@@ -1,5 +1,5 @@
-NAPPO DOCUMENTATION:
-====================
+PyTorchRL DOCUMENTATION:
+========================
 
 .. toctree::
    :maxdepth: 2
