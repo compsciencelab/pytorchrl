@@ -19,7 +19,7 @@ if __name__ == "__main__":
         long_description = fh.read()
 
     setuptools.setup(
-        name="nappo",
+        name="pytorchrl",
         version=version,
         author="",
         author_email="",
