@@ -131,12 +131,12 @@ Nappo contains a distributed component called ``Scheme`` which takes in the comp
 
         # Collection operation params
         scheme_parameters.update({
-            "col_remote_workers": 0, # only a local worker
+            "col_remote_workers": 1,
             "col_communication": "synchronous"})
 
         # Gradient computation operation params
         scheme_parameters.update({
-            "grad_remote_workers": 0, # only a local worker
+            "grad_remote_workers": 1,
             "col_communication": "synchronous"})
 
         scheme = Scheme(**scheme_parameters)

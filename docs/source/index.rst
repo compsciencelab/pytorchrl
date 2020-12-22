@@ -1,5 +1,5 @@
-PyTorchRL DOCUMENTATION:
-========================
+PyTorchRL Documentation
+=======================
 
 .. toctree::
    :maxdepth: 2
