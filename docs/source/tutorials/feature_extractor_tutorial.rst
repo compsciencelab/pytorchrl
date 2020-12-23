@@ -1,11 +1,11 @@
 Create custom feature extractors
 ================================
 
-In Deep Reinforcement Learning (DRL), Actors predict things such as the probability distribution over the next action, the value score or the Q-value using Neural Networks.
+In Deep Reinforcement Learning (DRL), Actors use Neural Networks to predict things such as the probability distribution over the next action, the value score or the Q-value.
 
-In Nappo, Neural Networks are implemented using Pytorch. More specifically, Nappo Actors create function approximators using the ``pytorchrl.core.actors.neural_networks.neural_network.NNBase`` `class <https://github.com/nappo/nappo/blob/master/nappo/core/actors/neural_networks/neural_network.py>`_. ``NNBase`` accepts a Pytorch nn.Module subclass as a parameter and creates an instance of it to extract features from environment observations. On top of the feature extractor, ``NNBase`` optionally adds a recurrent layer. It finally ends it with a feed-forward layer to match a specified number of outputs. ``Actor`` components should take as input which feature extractor to use.
+In PyTorchRL, Neural Networks are implemented using Pytorch. More specifically, PyTorchRL Actors contain function approximators of ``pytorchrl.core.actors.neural_networks.neural_network.NNBase`` `class <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/actors/neural_networks/neural_network.py>`_. ``NNBase`` accepts a Pytorch nn.Module subclass as a parameter and creates an instance of it to extract features from environment observations. On top of the feature extractor, ``NNBase`` optionally adds a recurrent layer. It finally ends it with a feed-forward layer to match a specified number of outputs. ``Actor`` components should take as input which feature extractor to use.
 
-Therefore, experimenting with different network architectures is as easy as changing the feature extractor class provided to the Actor component. For example, here we have the default feature extractor in Nappo, a multilayer perceptron network. The complete list of included feature extractors can be found `here <https://nappo.readthedocs.io/en/latest/package/core/actors/neural_networks.html>`_.
+Therefore, experimenting with different network architectures is as easy as changing the feature extractor class provided to the Actor component. For example, here we have the default feature extractor used by PyTorchRL Actors, a multilayer perceptron network. The complete list of included feature extractors can be found `here <https://pytorchrl.readthedocs.io/en/latest/package/core/actors/feature_extractors.html>`_.
 
 .. code-block:: python
 
@@ -68,8 +68,8 @@ Use examples:
 
 .. code-block:: python
 
-    from nappo.core.actors import OnPolicyActorCritic
-    from nappo.core.actors.neural_networks.feature_extractors.mlp import MLP
+    from pytorchrl.core.actors import OnPolicyActorCritic
+    from pytorchrl.core.actors.neural_networks.feature_extractors.mlp import MLP
 
     actor_factory = OnPolicyActorCritic.create_factory(observation_space, action_space, feature_extractor_network=MLP)
 
@@ -77,12 +77,12 @@ and
 
 .. code-block:: python
 
-    from nappo.core.actors import OnPolicyActorCritic, get_feature_extractor
+    from pytorchrl.core.actors import OnPolicyActorCritic, get_feature_extractor
 
     actor_factory = OnPolicyActorCritic.create_factory(observation_space, action_space, feature_extractor_network=get_feature_extractor("CNN"))
 
 Create ``OnPolicyActorCritic`` Actors extracting features with a multilayer perceptron (MLP) and a Convolutional Neural Network (CNN) respectively.
 
 .. note::
-    To simplify the import of feature extractors classes already included in Nappo, the ``get_feature_extractor`` method can be imported from ``nappo.core.actors``. This methods returns a class from its name. See code `here <https://github.com/nappo/nappo/blob/master/nappo/core/actors/neural_networks/feature_extractors/__init__.py>`_.
+    To simplify the import of feature extractors classes already included in PyTorchRL, the ``get_feature_extractor`` method can be imported from ``pytorchrl.core.actors``. This methods returns a class from its name. See code `here <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/actors/neural_networks/feature_extractors/__init__.py>`_.
 

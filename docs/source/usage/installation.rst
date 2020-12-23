@@ -6,13 +6,13 @@ Installing Anaconda or Miniconda
 
 If not already done, install conda (Miniconda is sufficient). To do so, see the `official documentation. <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_
 
-Installing Nappo library
-------------------------
+Installing PyTorchRL library
+----------------------------
 
 1. Set up conda environment ::
 
-    conda create -y -n nappo
-    conda activate nappo
+    conda create -y -n pytorchrl
+    conda activate pytorchrl
 
 2. Install dependencies ::
 
@@ -21,4 +21,4 @@ Installing Nappo library
 
 3. Install package ::
 
-    pip install nappo
+    pip install pytorchrl

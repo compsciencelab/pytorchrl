@@ -9,8 +9,8 @@ Multilayer Perceptron (MLP)
    :undoc-members:
    :show-inheritance:
 
-Basic Convolutional Neural Netwok (CNN)
----------------------------------------
+Convolutional Neural Netwok (CNN)
+---------------------------------
 
 .. automodule:: pytorchrl.core.actors.neural_networks.feature_extractors.cnn
    :members:

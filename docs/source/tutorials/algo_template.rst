@@ -1,7 +1,7 @@
 Algo template
 =============
 
-As reference examples, see `PPO <https://github.com/nappo/nappo/blob/master/nappo/core/algos/ppo.py>`_ and `SAC <https://github.com/nappo/nappo/blob/master/nappo/core/algos/sac.py>`_.
+As reference examples, see `PPO <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/algos/ppo.py>`_ and `SAC <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/algos/sac.py>`_.
 
 .. code-block:: python
 

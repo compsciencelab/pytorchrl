@@ -1,7 +1,7 @@
 Create a custom core component
 ==============================
 
-We encourage users to create their own Nappo components to extend current functionality and explore new ideas. To do it, we provide a Python superclass template for each agent component type: Actor, Storage and Algo.
+We encourage users to create their own PyTorchRL components to extend current functionality and explore new ideas. To do it, we provide a Python superclass template for each agent component type: Actor, Storage and Algo.
 
 - :ref:`Algo Template`
 - :ref:`Actor Template`

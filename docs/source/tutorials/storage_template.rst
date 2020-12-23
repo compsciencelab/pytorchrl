@@ -1,7 +1,7 @@
 Storage template
 ================
 
-As reference examples, see `OnPolicyBuffer <https://github.com/nappo/nappo/blob/master/nappo/core/storages/on_policy/on_policy_buffer.py>`_ and `ReplayBuffer <https://github.com/nappo/nappo/blob/master/nappo/core/storages/off_policy/replay_buffer.py>`_
+As reference examples, see `OnPolicyBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/storages/on_policy/on_policy_buffer.py>`_ and `ReplayBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/storages/off_policy/replay_buffer.py>`_
 
 .. code-block:: python
 

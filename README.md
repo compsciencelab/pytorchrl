@@ -16,7 +16,7 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
 
 ### Documentation
 
-NAPPO documentation can be found [here](http://pytorchrl.readthedocs.io/).
+PyTorchRL documentation can be found [here](https://pytorchrl.readthedocs.io/en/latest/).
 
 ### Citing Nappo
 
