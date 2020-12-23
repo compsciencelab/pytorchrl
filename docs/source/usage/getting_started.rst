@@ -14,7 +14,7 @@ This page covers how to create a training script to run a basic experiment using
 1. Starting a training script
 -----------------------------
 
-PyTorchRL uses Ray distributed framework internally to define and assign the available compute resources to the processes handling RL training. For that reason, it is important to initialize Ray at the beginning of every training script. In this example, we will initialize Ray on a single machine by simply calling ``ray.init()``, but it can be initialized on clusters of arbitrary size. To do so, see the `official Ray documentation. <https://docs.ray.io/en/releases-0.8.6/starting-ray.html>`_
+PyTorchRL uses Ray :footcite:`moritz2018ray` distributed framework internally to define and assign the available compute resources to the processes handling RL training. For that reason, it is important to initialize Ray at the beginning of every training script. In this example, we will initialize Ray on a single machine by simply calling ``ray.init()``, but it can be initialized on clusters of arbitrary size. To do so, see the `official Ray documentation. <https://docs.ray.io/en/releases-0.8.6/starting-ray.html>`_
 
 PyTorchRL also uses multiprocessing, so it is important to define our script as the entry point of the program with ``if __name__ == "__main__":``.
 
@@ -213,3 +213,5 @@ And enjoy our Agent's performance with running this script:
             done, episode_reward = 0, False
             env.render()
             obs = env.reset()
+
+.. footbibliography::

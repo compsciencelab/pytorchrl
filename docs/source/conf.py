@@ -34,9 +34,16 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
-    "sphinx.ext.viewcode",
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinxcontrib.bibtex',
+    'sphinxcontrib.youtube'
 ]
+
+bibtex_bibfiles = ['refs.bib']
+bibtex_default_style = 'unsrt'
+bibtex_encoding = 'latin'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
