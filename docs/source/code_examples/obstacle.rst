@@ -1,7 +1,7 @@
 Unity 3D Obstacle Tower Environment
 ===================================
 
-This page covers how to use PyTorchRL to train an agent on the Obstacle Tower Unity3D challenge environment, :footcite:`juliani2019obstacle`, a procedurally generated 3D world where an agent must learn to navigate an increasingly difficult set of floors (up to 100) with varying lightning conditions and textures. Each floor can contain multiple rooms, and each room can contain puzzles, obstacles or keys enabling to unlock doors. The number and arrangement of rooms in each floor for a given episode can be fixed with a seed parameter.
+This page covers how to use PyTorchRL to train an agent on the Obstacle Tower Unity3D challenge environment :footcite:`juliani2019obstacle`, a procedurally generated 3D world where an agent must learn to navigate an increasingly difficult set of floors (up to 100) with varying lightning conditions and textures. Each floor can contain multiple rooms, and each room can contain puzzles, obstacles or keys enabling to unlock doors. The number and arrangement of rooms in each floor for a given episode can be fixed with a seed parameter.
 
 ..  youtube:: https://www.youtube.com/watch?v=L442rrVnDr4
 
@@ -71,9 +71,7 @@ The ``ReducedActionEnv`` wrapper reduces the Agent's action set from the initial
 The Agent
 ---------
 
-We define an RL On-Policy Agent, using the Proximal Policy Optimization (PPO) algorithm and a Storage with Generalized Advantage Estimation (GAE).
-
-We use a feature extractor with the network architecture proposed in :footcite:`espeholt2018impala` but we initialize its weights according to Fixup :footcite:`zhang2019fixup`. We end our network with a gated recurrent unit (GRU) :footcite:`gru` with a hidden layer of size 256 neurons.
+We define an RL On-Policy Agent, using the Proximal Policy Optimization (PPO) :footcite:`schulman2017proximal` algorithm and a Storage with Generalized Advantage Estimation (GAE) :footcite:`gae`. We use a feature extractor with the network architecture proposed in :footcite:`espeholt2018impala` but we initialize its weights according to Fixup :footcite:`zhang2019fixup`. We end our network with a gated recurrent unit (GRU) :footcite:`gru` with a hidden layer of size 256 neurons.
 
 .. code-block:: python
 
@@ -173,7 +171,7 @@ We decay the starting learning rate value of 4e-4  by a factor of 0.25 both afte
 Results
 -------
 
-We train our agent on a fixed set of seeds [0, 100) for approximately 11 days and test its behaviour on seeds 1001 to 1005, a procedure designed by the authors of the challenge to evaluate weak generalization capacities of RL agents \cite{juliani2019obstacle}. Test performance is measured as the highest averaged score on the five test seeds obtained after 5 attempts, due to some intrinsic randomness in the environment. Our maximum average test score is 23.6, which supposes a significant improvement with respect to 19.4, the previous state-of-the-art obtained by the winner of the competition. Our results are show that we are also consistently above 19.4.
+We train our agent on a fixed set of seeds [0, 100) for approximately 11 days and test its behaviour on seeds 1001 to 1005, a procedure designed by the authors of the challenge to evaluate weak generalization capacities of RL agents :footcite:`juliani2019obstacle`. Test performance is measured as the highest averaged score on the five test seeds obtained after 5 attempts, due to some intrinsic randomness in the environment. Our maximum average test score is 23.6, which supposes a significant improvement with respect to 19.4, the previous state-of-the-art obtained by the winner of the competition. Our results are show that we are also consistently above 19.4.
 
 .. image:: ../images/obstacle_tower_curves.jpg
   :width: 1200
