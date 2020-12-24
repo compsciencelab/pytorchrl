@@ -18,7 +18,7 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
 
 PyTorchRL documentation can be found [here](https://pytorchrl.readthedocs.io/en/latest/).
 
-### Citing Nappo
+### Citing PyTorchRL
 
 ```
 @misc{pytorchrl2021,
