@@ -339,7 +339,7 @@ class SAC(Algo):
             with torch.no_grad():
                 # Target actions come from *current* policy
                 a2, _, _, _, _ = self.actor_critic.get_action(o2, rnn_hs, d)
-                p_a2 = self.actor_critic.dist.action_dist.probs
+                p_a2 = self.actor_critic.dist.dist.probs
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
 

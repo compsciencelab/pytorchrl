@@ -69,7 +69,7 @@ class NNBase(nn.Module):
             feature_map_size = recurrent_hidden_size
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), nn.init.calculate_gain('relu'))
-        output = [init_(nn.Linear(feature_map_size + np.prod(action_shape), self._num_outputs))]
+        output = [init_(nn.Linear(feature_map_size + int(np.prod(action_shape)), self._num_outputs))]
         if final_activation: output += [activation()]
         self.output = nn.Sequential(*output)
 
@@ -225,7 +225,7 @@ class NNBase(nn.Module):
             x, rnn_hxs = self._forward_gru(x, hxs, done)
 
         if act is not None:
-            x = torch.cat([x, act], dim=-1)
+            x = torch.cat([x, act.float()], dim=-1)
 
         out = self.output(x)
         assert tuple(out.shape[1:]) == self.output_shape

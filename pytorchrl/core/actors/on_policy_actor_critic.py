@@ -265,7 +265,7 @@ class OnPolicyActorCritic(nn.Module):
             action = self.scale(action)
 
         actor_features, rhs = self.policy_net(obs, rhs, done)
-        logp_action, entropy_dist = self.dist.evaluate_actions(actor_features, action)
+        logp_action, entropy_dist = self.dist.evaluate_pred(actor_features, action)
         self.last_actor_features = actor_features
 
         return logp_action, entropy_dist, rhs
