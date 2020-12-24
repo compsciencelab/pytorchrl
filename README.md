@@ -22,7 +22,7 @@ PyTorchRL documentation can be found [here](https://pytorchrl.readthedocs.io/en/
 
 ```
 @misc{pytorchrl2021,
-  author = {Bou, Albert},
+  author = {Albert Bou and Gianni De Fabritiis},
   title = {PyTorchRL: A PyTorch Library for distributed Reinforcement Learning},
   year = {2020},
   publisher = {GitHub},
