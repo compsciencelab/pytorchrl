@@ -150,6 +150,23 @@ class GWorker(W):
         if distribute_gradients: self.apply_gradients()
         return grads, info
 
+    def get_data(self):
+        """Pulls data from `self.inqueue` and prepares batches to compute gradients."""
+
+        try:  # Try pulling next batch
+            self.next_batch = self.batches.__next__()
+
+        except Exception: # StopIteration or AttributeError, Otherwise generate more batches
+
+            if self.col_communication == "synchronous": self.collector.step()
+            data, self.col_info = self.inqueue.get(timeout=300)
+            self.storage.add_data(data)
+            self.storage.before_update(self.actor, self.algo)
+            self.batches = self.storage.generate_batches(
+                self.algo.num_mini_batch, self.algo.mini_batch_size,
+                self.algo.num_epochs, self.actor.is_recurrent)
+            self.next_batch = self.batches.__next__()
+
     def get_grads(self, distribute_gradients=False):
         """
         Perform a gradient computation step.
@@ -168,18 +185,7 @@ class GWorker(W):
             Summary dict of relevant gradient operation information.
         """
 
-        # Collect data and prepare data batches
-        if self.iter % (self.algo.num_epochs * self.algo.num_mini_batch) == 0:
-
-            self.storage.add_data(self.data)
-            self.storage.before_update(self.actor, self.algo)
-            self.batches = self.storage.generate_batches(
-                self.algo.num_mini_batch, self.algo.mini_batch_size,
-                self.algo.num_epochs, self.actor.is_recurrent)
-
-        # Compute gradients, get algo info
-        grads, info = self.compute_gradients(
-            self.batches.__next__(), distribute_gradients)
+        grads, info = self.compute_gradients(self.next_batch, distribute_gradients)
 
         # Add extra information to info dict
         info.update(self.col_info)
@@ -189,12 +195,6 @@ class GWorker(W):
         self.iter += 1
 
         return grads, info
-
-    def get_data(self):
-        """Pulls data from `self.inqueue`"""
-        if self.iter % (self.algo.num_epochs * self.algo.num_mini_batch) == 0:
-            if self.col_communication == "synchronous": self.collector.step()
-            self.data, self.col_info = self.inqueue.get(timeout=300)
 
     def compute_gradients(self, batch, distribute_gradients):
         """

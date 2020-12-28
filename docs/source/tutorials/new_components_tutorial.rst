@@ -7,4 +7,4 @@ We encourage users to create their own PyTorchRL components to extend current fu
 - :ref:`Actor Template`
 - :ref:`Storage Template`
 
-Templates contain detailed information about the abstract methods that need to be implemented by any component subclass. Complementary, already implemented components can also serve as a good starting point to create new ones without coding all abstract class methods
+Templates contain detailed information about the abstract methods that need to be implemented by any component subclass. Complementary, already implemented components can also serve as a good starting point to create new ones without coding all abstract class methods again.
