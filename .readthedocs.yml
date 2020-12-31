@@ -25,5 +25,4 @@ python:
       - method: pip
         path: .
         extra_requirements:
-          - sphinxcontrib.bibtex
           - sphinxcontrib-bibtex
