@@ -3,8 +3,11 @@ Unity 3D Obstacle Tower Environment
 
 This page covers how to use PyTorchRL to train an agent on the Obstacle Tower Unity3D challenge environment :footcite:`juliani2019obstacle`, a procedurally generated 3D world where an agent must learn to navigate an increasingly difficult set of floors (up to 100) with varying lightning conditions and textures. Each floor can contain multiple rooms, and each room can contain puzzles, obstacles or keys enabling to unlock doors. The number and arrangement of rooms in each floor for a given episode can be fixed with a seed parameter.
 
-.. youtube:: https://www.youtube.com/watch?v=L442rrVnDr4
+.. raw:: html
+
+   <iframe width="560" height="315" src="https://www.youtube.com/embed/L442rrVnDr4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 |
+
 The Environment
 ---------------
 
