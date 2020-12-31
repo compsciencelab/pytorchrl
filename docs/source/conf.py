@@ -41,7 +41,6 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
-    'sphinxcontrib.yt',
 ]
 
 bibtex_bibfiles = ['refs.bib']
