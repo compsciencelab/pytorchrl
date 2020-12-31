@@ -1,4 +1,5 @@
 sphinxcontrib.bibtex
+sphinxcontrib.youtube
 ray
 ray[debug]
 pybullet
