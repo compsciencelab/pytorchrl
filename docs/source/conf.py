@@ -40,7 +40,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
-    'sphinxcontrib.youtube'
+    'sphinxcontrib.yt'
 ]
 
 bibtex_bibfiles = ['refs.bib']
