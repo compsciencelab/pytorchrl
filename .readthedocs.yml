@@ -20,12 +20,15 @@ formats:
 # Optionally set the version of Python and requirements required to build your docs
 
 python:
-  version: 3.6
+  version: 3.7
   pip_install: true
   setup_py_install: true
   install:
-    - method: pip
-    - sphinxcontrib.bibtex
-    - sphinxcontrib-bibtex
-    - sphinxcontrib.yt
-    - sphinxcontrib-yt
+      - requirements: docs/requirements.txt
+      - method: pip
+        path: .
+        extra_requirements:
+          - sphinxcontrib.bibtex
+          - sphinxcontrib-bibtex
+          - sphinxcontrib.yt
+          - sphinxcontrib-yt
