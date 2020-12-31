@@ -31,6 +31,7 @@ release = '0.0.1'
 # ones.
 
 master_doc = 'index'
+html_static_path = []
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -40,7 +41,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
-    'sphinxcontrib.yt'
+    'sphinxcontrib.yt',
 ]
 
 bibtex_bibfiles = ['refs.bib']
