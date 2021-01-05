@@ -101,25 +101,24 @@ class GWorker(W):
         self.algo = self.local_worker.algo
 
         # Get storage instance
-        if col_communication == "synchronous":
-            self.storage = self.local_worker.storage
-        else:
+        if col_communication == "asynchronous" and self.local_worker.envs_train is not None:
             self.storage = deepcopy(self.local_worker.storage)
+        else:
+            self.storage = self.local_worker.storage
 
         # Queue
         self.inqueue = queue.Queue(maxsize=100)
 
         # Create CollectorThread
-        if self.local_worker.envs_train:
-            self.collector = CollectorThread(
-                input_queue=self.inqueue,
-                index_worker=index_worker,
-                local_worker=self.local_worker,
-                remote_workers=self.remote_workers,
-                col_communication=col_communication,
-                col_fraction_workers=col_fraction_workers,
-                col_execution=col_execution,
-                broadcast_interval=1)
+        self.collector = CollectorThread(
+            input_queue=self.inqueue,
+            index_worker=index_worker,
+            local_worker=self.local_worker,
+            remote_workers=self.remote_workers,
+            col_communication=col_communication,
+            col_fraction_workers=col_fraction_workers,
+            col_execution=col_execution,
+            broadcast_interval=1)
 
         # Print worker information
         self.print_worker_info()
@@ -385,21 +384,20 @@ class CollectorThread(threading.Thread):
             pass
 
         elif col_execution == "centralised" and col_communication == "asynchronous":
-            # Start CollectorThread
-            self.start()
+            if self.local_worker.envs_train: self.start() # Start CollectorThread
 
         elif col_execution == "decentralised" and col_communication == "synchronous":
             pass
 
         elif col_execution == "decentralised" and col_communication == "asynchronous":
-            # Start CollectorThread
-            self.pending_tasks = {}
-            self.broadcast_new_weights()
-            for w in self.remote_workers:
-                for _ in range(2):
-                    future = w.collect_data.remote()
-                    self.pending_tasks[future] = w
-            self.start()
+            if self.local_worker.envs_train: # Start CollectorThread
+                self.pending_tasks = {}
+                self.broadcast_new_weights()
+                for w in self.remote_workers:
+                    for _ in range(2):
+                        future = w.collect_data.remote()
+                        self.pending_tasks[future] = w
+                self.start()
 
         else:
             raise NotImplementedError
