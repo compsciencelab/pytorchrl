@@ -103,6 +103,10 @@ class GWorker(W):
         # Get storage instance
         if col_communication == "asynchronous" and self.local_worker.envs_train is not None:
             self.storage = deepcopy(self.local_worker.storage)
+            size1 = self.local_worker.storage.size
+            size2 = self.local_worker.algo.update_every
+            if size2 == None: size2 = float("Inf")
+            self.local_worker.storage.size = min(size1, size2)
         else:
             self.storage = self.local_worker.storage
 
