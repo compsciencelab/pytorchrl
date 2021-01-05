@@ -79,12 +79,12 @@ class Scheme:
             train_envs_factory=train_envs_factory,
 
             # col specs
-            num_workers=num_col_workers - 1,
+            num_workers=num_col_workers - 1 if num_col_workers == 1 else num_col_workers,
             col_worker_resources=col_worker_resources,
             col_fraction_samples=sync_col_specs.get("fraction_samples"),
 
             # grad specs
-            total_parent_workers=num_grad_workers - 1,
+            total_parent_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
         )
 
         grad_workers_factory = GWorkerSet.create_factory(
@@ -96,7 +96,7 @@ class Scheme:
             col_fraction_workers=sync_col_specs.get("fraction_workers"),
 
             # grad_specs
-            num_workers=num_grad_workers - 1,
+            num_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
             grad_worker_resources=grad_worker_resources,
         )
 

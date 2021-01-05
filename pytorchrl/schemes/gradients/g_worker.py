@@ -110,15 +110,16 @@ class GWorker(W):
         self.inqueue = queue.Queue(maxsize=100)
 
         # Create CollectorThread
-        self.collector = CollectorThread(
-            input_queue=self.inqueue,
-            index_worker=index_worker,
-            local_worker=self.local_worker,
-            remote_workers=self.remote_workers,
-            col_communication=col_communication,
-            col_fraction_workers=col_fraction_workers,
-            col_execution=col_execution,
-            broadcast_interval=1)
+        if self.local_worker.envs_train:
+            self.collector = CollectorThread(
+                input_queue=self.inqueue,
+                index_worker=index_worker,
+                local_worker=self.local_worker,
+                remote_workers=self.remote_workers,
+                col_communication=col_communication,
+                col_fraction_workers=col_fraction_workers,
+                col_execution=col_execution,
+                broadcast_interval=1)
 
         # Print worker information
         self.print_worker_info()
