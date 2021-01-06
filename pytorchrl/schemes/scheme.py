@@ -47,7 +47,7 @@ class Scheme:
                  actor_factory,
                  storage_factory,
                  train_envs_factory,
-                 test_envs_factory=lambda x, y, c: None,
+                 test_envs_factory=lambda v, x, y, z: None,
 
                  # collection
                  num_col_workers=1,

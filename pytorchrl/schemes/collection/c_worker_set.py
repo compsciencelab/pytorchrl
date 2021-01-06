@@ -54,8 +54,8 @@ class CWorkerSet(WS):
                  initial_weights=None,
                  fraction_samples=1.0,
                  total_parent_workers=0,
-                 train_envs_factory=lambda x, y: None,
-                 test_envs_factory=lambda x, y, c: None,
+                 train_envs_factory=lambda x, y, z: None,
+                 test_envs_factory=lambda v, x, y, c: None,
                  worker_remote_config=default_remote_config):
 
         self.worker_class = CWorker

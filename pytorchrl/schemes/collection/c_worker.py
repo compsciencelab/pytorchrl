@@ -81,8 +81,8 @@ class CWorker(W):
                  actor_factory,
                  storage_factory,
                  fraction_samples=1.0,
-                 train_envs_factory=lambda x, y: None,
-                 test_envs_factory=lambda x, y, z: None,
+                 train_envs_factory=lambda x, y, z: None,
+                 test_envs_factory=lambda v, x, y, z: None,
                  initial_weights=None,
                  device=None):
 
