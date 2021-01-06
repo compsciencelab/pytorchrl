@@ -62,6 +62,7 @@ class CWorkerSet(WS):
         default_remote_config.update(worker_remote_config)
         self.remote_config = default_remote_config
         self.worker_params = {
+            "index_parent": index_parent,
             "algo_factory": algo_factory,
             "storage_factory": storage_factory,
             "test_envs_factory": test_envs_factory,

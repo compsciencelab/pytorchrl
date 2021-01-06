@@ -19,6 +19,8 @@ class CWorker(W):
     ----------
     index_worker : int
         Worker index.
+    index_worker : int
+        Index of gradient worker in charge of this data collection worker.
     algo_factory : func
         A function that creates an algorithm class.
     actor_factory : func
@@ -74,6 +76,7 @@ class CWorker(W):
 
     def __init__(self,
                  index_worker,
+                 index_parent,
                  algo_factory,
                  actor_factory,
                  storage_factory,
@@ -105,10 +108,10 @@ class CWorker(W):
         self.update_every = self.algo.update_every or self.storage.max_size
 
         # Create train environments
-        self.envs_train = train_envs_factory(self.device, index_worker)
+        self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
 
         # Create test environments (if creation function available)
-        self.envs_test = test_envs_factory(self.device, index_worker, "test")
+        self.envs_test = test_envs_factory(self.device, index_worker, index_parent, "test")
 
         if initial_weights:  # if remote worker
 

@@ -24,7 +24,7 @@ class VecEnv:
             Function to create the environment.
         env_kwargs : dict
             keyword arguments of env_fn.
-        num_processes : int
+        vec_env_size : int
             size of the vector of environments.
         log_dir : str
             Target path for envs to log information through bench.Monitor class.
@@ -41,18 +41,18 @@ class VecEnv:
             Environments observation space.
         """
 
-        def make_vec_env(device=torch.device("cpu"), index_worker=0, mode="train"):
+        def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
             """Create and return a vector environment"""
 
             if mode == "train":
                 env_indexes = range(0, vec_env_size)
             else:
                 env_indexes = range(vec_env_size, 2 * vec_env_size)
-            index_worker *= vec_env_size  # to avoid repeating seeds between workers
 
             envs = [make_env(
                 env_fn=env_fn, env_kwargs=env_kwargs,
-                index_worker=index_worker,
+                index_col_worker=index_col_worker,
+                index_grad_worker=index_grad_worker,
                 index_env=i, log_dir=log_dir, mode=mode,
                 info_keywords=info_keywords
             ) for i in env_indexes]
@@ -67,7 +67,8 @@ class VecEnv:
             return envs
 
         dummy_env = [make_env(
-            env_fn=env_fn, env_kwargs=env_kwargs, index_worker=0, index_env=0)]
+            env_fn=env_fn, env_kwargs=env_kwargs, index_col_worker=0,
+            index_grad_worker=0, index_env=0)]
         dummy_env = DummyVecEnv(dummy_env)
 
         cls.action_space = dummy_env.action_space
@@ -75,7 +76,7 @@ class VecEnv:
 
         return make_vec_env, dummy_env.action_space, dummy_env.observation_space
 
-def make_env(env_fn, env_kwargs, index_worker, index_env, log_dir=None, info_keywords=(), mode="train"):
+def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env, log_dir=None, info_keywords=(), mode="train"):
     """
     Returns a function that handles the creating of a single environment, so it
     can be executed in an independent thread.
@@ -91,8 +92,10 @@ def make_env(env_fn, env_kwargs, index_worker, index_env, log_dir=None, info_key
         Target path for bench.Monitor logger values.
     info_keywords : tuple
         Information keywords to be logged stored by bench.Monitor.
-    index_worker : int
-        Index of the worker running this environment.
+    index_col_worker:
+        Index of the data collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running this environment.
     index_env : int
         Index of this environment withing the vector of environments.
     mode : str
@@ -112,8 +115,10 @@ def make_env(env_fn, env_kwargs, index_worker, index_env, log_dir=None, info_key
         os.makedirs(path, exist_ok=True)
 
     # index_worker and index_env added as paramaters
-    if "index_worker" in inspect.getfullargspec(env_fn).args:
-        env_kwargs["index_worker"] = index_worker
+    if "index_col_worker" in inspect.getfullargspec(env_fn).args:
+        env_kwargs["index_col_worker"] = index_col_worker
+    if "index_grad_worker" in inspect.getfullargspec(env_fn).args:
+        env_kwargs["index_grad_worker"] = index_grad_worker
     if "index_env" in inspect.getfullargspec(env_fn).args:
         env_kwargs["index_env"] = index_env
 
@@ -126,7 +131,8 @@ def make_env(env_fn, env_kwargs, index_worker, index_env, log_dir=None, info_key
         # Monitor provided info_keywords
         if log_dir is not None:
             env = bench.Monitor(
-                env, os.path.join(path, "{}_{}".format(index_worker, str(index_env))),
+                env, os.path.join(path, "{}_{}_{}".format(
+                    index_grad_worker, index_col_worker, str(index_env))),
                 allow_early_resets=True, info_keywords=info_keywords)
 
         # if obs are images with shape (W,H,C), transpose to (C,W,H) for PyTorch convolutions

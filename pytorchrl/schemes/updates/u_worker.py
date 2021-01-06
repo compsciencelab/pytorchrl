@@ -1,3 +1,4 @@
+import sys
 import ray
 import time
 import torch
@@ -150,6 +151,7 @@ class UWorker(W):
         self.grad_workers.local_worker().stop()
         for e in self.grad_workers.remote_workers():
             e.stop.remote()
+        sys.exit()
 
     def update_algo_parameter(self, parameter_name, new_parameter_value):
         """
