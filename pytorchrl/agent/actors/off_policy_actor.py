@@ -62,7 +62,7 @@ class OffPolicyActor(nn.Module):
                  recurrent_hidden_size=512,
                  create_double_q_critic=True):
 
-        super(OffPolicyActorCritic, self).__init__()
+        super(OffPolicyActo, self).__init__()
         self.input_space = input_space
         self.action_space = action_space
 

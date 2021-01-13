@@ -63,7 +63,7 @@ class OnPolicyActor(nn.Module):
                  recurrent_hidden_size=256,
                  shared_policy_value_network=False):
 
-        super(OnPolicyActorCritic, self).__init__()
+        super(OnPolicyActor, self).__init__()
         self.input_space = input_space
         self.action_space = action_space
         self.shared_policy_value_network = shared_policy_value_network
