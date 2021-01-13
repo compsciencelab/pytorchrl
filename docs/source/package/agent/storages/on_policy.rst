@@ -1,24 +1,24 @@
 On-policy
 =========
 
-On-policy buffer
-----------------
+Vanilla on-policy buffer
+------------------------
 
 .. automodule:: pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer
    :members:
    :undoc-members:
    :show-inheritance:
 
-On-policy GAE buffer
---------------------
+GAE buffer
+----------
 
 .. automodule:: pytorchrl.agent.storages.on_policy.gae_buffer
    :members:
    :undoc-members:
    :show-inheritance:
 
-On-policy V-trace buffer
-------------------------
+V-Trace buffer
+--------------
 
 .. automodule:: pytorchrl.agent.storages.on_policy.vtrace_buffer
    :members:

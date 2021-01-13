@@ -1,5 +1,5 @@
 import torch
-from .vanilla_on_policy_buffer import OnPolicyBuffer as B
+from .vanilla_on_policy_buffer import VanillaOnPolicyBuffer as B
 
 
 class VTraceBuffer(B):
