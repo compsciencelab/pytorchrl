@@ -7,11 +7,11 @@ import argparse
 
 from pytorchrl import utils
 from pytorchrl import Learner
-from pytorchrl.schemes import Scheme
-from pytorchrl.core.algos import SAC
-from pytorchrl.core.env import VecEnv
-from pytorchrl.core.storages import ReplayBuffer
-from pytorchrl.core.actors import OffPolicyActorCritic, get_feature_extractor
+from pytorchrl.scheme import Scheme
+from pytorchrl.agent.algos import SAC
+from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import ReplayBuffer
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import atari_train_env_factory, atari_test_env_factory
 
 
@@ -53,7 +53,7 @@ def main():
         mini_batch_size=args.mini_batch_size)
 
     # 4. Define RL Policy
-    actor_factory = OffPolicyActorCritic.create_factory(
+    actor_factory = OffPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
         recurrent_policy=args.recurrent_policy,

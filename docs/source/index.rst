@@ -13,7 +13,7 @@ PyTorchRL Documentation
    :maxdepth: 2
    :caption: PyTorchRL API:
 
-   package/core/core
+   package/agent/agent
    package/schemes/schemes
    package/learner
 

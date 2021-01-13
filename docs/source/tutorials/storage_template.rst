@@ -1,7 +1,7 @@
 Storage template
 ================
 
-As reference examples, see `OnPolicyBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/storages/on_policy/on_policy_buffer.py>`_ and `ReplayBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/storages/off_policy/replay_buffer.py>`_
+As reference examples, see `VanillaOnPolicyBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/agent/storages/on_policy/vanilla_on_policy_buffer.py>`_ and `ReplayBuffer <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/agent/storages/off_policy/replay_buffer.py>`_
 
 .. code-block:: python
 

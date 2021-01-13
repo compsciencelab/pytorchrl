@@ -7,11 +7,11 @@ import argparse
 
 from pytorchrl import utils
 from pytorchrl import Learner
-from pytorchrl.schemes import Scheme
-from pytorchrl.core.algos import PPO
-from pytorchrl.core.env import VecEnv
-from pytorchrl.core.storages import OnPolicyGAEBuffer
-from pytorchrl.core.actors import OnPolicyActorCritic, get_feature_extractor
+from pytorchrl.scheme import Scheme
+from pytorchrl.agent.algos import PPO
+from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs import obstacle_train_env_factory
 
 
@@ -47,14 +47,14 @@ def main():
         use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
     # 4. Define RL Policy
-    actor_factory = OnPolicyActorCritic.create_factory(
+    actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
         recurrent_policy=args.recurrent_policy,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
-    storage_factory = OnPolicyGAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+    storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
 
     # 6. Define scheme
     params = {}

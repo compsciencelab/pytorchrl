@@ -13,5 +13,6 @@
     wget https://storage.googleapis.com/obstacle-tower-build/v2.2/obstacletower_v2.2_linux.zip
     unzip obstacletower_v2.2_linux.zip
     pip install mlagents-envs==0.6.2
-
 ```
+
+Finally, uncomment line 4 in pytorchrl/envs/__init__.py

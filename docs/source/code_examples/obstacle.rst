@@ -76,14 +76,14 @@ We define an RL On-Policy Agent, using the Proximal Policy Optimization (PPO) :f
 
 .. code-block:: python
 
-    from pytorchrl.core.algos import PPO
-    from pytorchrl.core.env import VecEnv
-    from pytorchrl.core.storages import OnPolicyGAEBuffer
-    from pytorchrl.core.actors import OnPolicyActorCritic, get_feature_extractor
+    from pytorchrl.agent.algos import PPO
+    from pytorchrl.agent.env import VecEnv
+    from pytorchrl.agent.storages import GAEBuffer
+    from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
     from pytorchrl.envs import obstacle_train_env_factory
 
     # Define Train Vector of Envs
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+    envs_factory, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
         env_kwargs={"frame_skip": 2, "frame_stack": 4},
         vec_env_size=8, log_dir='/tmp/obstacle_tower_agent',
@@ -112,6 +112,8 @@ We train on 2 machines with 32 CPUs and 3 GPUs model GeForce RTX 2080 Ti each. W
 
 .. code-block:: python
 
+    from pytorchrl.scheme import Scheme
+
     # 6. Define scheme
     params = {}
 
@@ -120,7 +122,7 @@ We train on 2 machines with 32 CPUs and 3 GPUs model GeForce RTX 2080 Ti each. W
         "algo_factory": algo_factory,
         "actor_factory": actor_factory,
         "storage_factory": storage_factory,
-        "train_envs_factory": train_envs_factory,
+        "train_envs_factory": envs_factory,
     })
 
     # add collection specs

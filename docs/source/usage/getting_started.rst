@@ -52,7 +52,7 @@ As it can be observed, the function returns a ``gym.Env`` instance. Therefore, d
 
 .. code-block:: python
 
-        from pytorchrl.core.env import VecEnv
+        from pytorchrl.agent.env import VecEnv
 
         # Define Environment Vector
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
@@ -77,13 +77,13 @@ PyTorchRL distinguishes between 3 types of Agent components: the ``Algo``, which
 
 Our current implementation contains the following components.
 
-.. image:: ../images/on_policy_rl_agents.jpg
+.. image:: ../images/on_policy_agent.jpg
   :width: 700
-  :alt: Agent core components
+  :alt: Agent on-policy components
 
-.. image:: ../images/off_policy_rl_agents.jpg
+.. image:: ../images/off_policy_agent.jpg
   :width: 700
-  :alt: Agent core components
+  :alt: Agent off-policy components
 
 New components can be created and combined with already existing ones. For more information about how to do it, see :ref:`Create a custom core component`.
 
@@ -91,8 +91,8 @@ For our example, we can create an On-Policy Agent, using the Proximal Policy Opt
 
 .. code-block:: python
 
-        from pytorchrl.core.algos import PPO
-        from pytorchrl.core.storages import OnPolicyGAEBuffer
+        from pytorchrl.agent.algos import PPO
+        from pytorchrl.agent.storages import GAEBuffer
 
         # Define RL training algorithm
         algo_factory = PPO.create_factory(
@@ -117,7 +117,7 @@ PyTorchRL contains a distributed component called ``Scheme`` which takes in the 
 
 .. code-block:: python
 
-        from pytorchrl.schemes import Scheme
+        from pytorchrl.scheme import Scheme
 
         # Core components params
         scheme_parameters = {
@@ -180,7 +180,7 @@ And enjoy our Agent's performance with running this script:
 .. code-block:: python
 
     from pytorchrl.envs import pybullet_train_env_factory
-    from pytorchrl.core.actors import OnPolicyActorCritic, get_feature_extractor
+    from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 
     # Define single copy of the environment
     env = pybullet_train_env_factory(env_id="HalfCheetahBulletEnv-v0")

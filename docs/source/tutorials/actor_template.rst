@@ -1,7 +1,7 @@
 Actor template
 ==============
 
-As reference examples, see `OnPolicyActorCritic <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/actors/on_policy_actor_critic.py>`_ and `OffPolicyActorCritic <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/core/actors/off_policy_actor_critic.py>`_
+As reference examples, see `OnPolicyActor <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/agent/actors/on_policy_actor.py>`_ and `OffPolicyActor <https://github.com/PyTorchRL/pytorchrl/blob/master/pytorchrl/agent/actors/off_policy_actor.py>`_
 
 .. code-block:: python
 
