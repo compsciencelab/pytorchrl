@@ -66,8 +66,8 @@ class Scheme:
 
                  ):
 
-        col_execution="decentralised" if num_col_workers > 1 else "centralised"
-        grad_execution="decentralised" if num_grad_workers > 1 else "centralised"
+        col_execution="parallelised" if num_col_workers > 1 else "centralised"
+        grad_execution="parallelised" if num_grad_workers > 1 else "centralised"
 
         col_workers_factory = CWorkerSet.create_factory(
 

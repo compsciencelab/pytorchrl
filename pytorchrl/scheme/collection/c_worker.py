@@ -162,8 +162,8 @@ class CWorker(W):
 
         # Add information to info dict
         info = {}
-        info.update({"time/collect": col_time})
-        info.update({"performance/train": train_perf})
+        info.update({"debug/collect_time": col_time})
+        info.update({"performance/train_reward": train_perf})
         info.update({"col_version": self.actor_version})
         info.update({"collected_samples": self.samples_collected})
         self.samples_collected = 0

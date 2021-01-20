@@ -62,7 +62,7 @@ class UWorker(W):
                  grad_workers_factory,
                  index_worker=0,
                  col_fraction_workers=1.0,
-                 grad_execution="decentralised",
+                 grad_execution="parallelised",
                  grad_communication="synchronous",
                  update_execution="centralised",
                  local_device=None):
@@ -81,7 +81,7 @@ class UWorker(W):
         self.num_workers = len(self.grad_workers.remote_workers())
 
         # Create CWorkerSet instance
-        if update_execution == "decentralised":
+        if update_execution == "parallelised":
             # Setup the distributed processes for gradient averaging
             ip = ray.get(self.remote_workers[0].get_node_ip.remote())
             port = ray.get(self.remote_workers[0].find_free_port.remote())
@@ -119,7 +119,9 @@ class UWorker(W):
         if self.grad_communication == "synchronous":
             self.updater.step()
 
-        new_info = self.outqueue.get(timeout=300)
+        while self.outqueue.empty():
+            time.sleep(0.05)
+        new_info = self.outqueue.get()
 
         return new_info
 
@@ -151,7 +153,6 @@ class UWorker(W):
         self.grad_workers.local_worker().stop()
         for e in self.grad_workers.remote_workers():
             e.stop.remote()
-        sys.exit()
 
     def update_algo_parameter(self, parameter_name, new_parameter_value):
         """
@@ -244,14 +245,11 @@ class UpdaterThread(threading.Thread):
         elif grad_execution == "centralised" and grad_communication == "asynchronous":
             self.start() # Start UpdaterThread
 
-        elif grad_execution == "decentralised" and grad_communication == "synchronous":
+        elif grad_execution == "parallelised" and grad_communication == "synchronous":
             pass
 
-        elif grad_execution == "decentralised" and grad_communication == "asynchronous":
+        elif grad_execution == "parallelised" and grad_communication == "asynchronous":
             self.start() # Start UpdaterThread
-
-        else:
-            raise NotImplementedError
 
     def run(self):
         while not self.stopped:
@@ -263,7 +261,7 @@ class UpdaterThread(threading.Thread):
         output queue.
         """
 
-        distribute_gradients = self.update_execution == "decentralised"
+        distribute_gradients = self.update_execution == "parallelised"
 
         if self.grad_execution == "centralised" and self.grad_communication == "synchronous":
             _, info = self.local_worker.step(distribute_gradients)
@@ -275,7 +273,7 @@ class UpdaterThread(threading.Thread):
             info["update_version"] = self.local_worker.actor_version
             self.local_worker.apply_gradients()
 
-        elif self.grad_execution == "decentralised" and self.grad_communication == "synchronous":
+        elif self.grad_execution == "parallelised" and self.grad_communication == "synchronous":
 
             to_average = []
             step_metrics = defaultdict(float)
@@ -285,8 +283,7 @@ class UpdaterThread(threading.Thread):
             pending_tasks = [e.get_data.remote() for e in self.remote_workers]
 
             # Keep checking how many workers have finished until percent% are ready
-            samples_ready, samples_not_ready = ray.wait(pending_tasks,
-              num_returns=len(pending_tasks), timeout=0.5)
+            samples_ready = []
             while len(samples_ready) < (self.num_workers * self.fraction_workers):
                 samples_ready, samples_not_ready = ray.wait(pending_tasks,
                   num_returns=len(pending_tasks), timeout=0.5)
@@ -322,18 +319,18 @@ class UpdaterThread(threading.Thread):
                 t = time.time()
                 self.local_worker.apply_gradients(average_gradients(to_average))
                 avg_grads_t = time.time() - t
-                info.update({"time/avg_grads_time": avg_grads_t})
+                info.update({"debug/avg_grads_time": avg_grads_t})
 
                 # Update workers with current weights
                 t = time.time()
                 self.sync_weights()
                 sync_grads_t = time.time() - t
-                info.update({"time/sync_grads_time": sync_grads_t})
+                info.update({"debug/sync_grads_time": sync_grads_t})
 
             else:
                 self.local_worker.local_worker.actor_version += 1
 
-        elif self.grad_execution == "decentralised" and self.grad_communication == "asynchronous":
+        elif self.grad_execution == "parallelised" and self.grad_communication == "asynchronous":
 
             # If first call, call for gradients from all workers
             if self.local_worker.actor_version == 0:
@@ -344,8 +341,7 @@ class UpdaterThread(threading.Thread):
 
             # Wait for first gradients ready
             wait_results = ray.wait(list(self.pending_gradients.keys()))
-            ready_list = wait_results[0]
-            future = ready_list[0]
+            future = wait_results[0][0]
 
             # Get gradients
             gradients, info = ray_get_and_free(future)
@@ -366,9 +362,6 @@ class UpdaterThread(threading.Thread):
             # Call compute_gradients in remote worker again
             future = e.step.remote()
             self.pending_gradients[future] = e
-
-        else:
-            raise NotImplementedError
 
         # Add step info to queue
         self.outqueue.put(info)

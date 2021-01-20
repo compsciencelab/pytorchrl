@@ -48,7 +48,7 @@ class Learner:
 
         # Counters and metrics
         self.num_samples_collected = 0
-        self.metrics = defaultdict(partial(deque, maxlen=100))
+        self.metrics = defaultdict(partial(deque, maxlen=1))
 
         # Define summary writer
         if log_dir:
@@ -69,9 +69,9 @@ class Learner:
         # info.update({"scheme/metrics/col_grad_lag": self.ac_version - self.col_info["ac_version"]})
         # grad_update_lag
 
-        info["scheme/metrics/fps"] = int(self.num_samples_collected / (time.time() - self.start))
-        info["scheme/metrics/collection_lag"] = info["grad_version"] - info.pop("col_version")
-        info["scheme/metrics/gradient_lag"] = info.pop("update_version") - info.pop("grad_version")
+        info["scheme/fps"] = int(self.num_samples_collected / (time.time() - self.start))
+        info["scheme/collection_lag"] = info["grad_version"] - info.pop("col_version")
+        info["scheme/gradient_lag"] = info.pop("update_version") - info.pop("grad_version")
 
         # Update counters
         self.num_samples_collected += info.pop("collected_samples")
@@ -98,16 +98,36 @@ class Learner:
         """Returns metrics averaged across number of updates."""
         return {k: sum(v) / len(v) for k, v in self.metrics.items()}
 
-    def print_info(self):
+    def print_info(self, add_algo_info=True, add_performace_info=True, add_scheme_info=False, add_debug_info=False):
         """Print relevant information about the training process"""
+
         s = "Update {}, num samples collected {}, FPS {}".format(
             self.update_worker.actor_version, self.num_samples_collected,
             int(self.num_samples_collected / (time.time() - self.start)))
-        s += "\n"
-        for k, v in self.get_metrics().items():
 
-            if k.split("/")[0] == "algo":
-                s += "{} {}, ".format(k.split("/")[-1], v)
+        if add_algo_info:
+            s += "\n algo: "
+            for k, v in self.get_metrics().items():
+                if k.split("/")[0] == "algo":
+                    s += "{} {}, ".format(k.split("/")[-1], v)
+
+        if add_performace_info:
+            s += "\n performance: "
+            for k, v in self.get_metrics().items():
+                if k.split("/")[0] == "performance":
+                    s += "{} {}, ".format(k.split("/")[-1], v)
+
+        if add_scheme_info:
+            s += "\n scheme: "
+            for k, v in self.get_metrics().items():
+                if k.split("/")[0] == "scheme":
+                    s += "{} {}, ".format(k.split("/")[-1], v)
+
+        if add_debug_info:
+            s += "\n debug: "
+            for k, v in self.get_metrics().items():
+                if k.split("/")[0] == "debug":
+                    s += "{} {}, ".format(k.split("/")[-1], v)
 
         print(s[:-2], flush=True)
 

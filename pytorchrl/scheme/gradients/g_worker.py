@@ -74,7 +74,7 @@ class GWorker(W):
                  index_worker,
                  col_workers_factory,
                  col_communication="synchronous",
-                 col_execution="distributed",
+                 col_execution="parallelised",
                  col_fraction_workers=1.0,
                  initial_weights=None,
                  device=None):
@@ -111,7 +111,7 @@ class GWorker(W):
             self.storage = self.local_worker.storage
 
         # Queue
-        self.inqueue = queue.Queue(maxsize=250)
+        self.inqueue = queue.Queue()
 
         # Create CollectorThread
         self.collector = CollectorThread(
@@ -163,6 +163,8 @@ class GWorker(W):
         except Exception: # StopIteration or AttributeError, Otherwise generate more batches
 
             if self.col_communication == "synchronous": self.collector.step()
+            while self.inqueue.empty():
+                time.sleep(0.05)
             data, self.col_info = self.inqueue.get()
             self.storage.add_data(data)
             self.storage.before_update(self.actor, self.algo)
@@ -363,7 +365,7 @@ class CollectorThread(threading.Thread):
                  remote_workers,
                  col_fraction_workers=1.0,
                  col_communication="synchronous",
-                 col_execution="distributed",
+                 col_execution="parallelised",
                  broadcast_interval=1):
 
         threading.Thread.__init__(self)
@@ -390,21 +392,16 @@ class CollectorThread(threading.Thread):
         elif col_execution == "centralised" and col_communication == "asynchronous":
             if self.local_worker.envs_train: self.start() # Start CollectorThread
 
-        elif col_execution == "decentralised" and col_communication == "synchronous":
+        elif col_execution == "parallelised" and col_communication == "synchronous":
             pass
 
-        elif col_execution == "decentralised" and col_communication == "asynchronous":
+        elif col_execution == "parallelised" and col_communication == "asynchronous":
             self.pending_tasks = {}
             self.broadcast_new_weights()
             for w in self.remote_workers:
-                for _ in range(2):
                     future = w.collect_data.remote()
                     self.pending_tasks[future] = w
             self.start()
-
-        else:
-            raise NotImplementedError
-
 
     def run(self):
         while not self.stopped:
@@ -429,7 +426,7 @@ class CollectorThread(threading.Thread):
             rollouts = self.local_worker.collect_data(data_to_cpu=False)
             self.inqueue.put(rollouts)
 
-        elif self.col_execution == "decentralised" and self.col_communication == "synchronous":
+        elif self.col_execution == "parallelised" and self.col_communication == "synchronous":
 
             # Start data collection in all workers
             worker_key = "worker_{}".format(self.index_worker)
@@ -439,8 +436,7 @@ class CollectorThread(threading.Thread):
                 listen_to=["sync", worker_key]) for e in self.remote_workers]
 
             # Keep checking how many workers have finished until percent% are ready
-            samples_ready, samples_not_ready = ray.wait(
-                pending_samples, num_returns=len(pending_samples), timeout=0.5)
+            samples_ready = []
             while len(samples_ready) < (self.num_workers * self.fraction_workers):
                 samples_ready, samples_not_ready = ray.wait(
                     pending_samples, num_returns=len(pending_samples), timeout=0.5)
@@ -452,9 +448,10 @@ class CollectorThread(threading.Thread):
             for r in pending_samples: self.inqueue.put(ray_get_and_free(r))
 
 
-        elif self.col_execution == "decentralised" and self.col_communication == "asynchronous":
+        elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
 
             # Wait for first worker to finish
+            assert len(list(self.pending_tasks.keys())) == len(self.remote_workers)
             wait_results = ray.wait(list(self.pending_tasks.keys()))
             future = wait_results[0][0]
             w = self.pending_tasks.pop(future)
@@ -470,9 +467,6 @@ class CollectorThread(threading.Thread):
             # Schedule a new collection task
             future = w.collect_data.remote()
             self.pending_tasks[future] = w
-
-        else:
-            raise NotImplementedError
 
     def should_broadcast(self):
         """Returns whether broadcast() should be called to update weights."""
