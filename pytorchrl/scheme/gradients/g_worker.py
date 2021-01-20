@@ -110,8 +110,8 @@ class GWorker(W):
         else:
             self.storage = self.local_worker.storage
 
-        # Queue
-        self.inqueue = queue.Queue()
+        # Queue - maxsize puts a cap on the policy lag
+        self.inqueue = queue.Queue(maxsize=100)
 
         # Create CollectorThread
         self.collector = CollectorThread(
@@ -164,7 +164,7 @@ class GWorker(W):
 
             if self.col_communication == "synchronous": self.collector.step()
             while self.inqueue.empty():
-                time.sleep(0.05)
+                time.sleep(0.005)
             data, self.col_info = self.inqueue.get()
             self.storage.add_data(data)
             self.storage.before_update(self.actor, self.algo)
@@ -420,10 +420,16 @@ class CollectorThread(threading.Thread):
         if self.col_execution == "centralised" and self.col_communication == "synchronous":
 
             rollouts = self.local_worker.collect_data(listen_to=["sync"], data_to_cpu=False)
+
+            while self.inqueue.full():
+                time.sleep(0.005)
             self.inqueue.put(rollouts)
 
         elif self.col_execution == "centralised" and self.col_communication == "asynchronous":
             rollouts = self.local_worker.collect_data(data_to_cpu=False)
+
+            while self.inqueue.full():
+                time.sleep(0.005)
             self.inqueue.put(rollouts)
 
         elif self.col_execution == "parallelised" and self.col_communication == "synchronous":
@@ -445,7 +451,10 @@ class CollectorThread(threading.Thread):
             broadcast_message(worker_key, b"stop")
 
             # Compute model updates
-            for r in pending_samples: self.inqueue.put(ray_get_and_free(r))
+            for r in pending_samples:
+                while self.inqueue.full():
+                    time.sleep(0.005)
+                self.inqueue.put(ray_get_and_free(r))
 
 
         elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
@@ -455,6 +464,9 @@ class CollectorThread(threading.Thread):
             wait_results = ray.wait(list(self.pending_tasks.keys()))
             future = wait_results[0][0]
             w = self.pending_tasks.pop(future)
+
+            while self.inqueue.full():
+                time.sleep(0.005)
 
             # Retrieve rollouts and add them to queue
             self.inqueue.put(ray_get_and_free(future))

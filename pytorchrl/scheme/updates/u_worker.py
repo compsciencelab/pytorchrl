@@ -120,7 +120,7 @@ class UWorker(W):
             self.updater.step()
 
         while self.outqueue.empty():
-            time.sleep(0.05)
+            time.sleep(0.00001)
         new_info = self.outqueue.get()
 
         return new_info

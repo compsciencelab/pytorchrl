@@ -124,7 +124,7 @@ class CWorker(W):
                 self.envs_train.reset())
 
             # Define train performance tracking variables
-            self.train_perf = deque(maxlen=100)
+            self.train_perf = deque(maxlen=1)
             self.acc_reward = torch.zeros_like(self.done)
 
             # Collect initial samples
@@ -163,8 +163,8 @@ class CWorker(W):
         # Add information to info dict
         info = {}
         info.update({"debug/collect_time": col_time})
-        info.update({"performance/train_reward": train_perf})
         info.update({"col_version": self.actor_version})
+        info.update({"performance/train_reward": train_perf})
         info.update({"collected_samples": self.samples_collected})
         self.samples_collected = 0
 
