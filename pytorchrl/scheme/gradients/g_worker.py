@@ -110,7 +110,7 @@ class GWorker(W):
         else:
             self.storage = self.local_worker.storage
 
-        # Queue - maxsize puts a cap on the policy lag
+        # Queue - maxsize puts a cap on the allowed policy lag
         self.inqueue = queue.Queue(maxsize=100)
 
         # Create CollectorThread
