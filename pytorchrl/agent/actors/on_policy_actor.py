@@ -61,7 +61,7 @@ class OnPolicyActor(nn.Module):
                  feature_extractor_kwargs={},
                  recurrent_policy=False,
                  recurrent_hidden_size=256,
-                 shared_policy_value_network=False):
+                 shared_policy_value_network=True):
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
@@ -114,7 +114,7 @@ class OnPolicyActor(nn.Module):
             recurrent_policy=False,
             recurrent_hidden_size=256,
             feature_extractor_kwargs={},
-            shared_policy_value_network=False,
+            shared_policy_value_network=True,
             feature_extractor_network=get_feature_extractor("MLP")):
         """
         Returns a function that creates actor critic instances.

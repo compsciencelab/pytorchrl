@@ -164,7 +164,7 @@ class CWorker(W):
         info = {}
         info.update({"debug/collect_time": col_time})
         info.update({"col_version": self.actor_version})
-        info.update({"performance/train reward": train_perf})
+        info.update({"performance/train_reward": train_perf})
         info.update({"collected_samples": self.samples_collected})
         self.samples_collected = 0
 
@@ -172,7 +172,7 @@ class CWorker(W):
         if self.iter % self.algo.test_every == 0:
             if self.envs_test and self.algo.num_test_episodes > 0:
                 test_perf = self.evaluate()
-                info.update({"performance/test reward": test_perf})
+                info.update({"performance/test_reward": test_perf})
 
         # Update counter
         self.iter += 1
@@ -211,7 +211,8 @@ class CWorker(W):
 
             # Handle end of episode
             self.acc_reward += reward
-            self.train_perf.extend(self.acc_reward[done == 1.0].tolist())
+            ended_eps = self.acc_reward[done == 1.0].tolist()
+            if len(ended_eps) > 0: self.train_perf.extend(np.mean(ended_eps))
             self.acc_reward[done == 1.0] = 0.0
 
             # Prepare transition dict

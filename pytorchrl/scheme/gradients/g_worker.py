@@ -225,7 +225,7 @@ class GWorker(W):
         t = time.time()
         grads, info = self.algo.compute_gradients(batch, grads_to_cpu=not distribute_gradients)
         compute_time = time.time() - t
-        info.update({"time/compute_grads": compute_time})
+        info.update({"debug/compute_grads": compute_time})
 
         if distribute_gradients:
 

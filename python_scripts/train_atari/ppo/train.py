@@ -4,6 +4,7 @@ import sys
 import time
 import json
 import argparse
+import numpy as np
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../..')
 
@@ -59,7 +60,8 @@ def main():
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
         recurrent_policy=args.recurrent_policy,
-        restart_model=args.restart_model)
+        restart_model=args.restart_model,
+    )
 
     # 5. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
@@ -99,6 +101,12 @@ def main():
     # 8. Define train loop
     iterations = 0
     start_time = time.time()
+
+    updates = 0
+    total_updates = np.ceil((args.num_env_steps * args.ppo_epoch * args.num_mini_batch) / (
+        args.num_env_processes * args.num_steps)) + args.ppo_epoch * args.num_mini_batch
+    alpha = np.linspace(1.0, 0.0, total_updates)
+
     while not learner.done():
 
         learner.step()
@@ -116,6 +124,8 @@ def main():
             break
 
         iterations += 1
+        learner.update_algo_parameter("lr", alpha[updates] * args.lr)
+        learner.update_algo_parameter("clip_param", alpha[updates] * args.clip_param)
 
     print("Finished!")
     sys.exit()

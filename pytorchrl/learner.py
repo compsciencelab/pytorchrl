@@ -4,6 +4,7 @@ import time
 from functools import partial
 from collections import defaultdict, deque
 from torch.utils.tensorboard import SummaryWriter
+from .utils import colorize
 
 class Learner:
     """
@@ -70,8 +71,8 @@ class Learner:
         # grad_update_lag
 
         info["scheme/fps"] = int(self.num_samples_collected / (time.time() - self.start))
-        info["scheme/collection_lag"] = info["grad_version"] - info.pop("col_version")
-        info["scheme/gradient_lag"] = info.pop("update_version") - info.pop("grad_version")
+        info["scheme/policy_lag"] = info["grad_version"] - info.pop("col_version")
+        info["scheme/gradient_asyncrony"] = info.pop("update_version") - info.pop("grad_version")
 
         # Update counters
         self.num_samples_collected += info.pop("collected_samples")
@@ -101,33 +102,33 @@ class Learner:
     def print_info(self, add_algo_info=True, add_performace_info=True, add_scheme_info=False, add_debug_info=False):
         """Print relevant information about the training process"""
 
-        s = "Update {}, num samples collected {}, FPS {}".format(
-            self.update_worker.actor_version, self.num_samples_collected,
+        s = colorize("Update {}".format(self.update_worker.actor_version), color="yellow")
+        s += ", num samples collected {}, FPS {}".format(self.num_samples_collected,
             int(self.num_samples_collected / (time.time() - self.start)))
 
         if add_algo_info:
-            s += "\n algo: "
+            s += colorize("\n  algo: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "algo":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-1]
 
         if add_performace_info:
-            s += "\n performance: "
+            s += colorize("\n  performance: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "performance":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-1]
 
         if add_scheme_info:
-            s += "\n scheme: "
+            s += colorize("\n  scheme: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "scheme":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-1]
 
         if add_debug_info:
-            s += "\n debug: "
+            s += colorize("\n  debug: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "debug":
                     s += "{} {}, ".format(k.split("/")[-1], v)

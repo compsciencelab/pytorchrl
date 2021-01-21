@@ -1,6 +1,5 @@
-from baselines.common.atari_wrappers import make_atari, wrap_deepmind
+from baselines.common.atari_wrappers import make_atari
 from .wrappers import wrap_deepmind
-from ..common import FrameStack
 
 def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_stack=1):
     """
@@ -29,10 +28,8 @@ def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
     env = wrap_deepmind(
         env, episode_life=True,
         clip_rewards=True,
-        scale=False, frame_stack=1)
-
-    if frame_stack > 1:
-        env = FrameStack(env, frame_stack)
+        scale=False,
+        frame_stack=frame_stack)
 
     return env
 
@@ -63,9 +60,7 @@ def atari_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_st
     env = wrap_deepmind(
         env, episode_life=False,
         clip_rewards=False,
-        scale=False, frame_stack=1)
-
-    if frame_stack > 1:
-        env = FrameStack(env, frame_stack)
+        scale=False,
+        frame_stack=frame_stack)
 
     return env

@@ -29,13 +29,13 @@ def plot(experiment_path, save_dir="/tmp/", save_name="results", limit_steps=Non
 
         # X axis
         gap = 1
-        ax.set_xticks(np.arange(0, ((df['steps'].iloc[-1] // gap) + 1) * gap, gap))
+        # ax.set_xticks(np.arange(0, ((df['steps'].iloc[-1] // gap) + 1) * gap, gap))
         ax.set_xlabel('Num steps (M)')
         if limit_steps: plt.xlim(0, limit_steps)
 
         # Y axis
         gap = 25
-        ax.set_yticks(np.arange(((df['r'].min() // gap) - 1) * gap, ((df['r'].max() // gap) + 1) * gap, gap))
+        # ax.set_yticks(np.arange(((df['r'].min() // gap) - 1) * gap, ((df['r'].max() // gap) + 1) * gap, gap))
         ax.set_ylabel('Reward')
         ax.grid(True)
 
