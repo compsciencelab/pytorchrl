@@ -5,6 +5,8 @@ import time
 import json
 import argparse
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../..')
+
 from pytorchrl import utils
 from pytorchrl import Learner
 from pytorchrl.scheme import Scheme

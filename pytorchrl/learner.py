@@ -110,18 +110,21 @@ class Learner:
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "algo":
                     s += "{} {}, ".format(k.split("/")[-1], v)
+            s = s[:-1]
 
         if add_performace_info:
             s += "\n performance: "
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "performance":
                     s += "{} {}, ".format(k.split("/")[-1], v)
+            s = s[:-1]
 
         if add_scheme_info:
             s += "\n scheme: "
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "scheme":
                     s += "{} {}, ".format(k.split("/")[-1], v)
+            s = s[:-1]
 
         if add_debug_info:
             s += "\n debug: "
