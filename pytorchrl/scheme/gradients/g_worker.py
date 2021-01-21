@@ -243,7 +243,7 @@ class GWorker(W):
             avg_grads_t = time.time() - t
             grads = None
 
-            info.update({"time/avg_grads": avg_grads_t})
+            info.update({"debug/avg_grads": avg_grads_t})
 
         return grads, info
 
