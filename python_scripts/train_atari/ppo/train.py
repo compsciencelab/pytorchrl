@@ -105,7 +105,7 @@ def main():
     updates = 0
     total_updates = np.ceil((args.num_env_steps * args.ppo_epoch * args.num_mini_batch) / (
         args.num_env_processes * args.num_steps)) + args.ppo_epoch * args.num_mini_batch
-    alpha = np.linspace(1.0, 0.0, total_updates)
+    alpha = np.linspace(1.0, 0.0, int(total_updates))
 
     while not learner.done():
 

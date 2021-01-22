@@ -1,4 +1,5 @@
 import os
+import sys
 import ray
 import time
 from functools import partial
@@ -92,7 +93,10 @@ class Learner:
             True if training has reached the target number of steps.
         """
         flag = self.num_samples_collected >= self.target_steps
-        if flag: self.update_worker.stop()
+        if flag:
+            self.update_worker.stop()
+            print(colorize("Training finished!", color="green", bold=True))
+            sys.exit()
         return flag
 
     def get_metrics(self):
@@ -111,21 +115,21 @@ class Learner:
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "algo":
                     s += "{} {}, ".format(k.split("/")[-1], v)
-            s = s[:-1]
+            s = s[:-2]
 
         if add_performace_info:
             s += colorize("\n  performance: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "performance":
-                    s += "{} {}, ".format(k.split("/")[-1], v)
-            s = s[:-1]
+                    s += "{} {:2f}, ".format(k.split("/")[-1], v)
+            s = s[:-2]
 
         if add_scheme_info:
             s += colorize("\n  scheme: ", color="green")
             for k, v in self.get_metrics().items():
                 if k.split("/")[0] == "scheme":
                     s += "{} {}, ".format(k.split("/")[-1], v)
-            s = s[:-1]
+            s = s[:-2]
 
         if add_debug_info:
             s += colorize("\n  debug: ", color="green")

@@ -1,4 +1,5 @@
 import os
+import sys
 import ray
 import time
 import torch
@@ -6,8 +7,6 @@ import threading
 from shutil import copy2
 from copy import deepcopy
 from six.moves import queue
-from functools import partial
-from collections import defaultdict, deque
 
 from ..base.worker import Worker as W
 from ..utils import ray_get_and_free, broadcast_message
@@ -382,9 +381,8 @@ class CollectorThread(threading.Thread):
         self.remote_workers = remote_workers
         self.num_workers = len(self.remote_workers)
 
-        # Counters and metrics
+        # Counters
         self.num_sent_since_broadcast = 0
-        self.metrics = defaultdict(partial(deque, maxlen=100))
 
         if col_execution == "centralised" and col_communication == "synchronous":
             pass
@@ -411,6 +409,7 @@ class CollectorThread(threading.Thread):
             self.num_sent_since_broadcast += 1
             if self.should_broadcast():
                 self.broadcast_new_weights()
+        sys.exit()
 
     def step(self):
         """

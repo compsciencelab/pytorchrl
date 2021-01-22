@@ -254,6 +254,7 @@ class UpdaterThread(threading.Thread):
     def run(self):
         while not self.stopped:
             self.step()
+        sys.exit()
 
     def step(self):
         """
@@ -283,13 +284,13 @@ class UpdaterThread(threading.Thread):
             pending_tasks = [e.get_data.remote() for e in self.remote_workers]
 
             # Keep checking how many workers have finished until percent% are ready
-            samples_ready = []
-            while len(samples_ready) < (self.num_workers * self.fraction_workers):
-                samples_ready, samples_not_ready = ray.wait(pending_tasks,
-                  num_returns=len(pending_tasks), timeout=0.5)
-
-            # Send stop message to the workers that have sync collection
-            broadcast_message("sync", b"stop")
+            if self.fraction_workers < 1.0:
+                samples_ready = []
+                while len(samples_ready) < (self.num_workers * self.fraction_workers):
+                    samples_ready, samples_not_ready = ray.wait(pending_tasks,
+                      num_returns=len(pending_tasks), timeout=0.005)
+                # Send stop message to the workers that have sync collection
+                broadcast_message("sync", b"stop")
 
             # Start gradient computation in all workers
             pending_tasks = ray.get([e.get_grads.remote(

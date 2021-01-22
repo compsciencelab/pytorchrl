@@ -212,12 +212,11 @@ class CWorker(W):
             # Handle end of episode
             self.acc_reward += reward
             ended_eps = self.acc_reward[done == 1.0].tolist()
-            if len(ended_eps) > 0: self.train_perf.extend(np.mean(ended_eps))
+            if len(ended_eps) > 0: self.train_perf.append(np.mean(ended_eps))
             self.acc_reward[done == 1.0] = 0.0
 
             # Prepare transition dict
-            transition = {"obs": self.obs, "rhs": rhs, "act": act,
-                          "rew": reward, "obs2": obs2, "done": done}
+            transition = {"obs": self.obs, "rhs": rhs, "act": act, "rew": reward, "obs2": obs2, "done": done}
             transition.update(algo_data)
 
             # Store transition in buffer
