@@ -165,7 +165,7 @@ class UpdaterThread(threading.Thread):
 
     Parameters
     ----------
-    output_queue : queue.Queue
+    outqueue : queue.Queue
         Queue to store the info dicts resulting from the model update operation.
     local_worker : GWorker
         Local GWorker that acts as a parameter server.

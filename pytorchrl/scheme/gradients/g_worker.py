@@ -341,7 +341,7 @@ class CollectorThread(threading.Thread):
     ----------
     stopped : bool
         Whether or not the thread in running.
-    inqueue : queue.Queue
+    queue : queue.Queue
         Queue to store the data dicts received from data collection workers.
     index_worker : int
         Index assigned to this worker.
@@ -367,6 +367,7 @@ class CollectorThread(threading.Thread):
                  col_execution="parallelised",
                  broadcast_interval=1):
 
+        self.index_worker = index_worker
         threading.Thread.__init__(self)
 
         self.stopped = False
@@ -453,21 +454,29 @@ class CollectorThread(threading.Thread):
 
         elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
 
+            print("STEP1 worker {}".format(self.index_worker), flush=True)
             # Wait for first worker to finish
             assert len(list(self.pending_tasks.keys())) == len(self.remote_workers)
+
+            print("STEP2 worker {}".format(self.index_worker), flush=True)
             wait_results = ray.wait(list(self.pending_tasks.keys()))
             future = wait_results[0][0]
             w = self.pending_tasks.pop(future)
 
+            print("STEP3 worker {}".format(self.index_worker), flush=True)
             while self.queue.qsize() > max_queue_size:
                 time.sleep(0.5)
 
+            print("STEP4 worker {}".format(self.index_worker), flush=True)
             # Retrieve rollouts and add them to queue
             self.queue.put(ray_get_and_free(future))
 
+            print("STEP5 worker {}".format(self.index_worker), flush=True)
             # Schedule a new collection task
             future = w.collect_data.remote()
             self.pending_tasks[future] = w
+
+            print("STEP6 worker {}".format(self.index_worker), flush=True)
 
     def should_broadcast(self):
         """Returns whether broadcast() should be called to update weights."""

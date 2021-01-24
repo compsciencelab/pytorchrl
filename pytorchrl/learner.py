@@ -68,9 +68,7 @@ class Learner:
         # Update step
         info = self.update_worker.step()
 
-        # info.update({"scheme/metrics/col_grad_lag": self.ac_version - self.col_info["ac_version"]})
         # grad_update_lag
-
         info["scheme/fps"] = int(self.num_samples_collected / (time.time() - self.start))
         info["scheme/policy_lag"] = info["grad_version"] - info.pop("col_version")
         info["scheme/gradient_asyncrony"] = info.pop("update_version") - info.pop("grad_version")

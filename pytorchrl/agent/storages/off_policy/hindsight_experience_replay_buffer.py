@@ -121,7 +121,7 @@ class HindsightExperienceReplayBuffer:
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
-        if self.size == 0: # data tensors lazy initialization
+        if self.size == 0 and self.data["obs"] is None: # data tensors lazy initialization
             self.init_tensors(sample)
 
         # Add current observation
