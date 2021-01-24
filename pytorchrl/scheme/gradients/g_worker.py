@@ -3,14 +3,16 @@ import sys
 import ray
 import time
 import torch
+import queue
 import threading
 from shutil import copy2
 from copy import deepcopy
-from six.moves import queue
 
 from ..base.worker import Worker as W
 from ..utils import ray_get_and_free, broadcast_message
 
+# Puts a capo on the allowed policy lag
+max_queue_size = 100
 
 class GWorker(W):
     """
@@ -78,6 +80,7 @@ class GWorker(W):
                  initial_weights=None,
                  device=None):
 
+        self.index_worker = index_worker
         super(GWorker, self).__init__(index_worker)
 
         # Define counters and other attributes
@@ -109,22 +112,21 @@ class GWorker(W):
         else:
             self.storage = self.local_worker.storage
 
-        # Queue - maxsize puts a cap on the allowed policy lag
-        self.inqueue = queue.Queue(maxsize=100)
+        if len(self.remote_workers) > 0 or \
+                (len(self.remote_workers) == 0 and
+                        self.local_worker.envs_train is not None):
+            # Create CollectorThread
+            self.collector = CollectorThread(
+                index_worker=index_worker,
+                local_worker=self.local_worker,
+                remote_workers=self.remote_workers,
+                col_communication=col_communication,
+                col_fraction_workers=col_fraction_workers,
+                col_execution=col_execution,
+                broadcast_interval=1)
 
-        # Create CollectorThread
-        self.collector = CollectorThread(
-            input_queue=self.inqueue,
-            index_worker=index_worker,
-            local_worker=self.local_worker,
-            remote_workers=self.remote_workers,
-            col_communication=col_communication,
-            col_fraction_workers=col_fraction_workers,
-            col_execution=col_execution,
-            broadcast_interval=1)
-
-        # Print worker information
-        self.print_worker_info()
+            # Print worker information
+            self.print_worker_info()
 
     @property
     def actor_version(self):
@@ -133,7 +135,7 @@ class GWorker(W):
 
     def step(self, distribute_gradients=False):
         """
-        Pulls data from `self.inqueue`, then perform a gradient computation step.
+        Pulls data from `self.collector.queue`, then perform a gradient computation step.
 
         Parameters
         ----------
@@ -154,7 +156,7 @@ class GWorker(W):
         return grads, info
 
     def get_data(self):
-        """Pulls data from `self.inqueue` and prepares batches to compute gradients."""
+        """Pulls data from `self.collector.queue` and prepares batches to compute gradients."""
 
         try:  # Try pulling next batch
             self.next_batch = self.batches.__next__()
@@ -162,9 +164,7 @@ class GWorker(W):
         except Exception: # StopIteration or AttributeError, Otherwise generate more batches
 
             if self.col_communication == "synchronous": self.collector.step()
-            while self.inqueue.empty():
-                time.sleep(0.005)
-            data, self.col_info = self.inqueue.get()
+            data, self.col_info = self.collector.queue.get()
             self.storage.add_data(data)
             self.storage.before_update(self.actor, self.algo)
             self.batches = self.storage.generate_batches(
@@ -305,6 +305,7 @@ class GWorker(W):
     def stop(self):
         """Stop collecting data."""
         self.collector.stopped = True
+        self.collector.join()
         for e in self.collector.remote_workers:
             e.terminate_worker.remote()
 
@@ -358,7 +359,6 @@ class CollectorThread(threading.Thread):
     """
 
     def __init__(self,
-                 input_queue,
                  index_worker,
                  local_worker,
                  remote_workers,
@@ -370,7 +370,7 @@ class CollectorThread(threading.Thread):
         threading.Thread.__init__(self)
 
         self.stopped = False
-        self.inqueue = input_queue
+        self.queue = queue.SimpleQueue()
         self.index_worker = index_worker
         self.col_execution = col_execution
         self.col_communication = col_communication
@@ -409,7 +409,6 @@ class CollectorThread(threading.Thread):
             self.num_sent_since_broadcast += 1
             if self.should_broadcast():
                 self.broadcast_new_weights()
-        sys.exit()
 
     def step(self):
         """
@@ -419,17 +418,14 @@ class CollectorThread(threading.Thread):
         if self.col_execution == "centralised" and self.col_communication == "synchronous":
 
             rollouts = self.local_worker.collect_data(listen_to=["sync"], data_to_cpu=False)
-
-            while self.inqueue.full():
-                time.sleep(0.005)
-            self.inqueue.put(rollouts)
+            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
+            self.queue.put(rollouts)
 
         elif self.col_execution == "centralised" and self.col_communication == "asynchronous":
-            rollouts = self.local_worker.collect_data(data_to_cpu=False)
 
-            while self.inqueue.full():
-                time.sleep(0.005)
-            self.inqueue.put(rollouts)
+            rollouts = self.local_worker.collect_data(data_to_cpu=False)
+            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
+            self.queue.put(rollouts)
 
         elif self.col_execution == "parallelised" and self.col_communication == "synchronous":
 
@@ -440,21 +436,20 @@ class CollectorThread(threading.Thread):
             pending_samples = [e.collect_data.remote(
                 listen_to=["sync", worker_key]) for e in self.remote_workers]
 
-            # Keep checking how many workers have finished until percent% are ready
-            samples_ready = []
-            while len(samples_ready) < (self.num_workers * self.fraction_workers):
-                samples_ready, samples_not_ready = ray.wait(
-                    pending_samples, num_returns=len(pending_samples), timeout=0.5)
+            if self.fraction_workers < 1.0:
+                # Keep checking how many workers have finished until percent% are ready
+                samples_ready = []
+                while len(samples_ready) < (self.num_workers * self.fraction_workers):
+                    samples_ready, samples_not_ready = ray.wait(
+                        pending_samples, num_returns=len(pending_samples), timeout=0.001)
 
-            # Send stop message to the workers
-            broadcast_message(worker_key, b"stop")
+                # Send stop message to the workers
+                broadcast_message(worker_key, b"stop")
 
             # Compute model updates
             for r in pending_samples:
-                while self.inqueue.full():
-                    time.sleep(0.005)
-                self.inqueue.put(ray_get_and_free(r))
-
+                while self.queue.qsize() > max_queue_size: time.sleep(0.5)
+                self.queue.put(ray_get_and_free(r))
 
         elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
 
@@ -464,16 +459,11 @@ class CollectorThread(threading.Thread):
             future = wait_results[0][0]
             w = self.pending_tasks.pop(future)
 
-            while self.inqueue.full():
-                time.sleep(0.005)
+            while self.queue.qsize() > max_queue_size:
+                time.sleep(0.5)
 
             # Retrieve rollouts and add them to queue
-            self.inqueue.put(ray_get_and_free(future))
-
-            # Then, update counter and broadcast weights to worker if necessary
-            self.num_sent_since_broadcast += 1
-            if self.should_broadcast():
-                self.broadcast_new_weights()
+            self.queue.put(ray_get_and_free(future))
 
             # Schedule a new collection task
             future = w.collect_data.remote()

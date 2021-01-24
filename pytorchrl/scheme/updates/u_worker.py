@@ -2,8 +2,8 @@ import sys
 import ray
 import time
 import torch
+import queue
 import threading
-from six.moves import queue
 from collections import defaultdict
 from ..base.worker import Worker as W
 from ..utils import ray_get_and_free, average_gradients, broadcast_message
@@ -50,12 +50,10 @@ class UWorker(W):
         grad_workers remote data collection workers.
     num_workers : int
         Number of gradient remote workers.
-    outqueue : queue.Queue
-        Output queue where information from update operations is placed.
     updater : UpdaterThread
         Class handling updates, calling grad_workers to get gradients,
         performing update steps and placing update information into the
-        ouput queue `outqueue`.
+        output queue `outqueue`.
     """
 
     def __init__(self,
@@ -90,12 +88,8 @@ class UWorker(W):
                 address, i, len(self.remote_workers), "nccl")
                      for i, worker in enumerate(self.remote_workers)])
 
-        # Queue
-        self.outqueue = queue.Queue()
-
         # Create UpdaterThread
         self.updater = UpdaterThread(
-            output_queue=self.outqueue,
             local_worker=self.local_worker,
             remote_workers=self.remote_workers,
             col_fraction_workers=col_fraction_workers,
@@ -114,15 +108,10 @@ class UWorker(W):
         return version
 
     def step(self):
-        """Pulls information from update operations from  `self.outqueue`."""
+        """Pulls information from update operations from  `self.updater.outqueue`."""
 
-        if self.grad_communication == "synchronous":
-            self.updater.step()
-
-        while self.outqueue.empty():
-            time.sleep(0.00001)
-        new_info = self.outqueue.get()
-
+        if self.grad_communication == "synchronous": self.updater.step()
+        new_info = self.updater.outqueue.get()
         return new_info
 
     def save_model(self, fname):
@@ -150,6 +139,7 @@ class UWorker(W):
     def stop(self):
         """Stop remote workers"""
         self.updater.stopped = True
+        self.updater.join()
         self.grad_workers.local_worker().stop()
         for e in self.grad_workers.remote_workers():
             e.stop.remote()
@@ -219,7 +209,6 @@ class UpdaterThread(threading.Thread):
     """
 
     def __init__(self,
-                 output_queue,
                  local_worker,
                  remote_workers,
                  update_execution,
@@ -230,7 +219,7 @@ class UpdaterThread(threading.Thread):
         threading.Thread.__init__(self)
 
         self.stopped = False
-        self.outqueue = output_queue
+        self.outqueue = queue.SimpleQueue()
         self.local_worker = local_worker
         self.remote_workers = remote_workers
         self.num_workers = len(remote_workers)
@@ -293,14 +282,15 @@ class UpdaterThread(threading.Thread):
                 broadcast_message("sync", b"stop")
 
             # Start gradient computation in all workers
-            pending_tasks = ray.get([e.get_grads.remote(
-                distribute_gradients) for e in self.remote_workers])
+            pending = {e.get_grads.remote(distribute_gradients): e for e in self.remote_workers}
 
             # Compute model updates
-            for grads in pending_tasks:
+            while pending:
 
                 # Get gradients
-                gradients, info = grads
+                out = ray.wait(list(pending.keys()))[0][0]
+                gradients, info = ray_get_and_free(out)
+                pending.pop(out)
 
                 # Update info dict
                 info["update_version"] = self.local_worker.actor_version
@@ -341,7 +331,8 @@ class UpdaterThread(threading.Thread):
                     self.pending_gradients[future] = e
 
             # Wait for first gradients ready
-            wait_results = ray.wait(list(self.pending_gradients.keys()))
+            wait_results = ray.wait(list(self.pending_gradients.keys()), timeout=60)
+
             future = wait_results[0][0]
 
             # Get gradients
