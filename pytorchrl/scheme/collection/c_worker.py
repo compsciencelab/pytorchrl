@@ -296,6 +296,21 @@ class CWorker(W):
         """
         self.algo.update_algo_parameter(parameter_name, new_parameter_value)
 
+    def update_storage_parameter(self, parameter_name, new_parameter_value):
+        """
+        If `parameter_name` is an attribute of self.storage, change its value to
+        `new_parameter_value value`.
+
+        Parameters
+        ----------
+        parameter_name : str
+            Storage attribute name
+        new_parameter_value : float
+            Storage new parameter value.
+        """
+        if hasattr(self.storage, parameter_name):
+            setattr(self.storage, parameter_name, new_parameter_value)
+
     def replace_core_component(self, component_name, new_component_factory):
         """
         If `component_name` is an attribute of c_worker, replaces it with

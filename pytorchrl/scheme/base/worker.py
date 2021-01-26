@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 default_remote_config = {
     "num_cpus": 1,
     "num_gpus": 0.2,
+    "memory": 5 * 1024 ** 3,
+    "object_store_memory": 2 * 1024 ** 3
 }
 
 

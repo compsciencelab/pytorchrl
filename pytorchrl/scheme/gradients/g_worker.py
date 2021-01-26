@@ -102,13 +102,20 @@ class GWorker(W):
         # Get Algorithm instance
         self.algo = self.local_worker.algo
 
-        # Get storage instance
+        # Get storage instance.
+        # If async comm, collection storage sizes reduced to minimum necessary
         if col_communication == "asynchronous" and self.local_worker.envs_train is not None:
-            self.storage = deepcopy(self.local_worker.storage)
             size1 = self.local_worker.storage.size
             size2 = self.local_worker.algo.update_every
             if size2 == None: size2 = float("Inf")
-            self.local_worker.storage.size = min(size1, size2)
+            new_size = min(size1, size2)
+            if self.local_worker.envs_train is not None:
+                self.storage = deepcopy(self.local_worker.storage)
+                self.local_worker.storage.size = new_size
+            else:
+                self.storage = self.local_worker.storage
+                for e in self.remote_workers:
+                    e.update_storage_parameter.remote("size", new_size)
         else:
             self.storage = self.local_worker.storage
 
@@ -454,29 +461,20 @@ class CollectorThread(threading.Thread):
 
         elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
 
-            print("STEP1 worker {}".format(self.index_worker), flush=True)
             # Wait for first worker to finish
             assert len(list(self.pending_tasks.keys())) == len(self.remote_workers)
 
-            print("STEP2 worker {}".format(self.index_worker), flush=True)
             wait_results = ray.wait(list(self.pending_tasks.keys()))
             future = wait_results[0][0]
             w = self.pending_tasks.pop(future)
 
-            print("STEP3 worker {}".format(self.index_worker), flush=True)
-            while self.queue.qsize() > max_queue_size:
-                time.sleep(0.5)
-
-            print("STEP4 worker {}".format(self.index_worker), flush=True)
             # Retrieve rollouts and add them to queue
+            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(ray_get_and_free(future))
 
-            print("STEP5 worker {}".format(self.index_worker), flush=True)
             # Schedule a new collection task
             future = w.collect_data.remote()
             self.pending_tasks[future] = w
-
-            print("STEP6 worker {}".format(self.index_worker), flush=True)
 
     def should_broadcast(self):
         """Returns whether broadcast() should be called to update weights."""
