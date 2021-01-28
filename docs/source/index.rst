@@ -14,7 +14,7 @@ PyTorchRL Documentation
    :caption: PyTorchRL API:
 
    package/agent/agent
-   package/schemes/schemes
+   package/scheme/scheme
    package/learner
 
 .. toctree::
