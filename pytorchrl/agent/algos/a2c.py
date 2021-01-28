@@ -83,7 +83,7 @@ class A2C(Algo):
         # Number of episodes to complete when testing
         self.num_test_episodes = num_test_episodes
 
-        # ---- VPG-specific attributes ----------------------------------------
+        # ---- A2C-specific attributes ----------------------------------------
 
         self.iter = 0
         self.gamma = gamma
@@ -105,7 +105,7 @@ class A2C(Algo):
                        max_grad_norm=0.5,
                        num_test_episodes=5):
         """
-        Returns a function to create new VPG instances.
+        Returns a function to create new A2C instances.
 
         Parameters
         ----------
@@ -127,7 +127,7 @@ class A2C(Algo):
         Returns
         -------
         create_algo_instance : func
-            creates a new VPG class instance.
+            creates a new A2C class instance.
         """
 
         def create_algo_instance(device, actor):
@@ -143,7 +143,7 @@ class A2C(Algo):
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
-        VPG acting function.
+        A2C acting function.
 
         Parameters
         ----------
@@ -165,7 +165,7 @@ class A2C(Algo):
         rhs: torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
         other: dict
-            Additional VPG predictions, value score and action log probability.
+            Additional A2C predictions, value score and action log probability.
         """
 
         with torch.no_grad():
@@ -179,19 +179,19 @@ class A2C(Algo):
 
     def compute_loss(self, data):
         """
-        Calculate VPG loss
+        Calculate A2C loss
 
         Parameters
         ----------
         data: dict
-            Data batch dict containing all required tensors to compute VPG loss.
+            Data batch dict containing all required tensors to compute A2C loss.
         rnn_hs : torch.tensor
             Policy recurrent hidden state obtained with the current ActorCritic version.
 
         Returns
         -------
         loss : torch.tensor
-            VPG loss.
+            A2C loss.
         """
 
         o, rhs, a, old_v = data["obs"], data["rhs"], data["act"], data["val"]
@@ -215,7 +215,7 @@ class A2C(Algo):
         Parameters
         ----------
         data: dict
-            data batch containing all required tensors to compute VPG loss.
+            data batch containing all required tensors to compute A2C loss.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.
 
@@ -224,10 +224,10 @@ class A2C(Algo):
         grads: list of tensors
             List of actor_critic gradients.
         info: dict
-            Dict containing current VPG iteration information.
+            Dict containing current A2C iteration information.
         """
 
-        # Compute VPG losses
+        # Compute A2C losses
         action_loss, value_loss = self.compute_loss(batch)
 
         # Compute policy gradients
