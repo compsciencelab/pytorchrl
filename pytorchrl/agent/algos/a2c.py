@@ -5,9 +5,9 @@ import torch.optim as optim
 from .base import Algo
 
 
-class VPG(Algo):
+class A2C(Algo):
     """
-    Algorithm class to execute VPG, from Sutton et al. 2000 (https://arxiv.org/abs/1706.06643).
+    Algorithm class to execute A2C, from Mnih et al. 2016 (https://arxiv.org/pdf/1602.01783.pdf).
 
     Parameters
     ----------
