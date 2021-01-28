@@ -1,10 +1,10 @@
 On-policy
 =========
 
-Vanilla Policy Gradient (VPG)
+Advantage Actor Critic (A2C)
 -----------------------------
 
-.. automodule:: pytorchrl.agent.algos.vpg
+.. automodule:: pytorchrl.agent.algos.a2c
    :members:
    :undoc-members:
    :show-inheritance:
