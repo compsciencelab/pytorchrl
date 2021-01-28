@@ -2,7 +2,7 @@ On-policy
 =========
 
 Advantage Actor Critic (A2C)
------------------------------
+----------------------------
 
 .. automodule:: pytorchrl.agent.algos.a2c
    :members:

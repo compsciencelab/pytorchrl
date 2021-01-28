@@ -311,9 +311,11 @@ class GWorker(W):
 
     def stop(self):
         """Stop collecting data."""
-        self.collector.stopped = True
-        self.collector.join()
-        for e in self.collector.remote_workers:
+
+        if hasattr(self, "collector"):
+            self.collector.stopped = True
+            self.collector.join()
+        for e in self.remote_workers:
             e.terminate_worker.remote()
 
 

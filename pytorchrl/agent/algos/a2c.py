@@ -46,7 +46,7 @@ class A2C(Algo):
         Gradient clipping parameter.
     pi_optimizer : torch.optimizer
         Policy network optimizer
-    pi_optimizer : torch.optimizer
+    v_optimizer : torch.optimizer
         Value network optimizer
     """
 

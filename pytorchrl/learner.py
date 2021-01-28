@@ -94,7 +94,8 @@ class Learner:
         if flag:
             self.update_worker.stop()
             print(colorize("\nTraining finished!", color="green", bold=True))
-            ray.shutdown()
+            time.sleep(10)
+            # ray.shutdown()
             sys.exit()
         return flag
 
