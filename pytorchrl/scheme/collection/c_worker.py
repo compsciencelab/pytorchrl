@@ -123,8 +123,7 @@ class CWorker(W):
             self.obs, self.rhs, self.done = self.actor.policy_initial_states(
                 self.envs_train.reset())
 
-            # Define train performance tracking variables
-            self.train_perf = deque(maxlen=1)
+            # Define reward tracking variable
             self.acc_reward = torch.zeros_like(self.done)
 
             # Collect initial samples
@@ -164,8 +163,8 @@ class CWorker(W):
         info = {}
         info.update({"debug/collect_time": col_time})
         info.update({"col_version": self.actor_version})
-        info.update({"performance/train_reward": train_perf})
         info.update({"collected_samples": self.samples_collected})
+        if train_perf: info.update({"performance/train_reward": train_perf})
         self.samples_collected = 0
 
         # Evaluate current network on test environments
@@ -197,6 +196,7 @@ class CWorker(W):
             Average accumulated reward over recent train episodes.
         """
         t = time.time()
+        train_perf = []
         num_steps = num_steps if num_steps is not None else int(self.update_every)
         min_steps = int(num_steps * self.fraction_samples)
 
@@ -212,7 +212,7 @@ class CWorker(W):
             # Handle end of episode
             self.acc_reward += reward
             ended_eps = self.acc_reward[done == 1.0].tolist()
-            if len(ended_eps) > 0: self.train_perf.append(np.mean(ended_eps))
+            if len(ended_eps) > 0: train_perf.append(np.mean(ended_eps))
             self.acc_reward[done == 1.0] = 0.0
 
             # Prepare transition dict
@@ -234,8 +234,7 @@ class CWorker(W):
                     break
 
         col_time = time.time() - t
-        train_perf = 0 if len(self.train_perf) == 0 else sum(
-            self.train_perf) / len(self.train_perf)
+        train_perf = None if len(train_perf) == 0 else np.mean(train_perf)
 
         return col_time, train_perf
 
