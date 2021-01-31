@@ -1,5 +1,4 @@
 ray
 ray[debug]
 pybullet
-Tensorflow # just for logging
 TensorBoard # just for logging
