@@ -14,6 +14,12 @@ The Environment
 We define an ``env_factory`` function with 5  wrappers.
 
 .. code-block:: python
+    import os
+    import obstacle_tower_env
+    from obstacle_tower_env import ObstacleTowerEnv
+    from pytorchrl.envs.common import FrameStack, FrameSkip
+    from pytorchrl.envs.obstacle_tower_unity3d_challenge.wrappers import (
+    ReducedActionEnv, BasicObstacleEnv, RewardShapeObstacleEnv)
 
     def obstacle_train_env_factory(
             index_worker=0, rank=0, frame_skip=0, frame_stack=1, min_floor=0,
