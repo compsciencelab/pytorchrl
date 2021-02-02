@@ -96,14 +96,14 @@ We define an RL On-Policy Agent, using the Proximal Policy Optimization (PPO) :f
         use_clipped_value_loss=True, gamma=0.99)
 
     # Define RL Policy
-    actor_factory = OnPolicyActorCritic.create_factory(
+    actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor("Fixup"),
         recurrent_policy=args.recurrent_policy,
         restart_model=args.restart_model)
 
     # Define rollouts storage
-    storage_factory = OnPolicyGAEBuffer.create_factory(size=800, gae_lambda=0.95)
+    storage_factory = GAEBuffer.create_factory(size=800, gae_lambda=0.95)
 
 The Scheme
 ----------
