@@ -147,11 +147,13 @@ We decay the starting learning rate value of 4e-4  by a factor of 0.25 both afte
 
 .. code-block:: python
 
+    from pytorchrl import Learner
 
     # 7. Define learner
     learner = Learner(scheme, target_steps=600000000, log_dir='/tmp/obstacle_tower_agent')
 
     # 8. Define train loop
+    iterations = 0
     num_lr_updates = 0
     start_time = time.time()
     while not learner.done():
@@ -159,16 +161,17 @@ We decay the starting learning rate value of 4e-4  by a factor of 0.25 both afte
         learner.step()
         learner.print_info()
 
-        if iterations % args.save_interval == 0:
+        if iterations % 100 == 0:
             save_name = learner.save_model()
 
-        if Learner.num_samples_collected > 100000000 and num_lr_updates=0:
-            Learner.update_algo_parameter("lr", 4e-4 * 0.25)
+        if learner.num_samples_collected > 100000000 and num_lr_updates == 0:
+            learner.update_algo_parameter("lr", 4e-4 * 0.25)
             num_lr_updates += 1
-        elif Learner.num_samples_collected > 400000000 and num_lr_updates=1:
-            Learner.update_algo_parameter("lr", 4e-4 * 0.25 ** 2)
+        elif learner.num_samples_collected > 400000000 and num_lr_updates == 1:
+            learner.update_algo_parameter("lr", 4e-4 * 0.25 ** 2)
             num_lr_updates += 1
 
+        iterations += 1
 
 Results
 -------
