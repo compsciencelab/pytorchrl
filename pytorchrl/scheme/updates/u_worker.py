@@ -31,8 +31,9 @@ class UWorker(W):
         Execution patterns for gradients computation.
     grad_communication : str
         Communication coordination pattern for gradient computation workers.
-    update_execution : str
-        Execution patterns for update steps.
+    decentralized_update_execution : bool
+        Whether the gradients are applied in the update workers (central update)
+        or broadcasted to all gradient workers for a decentralized update.
     local_device : str
         "cpu" or specific GPU "cuda:number`" to use for computation.
 
@@ -62,7 +63,7 @@ class UWorker(W):
                  col_fraction_workers=1.0,
                  grad_execution="parallelised",
                  grad_communication="synchronous",
-                 update_execution="centralised",
+                 decentralized_update_execution=False,
                  local_device=None):
 
         super(UWorker, self).__init__(index_worker)
@@ -79,7 +80,7 @@ class UWorker(W):
         self.num_workers = len(self.grad_workers.remote_workers())
 
         # Create CWorkerSet instance
-        if update_execution == "parallelised":
+        if decentralized_update_execution:
             # Setup the distributed processes for gradient averaging
             ip = ray.get(self.remote_workers[0].get_node_ip.remote())
             port = ray.get(self.remote_workers[0].find_free_port.remote())
@@ -95,7 +96,7 @@ class UWorker(W):
             col_fraction_workers=col_fraction_workers,
             grad_communication=grad_communication,
             grad_execution=grad_execution,
-            update_execution=update_execution,
+            decentralized_update_execution=decentralized_update_execution,
         )
 
         # Print worker information
@@ -212,7 +213,7 @@ class UpdaterThread(threading.Thread):
     def __init__(self,
                  local_worker,
                  remote_workers,
-                 update_execution,
+                 decentralized_update_execution,
                  col_fraction_workers=1.0,
                  grad_execution="distributed",
                  grad_communication="synchronous"):
@@ -224,7 +225,7 @@ class UpdaterThread(threading.Thread):
         self.local_worker = local_worker
         self.remote_workers = remote_workers
         self.num_workers = len(remote_workers)
-        self.update_execution = update_execution
+        self.decentralized_update_execution = decentralized_update_execution
         self.grad_execution = grad_execution
         self.fraction_workers = col_fraction_workers
         self.grad_communication = grad_communication
@@ -252,15 +253,13 @@ class UpdaterThread(threading.Thread):
         output queue.
         """
 
-        distribute_gradients = self.update_execution == "parallelised"
-
         if self.grad_execution == "centralised" and self.grad_communication == "synchronous":
-            _, info = self.local_worker.step(distribute_gradients)
+            _, info = self.local_worker.step(self.decentralized_update_execution)
             info["update_version"] = self.local_worker.actor_version
             self.local_worker.apply_gradients()
 
         elif self.grad_execution == "centralised" and self.grad_communication == "asynchronous":
-            _, info = self.local_worker.step(distribute_gradients)
+            _, info = self.local_worker.step(self.decentralized_update_execution)
             info["update_version"] = self.local_worker.actor_version
             self.local_worker.apply_gradients()
 
@@ -283,7 +282,8 @@ class UpdaterThread(threading.Thread):
                 broadcast_message("sync", b"stop")
 
             # Start gradient computation in all workers
-            pending = {e.get_grads.remote(distribute_gradients): e for e in self.remote_workers}
+            pending = {e.get_grads.remote(
+                self.decentralized_update_execution): e for e in self.remote_workers}
 
             # Compute model updates
             while pending:
@@ -306,7 +306,7 @@ class UpdaterThread(threading.Thread):
             info = {k: v / self.num_workers if k != "collected_samples" else
             v for k, v in step_metrics.items()}
 
-            if self.update_execution == "centralised":
+            if not self.decentralized_update_execution:
                 # Average and apply gradients
                 t = time.time()
                 self.local_worker.apply_gradients(average_gradients(to_average))

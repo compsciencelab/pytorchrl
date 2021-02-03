@@ -14,6 +14,7 @@ The Environment
 We define an ``env_factory`` function with 5  wrappers.
 
 .. code-block:: python
+
     import os
     import obstacle_tower_env
     from obstacle_tower_env import ObstacleTowerEnv
@@ -133,15 +134,15 @@ We train on 2 machines with 32 CPUs and 3 GPUs model GeForce RTX 2080 Ti each. W
     # add collection specs
     params.update({
         "num_col_workers": 4,
-        "col_communication": "asynchronous",
+        "col_workers_communication": "asynchronous",
         "col_worker_resources": {"num_cpus": 1, "num_gpus": 0.5, "object_store_memory": 2.5 * 1024 ** 3, "memory": 2.5 * 1024 ** 3},
     })
 
     # add gradient specs
     params.update({
         "num_grad_workers": 2,
-        "grad_communication": "synchronous",
-        "grad_worker_resources": {"num_cpus": 32 - 4, "num_gpus": 1.0, "object_store_memory": 2.5 * 1024 ** 3, "memory": 2.5 * 1024 ** 3},
+        "grad_workers_communication": "synchronous",
+        "grad_workers_resources": {"num_cpus": 32 - 4, "num_gpus": 1.0, "object_store_memory": 2.5 * 1024 ** 3, "memory": 2.5 * 1024 ** 3},
     })
 
     scheme = Scheme(**params)

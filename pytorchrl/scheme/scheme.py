@@ -20,25 +20,26 @@ class Scheme:
         A function to create train environments.
     test_envs_factory : func
         A function to create test environments.
-    col_remote_workers : int
+    num_col_workers : int
         Number of data collection workers per gradient worker.
-    col_communication : str
+    col_workers_communication : str
         Communication coordination pattern for data collection.
-    col_worker_resources : dict
+    col_workers_resources : dict
         Ray resource specs for collection remote workers.
-    sync_col_specs : dict
+    col_preemption_thresholds : dict
         specs about minimum fraction_samples [0 - 1.0] and minimum
         fraction_workers [0 - 1.0] required in synchronous data collection.
-    grad_remote_workers : int
+    num_grad_workers : int
         Number of gradient workers.
-    grad_communication : str
+    grad_workers_communication : str
         Communication coordination pattern for gradient computation workers.
-    grad_worker_resources : dict
+    grad_workers_resources : dict
         Ray resource specs for gradient remote workers.
     local_device : str
         "cpu" or specific GPU "cuda:`number`" to use for computation.
-    update_execution : str
-        Execution patterns for update steps.
+    decentralized_update_execution : bool
+        Whether the gradients are applied in the update workers (central update)
+        or broadcasted to all gradient workers for a decentralized update.
     """
     def __init__(self,
 
@@ -51,20 +52,24 @@ class Scheme:
 
                  # collection
                  num_col_workers=1,
-                 col_communication="synchronous",
-                 col_worker_resources={"num_cpus": 1, "num_gpus": 0.2},
-                 sync_col_specs={"fraction_samples": 1.0, "fraction_workers": 1.0},
+                 col_workers_communication="synchronous",
+                 col_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
+                 col_preemption_thresholds={"fraction_samples": 1.0, "fraction_workers": 1.0},
 
                  # gradients
                  num_grad_workers=1,
-                 grad_communication="synchronous",
-                 grad_worker_resources={"num_cpus": 1, "num_gpus": 0.2},
+                 grad_workers_communication="synchronous",
+                 grad_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
 
                  # update
                  local_device=None,
-                 update_execution="centralised", # OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=8 main.py
-
+                 decentralized_update_execution=False, # OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=8 main.py
                  ):
+
+        assert col_workers_communication in ("synchronous", "asynchronous"),\
+            "col_workers_communication can only be `synchronous` or `asynchronous`"
+        assert grad_workers_communication in ("synchronous", "asynchronous"),\
+            "grad_workers_communication can only be `synchronous` or `asynchronous`"
 
         col_execution="parallelised" if num_col_workers > 1 else "centralised"
         grad_execution="parallelised" if num_grad_workers > 1 else "centralised"
@@ -80,8 +85,8 @@ class Scheme:
 
             # col specs
             num_workers=num_col_workers - 1 if num_col_workers == 1 else num_col_workers,
-            col_worker_resources=col_worker_resources,
-            col_fraction_samples=sync_col_specs.get("fraction_samples"),
+            col_worker_resources=col_workers_resources,
+            col_fraction_samples=col_preemption_thresholds.get("fraction_samples"),
 
             # grad specs
             total_parent_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
@@ -91,28 +96,28 @@ class Scheme:
 
             # col specs
             col_execution=col_execution,
-            col_communication=col_communication,
+            col_communication=col_workers_communication,
             col_workers_factory=col_workers_factory,
-            col_fraction_workers=sync_col_specs.get("fraction_workers"),
+            col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
 
             # grad_specs
             num_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
-            grad_worker_resources=grad_worker_resources,
+            grad_worker_resources=grad_workers_resources,
         )
 
         self._update_worker = UWorker(
 
            # col specs
-            col_fraction_workers=sync_col_specs.get("fraction_workers"),
+            col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
 
             # grad specs
             grad_execution=grad_execution,
-            grad_communication=grad_communication,
+            grad_communication=grad_workers_communication,
             grad_workers_factory=grad_workers_factory,
 
             # update specs
             local_device=local_device,
-            update_execution=update_execution,
+            decentralized_update_execution=decentralized_update_execution,
         )
 
     def update_worker(self):

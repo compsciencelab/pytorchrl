@@ -72,16 +72,15 @@ def main():
     # add collection specs
     params.update({
         "num_col_workers": args.num_col_workers,
-        "col_communication": args.com_col_workers,
-        "col_worker_resources": {"num_cpus": 1, "num_gpus": 0.5},
-        "sync_col_specs": {"fraction_samples": 1.0, "fraction_workers": 1.0}
+        "col_workers_communication": args.com_col_workers,
+        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
     })
 
     # add gradient specs
     params.update({
         "num_grad_workers": args.num_grad_workers,
-        "grad_communication": args.com_grad_workers,
-        "grad_worker_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+        "grad_workers_communication": args.com_grad_workers,
+        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
     })
 
     scheme = Scheme(**params)
