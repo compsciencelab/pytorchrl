@@ -130,7 +130,7 @@ class UWorker(W):
             Path to saved file.
         """
 
-        if self.updater.update_execution == "centralised":
+        if not self.updater.decentralized_update_execution:
             save_name = self.local_worker.save_model(fname)
         else:
             save_name = ray.get(self.remote_workers[0].save_model.remote(fname))
@@ -173,8 +173,8 @@ class UpdaterThread(threading.Thread):
         Local GWorker that acts as a parameter server.
     remote_workers : List
         grad_workers remote data collection workers.
-    update_execution : str
-        Execution patterns for update steps.
+    decentralized_update_execution : bool
+        Whether decentralized execution pattern for update steps is enabled or not.
     col_fraction_workers : float
         Minimum fraction of samples required to stop if collection is
         synchronously coordinated and most workers have finished their
@@ -198,8 +198,8 @@ class UpdaterThread(threading.Thread):
         collection task.
     num_workers : int
         Number of gradient remote workers.
-    update_execution : str
-        Execution patterns for update steps.
+    decentralized_update_execution : bool
+        Whether decentralized execution pattern for update steps is enabled or not.
     col_fraction_workers : float
         Minimum fraction of samples required to stop if collection is
         synchronously coordinated and most workers have finished their
