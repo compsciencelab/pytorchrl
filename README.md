@@ -19,14 +19,15 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
 PyTorchRL documentation can be found [here](https://pytorchrl.readthedocs.io/en/latest/).
 
 ### Citing PyTorchRL
+Here is the [paper](https://arxiv.org/abs/2007.02622)
 
 ```
-@misc{pytorchrl2021,
-  author = {Albert Bou and Gianni De Fabritiis},
-  title = {PyTorchRL: A PyTorch Library for distributed Reinforcement Learning},
-  year = {2020},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/PyTorchRL/pytorchrl}},
+@misc{bou2021pytorchrl,
+      title={PyTorchRL: Modular and Distributed Reinforcement Learning in PyTorch}, 
+      author={Albert Bou and Gianni De Fabritiis},
+      year={2021},
+      eprint={2007.02622},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
