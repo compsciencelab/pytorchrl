@@ -62,7 +62,7 @@ class GAEBuffer(B):
             return cls(size, gae_lambda, device)
         return create_buffer_instance
 
-    def before_update(self, actor, algo):
+    def before_gradients(self, actor, algo):
         """
         Before updating actor policy model, compute returns and advantages.
 

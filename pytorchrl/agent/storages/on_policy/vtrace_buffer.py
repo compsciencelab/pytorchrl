@@ -34,7 +34,7 @@ class VTraceBuffer(B):
             size=size,
             device=device)
 
-    def before_update(self, actor, algo):
+    def before_gradients(self, actor, algo):
         """
         Before updating actor policy model, compute returns and advantages.
 

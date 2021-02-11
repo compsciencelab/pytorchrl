@@ -63,22 +63,33 @@ class Storage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def before_update(self, actor_critic, algo, *args):
+    def before_gradients(self, actor, algo, *args):
         """
-        Before updating actor policy model, compute returns and advantages.
+        Steps required before updating actor policy model.
 
         Parameters
         ----------
-        actor_critic : ActorCritic
-            An actor_critic class instance.
-        algo : an algorithm class
+        actor : Actor class
+            An actor class instance.
+        algo : Algo class
             An algorithm class instance.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def after_update(self, *args):
-        """After updating actor policy model, make sure self.step is at 0."""
+    def after_gradients(self, actor, algo, info, *args):
+        """
+        Steps required after updating actor policy model
+
+        Parameters
+        ----------
+        actor : Actor class
+            An actor class instance.
+        algo : Algo class
+            An algorithm class instance.
+        info : dict
+            Additional relevant info from gradient computation.
+        """
         raise NotImplementedError
 
     @abstractmethod

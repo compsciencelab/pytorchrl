@@ -173,7 +173,7 @@ class GWorker(W):
             if self.col_communication == "synchronous": self.collector.step()
             data, self.col_info = self.collector.queue.get()
             self.storage.add_data(data)
-            self.storage.before_update(self.actor, self.algo)
+            self.storage.before_gradients(self.actor, self.algo)
             self.batches = self.storage.generate_batches(
                 self.algo.num_mini_batch, self.algo.mini_batch_size,
                 self.algo.num_epochs, self.actor.is_recurrent)
@@ -198,6 +198,7 @@ class GWorker(W):
         """
 
         grads, info = self.compute_gradients(self.next_batch, distribute_gradients)
+        self.storage.after_gradients(self.actor, self.algo, self.next_batch, info)
 
         # Add extra information to info dict
         info.update(self.col_info)

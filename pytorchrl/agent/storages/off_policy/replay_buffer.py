@@ -129,21 +129,34 @@ class ReplayBuffer(S):
         self.step = (self.step + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def before_update(self, actor, algo):
+    def before_gradients(self, actor, algo):
         """
         Steps required before updating actor policy model.
 
         Parameters
         ----------
-        actor : ActorCritic
+        actor : Actor class
             An actor class instance.
-        algo : an algorithm class
+        algo : Algo class
             An algorithm class instance.
         """
         pass
 
-    def after_update(self):
-        """Steps required after updating actor policy model"""
+    def after_gradients(self, actor, algo, batch, info):
+        """
+        Steps required after updating actor policy model
+
+        Parameters
+        ----------
+        actor : Actor class
+            An actor class instance.
+        algo : Algo class
+            An algorithm class instance.
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+        """
         pass
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, recurrent_ac=False):

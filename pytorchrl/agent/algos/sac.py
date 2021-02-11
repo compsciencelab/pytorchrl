@@ -371,8 +371,9 @@ class SAC(Algo):
         loss_q1 = ((q1 - backup) ** 2).mean()
         loss_q2 = ((q2 - backup) ** 2).mean()
         loss_q = 0.5 * loss_q1 + 0.5 * loss_q2
+        errors = (torch.min(q1, q2) - backup).abs()
 
-        return loss_q1, loss_q2, loss_q
+        return loss_q1, loss_q2, loss_q, errors
 
     def compute_loss_pi(self, data):
         """
@@ -461,7 +462,7 @@ class SAC(Algo):
 
         # Compute policy and Q losses
         loss_pi, logp_pi, rhs = self.compute_loss_pi(batch)
-        loss_q1, loss_q2, loss_q = self.compute_loss_q(batch, rhs)
+        loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, rhs)
 
         # First run one gradient descent step for Q1 and Q2
         self.q_optimizer.zero_grad()
@@ -499,6 +500,7 @@ class SAC(Algo):
             "algo/loss_pi": loss_pi.detach().item(),
             "algo/loss_alpha": loss_alpha.detach().item(),
             "algo/alpha": self.alpha.detach().item(),
+            "algo/errors": errors.detach().cpu().numpy()
         }
 
         return grads, info

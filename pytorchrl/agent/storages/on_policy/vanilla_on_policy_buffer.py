@@ -119,7 +119,7 @@ class VanillaOnPolicyBuffer(S):
         self.step = (self.step + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def before_update(self, actor, algo):
+    def before_gradients(self, actor, algo):
         """
         Before updating actor policy model, compute returns and advantages.
 
@@ -141,8 +141,21 @@ class VanillaOnPolicyBuffer(S):
         self.compute_returns(algo.gamma)
         self.compute_advantages()
 
-    def after_update(self):
-        """After updating actor policy model, make sure self.step is at 0."""
+    def after_gradients(self, actor, algo, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+
+        Parameters
+        ----------
+        actor : Actor class
+            An actor class instance.
+        algo : Algo class
+            An algorithm class instance.
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+        """
         self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
         self.data["rhs"][0].copy_(self.data["rhs"][self.step - 1])
         self.data["done"][0].copy_(self.data["done"][self.step - 1])

@@ -2,6 +2,7 @@ import os
 import sys
 import ray
 import time
+import numpy as np
 from functools import partial
 from collections import defaultdict, deque
 from torch.utils.tensorboard import SummaryWriter
@@ -78,8 +79,10 @@ class Learner:
 
         # Update and log metrics
         for k, v in info.items():
-            self.metrics[k].append(v)
-            if self.writer: self.writer.add_scalar(k, v, self.num_samples_collected)
+            if np.isscalar(v):
+                self.metrics[k].append(v)
+                if self.writer: self.writer.add_scalar(
+                    k, v, self.num_samples_collected)
 
     def done(self):
         """
