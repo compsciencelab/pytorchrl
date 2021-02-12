@@ -107,7 +107,8 @@ class HindsightExperienceReplayBuffer:
                 self.data[k][self.step:self.step + len] = v
             else:
                 self.data[k][self.step:self.max_size] = v[0:self.max_size - self.step]
-                self.data[k][0:len - self.max_size - self.step] = v[self.max_size - self.step:]
+                self.data[k][0:len - self.max_size + self.step] = v[self.max_size - self.step:]
+
 
         self.step = (self.step + len) % self.max_size
         self.size = min(self.size + len, self.max_size)
