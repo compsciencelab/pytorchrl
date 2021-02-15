@@ -258,7 +258,7 @@ class GWorker(W):
         """Update Actor Critic model"""
         self.local_worker.actor_version += 1
         self.algo.apply_gradients(gradients)
-        if self.col_communication == "synchronous":
+        if self.col_communication == "synchronous" and len(self.remote_workers) > 0:
             self.collector.broadcast_new_weights()
 
     def set_weights(self, weights):
@@ -284,7 +284,6 @@ class GWorker(W):
         self.local_worker.update_algo_parameter(parameter_name, new_parameter_value)
         for e in self.remote_workers:
             e.update_algo_parameter.remote(parameter_name, new_parameter_value)
-
 
         self.algo.update_algo_parameter(parameter_name, new_parameter_value)
         for e in self.col_workers.remote_workers():
