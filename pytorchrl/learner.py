@@ -97,9 +97,8 @@ class Learner:
         if flag:
             self.update_worker.stop()
             print(colorize("\nTraining finished!", color="green", bold=True))
-            time.sleep(10)
+            time.sleep(1)
             # ray.shutdown()
-            sys.exit()
         return flag
 
     def get_metrics(self):

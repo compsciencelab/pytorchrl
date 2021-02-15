@@ -314,7 +314,6 @@ class GWorker(W):
 
         if hasattr(self, "collector"):
             self.collector.stopped = True
-            self.collector.join()
         for e in self.remote_workers:
             e.terminate_worker.remote()
 
