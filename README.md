@@ -9,8 +9,8 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
     conda activate pytorchrl
 
     conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
-    pip install git+git://github.com/openai/baselines.git
-
+    pip install git+https://github.com/PyTorchRL/baselines.git
+    
     pip install pytorchrl
 ```
 
