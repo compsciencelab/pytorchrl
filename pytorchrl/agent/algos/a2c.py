@@ -172,7 +172,7 @@ class A2C(Algo):
             (action, clipped_action, logp_action, rhs,
              entropy_dist) = self.actor_critic.get_action(
                 obs, rhs, done, deterministic)
-            value = self.actor_critic.get_value(obs)
+            value = self.actor_critic.get_value(obs, rhs, done)
             other = {"val": value, "logp": logp_action}
 
         return action, clipped_action, rhs, other
@@ -202,7 +202,7 @@ class A2C(Algo):
         pi_loss = - (logp * adv).mean()
 
         # Value loss
-        new_v = self.actor_critic.get_value(o)
+        new_v = self.actor_critic.get_value(o, rhs, d)
         value_loss = (r - new_v).pow(2).mean()
 
         return pi_loss, value_loss

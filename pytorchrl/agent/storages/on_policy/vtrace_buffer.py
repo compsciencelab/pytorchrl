@@ -55,7 +55,7 @@ class VTraceBuffer(B):
                 self.data["rhs"][self.step - 1],
                 self.data["done"][self.step - 1]
             )
-            
+
         self.data["ret"][self.step] = next_value
         self.compute_returns(algo.gamma)
         self.compute_vtrace(actor, algo)
