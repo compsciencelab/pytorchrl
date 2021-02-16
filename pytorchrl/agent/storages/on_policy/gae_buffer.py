@@ -84,6 +84,28 @@ class GAEBuffer(B):
         self.compute_returns(algo.gamma)
         self.compute_advantages()
 
+    def after_gradients(self, actor, algo, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+
+        Parameters
+        ----------
+        actor : Actor class
+            An actor class instance.
+        algo : Algo class
+            An algorithm class instance.
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+        """
+        self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
+        self.data["rhs"][0].copy_(self.data["rhs"][self.step - 1])
+        self.data["done"][0].copy_(self.data["done"][self.step - 1])
+
+        if self.step != 0:
+            self.step = 0
+
     def compute_returns(self, gamma):
         """
         Compute return values.
