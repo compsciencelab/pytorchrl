@@ -270,7 +270,7 @@ class OnPolicyActor(nn.Module):
 
         return logp_action, entropy_dist, rhs
 
-    def get_value(self, obs):
+    def get_value(self, obs, rhs, done):
         """
         Return value scores of given observation.
 
@@ -285,6 +285,8 @@ class OnPolicyActor(nn.Module):
             value score according to current value_net version.
         """
         if self.shared_policy_value_network:
+            if self.last_actor_features.shape[0] != obs.shape[0]:
+                self.last_actor_features, _ = self.policy_net(obs, rhs, done)
             return self.value_net(self.last_actor_features)
         else:
             val, _ = self.value_net(obs)

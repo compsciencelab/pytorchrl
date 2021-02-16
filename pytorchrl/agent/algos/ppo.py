@@ -250,7 +250,7 @@ class PPO(Algo):
             (action, clipped_action, logp_action, rhs,
              entropy_dist) = self.actor_critic.get_action(
                 obs, rhs, done, deterministic)
-            value = self.actor_critic.get_value(obs)
+            value = self.actor_critic.get_value(obs, rhs, done)
             other = {"val": value, "logp": logp_action}
 
         return action, clipped_action, rhs, other
@@ -280,7 +280,7 @@ class PPO(Algo):
         r, d, old_logp, adv = data["ret"], data["done"], data["logp"], data["adv"]
 
         new_logp, dist_entropy, _ = self.actor_critic.evaluate_actions(o, rhs, d, a)
-        new_v = self.actor_critic.get_value(o)
+        new_v = self.actor_critic.get_value(o, rhs, d)
 
         ratio = torch.exp(new_logp - old_logp)
         surr1 = ratio * adv

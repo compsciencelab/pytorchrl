@@ -78,7 +78,11 @@ class GAEBuffer(B):
                 self.data["obs"][self.step - 1],
                 self.data["rhs"][self.step - 1],
                 self.data["done"][self.step - 1])
-            next_value = actor.get_value(self.data["obs"][self.step - 1])
+            next_value = actor.get_value(
+                self.data["obs"][self.step - 1],
+                self.data["rhs"][self.step - 1],
+                self.data["done"][self.step - 1]
+            )
 
         self.data["val"][self.step] = next_value
         self.compute_returns(algo.gamma)
