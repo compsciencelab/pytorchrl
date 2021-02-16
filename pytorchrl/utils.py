@@ -1,6 +1,7 @@
 import os
 import shutil
 
+
 color2num = dict(gray=30, red=31, green=32, yellow=33, blue=34,
                  magenta=35, cyan=36, white=37, crimson=38)
 
@@ -34,3 +35,27 @@ def cleanup_log_dir(log_dir):
     os.makedirs(log_dir, exist_ok=True)
 
 
+import yaml
+import argparse
+
+class LoadFromFile(argparse.Action):
+    #parser.add_argument('--file', type=open, action=LoadFromFile)
+    def __call__ (self, parser, namespace, values, option_string = None):
+        if values.name.endswith("yaml") or values.name.endswith("yml"):
+            with values as f:
+                namespace.__dict__.update(yaml.load(f, Loader=yaml.FullLoader))
+        else:
+            raise ValueError("configuration file must end with yaml or yml")
+    
+
+
+def save_argparse(args,filename,exclude=None):
+    if filename.endswith('yaml') or filename.endswith('yml'):
+        if isinstance(exclude, str):
+            exclude = [exclude,]
+        args = args.__dict__.copy()
+        for exl in exclude:
+            del args[exl]
+        yaml.dump(args, open(filename, 'w'))
+    else:
+        raise ValueError("Configuration file should end with yaml or yml")
