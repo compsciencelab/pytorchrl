@@ -2,7 +2,6 @@ import os
 import ray
 import sys
 import time
-import json
 import argparse
 
 from pytorchrl import utils
@@ -20,7 +19,6 @@ def main():
     args = get_args()
     utils.cleanup_log_dir(args.log_dir)
     args_dict = vars(args)
-    json.dump(args_dict, open(os.path.join(args.log_dir, "training_arguments.json"), "w"), indent=4)
     save_argparse(args,os.path.join(args.log_dir, "conf.yaml"),[])
     
 
@@ -110,9 +108,6 @@ def main():
 
         if iterations % args.save_interval == 0:
             save_name = learner.save_model()
-            args_dict.update({"latest_model": save_name})
-            args_path = os.path.join(args.log_dir, "training_arguments.json")
-            json.dump(args_dict, open(args_path, "w"), indent=4)
 
         if args.max_time != -1 and (time.time() - start_time) > args.max_time:
             break
