@@ -179,16 +179,16 @@ And enjoy our Agent's performance with running this script:
 
 .. code-block:: python
 
-    from pytorchrl.envs import pybullet_train_env_factory
+    from pytorchrl.envs import pybullet_test_env_factory
     from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 
     # Define single copy of the environment
-    env = pybullet_train_env_factory(env_id="HalfCheetahBulletEnv-v0")
+    env = pybullet_test_env_factory(env_id="HalfCheetahBulletEnv-v0")
     env.render()
 
     # Define agent device and agent
     device = torch.device("cpu")
-    policy = OnPolicyActorCritic.create_factory(
+    policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space,
         feature_extractor_network=get_feature_extractor("MLP"),
         restart_model="/tmp/train_example/actor_critic.state_dict")(device)

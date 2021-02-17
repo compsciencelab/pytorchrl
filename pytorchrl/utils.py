@@ -1,9 +1,12 @@
 import os
+import yaml
 import shutil
+import argparse
 
 
-color2num = dict(gray=30, red=31, green=32, yellow=33, blue=34,
-                 magenta=35, cyan=36, white=37, crimson=38)
+color2num = dict(
+    gray=30, red=31, green=32, yellow=33, blue=34,
+    magenta=35, cyan=36, white=37, crimson=38)
 
 def colorize(string, color, bold=False, highlight=False):
     """
@@ -33,10 +36,6 @@ def cleanup_log_dir(log_dir):
     except Exception:
         print("Unable to cleanup log_dir...")
     os.makedirs(log_dir, exist_ok=True)
-
-
-import yaml
-import argparse
 
 class LoadFromFile(argparse.Action):
     #parser.add_argument('--file', type=open, action=LoadFromFile)

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import ray
 import sys
@@ -19,7 +21,7 @@ def main():
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
-    save_argparse(args,os.path.join(args.log_dir, "conf.yaml"),[])
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
 
     if args.cluster:
         ray.init(address="auto")
