@@ -1,5 +1,5 @@
-Getting started
-===============
+Breaking down PyTorchRL
+=======================
 
 This page covers how to create a training script to run a basic experiment using PyTorchRL.
 

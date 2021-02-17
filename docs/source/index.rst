@@ -7,7 +7,7 @@ PyTorchRL Documentation
 
    usage/introduction
    usage/installation
-   usage/getting_started
+   usage/breaking_down_pytorchrl
 
 .. toctree::
    :maxdepth: 2
@@ -28,6 +28,8 @@ PyTorchRL Documentation
    :maxdepth: 2
    :caption: Code examples:
 
+   code_examples/atari2600
+   code_examples/pybullet
    code_examples/obstacle
 
 .. toctree::

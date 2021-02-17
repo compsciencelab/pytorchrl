@@ -12,15 +12,13 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
-from pytorchrl.utils import LoadFromFile,save_argparse
+from pytorchrl.utils import LoadFromFile, save_argparse
 
 def main():
 
     args = get_args()
     utils.cleanup_log_dir(args.log_dir)
-    args_dict = vars(args)
     save_argparse(args,os.path.join(args.log_dir, "conf.yaml"),[])
-    
 
     if args.cluster:
         ray.init(address="auto")
@@ -119,7 +117,8 @@ def main():
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
-    #Configuration file, keep first
+
+    # Configuration file, keep first
     parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
 
     # Environment specs
