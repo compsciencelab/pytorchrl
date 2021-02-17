@@ -400,7 +400,7 @@ class SAC(Algo):
         if self.discrete_version:
 
             pi, _, _, rnn_hs, _ = self.actor_critic.get_action(o, rhs, d)
-            p_pi = self.actor_critic.dist.action_dist.probs
+            p_pi = self.actor_critic.dist.dist.probs
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
