@@ -4,7 +4,6 @@ import sys
 import time
 import argparse
 
-from pytorchrl import utils
 from pytorchrl import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algos import SAC
@@ -12,12 +11,13 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
-from pytorchrl.utils import LoadFromFile, save_argparse
+from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+
 
 def main():
 
     args = get_args()
-    utils.cleanup_log_dir(args.log_dir)
+    cleanup_log_dir(args.log_dir)
     save_argparse(args,os.path.join(args.log_dir, "conf.yaml"),[])
 
     if args.cluster:

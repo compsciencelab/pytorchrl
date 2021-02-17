@@ -1,0 +1,24 @@
+num_env_steps : 100000000000000000
+log_dir: /tmp/atari_ppo
+gamma: 0.99
+save_interval: 10000
+max_time: 86400
+num_env_processes: 8
+num_steps: 128
+num_mini_batch: 4
+clip_param: 0.1
+ppo_epoch: 3
+use_gae: True
+gae_lambda: 0.95
+value_loss_coef: 1.0
+entropy_coef: 0.01
+max_grad_norm: 0.5
+lr: 0.00025
+nn: CNN
+frame_skip: 0
+frame_stack: 4
+env_id: PongNoFrameskip-v4
+num_grad_workers: 1 
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous

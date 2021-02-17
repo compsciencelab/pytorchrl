@@ -12,7 +12,7 @@ use_gae: True
 gae_lambda: 0.95
 value_loss_coef: 0.5
 entropy_coef: 0.0
-eps: 2e-4
+eps: 0.0002
 lr: 0.00025
 nn: MLP
 frame_skip: 0

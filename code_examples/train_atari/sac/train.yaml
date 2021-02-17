@@ -1,0 +1,22 @@
+num_env_steps : 100000000000000000
+log_dir: /tmp/atari_sac
+gamma: 0.99
+polyak: 0.995
+save_interval: 50000
+max_time: 86400
+num_env_processes: 1
+mini_batch_size: 64
+update_every: 4
+num_updates: 1
+start_steps: 20000 
+buffer_size: 300000
+target_update_interval: 8000
+lr: 0.0003
+nn: CNN
+frame_skip: 4
+frame_stack: 4
+env_id: MsPacmanNoFrameskip-v4
+num_grad_workers: 1 
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous

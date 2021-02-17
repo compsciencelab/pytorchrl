@@ -6,9 +6,6 @@ import json
 import argparse
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../..')
-
-from pytorchrl import utils
 from pytorchrl import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algos import PPO
@@ -16,14 +13,14 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs import atari_train_env_factory, atari_test_env_factory
+from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 
 def main():
 
     args = get_args()
-    utils.cleanup_log_dir(args.log_dir)
-    args_dict = vars(args)
-    json.dump(args_dict, open(os.path.join(args.log_dir, "training_arguments.json"), "w"), indent=4)
+    cleanup_log_dir(args.log_dir)
+    save_argparse(args,os.path.join(args.log_dir, "conf.yaml"),[])
 
     if args.cluster:
         ray.init(address="auto")
@@ -115,9 +112,6 @@ def main():
 
         if iterations % args.save_interval == 0:
             save_name = learner.save_model()
-            args_dict.update({"latest_model": save_name})
-            args_path = os.path.join(args.log_dir, "training_arguments.json")
-            json.dump(args_dict, open(args_path, "w"), indent=4)
 
         if args.max_time != -1 and (time.time() - start_time) > args.max_time:
             break
@@ -131,6 +125,9 @@ def main():
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
+
+    # Configuration file, keep first
+    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
 
     # Environment specs
     parser.add_argument(
