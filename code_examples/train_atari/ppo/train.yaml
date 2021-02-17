@@ -1,4 +1,4 @@
-num_env_steps : 100000000000000000
+num_env_steps : 10000000
 log_dir: /tmp/atari_ppo
 gamma: 0.99
 save_interval: 10000
