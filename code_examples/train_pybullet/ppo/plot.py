@@ -70,7 +70,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
 
-    args.log_dir = "//tmp/pybullet_ppo/"
+    args.log_dir = "/tmp/pybullet_ppo/"
     args.save_dir = "/tmp/"
 
     plot(experiment_path=args.log_dir,

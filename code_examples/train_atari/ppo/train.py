@@ -49,7 +49,7 @@ def main():
 
     # 3. Define RL training algorithm
     algo_factory = PPO.create_factory(
-        lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
+        lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
         use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
@@ -145,14 +145,8 @@ def get_args():
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
-        '--eps', type=float, default=1e-5,
-        help='Adam optimizer epsilon (default: 1e-5)')
-    parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
-    parser.add_argument(
-        '--use-gae', action='store_true', default=False,
-        help='use generalized advantage estimation')
     parser.add_argument(
         '--gae-lambda', type=float, default=0.95,
         help='gae lambda parameter (default: 0.95)')

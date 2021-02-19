@@ -161,7 +161,7 @@ class PPO(Algo):
                      max_grad_norm=0.5,
                      entropy_coef=0.01,
                      value_loss_coef=0.5,
-                     num_test_episodes=0,
+                     num_test_episodes=5,
                      use_clipped_value_loss=True):
         """
         Returns a function to create new PPO instances.

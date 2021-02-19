@@ -8,7 +8,6 @@ num_steps: 128
 num_mini_batch: 4
 clip_param: 0.1
 ppo_epoch: 3
-use_gae: True
 gae_lambda: 0.95
 value_loss_coef: 1.0
 entropy_coef: 0.01
