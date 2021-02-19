@@ -1,6 +1,6 @@
 torch
 torchvision
-pytorchrl==0.0.31
+pytorchrl==0.0.32
 Sphinx==3.4.1
 sphinx-reload==0.2.0
 sphinx-rtd-theme==0.4.3
