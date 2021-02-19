@@ -1,3 +1,8 @@
+ray
+gym[atari]
+ray[debug]
+pybullet
+TensorBoard
 torch
 torchvision
 Sphinx
@@ -10,4 +15,3 @@ sphinxcontrib-htmlhelp
 sphinxcontrib-jsmath
 sphinxcontrib-qthelp
 sphinxcontrib-serializinghtml
-pytorchrl==0.0.30

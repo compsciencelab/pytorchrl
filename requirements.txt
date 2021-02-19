@@ -2,4 +2,4 @@ ray
 gym[atari]
 ray[debug]
 pybullet
-TensorBoard # just for logging
+TensorBoard
