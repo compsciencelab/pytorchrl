@@ -21,14 +21,6 @@ class SquashedGaussian(nn.Module):
         Number of dims in output space.
     predict_log_std : bool
         Whether to use a nn.linear layer to predict the output std.
-
-    Attributes
-    ----------
-    mean: nn.Module
-        Maps the incoming feature maps to output mean values.
-    log_std : nn.Module or nn.Parameter
-        If predict_log_std is True Maps the incoming feature maps to output
-        std values. Otherwise, the std values are a learnable nn.Parameter.
     """
 
     def __init__(self, num_inputs, num_outputs, predict_log_std=True):

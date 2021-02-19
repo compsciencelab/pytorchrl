@@ -15,14 +15,6 @@ class ReplayBuffer(S):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
-
-    Attributes
-    ----------
-    max_size : int
-        Storage capacity along time axis.
-    device: torch.device
-        CPU or specific GPU where data tensors will be placed and class
-        computations will take place.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError

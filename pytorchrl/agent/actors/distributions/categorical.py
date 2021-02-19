@@ -14,11 +14,6 @@ class Categorical(nn.Module):
         Size of input feature maps.
     num_outputs : int
         Number of options in output space.
-
-    Attributes
-    ----------
-    linear: nn.Module
-        Maps the incoming feature maps to probabilities over the output space.
     """
     def __init__(self, num_inputs, num_outputs):
         super(Categorical, self).__init__()

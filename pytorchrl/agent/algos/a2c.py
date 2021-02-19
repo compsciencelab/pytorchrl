@@ -29,25 +29,6 @@ class A2C(Algo):
         Regularity of test evaluations in actor_critic updates.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
-
-    Attributes
-    ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        ActorCritic Class containing Neural Network function approximators.
-    test_every : int
-        Number of network updates between test evaluations.
-    num_test_episodes : int
-        Num episodes to complete in each test phase.
-    gamma : float
-        Discount factor parameter.
-    max_grad_norm : float
-        Gradient clipping parameter.
-    pi_optimizer : torch.optimizer
-        Policy network optimizer
-    v_optimizer : torch.optimizer
-        Value network optimizer
     """
 
     def __init__(self,

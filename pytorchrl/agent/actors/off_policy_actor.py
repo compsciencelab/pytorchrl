@@ -31,25 +31,6 @@ class OffPolicyActor(nn.Module):
     create_double_q_critic : bool
         Whether to instantiate a second Q network or not.
 
-    Attributes
-    ----------
-    policy_net : nn.module
-        Neural network that extracts features from the input env obs.
-    input_space : gym.Space
-        Environment observation space.
-    action_space : gym.Space
-        Environment action space.
-    dist : nn.module
-        Neural network that predict a prob distribution over the action space
-    q1 : nn.module
-        Neural network that predicts a Q-value for a given env obs and action.
-    q2 : nn.module
-        A second neural network to predict a Q-value for a given env obs and action.
-    scale : nn.module
-        Maps actions from [space.low, space.high] range to [-1, 1] range.
-    unscale : nn.module
-        Maps actions from [-1, 1] range to [space.low, space.high] range.
-
     Examples
     --------
     """

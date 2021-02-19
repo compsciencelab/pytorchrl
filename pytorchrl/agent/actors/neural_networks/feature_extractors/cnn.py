@@ -19,11 +19,6 @@ class CNN(nn.Module):
         Convolutional layers number of filters.
     kernel_sizes : list
         Convolutional layers kernel sizes.
-
-    Attributes
-    ----------
-    feature_extractor : nn.Module
-        Neural network feature extractor block.
     """
     def __init__(self,
                  input_shape,

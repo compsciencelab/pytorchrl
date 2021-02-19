@@ -15,16 +15,6 @@ class HindsightExperienceReplayBuffer:
         actor model is located.
     her_function : func
         Function to update obs, rhs, obs2 and rew according to HER paper.
-
-    Attributes
-    ----------
-    max_size : int
-        Storage capacity along time axis.
-    device: torch.device
-        CPU or specific GPU where data tensors will be placed and class
-        computations will take place.
-    her_function : func
-        Function to update obs, rhs, obs2 and rew according to HER paper.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError

@@ -23,23 +23,6 @@ class Learner:
         Number of environment steps to reach to complete training.
     log_dir : str
         Target directory for Tensorboard logs.
-
-    Attributes
-    ----------
-    update_workers : Worker or WorkerSet
-        The set of workers handling actor_critic updates.
-    target_steps : int
-        Number of environment steps to reach to complete training.
-    log_dir : str
-        Target directory for Tensorboard logs.
-    num_samples_collected : int
-        Number of train environment transition samples so far in the
-        training process.
-    metrics : collections.defaultdict
-        Collection of deque's, tracking recent training metrics (as moving
-        averages).
-    start : float
-        Training start time.
     """
 
     def __init__(self, scheme, target_steps, log_dir=None):

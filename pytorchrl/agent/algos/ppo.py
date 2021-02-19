@@ -45,43 +45,6 @@ class PPO(Algo):
     use_clipped_value_loss : bool
         Prevent value loss from shifting too fast.
 
-    Attributes
-    ----------
-    start_steps : int
-        Number of steps collected with initial random policy (default to 0 for
-        On-policy algos).
-    num_epochs : int
-        Times data in the buffer is re-used before data collection proceeds.
-    update_every : int
-        Number of data samples collected between network update stages (depends
-        on storage capacity for On-policy algos).
-    num_mini_batch : int
-        Number mini batches per epoch.
-    mini_batch_size : int
-        Size of update mini batches.
-    test_every : int
-        Number of network updates between test evaluations.
-    num_test_episodes : int
-        Num episodes to complete in each test phase.
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        ActorCritic Class containing Neural Network function approximators.
-    gamma : float
-        Discount factor parameter.
-    clip_param : float
-        PPO clipping parameter.
-    entropy_coef : float
-        PPO entropy coefficient parameter.
-    max_grad_norm : float
-        Gradient clipping parameter.
-    value_loss_coef : float
-        PPO value coefficient parameter.
-    use_clipped_value_loss : bool
-        Whether or not value loss clipping is being used
-    optimizer : torch.optimizer
-        ActorCritic model optimizer
-
     Examples
     --------
     >>> create_algo = PPO.create_factory(

@@ -15,11 +15,6 @@ class MLP(nn.Module):
         Hidden layers sizes.
     activation : func
         Non-linear activation function.
-
-    Attributes
-    ----------
-    feature_extractor : nn.Module
-        Neural network feature extractor block.
     """
     def __init__(self, input_shape, hidden_sizes=[256, 256], activation=nn.ReLU):
         super(MLP, self).__init__()

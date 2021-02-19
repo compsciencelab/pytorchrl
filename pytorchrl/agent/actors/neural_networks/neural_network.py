@@ -28,17 +28,6 @@ class NNBase(nn.Module):
         Non-linear activation function.
     final_activation : bool
         Whether or not to apply nonlinearity after last layer.
-
-    Attributes
-    ----------
-    output_shape : tuple
-        Output feature map shape.
-    feature_extractor : nn.Module
-        Neural network feature extractor block.
-    gru : nn.Module
-        Neural network recurrency block.
-    output : nn.Module
-        Neural network final layer.
     """
     def __init__(self,
                  input_shapes,

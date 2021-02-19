@@ -31,28 +31,6 @@ class OnPolicyActor(nn.Module):
         Policy RNN hidden size.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
-
-    Attributes
-    ----------
-    policy_net : nn.module
-        Neural network that extracts features from the input env obs.
-    input_space : gym.Space
-        Environment observation space.
-    action_space : gym.Space
-        Environment action space.
-    dist : nn.module
-        Neural network that predict a prob distribution over the action space
-        from the features extracted by the policy_net.
-    value_net : nn.module
-        Neural network that predicts a value score for a given env obs.
-    shared_policy_value_network : bool
-        If True, the feature extraction block of the value_net will be the
-        policy_net.
-    scale : nn.module
-        Maps actions from [space.low, space.high] range to [-1, 1] range.
-    unscale : nn.module
-        Maps actions from [-1, 1] range to [space.low, space.high] range.
-
     """
     def __init__(self,
                  input_space,

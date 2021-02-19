@@ -13,11 +13,6 @@ class FixupCNN(nn.Module):
     ----------
     input_shape : tuple
         Shape input tensors.
-
-    Attributes
-    ----------
-    feature_extractor : nn.Module
-        Neural network feature extractor block.
     """
     def __init__(self, input_shape):
         super(FixupCNN, self).__init__()
