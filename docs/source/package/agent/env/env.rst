@@ -4,7 +4,7 @@ Env
 VecEnv
 ------
 
-.. automodule:: pytorchrl.agent.envs.vec_env
+.. automodule:: pytorchrl.agent.env.vec_env
    :members:
    :undoc-members:
    :show-inheritance:

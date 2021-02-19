@@ -4,7 +4,7 @@ Agent components
 .. toctree::
    :maxdepth: 3
 
-   envs/envs
+   env/env
    algos/algos
    actors/actors
    storages/storages
