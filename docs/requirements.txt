@@ -1,8 +1,6 @@
 torch
 torchvision
 pytorchrl
-sphinxcontrib-moderncmakedomain
-git+https://github.com/PyTorchRL/baselines.git
 Sphinx==3.4.1
 sphinx-reload==0.2.0
 sphinx-rtd-theme==0.4.3
