@@ -10,4 +10,4 @@ sphinxcontrib-htmlhelp
 sphinxcontrib-jsmath
 sphinxcontrib-qthelp
 sphinxcontrib-serializinghtml
-pytorchrl=0.0.30
+pytorchrl==0.0.30
