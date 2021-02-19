@@ -1,8 +1,8 @@
 Off-policy
 ==========
 
-OffPolicyActorCritic
---------------------
+OffPolicyActor
+--------------
 
 .. automodule:: pytorchrl.agent.actors.off_policy_actor
    :members:
