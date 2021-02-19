@@ -1,6 +1,6 @@
 env_id: HalfCheetahBulletEnv-v0
 num_env_steps : 1000000
-log_dir: /Users/albertbou/Desktop #/tmp/pybullet_sac
+log_dir: tmp/pybullet_sac
 frame_skip: 0
 frame_stack: 1
 nn: MLP
