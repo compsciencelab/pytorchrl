@@ -8,4 +8,3 @@ VecEnv
    :members:
    :undoc-members:
    :show-inheritance:
-   
