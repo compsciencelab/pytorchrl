@@ -53,7 +53,7 @@ def main():
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-        use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
+        gamma=args.gamma)
 
     # 4. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
@@ -131,7 +131,7 @@ def get_args():
         '--frame-skip', type=int, default=0,
         help='Number of frame to skip for each action (default no skip)')
     parser.add_argument(
-        '--frame-stack', type=int, default=0,
+        '--frame-stack', type=int, default=1,
         help='Number of frame to stack in observation (default no stack)')
 
     # PPO specs
@@ -152,9 +152,6 @@ def get_args():
     parser.add_argument(
         '--max-grad-norm', type=float, default=0.5,
         help='max norm of gradients (default: 0.5)')
-    parser.add_argument(
-        '--use_clipped_value_loss', action='store_true', default=False,
-        help='clip value loss update')
     parser.add_argument(
         '--num-steps', type=int, default=20000,
         help='number of forward steps in PPO (default: 20000)')

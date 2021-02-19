@@ -10,6 +10,7 @@ clip_param: 0.2
 ppo_epoch: 10
 gae_lambda: 0.95
 value_loss_coef: 0.5
+max_grad_norm: 0.5
 entropy_coef: 0.0
 lr: 0.0002
 nn: MLP
