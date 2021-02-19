@@ -1,5 +1,6 @@
 torch
 torchvision
+git+https://github.com/PyTorchRL/baselines.git
 pytorchrl==0.0.32
 Sphinx==3.4.1
 sphinx-reload==0.2.0
