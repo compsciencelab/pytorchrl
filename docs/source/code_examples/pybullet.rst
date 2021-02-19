@@ -51,6 +51,8 @@ Use the plot.sh script to plot reward progression during training. If sripts are
 Visualizing the trained agent
 -----------------------------
 
+Use the enjoy.sh script to watch trained agent perform. If sripts are not executed from source, change the highlighted line to match the current path.
+
 .. literalinclude:: ../../../code_examples/train_pybullet/sac/enjoy.sh
   :language: bash
   :caption: code_examples/train_pybullet/sac/plot.sh
@@ -59,3 +61,7 @@ Visualizing the trained agent
 .. literalinclude:: ../../../code_examples/train_pybullet/sac/enjoy.py
   :language: python
   :caption: code_examples/train_pybullet/sac/plot.py
+
+.. raw:: html
+
+   <iframe width="560" height="315" src="https://www.youtube.com/embed/ZmKCOihD92A" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
