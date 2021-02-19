@@ -28,7 +28,7 @@ PyTorchRL Documentation
    :maxdepth: 2
    :caption: Code examples:
 
-   code_examples/atari2600
+   code_examples/atari
    code_examples/pybullet
    code_examples/obstacle
 

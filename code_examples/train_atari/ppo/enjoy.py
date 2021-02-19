@@ -37,6 +37,7 @@ def enjoy():
             _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
         obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
         episode_reward += reward
+        env.render()
 
         if done:
             print("EPISODE: reward: {}".format(episode_reward), flush=True)

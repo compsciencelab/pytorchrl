@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
+
 import os
 import ray
 import sys
 import time
-import json
 import argparse
 
 from pytorchrl import Learner
@@ -204,8 +205,8 @@ def get_args():
         '--save-interval', type=int, default=100,
         help='save interval, one save per n updates (default: 100)')
     parser.add_argument(
-        '--log-dir', default='/tmp/ppo/',
-        help='directory to save agent logs (default: /tmp/ppo)')
+        '--log-dir', default='/tmp/obstacle_tower_ppo',
+        help='directory to save agent logs (default: /tmp/obstacle_tower_ppo)')
 
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)

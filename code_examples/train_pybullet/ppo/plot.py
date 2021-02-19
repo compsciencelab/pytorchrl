@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 from glob import glob
 from matplotlib import pylab as plt; plt.rcdefaults()
