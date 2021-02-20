@@ -21,7 +21,7 @@ def enjoy():
     policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
-        restart_model=os.path.join(args.log_dir, "actor_critic.state_dict"))(device)
+        restart_model=os.path.join(args.log_dir, "model.state_dict"))(device)
 
     # Define initial Tensors
     obs = env.reset()

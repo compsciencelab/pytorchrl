@@ -106,6 +106,7 @@ class CWorker(W):
         # Define counters and other attributes
         self.iter, self.actor_version, self.samples_collected = 0, 0, 0
         self.update_every = self.algo.update_every or self.storage.max_size
+        self.updates_per_iter = self.algo.num_mini_batch * self.algo.num_epochs
 
         # Create train environments
         self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
@@ -168,10 +169,11 @@ class CWorker(W):
         self.samples_collected = 0
 
         # Evaluate current network on test environments
-        if self.iter % self.algo.test_every == 0:
-            if self.envs_test and self.algo.num_test_episodes > 0:
-                test_perf = self.evaluate()
-                info.update({"performance/test_reward": test_perf})
+        if self.envs_test and self.algo.num_test_episodes > 0:
+            if ((np.array(range(self.iter * self.updates_per_iter, (self.iter + 1)
+                * self.updates_per_iter)) % self.algo.test_every) == 0).sum() > 0:
+                    test_perf = self.evaluate()
+                    info.update({"performance/test_reward": test_perf})
 
         # Update counter
         self.iter += 1

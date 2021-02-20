@@ -147,6 +147,6 @@ class Learner:
         save_name : str
             Path to saved file.
         """
-        fname = os.path.join(self.log_dir, "actor_critic.state_dict")
+        fname = os.path.join(self.log_dir, "model.state_dict")
         save_name = self.update_worker.save_model(fname)
         return save_name
