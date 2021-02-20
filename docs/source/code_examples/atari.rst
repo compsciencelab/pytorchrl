@@ -43,6 +43,10 @@ Use the plot.sh script to plot reward progression during training. If sripts are
   :language: python
   :caption: ode_examples/train_atari/ppo/plot.py
 
+.. image:: ../images/pytorchrl_pong_ppo_results.jpg
+  :width: 1000
+  :alt: Train and Test performance
+
 Visualizing the trained agent
 -----------------------------
 
@@ -56,3 +60,7 @@ Use the enjoy.sh script to watch trained agent perform. If sripts are not execut
 .. literalinclude:: ../../../code_examples/train_atari/ppo/enjoy.py
   :language: python
   :caption: code_examples/train_atari/ppo/plot.py
+
+.. raw:: html
+
+   <iframe width="560" height="315" src="https://www.youtube.com/embed/XmZxUl0k8ew" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

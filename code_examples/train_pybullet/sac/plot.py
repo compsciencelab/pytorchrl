@@ -18,12 +18,10 @@ def plot(experiment_path, roll=5, save_name="results"):
         exps = glob(experiment_path)
         print(exps)
 
-        # Get data
         df_train = load_results(os.path.join(experiment_path, "train"))
         df_train['steps'] = df_train['l'].cumsum() / 1000000
         df_train['time'] = df_train['t'] / 3600
 
-        # Plots
         ax = plt.subplot(1, 1, 1)
         df_train.rolling(roll).mean().plot('steps', 'r',  style='-',  ax=ax,  legend=False)
 
@@ -32,17 +30,15 @@ def plot(experiment_path, roll=5, save_name="results"):
         exps = glob(experiment_path)
         print(exps)
 
-        # Get data
         df_test = load_results(os.path.join(experiment_path, "test"))
         df_test['steps'] = df_test['l'].cumsum() / 1000000
         df_test['time'] = df_test['t'] / 3600
 
-        # Map test results to number of training steps
+        # Map test steps with corresponding number of training steps
         df_test["steps"] = df_test["steps"].map(
             lambda a: df_train["steps"][np.argmin(abs(df_test["time"][df_test["steps"].index[
-                df_test["steps"] == a]] - df_train["time"]))])
+                df_test["steps"] == a]].to_numpy() - df_train["time"]))])
 
-        # Plots
         ax = plt.subplot(1, 1, 1)
         df_test.rolling(roll).mean().plot('steps', 'r', style='-', ax=ax, legend=False)
 

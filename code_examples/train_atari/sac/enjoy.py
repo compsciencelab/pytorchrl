@@ -31,18 +31,17 @@ def enjoy():
     # Execute episodes
     while not done:
 
+        env.render()
         obs = torch.Tensor(obs).view(1, -1).to(device)
         done = torch.Tensor([done]).view(1, -1).to(device)
         with torch.no_grad():
             _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
         obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
         episode_reward += reward
-        env.render()
 
         if done:
             print("EPISODE: reward: {}".format(episode_reward), flush=True)
             done, episode_reward = 0, False
-            env.render()
             obs = env.reset()
 
 def get_args():

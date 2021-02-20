@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 
 import os
+import time
 import torch
 import argparse
 from pytorchrl.envs import atari_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
+from pytorchrl.agent.env.env_wrappers import TransposeImage
+
 
 def enjoy():
 
     args = get_args()
 
     # Define single copy of the environment
-    env = atari_test_env_factory(env_id=args.env_id)
+    env = atari_test_env_factory(env_id=args.env_id, frame_stack=args.frame_stack)
+    env = TransposeImage(env)
     env.render()
 
     # Define agent device and agent
@@ -31,18 +35,18 @@ def enjoy():
     # Execute episodes
     while not done:
 
-        obs = torch.Tensor(obs).view(1, -1).to(device)
-        done = torch.Tensor([done]).view(1, -1).to(device)
+        env.render()
+        time.sleep(0.01)
+        obs = torch.Tensor(obs).unsqueeze(0).to(device)
+        done = torch.Tensor([done]).unsqueeze(0).to(device)
         with torch.no_grad():
-            _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
+            _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=False)
         obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
         episode_reward += reward
-        env.render()
 
         if done:
             print("EPISODE: reward: {}".format(episode_reward), flush=True)
             done, episode_reward = 0, False
-            env.render()
             obs = env.reset()
 
 def get_args():
