@@ -55,8 +55,7 @@ class SAC(Algo):
     >>> create_algo = SAC.create_factory(
             lr_q=1e-4, lr_pi=1e-4, lr_alpha=1e-4, gamma=0.99, polyak=0.995,
             num_updates=50, update_every=50, test_every=5000, start_steps=20000,
-            mini_batch_size=64, alpha=1.0, num_test_episodes=0,
-            target_update_interval=1)
+            mini_batch_size=64, alpha=1.0, num_test_episodes=0, target_update_interval=1)
     """
 
     def __init__(self,
