@@ -43,8 +43,6 @@ class SAC(Algo):
         Num of initial random environment steps before learning starts.
     mini_batch_size: int
         Size of actor_critic update batches.
-    reward_scaling: float
-        Reward scaling factor.
     target_update_interval: float
         regularity of target nets updates with respect to actor_critic Adam updates.
     num_test_episodes : int
@@ -57,8 +55,8 @@ class SAC(Algo):
     >>> create_algo = SAC.create_factory(
             lr_q=1e-4, lr_pi=1e-4, lr_alpha=1e-4, gamma=0.99, polyak=0.995,
             num_updates=50, update_every=50, test_every=5000, start_steps=20000,
-            mini_batch_size=64, alpha=1.0, reward_scaling=1.0, num_test_episodes=0,
-             target_update_interval=1)
+            mini_batch_size=64, alpha=1.0, num_test_episodes=0,
+            target_update_interval=1)
     """
 
     def __init__(self,
@@ -75,7 +73,6 @@ class SAC(Algo):
                  initial_alpha=1.0,
                  start_steps=20000,
                  mini_batch_size=64,
-                 reward_scaling=1.0,
                  num_test_episodes=5,
                  target_update_interval=1):
 
@@ -109,7 +106,6 @@ class SAC(Algo):
         self.polyak = polyak
         self.device = device
         self.actor_critic = actor_critic
-        self.reward_scaling = reward_scaling
         self.target_update_interval = target_update_interval
 
         if self.actor_critic.q1 is None:
@@ -160,7 +156,6 @@ class SAC(Algo):
                 start_steps=1000,
                 initial_alpha=1.0,
                 mini_batch_size=64,
-                reward_scaling=1.0,
                 num_test_episodes=5,
                 target_update_interval=1.0):
         """
@@ -188,8 +183,6 @@ class SAC(Algo):
             Num of initial random environment steps before learning starts.
         mini_batch_size: int
             Size of actor_critic update batches.
-        reward_scaling: float
-            Reward scaling factor.
         target_update_interval: float
             regularity of target nets updates with respect to actor_critic Adam updates.
         num_test_episodes : int
@@ -216,7 +209,6 @@ class SAC(Algo):
                        num_updates=num_updates,
                        update_every=update_every,
                        initial_alpha=initial_alpha,
-                       reward_scaling=reward_scaling,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval)
@@ -283,7 +275,6 @@ class SAC(Algo):
         """
 
         o, a, r, o2, d = data["obs"], data["act"], data["rew"], data["obs2"], data["done"]
-        r *= self.reward_scaling
 
         if self.discrete_version:
 
@@ -328,7 +319,9 @@ class SAC(Algo):
         loss_q1 = ((q1 - backup) ** 2).mean()
         loss_q2 = ((q2 - backup) ** 2).mean()
         loss_q = 0.5 * loss_q1 + 0.5 * loss_q2
-        errors = (torch.min(q1, q2) - backup).abs()
+
+        # errors = (torch.min(q1, q2) - backup).abs()
+        errors = torch.max((q1 - backup).abs(), (q2 - backup).abs())
 
         return loss_q1, loss_q2, loss_q, errors
 
@@ -352,7 +345,6 @@ class SAC(Algo):
         """
 
         o, rhs, a, r, o2, d = data["obs"], data["rhs"], data["act"], data["rew"], data["obs2"], data["done"]
-        r *= self.reward_scaling
 
         if self.discrete_version:
 
