@@ -66,6 +66,11 @@ class VTraceBuffer(B):
             Data batch used to compute the gradients.
         info : dict
             Additional relevant info from gradient computation.
+
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
         """
         self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
         self.data["rhs"][0].copy_(self.data["rhs"][self.step - 1])
@@ -73,6 +78,8 @@ class VTraceBuffer(B):
 
         if self.step != 0:
             self.step = 0
+
+        return info
 
     @torch.no_grad()
     def get_updated_action_log_probs(self, actor, algo):

@@ -148,8 +148,13 @@ class ReplayBuffer(S):
             Data batch used to compute the gradients.
         info : dict
             Additional relevant info from gradient computation.
+
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
         """
-        pass
+        return info
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, recurrent_ac=False):
         """

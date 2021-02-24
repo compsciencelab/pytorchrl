@@ -198,12 +198,14 @@ class GWorker(W):
         """
 
         grads, info = self.compute_gradients(self.next_batch, distribute_gradients)
-        self.storage.after_gradients(self.actor, self.algo, self.next_batch, info)
 
         # Add extra information to info dict
         info.update(self.col_info)
         self.col_info.update({"collected_samples": 0})
+        if "performance/train_reward" in self.col_info: self.col_info.pop("performance/train_reward")
+        if "performance/test_reward" in self.col_info: self.col_info.pop("performance/test_reward")
         info.update({"grad_version": self.local_worker.actor_version})
+        info = self.storage.after_gradients(self.actor, self.algo, self.next_batch, info)
 
         self.iter += 1
 

@@ -89,6 +89,11 @@ class Storage(ABC):
             An algorithm class instance.
         info : dict
             Additional relevant info from gradient computation.
+
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
         """
         raise NotImplementedError
 
@@ -111,7 +116,7 @@ class Storage(ABC):
             Whether to shuffle collected data or generate sequential
 
         Yields
-        ______
+        ------
         batch : dict
             Generated data batches.
         """
