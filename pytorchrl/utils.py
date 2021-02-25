@@ -45,8 +45,6 @@ class LoadFromFile(argparse.Action):
                 namespace.__dict__.update(yaml.load(f, Loader=yaml.FullLoader))
         else:
             raise ValueError("configuration file must end with yaml or yml")
-    
-
 
 def save_argparse(args,filename,exclude=None):
     if filename.endswith('yaml') or filename.endswith('yml'):
@@ -58,3 +56,4 @@ def save_argparse(args,filename,exclude=None):
         yaml.dump(args, open(filename, 'w'))
     else:
         raise ValueError("Configuration file should end with yaml or yml")
+

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from ..base import Storage as S
+from pytorchrl.agent.storages.base import Storage as S
 
 
 class ReplayBuffer(S):

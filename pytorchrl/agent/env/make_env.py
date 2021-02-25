@@ -2,7 +2,7 @@ import os
 import inspect
 from baselines import bench
 
-from .env_wrappers import TransposeImage
+from pytorchrl.agent.env.env_wrappers import TransposeImage
 
 
 def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env, log_dir=None, info_keywords=(), mode="train"):

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .base import Algo
+from pytorchrl.agent.algos.base import Algo
 
 
 class A2C(Algo):

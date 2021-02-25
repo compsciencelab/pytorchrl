@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 
-from .utils import Scale, Unscale
-from .neural_networks import NNBase
-from .distributions import get_dist
-from .neural_networks.feature_extractors import get_feature_extractor
+from pytorchrl.agent.actors.utils import Scale, Unscale
+from pytorchrl.agent.actors.neural_networks import NNBase
+from pytorchrl.agent.actors.distributions import get_dist
+from pytorchrl.agent.actors.neural_networks.feature_extractors import get_feature_extractor
 
 
 class OffPolicyActor(nn.Module):

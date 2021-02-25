@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
 
-from .neural_networks.feature_extractors import get_feature_extractor
+from pytorchrl.agent.actors.neural_networks.feature_extractors import get_feature_extractor
 
 
 class Actor(nn.Module, ABC):

@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
-from ..base import Storage as S
+from pytorchrl.agent.storages.base import Storage as S
 
 
 class VanillaOnPolicyBuffer(S):

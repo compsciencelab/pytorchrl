@@ -1,5 +1,5 @@
 import torch
-from .vanilla_on_policy_buffer import VanillaOnPolicyBuffer as B
+from pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer as B
 
 
 class GAEBuffer(B):

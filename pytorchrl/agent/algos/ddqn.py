@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-from .base import Algo
+from pytorchrl.agent.algos.base import Algo
 
 
 class DDQN(Algo):

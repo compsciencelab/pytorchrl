@@ -5,7 +5,7 @@ from copy import deepcopy
 import torch
 import torch.optim as optim
 
-from .base import Algo
+from pytorchrl.agent.algos.base import Algo
 
 
 class SAC(Algo):
