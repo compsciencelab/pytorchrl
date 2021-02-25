@@ -9,17 +9,17 @@ If not already done, install conda (Miniconda is sufficient). To do so, see the 
 Installing PyTorchRL library
 ----------------------------
 
-1. Set up conda environment ::
+1. Set up conda environment. ::
 
     conda create -y -n pytorchrl # requires python3.7 or above
     conda activate pytorchrl
 
-2. Install dependencies ::
+2. Install dependencies. ::
 
     conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
     pip install git+https://github.com/PyTorchRL/baselines.git
 
-3. Install package. It can be installed either via PyPI or from source ::
+3. Install package. It can be installed either via PyPI or from source. ::
 
     # PyPI installation
     pip install pytorchrl
