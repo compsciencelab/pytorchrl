@@ -21,7 +21,15 @@ Installing PyTorchRL library
 
 3. Install package ::
 
+It can be install either via PyPI
+
     pip install pytorchrl
+
+or from source
+
+    git clone git@github.com:PyTorchRL/pytorchrl.git
+    cd pytorchrl
+    python -m pip install -e .
 
 4. To quickly test if installation was successful you can execute the following script, which runs a few training steps of the ``AC2`` algorithm on the ``CartPole-v0`` environment.
 
