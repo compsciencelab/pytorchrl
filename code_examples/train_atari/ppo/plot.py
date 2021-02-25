@@ -52,7 +52,7 @@ def plot(experiment_path, roll=5, save_name="results"):
 
 
     fig.legend(["train", "test"], loc="lower center", ncol=2)
-    ax.set_title("PongNoFrameskip-v4")
+    ax.set_title(args.env_id)
     ax.set_xlabel('Num steps (M)')
     ax.set_ylabel('Reward')
     ax.grid(True)
@@ -62,7 +62,7 @@ def plot(experiment_path, roll=5, save_name="results"):
     # Save figure
     save_name = os.path.join(experiment_path, save_name) + ".jpg"
     ax.get_figure().savefig(save_name)
-    print(colorize("Plot save as: {}".format(save_name), color="green"))
+    print(colorize("Plot saved as: {}".format(save_name), color="green"))
     plt.clf()
 
 
