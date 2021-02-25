@@ -24,7 +24,6 @@ Installing PyTorchRL library
     # PyPI installation
     pip install pytorchrl
 
-::
 
     # source installation
     git clone git@github.com:PyTorchRL/pytorchrl.git
