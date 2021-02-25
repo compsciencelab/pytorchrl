@@ -1,7 +1,9 @@
 import numpy as np
 import gym
 from gym import spaces
-from .utils import box_is_placed, box_location, place_location, reduced_action_lookup_6, reduced_action_lookup_7
+from pytorchrl.envs.obstacle_tower_unity3d_challenge.utils import (
+    box_is_placed, box_location, place_location, reduced_action_lookup_6,
+    reduced_action_lookup_7)
 
 
 class BasicObstacleEnv(gym.Wrapper):

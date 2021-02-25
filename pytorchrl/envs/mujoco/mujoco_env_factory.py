@@ -1,5 +1,5 @@
 import gym
-from ..common import FrameStack, FrameSkip
+from pytorchrl.envs.common import FrameStack, FrameSkip
 
 
 def mujoco_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1):

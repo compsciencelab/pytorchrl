@@ -2,8 +2,9 @@ import os
 import numpy as np
 import obstacle_tower_env
 from obstacle_tower_env import ObstacleTowerEnv
-from ..common import FrameStack, FrameSkip
-from .wrappers import ReducedActionEnv, BasicObstacleEnv, RewardShapeObstacleEnv, BasicObstacleEnvTest
+from pytorchrl.envs.common import FrameStack, FrameSkip
+from pytorchrl.envs.obstacle_tower_unity3d_challenge.wrappers import (
+    ReducedActionEnv, BasicObstacleEnv, RewardShapeObstacleEnv, BasicObstacleEnvTest)
 
 
 def obstacle_train_env_factory(

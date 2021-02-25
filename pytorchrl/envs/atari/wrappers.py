@@ -1,10 +1,11 @@
 import os
 os.environ.setdefault('PATH', '')
+
 import gym
 import cv2
 import numpy as np
 cv2.ocl.setUseOpenCL(False)
-from ..common import FrameStack
+from pytorchrl.envs.common import FrameStack
 
 
 class FireResetEnv(gym.Wrapper):
