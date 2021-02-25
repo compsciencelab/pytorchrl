@@ -19,14 +19,14 @@ Installing PyTorchRL library
     conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
     pip install git+https://github.com/PyTorchRL/baselines.git
 
-3. Install package ::
+3. Install package. It can be installed either via PyPI or from source ::
 
-It can be installed either via PyPI ::
-
+    # PyPI installation
     pip install pytorchrl
 
-or from source ::
+::
 
+    # source installation
     git clone git@github.com:PyTorchRL/pytorchrl.git
     cd pytorchrl
     python -m pip install -e .
