@@ -21,11 +21,11 @@ Installing PyTorchRL library
 
 3. Install package ::
 
-It can be install either via PyPI
+It can be installed either via PyPI ::
 
     pip install pytorchrl
 
-or from source
+or from source ::
 
     git clone git@github.com:PyTorchRL/pytorchrl.git
     cd pytorchrl
