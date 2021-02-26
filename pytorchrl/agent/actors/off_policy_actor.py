@@ -254,5 +254,5 @@ class OffPolicyActor(nn.Module):
             inputs = obs
 
         q1, _ = self.q1(inputs)
-        q2, _ = self.q2(inputs) if self.q2 else None
+        q2, _ = self.q2(inputs) if self.q2 else (None, None)
         return q1, q2
