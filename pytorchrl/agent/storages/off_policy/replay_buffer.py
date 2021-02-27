@@ -41,7 +41,7 @@ class ReplayBuffer(S):
         Returns
         -------
         create_buffer_instance : func
-            creates a new OnPolicyBuffer class instance.
+            creates a new ReplayBuffer class instance.
         """
         def create_buffer(device):
             """Create and return a ReplayBuffer instance."""
