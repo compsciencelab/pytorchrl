@@ -3,8 +3,8 @@ import time
 import torch
 import numpy as np
 from collections import deque
-from ..base.worker import Worker as W
-from ..utils import check_message
+from pytorchrl.scheme.base.worker import Worker as W
+from pytorchrl.scheme.utils import check_message
 
 
 class CWorker(W):

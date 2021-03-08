@@ -1,6 +1,6 @@
-from .g_worker import GWorker
-from ..base.worker_set import WorkerSet as WS
-from ..base.worker import default_remote_config
+from pytorchrl.scheme.gradients.g_worker import GWorker
+from pytorchrl.scheme.base.worker_set import WorkerSet as WS
+from pytorchrl.scheme.base.worker import default_remote_config
 
 
 class GWorkerSet(WS):

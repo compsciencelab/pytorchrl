@@ -8,8 +8,9 @@ import threading
 from shutil import copy2
 from copy import deepcopy
 
-from ..base.worker import Worker as W
-from ..utils import ray_get_and_free, broadcast_message
+
+from pytorchrl.scheme.base.worker import Worker as W
+from pytorchrl.scheme.utils import ray_get_and_free, broadcast_message
 
 # Puts a capo on the allowed policy lag
 max_queue_size = 100

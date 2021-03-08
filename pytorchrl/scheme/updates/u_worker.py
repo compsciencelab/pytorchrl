@@ -5,8 +5,9 @@ import torch
 import queue
 import threading
 from collections import defaultdict
-from ..base.worker import Worker as W
-from ..utils import ray_get_and_free, average_gradients, broadcast_message
+
+from pytorchrl.scheme.base.worker import Worker as W
+from pytorchrl.scheme.utils import ray_get_and_free, average_gradients, broadcast_message
 
 
 class UWorker(W):

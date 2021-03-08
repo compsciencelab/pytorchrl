@@ -1,5 +1,5 @@
 import ray
-from .worker import default_remote_config
+from pytorchrl.scheme.base.worker import default_remote_config
 
 
 class WorkerSet:

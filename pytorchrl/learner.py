@@ -6,7 +6,7 @@ import numpy as np
 from functools import partial
 from collections import defaultdict, deque
 from torch.utils.tensorboard import SummaryWriter
-from .utils import colorize
+from pytorchrl.utils import colorize
 
 class Learner:
     """
@@ -84,9 +84,19 @@ class Learner:
             # ray.shutdown()
         return flag
 
-    def get_metrics(self):
-        """Returns metrics averaged across number of updates."""
-        return {k: sum(v) / len(v) for k, v in self.metrics.items()}
+    def get_metrics(self, add_algo_metrics=True, add_performace_metrics=True, add_scheme_metrics=False, add_debug_metrics=False):
+        """Returns current value of tracked metrics."""
+        m = {}
+        for k, v in self.metrics.items():
+            if k.split("/")[0] == "algo" and add_algo_metrics:
+                m.update({k: sum(v) / len(v)})
+            elif k.split("/")[0] == "performance" and add_performace_metrics:
+                m.update({k: sum(v) / len(v)})
+            elif k.split("/")[0] == "scheme" and add_scheme_metrics:
+                m.update({k: sum(v) / len(v)})
+            elif k.split("/")[0] == "debug" and add_debug_metrics:
+                m.update({k: sum(v) / len(v)})
+        return m
 
     def print_info(self, add_algo_info=True, add_performace_info=True, add_scheme_info=False, add_debug_info=False):
         """Print relevant information about the training process"""

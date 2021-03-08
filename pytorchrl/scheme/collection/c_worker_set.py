@@ -1,6 +1,6 @@
-from .c_worker import CWorker
-from ..base.worker_set import WorkerSet as WS
-from ..base.worker import default_remote_config
+from pytorchrl.scheme.collection.c_worker import CWorker
+from pytorchrl.scheme.base.worker_set import WorkerSet as WS
+from pytorchrl.scheme.base.worker import default_remote_config
 
 
 class CWorkerSet(WS):
