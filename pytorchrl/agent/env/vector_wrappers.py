@@ -34,20 +34,35 @@ class VecPyTorch(VecEnvWrapper):
     def reset(self):
         """New vec env reset function"""
         obs = self.venv.reset()
-        obs = torch.from_numpy(obs).float().to(self.device)
+        if isinstance(obs, dict):
+            for k in obs:
+                obs[k] = torch.from_numpy(obs[k]).float().to(self.device)
+            else:
+                obs = torch.from_numpy(obs).float().to(self.device)
         return obs
 
     def step_async(self, actions):
         """New vec env step_async function"""
-        if isinstance(actions, torch.Tensor):
-            # Squeeze the dimension for discrete actions
-            actions = actions.squeeze(1).cpu().numpy()
+        if isinstance(actions, dict):
+            for k in actions:
+                if isinstance(actions[k], torch.Tensor):
+                    actions[k] = actions[k].squeeze(1).cpu().numpy()
+        else:
+            if isinstance(actions, torch.Tensor):
+                # Squeeze the dimension for discrete actions
+                actions = actions.squeeze(1).cpu().numpy()
         self.venv.step_async(actions)
 
     def step_wait(self):
         """New vec env step_wait function"""
         obs, reward, done, info = self.venv.step_wait()
-        obs = torch.from_numpy(obs).float().to(self.device)
+
+        if isinstance(obs, dict):
+            for k in obs:
+                obs[k] = torch.from_numpy(obs[k]).float().to(self.device)
+        else:
+            obs = torch.from_numpy(obs).float().to(self.device)
+
         reward = torch.from_numpy(reward).unsqueeze(dim=1).float().to(self.device)
         done = torch.from_numpy(done).unsqueeze(dim=1).float().to(self.device)
 
