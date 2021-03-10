@@ -2,7 +2,7 @@ import os
 import inspect
 from baselines import bench
 
-from pytorchrl.agent.env.env_wrappers import TransposeImage
+from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
 
 
 def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env, log_dir=None, info_keywords=(), mode="train"):
@@ -65,9 +65,7 @@ def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env,
                 allow_early_resets=True, info_keywords=info_keywords)
 
         # if obs are images with shape (W,H,C), transpose to (C,W,H) for PyTorch convolutions
-        obs_shape = env.observation_space.shape
-        if len(obs_shape) == 3:
-            env = TransposeImage(env, op=[2, 0, 1])
+        env = TransposeImagesIfRequired(env, op=[2, 0, 1])
 
         return env
 

@@ -2,9 +2,9 @@ import gym
 from gym.spaces.box import Box
 
 
-class TransposeImage(gym.ObservationWrapper):
+class TransposeImagesIfRequired(gym.ObservationWrapper):
     """
-    When environment observations are images, this wrapper allows to transpose
+    When environment observations are images, this wrapper transposes
     the axis. It is useful when the images have shape (W,H,C), as they can be
     transposed "on the fly" to (C,W,H) for PyTorch convolutions to be applied.
 
@@ -14,28 +14,43 @@ class TransposeImage(gym.ObservationWrapper):
         Original Gym environment, previous to applying the wrapper.
     op : list
         New axis ordering.
-
-    Attributes
-    ----------
-    op : list
-        New axis ordering.
-    observation_space : gym.Space
-        New observation space
     """
 
     def __init__(self, env=None, op=[2, 0, 1]):
         """Transpose observation space for images"""
-        super(TransposeImage, self).__init__(env)
-        assert len(op) == 3, "Error: Operation, {}, must be dim3".format(str(op))
+        super(TransposeImageIfRequired, self).__init__(env)
+
         self.op = op
-        obs_shape = self.observation_space.shape
-        self.observation_space = Box(
-            self.observation_space.low[0, 0, 0],
-            self.observation_space.high[0, 0, 0], [
-                obs_shape[self.op[0]], obs_shape[self.op[1]],
-                obs_shape[self.op[2]]],
-            dtype=self.observation_space.dtype)
+
+        if self.observation_space.__class__.__name__ == "Box" and \
+                self.observation_space.shape == 3:
+            obs_shape = self.observation_space.shape
+            self.observation_space = Box(
+                self.observation_space.low[0, 0, 0],
+                self.observation_space.high[0, 0, 0],
+                [obs_shape[self.op[0]], obs_shape[self.op[1]], obs_shape[self.op[2]]],
+                dtype=self.observation_space.dtype)
+
+        elif self.observation_space.__class__.__name__ == "Dict":
+            for k in self.observation_space:
+                if self.observation_space[k].__class__.__name__ == "Box" and \
+                        self.observation_space[k].shape == 3:
+                    obs_shape = self.observation_space[k].shape
+                    self.observation_space[k] = Box(
+                        self.observation_space[k].low[0, 0, 0],
+                        self.observation_space[k].high[0, 0, 0],
+                        [obs_shape[self.op[0]], obs_shape[self.op[1]], obs_shape[self.op[2]]],
+                        dtype=self.observation_space.dtype)
 
     def observation(self, ob):
         """Transpose observation"""
-        return ob.transpose(self.op[0], self.op[1], self.op[2])
+
+        if isinstance(ob, dict):
+            for k in ob:
+                if len(ob[k].shape) == 3:
+                    ob[k] = ob[k].transpose(self.op[0], self.op[1], self.op[2])
+        else:
+            if len(ob.shape) == 3:
+                ob = ob.transpose(self.op[0], self.op[1], self.op[2])
+
+        return ob
