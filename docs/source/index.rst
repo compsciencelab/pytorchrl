@@ -2,10 +2,11 @@ PyTorchRL Documentation
 =======================
 
 .. warning::
-    Nowhere in this documentation the author's identity is reveled.
-    However github links should not be followed to preserve anonymous
-    review. On the other hand, other people are using the tool and
-    the links must remain there for the use of everybody else.
+    Nowhere in this documentation is the identity of the authors
+    disclosed. However github links should not be followed to
+    preserve anonymous review. On the other hand, other people
+    are using the tool and the links must remain there for the
+    use of everybody else.
 
 .. toctree::
    :maxdepth: 2
