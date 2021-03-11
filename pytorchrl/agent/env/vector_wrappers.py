@@ -37,8 +37,8 @@ class VecPyTorch(VecEnvWrapper):
         if isinstance(obs, dict):
             for k in obs:
                 obs[k] = torch.from_numpy(obs[k]).float().to(self.device)
-            else:
-                obs = torch.from_numpy(obs).float().to(self.device)
+        else:
+            obs = torch.from_numpy(obs).float().to(self.device)
         return obs
 
     def step_async(self, actions):
