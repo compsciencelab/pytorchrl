@@ -58,7 +58,14 @@ class VanillaOnPolicyBuffer(S):
             Data sample (containing all tensors of an environment transition)
         """
         assert set(sample.keys()) == set(self.on_policy_data_fields)
-        self.data["obs"] = torch.zeros(self.max_size + 1, *sample["obs"].shape).to(self.device)
+
+        if isinstance(sample["obs"], dict):
+            self.data["obs"] = {}
+            for k, v in sample["obs"]:
+                self.data["obs"][k] = torch.zeros(self.max_size + 1, *v.shape).to(self.device)
+        else:
+            self.data["obs"] = torch.zeros(self.max_size + 1, *sample["obs"].shape).to(self.device)
+
         self.data["val"] = torch.zeros(self.max_size + 1, *sample["val"].shape).to(self.device)
         self.data["rhs"] = torch.zeros(self.max_size + 1, *sample["rhs"].shape).to(self.device)
         self.data["act"] = torch.zeros(self.max_size, *sample["act"].shape).to(self.device)
@@ -69,8 +76,16 @@ class VanillaOnPolicyBuffer(S):
 
     def get_data(self, data_to_cpu=False):
         """Return currently stored data."""
-        if data_to_cpu: data = {k: v for k, v in self.data.items() if v is not None}
-        else: data = {k: v for k, v in self.data.items() if v is not None}
+        if data_to_cpu:
+            data = {k: v for k, v in self.data.items() if v is not None}
+            for k in data:
+                if isinstance(data[k], dict):
+                    for v in data[k]:
+                        data[k][v] = data[k][v].cpu()
+                else:
+                    data[k] = data[k].cpu()
+        else:
+            data = {k: v for k, v in self.data.items() if v is not None}
         return data
 
     def add_data(self, new_data):
@@ -83,6 +98,12 @@ class VanillaOnPolicyBuffer(S):
             Dictionary of env transition samples to replace self.data with.
         """
         for k, v in new_data.items(): self.data[k] = v
+        for k in new_data:
+            if isinstance(self.data[k], dict):
+                for v in self.data[k]:
+                    self.data[k][v] = self.data[k][v].to(self.device)
+            else:
+                self.data[k] = self.data[k].to(self.device)
 
     def reset(self):
         """Set class counters to zero and remove stored data"""
@@ -100,7 +121,12 @@ class VanillaOnPolicyBuffer(S):
         if self.size == 0 and self.data["obs"] is None: # data tensors lazy initialization
             self.init_tensors(sample)
 
-        self.data["obs"][self.step + 1].copy_(sample["obs2"])
+        if isinstance(sample["obs"], dict):
+            for k, v in sample["obs"]:
+                self.data["obs"][self.step + 1].copy_(sample["obs2"][k])
+        else:
+            self.data["obs"][self.step + 1].copy_(sample["obs2"])
+
         self.data["val"][self.step].copy_(sample["val"])
         self.data["rhs"][self.step + 1].copy_(sample["rhs"])
         self.data["act"][self.step].copy_(sample["act"])
@@ -122,16 +148,21 @@ class VanillaOnPolicyBuffer(S):
         algo : an algorithm class
             An algorithm class instance.
         """
+
+        if isinstance(self.data["obs"], dict):
+            last_obs = {self.data["obs"][k][self.step - 1] for k in self.data["obs"]}
+        else:
+            last_obs = self.data["obs"][self.step - 1]
+
         with torch.no_grad():
             _ = actor.get_action(
-                self.data["obs"][self.step - 1],
+                last_obs,
                 self.data["rhs"][self.step - 1],
                 self.data["done"][self.step - 1])
             next_value = actor.get_value(
-                self.data["obs"][self.step - 1],
+                last_obs,
                 self.data["rhs"][self.step - 1],
-                self.data["done"][self.step - 1]
-            )
+                self.data["done"][self.step - 1])
 
         self.data["ret"][self.step] = next_value
         self.compute_returns(algo.gamma)
@@ -157,7 +188,13 @@ class VanillaOnPolicyBuffer(S):
         info : dict
             info dict updated with relevant info from Storage.
         """
-        self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
+
+        if isinstance(self.data["obs"], dict):
+            for k in self.data["obs"]:
+                self.data["obs"][k][0].copy_(self.data["obs"][k][self.step - 1])
+        else:
+            self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
+
         self.data["rhs"][0].copy_(self.data["rhs"][self.step - 1])
         self.data["done"][0].copy_(self.data["done"][self.step - 1])
 
@@ -208,7 +245,7 @@ class VanillaOnPolicyBuffer(S):
             Generated data batches.
         """
 
-        num_proc = self.data["obs"].shape[1]
+        num_proc = self.data["done"].shape[1]
         l = self.step if self.step != 0 else self.max_size
 
         if recurrent_ac:  # Batches for a feed recurrent actor
@@ -219,21 +256,35 @@ class VanillaOnPolicyBuffer(S):
             for _ in range(num_epochs):
                 for start_ind in range(0, num_proc, num_envs_per_batch):
                     obs, rhs, act, val, ret, done, logp, adv = [], [], [], [], [], [], [], []
+                    if isinstance(self.data["obs"], dict):
+                        obs = {k: [] for k in self.data["obs"]}
 
                     for offset in range(num_envs_per_batch):
                         ind = perm[start_ind + offset]
-                        obs.append(self.data["obs"][:l, ind])
                         val.append(self.data["val"][:l, ind])
                         rhs.append(self.data["rhs"][0:1, ind])
                         act.append(self.data["act"][:l, ind])
                         ret.append(self.data["ret"][:l, ind])
                         done.append(self.data["done"][:l, ind])
                         logp.append(self.data["logp"][:l, ind])
+
                         if "adv" in self.data.keys():
                             adv.append(self.data["adv"][:l, ind])
 
+                        if isinstance(obs, dict):
+                            for k in obs:
+                                obs[k].append(self.data["obs"][:l, ind])
+                        else:
+                            obs.append(self.data["obs"][:l, ind])
+
+                    if isinstance(obs, dict):
+                        for k in obs:
+                            torch.stack(obs[k], dim=1).view(-1, *self.data["obs"][k].size()[2:])
+                    else:
+                        torch.stack(obs, dim=1).view(-1, *self.data["obs"].size()[2:])
+
                     batch = dict(
-                        obs=torch.stack(obs, dim=1).view(-1, *self.data["obs"].size()[2:]),
+                        obs=obs,
                         val=torch.stack(val, dim=1).view(-1, *self.data["val"].size()[2:]),
                         rhs=torch.stack(rhs, dim=1).view(-1, *self.data["rhs"].size()[2:]),
                         act=torch.stack(act, dim=1).view(-1, *self.data["act"].size()[2:]),
@@ -250,8 +301,14 @@ class VanillaOnPolicyBuffer(S):
             sampler = SubsetRandomSampler if shuffle else SequentialSampler
             for _ in range(num_epochs):
                 for idxs in BatchSampler(sampler(range(num_proc * l)), mini_batch_size, drop_last=shuffle):
+
+                    if isinstance(self.data["obs"], dict):
+                        obs = {k: self.data["obs"][k][0:l].reshape(-1, *self.data["obs"][k].shape[2:])[idxs] for k in self.data["obs"]}
+                    else:
+                        obs = self.data["obs"][0:l].reshape(-1, *self.data["obs"].shape[2:])[idxs]
+
                     batch = dict(
-                        obs=self.data["obs"][0:l].reshape(-1, *self.data["obs"].shape[2:])[idxs],
+                        obs=obs,
                         val=self.data["val"][0:l].reshape(-1, *self.data["val"].shape[2:])[idxs],
                         rhs=self.data["rhs"][0:l].reshape(-1, *self.data["rhs"].shape[2:])[idxs],
                         act=self.data["act"][0:l].reshape(-1, *self.data["act"].shape[2:])[idxs],
