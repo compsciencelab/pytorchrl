@@ -8,6 +8,7 @@ from collections import defaultdict, deque
 from torch.utils.tensorboard import SummaryWriter
 from pytorchrl.utils import colorize
 
+
 class Learner:
     """
     Task learner class.
@@ -84,7 +85,7 @@ class Learner:
             # ray.shutdown()
         return flag
 
-    def get_metrics(self, add_algo_metrics=True, add_performace_metrics=True, add_scheme_metrics=False, add_debug_metrics=False):
+    def get_metrics(self, add_algo_metrics=True, add_performace_metrics=True, add_episodes_metrics=False, add_scheme_metrics=False, add_debug_metrics=False):
         """Returns current value of tracked metrics."""
         m = {}
         for k, v in self.metrics.items():
@@ -92,43 +93,60 @@ class Learner:
                 m.update({k: sum(v) / len(v)})
             elif k.split("/")[0] == "performance" and add_performace_metrics:
                 m.update({k: sum(v) / len(v)})
+            elif k.split("/")[0] == "episode" and add_episodes_metrics:
+                m.update({k: sum(v) / len(v)})
             elif k.split("/")[0] == "scheme" and add_scheme_metrics:
                 m.update({k: sum(v) / len(v)})
             elif k.split("/")[0] == "debug" and add_debug_metrics:
                 m.update({k: sum(v) / len(v)})
         return m
 
-    def print_info(self, add_algo_info=True, add_performace_info=True, add_scheme_info=False, add_debug_info=False):
+    def print_info(self, add_algo_info=True, add_performace_info=True, add_episodes_info=False, add_scheme_info=False, add_debug_info=False):
         """Print relevant information about the training process"""
 
         s = colorize("Update {}".format(self.update_worker.actor_version), color="yellow")
         s += ", num samples collected {}, FPS {}".format(self.num_samples_collected,
             int(self.num_samples_collected / (time.time() - self.start)))
 
+        metrics = self.get_metrics(
+            add_algo_metrics=add_algo_info,
+            add_performace_metrics=add_performace_info,
+            add_episodes_metrics=add_episodes_info,
+            add_scheme_metrics=add_scheme_info,
+            add_debug_metrics=add_debug_info,
+        )
+
         if add_algo_info:
             s += colorize("\n  algo: ", color="green")
-            for k, v in self.get_metrics().items():
+            for k, v in metrics.items():
                 if k.split("/")[0] == "algo":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_performace_info:
             s += colorize("\n  performance: ", color="green")
-            for k, v in self.get_metrics().items():
+            for k, v in metrics.items():
                 if k.split("/")[0] == "performance":
+                    s += "{} {:2f}, ".format(k.split("/")[-1], v)
+            s = s[:-2]
+
+        if add_episodes_info:
+            s += colorize("\n  episodes: ", color="green")
+            for k, v in metrics.items():
+                if k.split("/")[0] == "episode":
                     s += "{} {:2f}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_scheme_info:
             s += colorize("\n  scheme: ", color="green")
-            for k, v in self.get_metrics().items():
+            for k, v in metrics.items():
                 if k.split("/")[0] == "scheme":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_debug_info:
             s += colorize("\n  debug: ", color="green")
-            for k, v in self.get_metrics().items():
+            for k, v in metrics().items():
                 if k.split("/")[0] == "debug":
                     s += "{} {}, ".format(k.split("/")[-1], v)
 

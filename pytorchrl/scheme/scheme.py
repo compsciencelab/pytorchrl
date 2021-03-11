@@ -123,3 +123,10 @@ class Scheme:
     def update_worker(self):
         """Return local worker"""
         return self._update_worker
+
+    def get_agent_components(self):
+        return {
+            "Actor": self._update_worker.local_worker.local_worker.actor.__class__.__name__,
+            "Algo": self._update_worker.local_worker.local_worker.algo.__class__.__name__,
+            "Storage": self._update_worker.local_worker.local_worker.storage.__class__.__name__,
+        }

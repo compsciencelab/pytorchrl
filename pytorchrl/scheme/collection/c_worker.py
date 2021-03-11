@@ -1,10 +1,12 @@
+import os
 import ray
 import time
 import torch
 import numpy as np
-from collections import deque
-from pytorchrl.scheme.base.worker import Worker as W
+from collections import deque, defaultdict
+
 from pytorchrl.scheme.utils import check_message
+from pytorchrl.scheme.base.worker import Worker as W
 
 
 class CWorker(W):
@@ -154,18 +156,16 @@ class CWorker(W):
         """
 
         # Collect train data
-        col_time, train_perf = self.collect_train_data(listen_to=listen_to)
+        col_time, info = self.collect_train_data(listen_to=listen_to)
 
         # Get collected rollouts
         data = self.storage.get_data(data_to_cpu)
         self.storage.reset()
 
         # Add information to info dict
-        info = {}
         info.update({"debug/collect_time": col_time})
         info.update({"col_version": self.actor_version})
         info.update({"collected_samples": self.samples_collected})
-        if train_perf: info.update({"performance/train_reward": train_perf})
         self.samples_collected = 0
 
         # Evaluate current network on test environments
@@ -198,7 +198,7 @@ class CWorker(W):
             Average accumulated reward over recent train episodes.
         """
         t = time.time()
-        train_perf = []
+        episode_infos = defaultdict(list)
         num_steps = num_steps if num_steps is not None else int(self.update_every)
         min_steps = int(num_steps * self.fraction_samples)
 
@@ -211,11 +211,18 @@ class CWorker(W):
             # Interact with envs_vector with predicted action (clipped within action space)
             obs2, reward, done, infos = self.envs_train.step(clip_act)
 
-            # Handle end of episode
-            self.acc_reward += reward
-            ended_eps = self.acc_reward[done == 1.0].tolist()
-            if len(ended_eps) > 0: train_perf.append(np.mean(ended_eps))
-            self.acc_reward[done == 1.0] = 0.0
+            # Handle end of episode - episode info
+            done_positions = done.nonzero()[:, 0].tolist()
+            for i in done_positions:
+                try:
+                    for j in infos[i]['episode']:
+                        if isinstance(infos[i]['episode'][j], (float, int)):
+                            if j == 'r':
+                                episode_infos['performance/train_reward'].append(infos[i]['episode'][j])
+                            else:
+                                episode_infos[os.path.join('episode', j)].append(infos[i]['episode'][j])
+                except KeyError:
+                    pass
 
             # Prepare transition dict
             transition = {"obs": self.obs, "rhs": rhs, "act": act, "rew": reward, "obs2": obs2, "done": done}
@@ -236,9 +243,10 @@ class CWorker(W):
                     break
 
         col_time = time.time() - t
-        train_perf = None if len(train_perf) == 0 else np.mean(train_perf)
 
-        return col_time, train_perf
+        episode_infos = {} if len(episode_infos) == 0 else {k: np.mean(v) for k, v in episode_infos.items()}
+
+        return col_time, episode_infos
 
     def evaluate(self):
         """
