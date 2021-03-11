@@ -18,7 +18,7 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
 
     def __init__(self, env=None, op=[2, 0, 1]):
         """Transpose observation space for images"""
-        super(TransposeImageIfRequired, self).__init__(env)
+        super(TransposeImagesIfRequired, self).__init__(env)
 
         self.op = op
 
