@@ -32,7 +32,7 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
                 dtype=self.observation_space.dtype)
 
         elif self.observation_space.__class__.__name__ == "Dict":
-            for k in self.observation_space:
+            for k in self.observation_space.spaces:
                 if self.observation_space[k].__class__.__name__ == "Box" and \
                         self.observation_space[k].shape == 3:
                     obs_shape = self.observation_space[k].shape
