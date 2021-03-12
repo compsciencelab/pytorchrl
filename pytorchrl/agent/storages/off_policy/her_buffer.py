@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from pytorchrl_extensions.storages.ere_buffer import EREBuffer as B
+from pytorchrl.agent.storages.off_policy.ere_buffer import EREBuffer as B
 
 
 class HERBuffer(B):
