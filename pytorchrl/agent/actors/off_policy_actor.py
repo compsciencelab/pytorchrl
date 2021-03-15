@@ -30,6 +30,10 @@ class OffPolicyActor(nn.Module):
         Policy RNN hidden size.
     create_double_q_critic : bool
         Whether to instantiate a second Q network or not.
+    deterministic: bool
+        Whether using DDPG, TD3 or any other deterministic off-policy actor.
+    noise: str
+        Type of exploration noise that will be added to the determinisitc actions.
 
     Examples
     --------
@@ -41,11 +45,14 @@ class OffPolicyActor(nn.Module):
                  feature_extractor_kwargs={},
                  recurrent_policy=False,
                  recurrent_hidden_size=512,
-                 create_double_q_critic=True):
+                 create_double_q_critic=True,
+                 deterministic=False,
+                 noise=None):
 
         super(OffPolicyActor, self).__init__()
         self.input_space = input_space
         self.action_space = action_space
+        self.deterministic = deterministic
 
         # ---- Input/Output spaces --------------------------------------------
 
@@ -92,13 +99,19 @@ class OffPolicyActor(nn.Module):
             self.scale = None
             self.unscale = None
 
-        elif action_space.__class__.__name__ == "Box":  # Continuous action space
+        elif action_space.__class__.__name__ == "Box" and not deterministic:  # Continuous action space
             self.dist = get_dist("SquashedGaussian")(self.policy_net.num_outputs, action_space.shape[0])
             self.scale = Scale(action_space)
             self.unscale = Unscale(action_space)
-
+            
+        elif action_space.__class__.__name__ == "Box" and deterministic:
+            self.dist = get_dist("Deterministic")(self.policy_net.num_outputs, action_space.shape[0], noise=noise)
+            self.scale = Scale(action_space)
+            self.unscale = Unscale(action_space)
+            
         else:
             raise NotImplementedError
+        
 
     @classmethod
     def create_factory(
@@ -110,7 +123,9 @@ class OffPolicyActor(nn.Module):
             recurrent_hidden_size=512,
             feature_extractor_kwargs={},
             feature_extractor_network=get_feature_extractor("MLP"),
-            create_double_q_critic=True):
+            create_double_q_critic=True,
+            deterministic=False,
+            noise=None):
         """
         Returns a function that creates actor critic instances.
 
@@ -132,6 +147,10 @@ class OffPolicyActor(nn.Module):
             Policy RNN hidden size.
         create_double_q_critic : bool
             whether to instantiate a second Q network or not.
+        deterministic: bool
+            Whether using DDPG, TD3 or any other deterministic off-policy actor.
+        noise: str
+            Type of exploration noise that will be added to the determinisitc actions.
 
         Returns
         -------
@@ -147,7 +166,9 @@ class OffPolicyActor(nn.Module):
                          recurrent_hidden_size=recurrent_hidden_size,
                          create_double_q_critic=create_double_q_critic,
                          feature_extractor_kwargs=feature_extractor_kwargs,
-                         feature_extractor_network=feature_extractor_network)
+                         feature_extractor_network=feature_extractor_network,
+                         deterministic=deterministic,
+                         noise=noise)
             if restart_model:
                 policy.load_state_dict(
                     torch.load(restart_model, map_location=device))
@@ -254,5 +275,10 @@ class OffPolicyActor(nn.Module):
             inputs = obs
 
         q1, _ = self.q1(inputs)
-        q2, _ = self.q2(inputs) if self.q2 else (None, None)
+        
+        if self.q2:
+            q2, _ = self.q2(inputs) 
+        else:
+            q2 = None
+        
         return q1, q2
