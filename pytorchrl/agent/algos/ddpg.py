@@ -31,7 +31,7 @@ class DDPG(Algo):
     gamma : float
         Discount factor parameter.
     polyak: float
-        SAC polyak averaging parameter.
+        DDPG polyak averaging parameter.
     num_updates: int
         Num consecutive actor_critic updates before data collection continues.
     update_every: int
@@ -55,7 +55,6 @@ class DDPG(Algo):
             mini_batch_size=64, num_test_episodes=0, target_update_interval=1)
     """
     
-    # TODO: 1. Soft update! 
 
     def __init__(self,
                  device,
@@ -208,7 +207,7 @@ class DDPG(Algo):
         rhs: torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
         other: dict
-            Additional SAC predictions, which are not used in other algorithms.
+            Additional DDPG predictions, which are not used in other algorithms.
         """
 
         with torch.no_grad():
@@ -220,7 +219,7 @@ class DDPG(Algo):
 
     def compute_loss_q(self, data, rnn_hs, n_step=1, weights=1):
         """
-        Calculate SAC Q-nets loss
+        Calculate DDPG Q-nets loss
 
         Parameters
         ----------
@@ -310,7 +309,7 @@ class DDPG(Algo):
         grads: list of tensors
             List of actor_critic gradients.
         info: dict
-            Dict containing current SAC iteration information.
+            Dict containing current DDPG iteration information.
         """
 
         # PER
