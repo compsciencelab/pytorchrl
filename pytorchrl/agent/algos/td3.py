@@ -228,7 +228,7 @@ class TD3(Algo):
         Parameters
         ----------
         data: dict
-            Data batch dict containing all required tensors to compute SAC losses.
+            Data batch dict containing all required tensors to compute TD3 losses.
         rnn_hs : torch.tensor
             Policy recurrent hidden state obtained with the current ActorCritic version.
 
@@ -285,7 +285,7 @@ class TD3(Algo):
         Parameters
         ----------
         data: dict
-            Data batch dict containing all required tensors to compute SAC losses.
+            Data batch dict containing all required tensors to compute TD3 losses.
 
         Returns
         -------
@@ -316,7 +316,7 @@ class TD3(Algo):
         Parameters
         ----------
         data: dict
-            data batch containing all required tensors to compute SAC losses.
+            data batch containing all required tensors to compute TD3 losses.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.
 
@@ -325,7 +325,7 @@ class TD3(Algo):
         grads: list of tensors
             List of actor_critic gradients.
         info: dict
-            Dict containing current SAC iteration information.
+            Dict containing current TD3 iteration information.
         """
 
         # PER
