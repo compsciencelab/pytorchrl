@@ -22,8 +22,8 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
 
         self.op = op
 
-        if self.observation_space.__class__.__name__ == "Box" and \
-                self.observation_space.shape == 3:
+        if isinstance(self.observation_space, gym.spaces.Box) and \
+                len(self.observation_space.shape) == 3:
             obs_shape = self.observation_space.shape
             self.observation_space = Box(
                 self.observation_space.low[0, 0, 0],
@@ -31,10 +31,10 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
                 [obs_shape[self.op[0]], obs_shape[self.op[1]], obs_shape[self.op[2]]],
                 dtype=self.observation_space.dtype)
 
-        elif self.observation_space.__class__.__name__ == "Dict":
-            for k in self.observation_space:
-                if self.observation_space[k].__class__.__name__ == "Box" and \
-                        self.observation_space[k].shape == 3:
+        elif isinstance(self.observation_space, gym.spaces.Dict):
+            for k in self.observation_space.spaces:
+                if isinstance(self.observation_space[k], gym.spaces.Box) and \
+                        len(self.observation_space[k].shape) == 3:
                     obs_shape = self.observation_space[k].shape
                     self.observation_space[k] = Box(
                         self.observation_space[k].low[0, 0, 0],
