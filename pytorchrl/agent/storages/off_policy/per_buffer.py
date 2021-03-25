@@ -171,6 +171,7 @@ class PERBuffer(B):
                     idxs = np.random.choice(range(num_proc * self.size), size=mini_batch_size, p=probs)
                     weigths = np.power(num_proc * self.size * probs, -self.beta)
                     weigths /= weigths.max()
+                    weigths = weigths.reshape(-1, 1)[idxs]
 
                 batch = dict(
                     obs=self.data["obs"][0:self.size].reshape(-1, *self.data["obs"].shape[2:])[idxs],
