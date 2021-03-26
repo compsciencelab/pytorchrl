@@ -80,7 +80,8 @@ class Learner:
         flag = self.num_samples_collected >= self.target_steps
         if flag:
             self.update_worker.stop()
-            print(colorize("\nTraining finished!", color="green", bold=True))
+            # print(colorize("\nTraining finished!", color="green", bold=True))
+            print("\nTraining finished!")
             time.sleep(1)
             # ray.shutdown()
         return flag
@@ -104,7 +105,8 @@ class Learner:
     def print_info(self, add_algo_info=True, add_performace_info=True, add_episodes_info=False, add_scheme_info=False, add_debug_info=False):
         """Print relevant information about the training process"""
 
-        s = colorize("Update {}".format(self.update_worker.actor_version), color="yellow")
+        # s = colorize("Update {}".format(self.update_worker.actor_version), color="yellow")
+        s = "Update {}".format(self.update_worker.actor_version)
         s += ", num samples collected {}, FPS {}".format(self.num_samples_collected,
             int(self.num_samples_collected / (time.time() - self.start)))
 
@@ -117,35 +119,40 @@ class Learner:
         )
 
         if add_algo_info:
-            s += colorize("\n  algo: ", color="green")
+            # s += colorize("\n  algo: ", color="green")
+            s += "\n  algo: "
             for k, v in metrics.items():
                 if k.split("/")[0] == "algo":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_performace_info:
-            s += colorize("\n  performance: ", color="green")
+            # s += colorize("\n  performance: ", color="green")
+            s += "\n  performance: "
             for k, v in metrics.items():
                 if k.split("/")[0] == "performance":
                     s += "{} {:2f}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_episodes_info:
-            s += colorize("\n  episodes: ", color="green")
+            # s += colorize("\n  episodes: ", color="green")
+            s += "\n  episodes: "
             for k, v in metrics.items():
                 if k.split("/")[0] == "episode":
                     s += "{} {:2f}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_scheme_info:
-            s += colorize("\n  scheme: ", color="green")
+            # s += colorize("\n  scheme: ", color="green")
+            s += "\n  scheme: "
             for k, v in metrics.items():
                 if k.split("/")[0] == "scheme":
                     s += "{} {}, ".format(k.split("/")[-1], v)
             s = s[:-2]
 
         if add_debug_info:
-            s += colorize("\n  debug: ", color="green")
+            # s += colorize("\n  debug: ", color="green")
+            s += "\n  debug: "
             for k, v in metrics().items():
                 if k.split("/")[0] == "debug":
                     s += "{} {}, ".format(k.split("/")[-1], v)
