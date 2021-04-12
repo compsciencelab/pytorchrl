@@ -111,12 +111,12 @@ class GWorker(W):
         self.algo = self.local_worker.algo
 
         # Get storage instance.
-        if col_communication == prl.SYNC and self.local_worker.envs_train is not None:
+        if col_communication == prl.ASYNC and self.local_worker.envs_train is not None:
 
             # If async, collection storage sizes need a storage copy
             # Define it with the minimum size required, to save memory
             size1 = self.local_worker.storage.max_size
-            size2 = self.local_worker.algo.update_every
+            size2 = self.local_worker.algo.update_every * 2
             if size2 == None: size2 = float("Inf")
             new_size = min(size1, size2)
 

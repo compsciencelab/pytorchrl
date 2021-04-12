@@ -270,7 +270,7 @@ class ReplayBuffer(S):
             self.init_tensors(sample)
 
         # If using memory, save fixed length consecutive overlapping sequences
-        if self.recurrent_actor and self.step % self.sequence_length == 0 and self.step != 0:
+        if self.recurrent_actor and self.step % self.sequence_length == 0 and self.step != 0 and self.overlap_length > 0:
             next_seq_overlap = self.get_data_slice(self.step - self.overlap_length, self.step)
             self.insert_data_slice(next_seq_overlap)
 

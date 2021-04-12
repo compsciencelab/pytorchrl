@@ -163,7 +163,7 @@ class PERBuffer(B):
         """
         Steps required before updating actor policy model.
         """
-        num_proc = self.data["done"].shape[1]
+        num_proc = self.data[prl.DONE].shape[1]
 
         if self.data["priority"] is None:  # Lazy initialization of priority
             if self.recurrent_actor:
