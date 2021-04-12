@@ -34,11 +34,11 @@ NUMSAMPLES = "NumberSamples"
 # Training Architecture
 CENTRAL = "Central"
 PARALLEL = "Parallel"
-SYNC = "Synchronous"
-ASYNC = "Asynchronous"
 FPS = "FramesPerSecond"
 PL = "PolicyLag"
 GA = "GradientAsynchrony"
+SYNC = "synchronous"
+ASYNC = "asynchronous"
 
 # Agent
 ACTOR = "Actor"
@@ -65,3 +65,6 @@ DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = DataTransitionKeys
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
 
+
+from pytorchrl.learner import Learner
+from pytorchrl.scheme import Scheme
