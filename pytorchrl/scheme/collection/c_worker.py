@@ -244,7 +244,7 @@ class CWorker(W):
 
             # Define transition sample
             transition = prl.DataTransition(
-                self.obs, self.rhs, self.done. act, reward,
+                self.obs, self.rhs, self.done, act, reward,
                 obs2, rhs2, done2)._asdict()
             transition.update(algo_data)
 
