@@ -5,10 +5,9 @@ from copy import deepcopy
 import torch
 import torch.optim as optim
 
-import pytorchrl_extensions as prl
-from pytorchrl.agent.algos.base import Algo
-from pytorchrl_extensions.algorithms.base import Algorithm
-from pytorchrl_extensions.algorithms.utils import get_gradients, set_gradients
+import pytorchrl as prl
+from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
 class TD3(Algorithm):
@@ -358,7 +357,6 @@ class TD3(Algorithm):
 
         pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
         q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
-
         # q_pi = torch.min(q1_pi, q2_pi) # commenting this out since the paper only
         # uses q1 but might be worth testing if using min gives general improvement
 
