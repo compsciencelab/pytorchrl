@@ -56,8 +56,6 @@ def main():
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
         obs_space, action_space,
-        feature_extractor_network=get_feature_extractor(args.nn),
-        recurrent_policy=args.recurrent_policy,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage

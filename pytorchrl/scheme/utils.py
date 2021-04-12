@@ -1,11 +1,15 @@
 import ray
 import time
 from collections import deque
+import base64
+import lz4.frame
+from ray import cloudpickle as pickle
 
 FREE_DELAY_S = 10.0
 MAX_FREE_QUEUE_SIZE = 100
 _last_free_time = 0.0
 _to_free = []
+
 
 def ray_get_and_free(object_ids):
     """
@@ -69,5 +73,24 @@ def average_gradients(grads_list):
         grads_list[0][grad] is not None else 0.0
         for grad in range(len(grads_list[0]))]
     return avg_grads
+
+
+def pack(data):
+    """ from https://github.com/ray-project/ray/blob/master/rllib/utils/compression.py """
+
+    data = pickle.dumps(data)
+    data = lz4.frame.compress(data)
+    # TODO(ekl) we shouldn't need to base64 encode this data, but this
+    # seems to not survive a transfer through the object store if we don't.
+    data = base64.b64encode(data).decode("ascii")
+    return data
+
+
+def unpack(data):
+    """ from https://github.com/ray-project/ray/blob/master/rllib/utils/compression.py """
+    data = base64.b64decode(data)
+    data = lz4.frame.decompress(data)
+    data = pickle.loads(data)
+    return data
 
 

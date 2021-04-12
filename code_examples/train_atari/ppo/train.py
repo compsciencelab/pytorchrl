@@ -58,9 +58,7 @@ def main():
     actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
-        recurrent_policy=args.recurrent_policy,
-        restart_model=args.restart_model,
-    )
+        restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)

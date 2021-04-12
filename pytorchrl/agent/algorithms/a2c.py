@@ -1,11 +1,13 @@
 import torch
+import itertools
 import torch.nn as nn
 import torch.optim as optim
 
-from pytorchrl.agent.algos.base import Algo
+import pytorchrl as prl
+from pytorchrl.agent.algorithms.base import Algorithm
 
 
-class A2C(Algo):
+class A2C(Algorithm):
     """
     Algorithm class to execute A2C, from Mnih et al. 2016 (https://arxiv.org/pdf/1602.01783.pdf).
 
@@ -13,7 +15,7 @@ class A2C(Algo):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
+    actor : Actor
         Actor_critic class instance.
     lr_v : float
         Value network learning rate.
@@ -26,14 +28,14 @@ class A2C(Algo):
     max_grad_norm : float
         Gradient clipping parameter.
     test_every : int
-        Regularity of test evaluations in actor_critic updates.
+        Regularity of test evaluations in actor updates.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
     """
 
     def __init__(self,
                  device,
-                 actor_critic,
+                 actor,
                  lr_v=1e-4,
                  lr_pi=1e-4,
                  gamma=0.99,
@@ -43,39 +45,41 @@ class A2C(Algo):
 
         # ---- General algo attributes ----------------------------------------
 
+        # Discount factor
+        self._gamma = gamma
+
         # Number of steps collected with initial random policy
-        self.start_steps = 0  # Default to 0 for On-policy algos
+        self._start_steps = 0  # Default to 0 for On-policy algos
 
         # Times data in the buffer is re-used before data collection proceeds
-        self.num_epochs = 1
+        self._num_epochs = 1
 
         # Number of data samples collected between network update stages
-        self.update_every = None  # Depends on storage capacity
+        self._update_every = None  # Depends on storage capacity
 
         # Number mini batches per epoch
-        self.num_mini_batch = 1
+        self._num_mini_batch = 1
 
         # Size of update mini batches
-        self.mini_batch_size = None  # Depends on storage capacity
+        self._mini_batch_size = None  # Depends on storage capacity
 
         # Number of network updates between test evaluations
-        self.test_every = test_every
+        self._test_every = test_every
 
         # Number of episodes to complete when testing
-        self.num_test_episodes = num_test_episodes
+        self._num_test_episodes = num_test_episodes
 
         # ---- A2C-specific attributes ----------------------------------------
 
         self.iter = 0
-        self.gamma = gamma
         self.device = device
-        self.actor_critic = actor_critic
+        self.actor = actor
         self.max_grad_norm = max_grad_norm
 
         # ----- Optimizer -----------------------------------------------------
 
-        self.pi_optimizer = optim.Adam(self.actor_critic.policy_net.parameters(), lr=lr_pi)
-        self.v_optimizer = optim.Adam(self.actor_critic.value_net.parameters(), lr=lr_v)
+        self.pi_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr_pi)
+        self.v_optimizer = optim.Adam(self.value_net.parameters(), lr=lr_v)
 
     @classmethod
     def create_factory(cls,
@@ -101,7 +105,7 @@ class A2C(Algo):
         max_grad_norm : float
             Gradient clipping parameter.
         test_every : int
-            Regularity of test evaluations in actor_critic updates.
+            Regularity of test evaluations in actor updates.
         num_test_episodes : int
             Number of episodes to complete in each test phase.
 
@@ -116,11 +120,64 @@ class A2C(Algo):
                        lr_v=lr_v,
                        gamma=gamma,
                        device=device,
-                       actor_critic=actor,
+                       actor=actor,
                        test_every=test_every,
                        max_grad_norm=max_grad_norm,
                        num_test_episodes=num_test_episodes)
         return create_algo_instance
+
+    @property
+    def gamma(self):
+        """Returns discount factor gamma."""
+        return self._gamma
+
+    @property
+    def start_steps(self):
+        """Returns the number of steps to collect with initial random policy."""
+        return self._start_steps
+
+    @property
+    def num_epochs(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_epochs
+
+    @property
+    def update_every(self):
+        """
+        Returns the number of data samples collected between
+        network update stages.
+        """
+        return self._update_every
+
+    @property
+    def num_mini_batch(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_mini_batch
+
+    @property
+    def mini_batch_size(self):
+        """
+        Returns the number of mini batches per epoch.
+        """
+        return self._mini_batch_size
+
+    @property
+    def test_every(self):
+        """Number of network updates between test evaluations."""
+        return self._test_every
+
+    @property
+    def num_test_episodes(self):
+        """
+        Returns the number of episodes to complete when testing.
+        """
+        return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
@@ -150,11 +207,14 @@ class A2C(Algo):
         """
 
         with torch.no_grad():
+
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor_critic.get_action(
+             entropy_dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
-            value = self.actor_critic.get_value(obs, rhs, done)
-            other = {"val": value, "logp": logp_action}
+
+            value, rhs = self.actor.get_value(obs, rhs, done)
+
+            other = {prl.VAL: value, prl.LOGP: logp_action}
 
         return action, clipped_action, rhs, other
 
@@ -166,8 +226,6 @@ class A2C(Algo):
         ----------
         data: dict
             Data batch dict containing all required tensors to compute A2C loss.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
 
         Returns
         -------
@@ -175,15 +233,15 @@ class A2C(Algo):
             A2C loss.
         """
 
-        o, rhs, a, old_v = data["obs"], data["rhs"], data["act"], data["val"]
-        r, d, old_logp, adv = data["ret"], data["done"], data["logp"], data["adv"]
+        o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
+        r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # Policy loss
-        logp, dist_entropy, _ = self.actor_critic.evaluate_actions(o, rhs, d, a)
+        logp, dist_entropy, _ = self.actor.evaluate_actions(o, rhs, d, a)
         pi_loss = - (logp * adv).mean()
 
         # Value loss
-        new_v = self.actor_critic.get_value(o, rhs, d)
+        new_v = self.actor.get_value(o, rhs, d)
         value_loss = (r - new_v).pow(2).mean()
 
         return pi_loss, value_loss
@@ -203,7 +261,7 @@ class A2C(Algo):
         Returns
         -------
         grads: list of tensors
-            List of actor_critic gradients.
+            List of actor gradients.
         info: dict
             Dict containing current A2C iteration information.
         """
@@ -215,21 +273,21 @@ class A2C(Algo):
         self.pi_optimizer.zero_grad()
         action_loss.backward(retain_graph=True)
 
-        for p in self.actor_critic.policy_net.parameters():
+        for p in self.policy_net.parameters():
             p.requires_grad = False
 
         # Compute value gradients
         self.v_optimizer.zero_grad()
         value_loss.backward()
 
-        for p in self.actor_critic.policy_net.parameters():
+        for p in self.policy_net.parameters():
             p.requires_grad = True
 
         # Clip gradients to max value
-        nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
         grads = []
-        for p in self.actor_critic.parameters():
+        for p in self.actor.parameters():
             if grads_to_cpu:
                 if p.grad is not None:
                     grads.append(p.grad.data.cpu().numpy())
@@ -240,8 +298,8 @@ class A2C(Algo):
                     grads.append(p.grad)
 
         info = {
-            "algo/value_loss": value_loss.item(),
-            "algo/action_loss": action_loss.item(),
+            "value_loss": value_loss.item(),
+            "action_loss": action_loss.item(),
         }
 
         return grads, info
@@ -254,10 +312,10 @@ class A2C(Algo):
         Parameters
         ----------
         gradients: list of tensors
-            List of actor_critic gradients.
+            List of actor gradients.
         """
         if gradients is not None:
-            for g, p in zip(gradients, self.actor_critic.parameters()):
+            for g, p in zip(gradients, self.actor.parameters()):
                 if g is not None:
                     p.grad = torch.from_numpy(g).to(self.device)
 
@@ -265,19 +323,19 @@ class A2C(Algo):
         self.v_optimizer.step()
         self.iter += 1
 
-    def set_weights(self, weights):
+    def set_weights(self, actor_weights):
         """
-        Update actor critic with the given weights.
+        Update actor with the given weights.
 
         Parameters
         ----------
-        weights: dict of tensors
-            Dict containing actor_critic weights to be set.
+        actor_weights: dict of tensors
+            Dict containing actor weights to be set.
         """
-        self.actor_critic.load_state_dict(weights)
+        self.actor.load_state_dict(actor_weights)
         self.iter += 1
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of the algorithm, change its value
         to `new_parameter_value value`.

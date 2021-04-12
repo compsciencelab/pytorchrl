@@ -6,38 +6,41 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-from pytorchrl.agent.algos.base import Algo
+import pytorchrl as prl
+from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
-class DDQN(Algo):
+class DDQN(Algorithm):
     """
     Deep Q Learning algorithm class.
 
     Algorithm class to execute DQN, from Mhin et al.
-    (https://www.nature.com/articles/nature14236?wm=book_wap_0005).
+    (https://www.nature.com/articles/nature14236?wm=book_wap_0005) with
+    target network.
 
     Parameters
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        Actor_critic class instance.
+    actor : ActorCritic
+        actor class instance.
     lr : float
         learning rate.
     gamma : float
         Discount factor parameter.
     num_updates: int
-        Num consecutive actor_critic updates before data collection continues.
+        Num consecutive actor updates before data collection continues.
     update_every: int
-        Regularity of actor_critic updates in number environment steps.
+        Regularity of actor updates in number environment steps.
     start_steps: int
         Num of initial random environment steps before learning starts.
     mini_batch_size: int
-        Size of actor_critic update batches.
+        Size of actor update batches.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
     test_every : int
-        Regularity of test evaluations in actor_critic updates.
+        Regularity of test evaluations in actor updates.
     initial_epsilon : float
         initial value for DQN epsilon parameter.
     epsilon_decay : float
@@ -46,7 +49,7 @@ class DDQN(Algo):
 
     def __init__(self,
                  device,
-                 actor_critic,
+                 actor,
                  lr=1e-4,
                  gamma=0.99,
                  polyak=0.995,
@@ -55,7 +58,6 @@ class DDQN(Algo):
                  test_every=5000,
                  start_steps=20000,
                  mini_batch_size=64,
-                 reward_scaling=1.0,
                  num_test_episodes=5,
                  initial_epsilon=1.0,
                  epsilon_decay=0.999,
@@ -63,49 +65,50 @@ class DDQN(Algo):
 
         # ---- General algo attributes ----------------------------------------
 
+        # Discount factor
+        self._gamma = gamma
+
         # Number of steps collected with initial random policy
-        self.start_steps = start_steps
+        self._start_steps = start_steps
 
         # Times data in the buffer is re-used before data collection proceeds
-        self.num_epochs = 1 # Default to 1 for off-policy algorithms
+        self._num_epochs = 1  # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
-        self.update_every = update_every
+        self._update_every = update_every
 
         # Number mini batches per epoch
-        self.num_mini_batch = num_updates
+        self._num_mini_batch = num_updates
 
         # Size of update mini batches
-        self.mini_batch_size = mini_batch_size
+        self._mini_batch_size = mini_batch_size
 
         # Number of network updates between test evaluations
-        self.test_every = test_every
+        self._test_every = test_every
 
         # Number of episodes to complete when testing
-        self.num_test_episodes = num_test_episodes
+        self._num_test_episodes = num_test_episodes
 
-        # ---- DQN-specific attributes ----------------------------------------
+        # ---- DDQN-specific attributes ---------------------------------------
 
         self.iter = 0
-        self.gamma = gamma
         self.device = device
         self.polyak = polyak
         self.epsilon = initial_epsilon
-        self.actor_critic = actor_critic
+        self.actor = actor
         self.epsilon_decay = epsilon_decay
-        self.reward_scaling = reward_scaling
         self.target_update_interval = target_update_interval
 
         # Create target network
-        self.actor_critic_targ = deepcopy(actor_critic)
+        self.actor_targ = deepcopy(actor)
 
-        # Freeze target networks with respect to optimizers (only update via polyak averaging)
-        for p in self.actor_critic_targ.parameters():
+        # Freeze target networks with respect to optimizers
+        for p in self.actor_targ.parameters():
             p.requires_grad = False
 
         # ----- Optimizer -----------------------------------------------------
 
-        self.q_optimizer = optim.Adam(self.actor_critic.q1.parameters(), lr=lr)
+        self.q_optimizer = optim.Adam(self.actor.q1.parameters(), lr=lr)
 
     @classmethod
     def create_factory(cls,
@@ -117,13 +120,12 @@ class DDQN(Algo):
                        test_every=5000,
                        start_steps=20000,
                        mini_batch_size=64,
-                       reward_scaling=1.0,
                        num_test_episodes=5,
                        epsilon_decay=0.999,
                        initial_epsilon=1.0,
                        target_update_interval=1):
         """
-        Returns a function to create new DQN instances.
+        Returns a function to create new DDQN instances.
 
         Parameters
         ----------
@@ -134,21 +136,19 @@ class DDQN(Algo):
         polyak: float
             Polyak averaging parameter.
         num_updates: int
-            Num consecutive actor_critic updates before data collection continues.
+            Num consecutive actor updates before data collection continues.
         update_every: int
-            Regularity of actor_critic updates in number environment steps.
+            Regularity of actor updates in number environment steps.
         start_steps: int
             Num of initial random environment steps before learning starts.
         mini_batch_size: int
-            Size of actor_critic update batches.
-        reward_scaling: float
-            Reward scaling factor.
+            Size of actor update batches.
         target_update_interval: float
-            regularity of target nets updates with respect to actor_critic Adam updates.
+            regularity of target nets updates with respect to actor Adam updates.
         num_test_episodes : int
             Number of episodes to complete in each test phase.
         test_every : int
-            Regularity of test evaluations in actor_critic updates.
+            Regularity of test evaluations in actor updates.
         initial_epsilon : float
             initial value for DQN epsilon parameter.
         epsilon_decay : float
@@ -157,7 +157,7 @@ class DDQN(Algo):
         Returns
         -------
         create_algo_instance : func
-            creates a new DQN class instance.
+            creates a new DDQN class instance.
         """
 
         def create_algo_instance(device, actor):
@@ -165,13 +165,12 @@ class DDQN(Algo):
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor_critic=actor,
+                       actor=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,
                        update_every=update_every,
                        epsilon_decay=epsilon_decay,
-                       reward_scaling=reward_scaling,
                        mini_batch_size=mini_batch_size,
                        initial_epsilon=initial_epsilon,
                        num_test_episodes=num_test_episodes,
@@ -180,14 +179,14 @@ class DDQN(Algo):
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
-        DQN acting function.
+        DDQN acting function.
 
         Parameters
         ----------
         obs: torch.tensor
             Current world observation
-        rhs: torch.tensor
-            RNN recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
+        rhs: dict
+            RNN recurrent hidden states.
         done: torch.tensor
             1.0 if current obs is the last one in the episode, else 0.0.
         deterministic: bool
@@ -199,59 +198,62 @@ class DDQN(Algo):
             Predicted next action.
         clipped_action: torch.tensor
             Predicted next action (clipped to be within action space).
-        rhs: torch.tensor
-            Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
+        rhs: batch
+            Actor recurrent hidden state.
         other: dict
-            Additional DQN predictions, which are not used in other algorithms.
+            Additional DDQN predictions, which are not used in other algorithms.
         """
 
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
             with torch.no_grad():
-                q, _ = self.actor_critic.get_q_scores(obs)
+                q, _ = self.actor.get_q_scores(obs)
                 action = clipped_action = torch.argmax(q, dim=1).unsqueeze(0)
         else:
             action = clipped_action  = torch.tensor(
-                [self.actor_critic.action_space.sample()]).unsqueeze(0)
+                [self.actor.action_space.sample()]).unsqueeze(0)
 
         other = {}
         return action, clipped_action, rhs, other
 
-    def compute_loss(self, data):
+    def compute_loss(self, batch, n_step=1, per_weights=1):
         """
-        Calculate DQN loss
+        Calculate DDQN loss
 
         Parameters
         ----------
-        data: dict
-            Data batch dict containing all required tensors to compute DQN loss.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
+        batch: dict
+            Data batch dict containing all required tensors to compute DDQN loss.
 
         Returns
         -------
         loss : torch.tensor
-            DQN loss.
+            DDQN loss.
+        errors : torch.tensor
+            TD errors.
         """
 
-        o, a, r, o2, d = data["obs"], data["act"], data["rew"], data["obs2"], data["done"]
-        r *= self.reward_scaling
+        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        a, r = batch[prl.ACT], batch[prl.REW]
+        o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         # Get max predicted Q values (for next states) from target model
-        q_targ_vals, _ = self.actor_critic_targ.get_q_scores(o2)
+        q_targ_vals, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
         q_targ_next = q_targ_vals.max(dim=1)[0].unsqueeze(1)
 
         # Compute Q targets for current states
-        q_targ = r + self.gamma * (1 - d) * q_targ_next
+        q_targ = r + (self.gamma ** n_step) * (1 - d2) * q_targ_next
 
         # Get expected Q values from local model
-        q_vals, _ = self.actor_critic.get_q_scores(o)
+        q_vals, _ = self.actor.get_q_scores(o, rhs, d)
         q_exp = q_vals.gather(1, a.long())
 
         # Compute loss
         loss = F.mse_loss(q_targ, q_exp)
 
-        return loss
+        errors = (q_exp - q_targ).abs().detach().cpu()
+
+        return loss, errors
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -268,33 +270,36 @@ class DDQN(Algo):
         Returns
         -------
         grads: list of tensors
-            List of actor_critic gradients.
+            List of actor gradients.
         info: dict
             Dict containing current DQN iteration information.
         """
 
-        # Compute DQN loss
-        loss = self.compute_loss(batch)
+        # Recurrent burn-in
+        if self.actor.is_recurrent:
+            batch = self.actor.burn_in_recurrent_states(batch)
 
-        # Compute gradients
+        # N-step returns
+        n_step = batch["n_step"] if "n_step" in batch else 1.0
+
+        # PER
+        per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
+
+        #######################################################################
+
+        # Compute DDQN loss and gradients
+        loss, errors = self.compute_loss(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss.backward()
-
-        grads = []
-        for p in self.actor_critic.q1.parameters():
-            if grads_to_cpu:
-                if p.grad is not None:
-                    grads.append(p.grad.data.cpu().numpy())
-                else:
-                    grads.append(None)
-            else:
-                if p.grad is not None:
-                    grads.append(p.grad)
+        grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
 
         info = {
-            "algo/loss_q": loss.detach().item(),
-            "algo/epsilon": self.epsilon,
+            "loss_q": loss.detach().item(),
+            "epsilon": self.epsilon,
         }
+
+        if "per_weights" in batch:
+            info.update({"errors": errors})
 
         return grads, info
 
@@ -302,7 +307,7 @@ class DDQN(Algo):
         """Update actor critic target networks with polyak averaging"""
         if self.iter % self.target_update_interval == 0:
             with torch.no_grad():
-                for p, p_targ in zip(self.actor_critic.parameters(), self.actor_critic_targ.parameters()):
+                for p, p_targ in zip(self.actor.parameters(), self.actor_targ.parameters()):
                     p_targ.data.mul_(self.polyak)
                     p_targ.data.add_((1 - self.polyak) * p.data)
 
@@ -318,13 +323,11 @@ class DDQN(Algo):
         Parameters
         ----------
         gradients: list of tensors
-            List of actor_critic gradients.
+            List of actor gradients.
         """
         if gradients is not None:
-            for g, p in zip(gradients, self.actor_critic.q1.parameters()):
-                if g is not None:
-                    p.grad = torch.from_numpy(g).to(self.device)
-
+            set_gradients(
+                self.actor.q1, gradients=gradients, device=self.device)
         self.q_optimizer.step()
 
         # Update target networks by polyak averaging.
@@ -339,9 +342,9 @@ class DDQN(Algo):
         Parameters
         ----------
         weights: dict of tensors
-            Dict containing actor_critic weights to be set.
+            Dict containing actor weights to be set.
         """
-        self.actor_critic.load_state_dict(weights)
+        self.actor.load_state_dict(weights)
 
         # Update target networks by polyak averaging.
         self.iter += 1

@@ -5,16 +5,19 @@ from copy import deepcopy
 import torch
 import torch.optim as optim
 
+import pytorchrl as prl
 from pytorchrl.agent.algos.base import Algo
+from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
-class TD3(Algo):
+class TD3(Algorithm):
     """
     Twin Delayed Deep Deterministic Policy Gradient algorithm class.
     Algorithm class to execute TD3, from Scott Fujimoto et al.
     Addressing Function Approximation Error in Actor-Critic Methods
-    (https://arxiv.org/pdf/1802.09477.pdf). 
-    
+    (https://arxiv.org/pdf/1802.09477.pdf).
+
     Algorithms are modules generally required by multiple workers, so TD3.algo_factory(...)
     returns a function that can be passed on to workers to instantiate their own TD3 module.
 
@@ -30,15 +33,15 @@ class TD3(Algo):
         Q-nets optimizer learning rate.
     gamma : float
         Discount factor parameter.
-    polyak: float
+    polyak : float
         TD3 polyak averaging parameter.
-    num_updates: int
+    num_updates : int
         Num consecutive actor_critic updates before data collection continues.
-    update_every: int
+    update_every : int
         Regularity of actor_critic updates in number environment steps.
-    start_steps: int
+    start_steps : int
         Num of initial random environment steps before learning starts.
-    mini_batch_size: int
+    mini_batch_size : int
         Size of actor_critic update batches.
     target_update_interval: float
         regularity of target nets updates with respect to actor_critic Adam updates.
@@ -57,68 +60,71 @@ class TD3(Algo):
 
     def __init__(self,
                  device,
-                 actor_critic,
-                 lr_q=1e-3,
-                 lr_pi=1e-3,
+                 actor,
+                 lr_q=1e-4,
+                 lr_pi=1e-4,
                  gamma=0.99,
                  polyak=0.995,
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
                  start_steps=20000,
-                 mini_batch_size=100,
+                 mini_batch_size=64,
                  num_test_episodes=5,
-                 target_update_interval=2):
+                 target_update_interval=1):
 
         # ---- General algo attributes ----------------------------------------
 
+        # Discount factor
+        self._gamma = gamma
+
         # Number of steps collected with initial random policy
-        self.start_steps = start_steps
+        self._start_steps = start_steps
 
         # Times data in the buffer is re-used before data collection proceeds
-        self.num_epochs = 1 # Default to 1 for off-policy algorithms
+        self._num_epochs = 1 # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
-        self.update_every = update_every
+        self._update_every = update_every
 
         # Number mini batches per epoch
-        self.num_mini_batch = num_updates
+        self._num_mini_batch = num_updates
 
         # Size of update mini batches
-        self.mini_batch_size = mini_batch_size
+        self._mini_batch_size = mini_batch_size
 
         # Number of network updates between test evaluations
-        self.test_every = test_every
+        self._test_every = test_every
 
         # Number of episodes to complete when testing
-        self.num_test_episodes = num_test_episodes
+        self._num_test_episodes = num_test_episodes
 
         # ---- TD3-specific attributes ----------------------------------------
 
         self.iter = 0
         self.prev_loss_pi = torch.FloatTensor([0.])
-        self.gamma = gamma
         self.polyak = polyak
         self.device = device
-        self.actor_critic = actor_critic
+        self.actor = actor
         self.target_update_interval = target_update_interval
-        
-        self.action_low = self.actor_critic.action_space.low[0] # Can sometimes be a vector?
-        self.action_high = self.actor_critic.action_space.high[0]
+
+
+        self.action_low = self.actor.action_space.low[0] # Can sometimes be a vector?
+        self.action_high = self.actor.action_space.high[0]
 
         # Create target networks
-        self.actor_critic_targ = deepcopy(actor_critic)
-    
+        self.actor_targ = deepcopy(actor)
+
         # Freeze target networks with respect to optimizers (only update via polyak averaging)
-        for p in self.actor_critic_targ.parameters():
+        for p in self.actor_targ.parameters():
             p.requires_grad = False
 
         # List of parameters for both Q-networks
-        q_params = itertools.chain(self.actor_critic.q1.parameters(),
-                                   self.actor_critic.q2.parameters())
+        q_params = itertools.chain(self.actor.q1.parameters(),
+                                   self.actor.q2.parameters())
 
         # List of parameters for both Q-networks
-        p_params = itertools.chain(self.actor_critic.policy_net.parameters())
+        p_params = itertools.chain(self.actor.policy_net.parameters())
 
         # ----- Optimizers ----------------------------------------------------
         self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
@@ -126,8 +132,8 @@ class TD3(Algo):
 
     @classmethod
     def create_factory(cls,
-                lr_q=1e-3,
-                lr_pi=1e-3,
+                lr_q=1e-4,
+                lr_pi=1e-4,
                 gamma=0.99,
                 polyak=0.995,
                 num_updates=50,
@@ -148,17 +154,17 @@ class TD3(Algo):
             Q-nets optimizer learning rate.
         gamma : float
             Discount factor parameter.
-        polyak: float
+        polyak : float
             TD3 polyak averaging parameter.
-        num_updates: int
+        num_updates : int
             Num consecutive actor_critic updates before data collection continues.
-        update_every: int
+        update_every : int
             Regularity of actor_critic updates in number environment steps.
-        start_steps: int
+        start_steps : int
             Num of initial random environment steps before learning starts.
-        mini_batch_size: int
+        mini_batch_size : int
             Size of actor_critic update batches.
-        target_update_interval: float
+        target_update_interval : float
             regularity of target nets updates with respect to actor_critic Adam updates.
         num_test_episodes : int
             Number of episodes to complete in each test phase.
@@ -177,7 +183,7 @@ class TD3(Algo):
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor_critic=actor,
+                       actor=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,
@@ -187,50 +193,105 @@ class TD3(Algo):
                        target_update_interval=target_update_interval)
         return create_algo_instance
 
+    @property
+    def gamma(self):
+        """Returns discount factor gamma."""
+        return self._gamma
+
+    @property
+    def start_steps(self):
+        """Returns the number of steps to collect with initial random policy."""
+        return self._start_steps
+
+    @property
+    def num_epochs(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_epochs
+
+    @property
+    def update_every(self):
+        """
+        Returns the number of data samples collected between
+        network update stages.
+        """
+        return self._update_every
+
+    @property
+    def num_mini_batch(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_mini_batch
+
+    @property
+    def mini_batch_size(self):
+        """
+        Returns the number of mini batches per epoch.
+        """
+        return self._mini_batch_size
+
+    @property
+    def test_every(self):
+        """Number of network updates between test evaluations."""
+        return self._test_every
+
+    @property
+    def num_test_episodes(self):
+        """
+        Returns the number of episodes to complete when testing.
+        """
+        return self._num_test_episodes
+
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
         TD3 acting function.
 
         Parameters
         ----------
-        obs: torch.tensor
+        obs : torch.tensor
             Current world observation
-        rhs: torch.tensor
+        rhs : torch.tensor
             RNN recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        done: torch.tensor
+        done : torch.tensor
             1.0 if current obs is the last one in the episode, else 0.0.
-        deterministic: bool
+        deterministic : bool
             Whether to randomly sample action from predicted distribution or taking the mode.
 
         Returns
         -------
-        action: torch.tensor
+        action : torch.tensor
             Predicted next action.
         clipped_action: torch.tensor
             Predicted next action (clipped to be within action space).
-        rhs: torch.tensor
+        rhs : torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        other: dict
+        other : dict
             Additional TD3 predictions, which are not used in other algorithms.
         """
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor_critic.get_action(
+             entropy_dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
 
-    def compute_loss_q(self, data, rnn_hs, n_step=1, weights=1):
+    def compute_loss_q(self, batch, n_step=1, per_weights=1):
         """
         Calculate TD3 Q-nets loss
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             Data batch dict containing all required tensors to compute TD3 losses.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
+        n_step : int or float
+            Number of future steps used to computed the truncated n-step return value.
+        per_weights :
+            Prioritized Experience Replay (PER) important sampling weights or 1.0.
 
         Returns
         -------
@@ -240,73 +301,69 @@ class TD3(Algo):
             Q2-net loss.
         loss_q : torch.tensor
             Weighted average of loss_q1 and loss_q2.
+        errors : torch.tensor
+            TD errors.
         """
-
-        o, a, r, o2, d = data["obs"], data["act"], data["rew"], data["obs2"], data["done"]
+        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        a, r = batch[prl.ACT], batch[prl.REW]
+        o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         # Q-values for all actions
-        q1, q2 = self.actor_critic.get_q_scores(o, a)
+        q1, q2, _ = self.actor.get_q_scores(o, rhs, d, a)
 
         # Bellman backup for Q functions
         with torch.no_grad():
 
             # Target actions come from *current* policy
-            a2, _, _, _, _ = self.actor_critic.get_action(o2, rnn_hs, d, deterministic=True)
-            # add noise for target smoothing
-            noise = torch.clamp(
-                        torch.normal(mean=torch.FloatTensor([0.0]),
-                                     std=torch.FloatTensor([0.2])
-                                ).to(a2.device), min=-0.5, max=0.5)
-            # clip in action range
+            a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+            noise = torch.clamp(torch.normal(mean=torch.FloatTensor(
+                [0.0]), std=torch.FloatTensor([0.2]) ).to(a2.device), min=-0.5, max=0.5)
             a2 = torch.clamp(a2 + noise, min=self.action_low, max=self.action_high)
+
             # Target Q-values
-            q1_pi_targ, q2_pi_targ = self.actor_critic_targ.get_q_scores(o2, a2)
+            q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
             q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
 
-            backup = r + (self.gamma ** n_step) * (1 - d) * q_pi_targ
+            backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
-        loss_q1 = (((q1 - backup) ** 2) * weights).mean()
-        loss_q2 = (((q2 - backup) ** 2) * weights).mean()
+        loss_q1 = (((q1 - backup) ** 2) * per_weights).mean()
+        loss_q2 = (((q2 - backup) ** 2) * per_weights).mean()
         loss_q = 0.5 * loss_q1 + 0.5 * loss_q2
 
-        errors = (torch.min(q1, q2) - backup).abs().detach().cpu().numpy()
-        # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu().numpy()
+        errors = (torch.min(q1, q2) - backup).abs().detach().cpu()
+        # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
 
         # reset Noise
-        self.actor_critic.dist.noise.reset()
-        
+        self.actor.dist.noise.reset()
+
         return loss_q1, loss_q2, loss_q, errors
 
-    def compute_loss_pi(self, data, weights=1):
+    def compute_loss_pi(self, batch, per_weights=1):
         """
         Calculate TD3 policy loss.
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             Data batch dict containing all required tensors to compute TD3 losses.
 
         Returns
         -------
         loss_pi : torch.tensor
             TD3 policy loss.
-        logp_pi : torch.tensor
-            Log probability of predicted next action.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
         """
 
-        o, rhs, a, r, o2, d = data["obs"], data["rhs"], data["act"], data["rew"], data["obs2"], data["done"]
+        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
 
-        pi, _, _, rnn_hs, _ = self.actor_critic.get_action(o, rhs, d, deterministic=False)
-        q1_pi, _ = self.actor_critic.get_q_scores(o, pi)
+        pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
+        q1_pi, _, _ = self.actor.get_q_scores(o, pi)
         # q_pi = torch.min(q1_pi, q2_pi) # commenting this out since the paper only
         # uses q1 but might be worth testing if using min gives general improvement
 
-        loss_pi = -(q1_pi * weights).mean()
+        loss_pi = - (q1_pi * per_weights).mean()
 
-        return loss_pi, rnn_hs
+        return loss_pi
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -328,52 +385,50 @@ class TD3(Algo):
             Dict containing current TD3 iteration information.
         """
 
+        # Recurrent burn-in
+        if self.actor.is_recurrent:
+            batch = self.actor.burn_in_recurrent_states(batch)
+
         # PER
-        weights = batch.pop("weights") if "weights" in batch else 1.0
+        per_weights = batch.pop("per_weights") if "per_weights" in batch else 1.0
 
         # N-step returns
         n_step = batch.pop("n_step") if "n_step" in batch else 1.0
 
-        # Compute and Q losses
-        rhs = batch["rhs"]
-        loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, rhs, n_step, weights)
-
         # First run one gradient descent step for Q1 and Q2
+        loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
-        loss_q.backward()
+        loss_q.backward(retain_graph=True)
+        q_grads = get_gradients(self.actor.q1, self.actor.q2, grads_to_cpu=grads_to_cpu)
+        grads = {"q_grads": q_grads}
 
-        for p in itertools.chain(self.actor_critic.q1.parameters(), self.actor_critic.q2.parameters()):
+        # Freeze Q-networks so you don't waste computational effort
+        # computing gradients for them during the policy learning step.
+        for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
             p.requires_grad = False
 
         # Compute policy
         loss_pi = self.prev_loss_pi
         if self.iter % self.target_update_interval == 0:
-            loss_pi, rhs = self.compute_loss_pi(batch, weights)
+            loss_pi = self.compute_loss_pi(batch, per_weights)
             # Next run one gradient descent step for pi.
             self.pi_optimizer.zero_grad()
             loss_pi.backward()
             self.prev_loss_pi = loss_pi
+            pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
+            grads.update({"pi_grads": pi_grads})
 
-        for p in itertools.chain(self.actor_critic.q1.parameters(), self.actor_critic.q2.parameters()):
+        for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
             p.requires_grad = True
 
-        grads = []
-        for p in self.actor_critic.parameters():
-            if grads_to_cpu:
-                if p.grad is not None:
-                    grads.append(p.grad.data.cpu().numpy())
-                else:
-                    grads.append(None)
-            else:
-                if p.grad is not None:
-                    grads.append(p.grad)
-
         info = {
-                "algo/loss_q1": loss_q1.detach().item(),
-                "algo/loss_q2": loss_q2.detach().item(),
-                "algo/loss_pi": loss_pi.detach().item(),
-                "algo/errors": errors,
-               }
+            "loss_q1": loss_q1.detach().item(),
+            "loss_q2": loss_q2.detach().item(),
+            "loss_pi": loss_pi.detach().item(),
+        }
+
+        if "per_weights" in batch:
+            info.update({"errors": errors})
 
         return grads, info
 
@@ -381,7 +436,7 @@ class TD3(Algo):
         """Update actor critic target networks with polyak averaging"""
         if self.iter % self.target_update_interval == 0:
             with torch.no_grad():
-                for p, p_targ in zip(self.actor_critic.parameters(), self.actor_critic_targ.parameters()):
+                for p, p_targ in zip(self.actor.parameters(), self.actor_targ.parameters()):
                     p_targ.data.mul_(self.polyak)
                     p_targ.data.add_((1 - self.polyak) * p.data)
 
@@ -392,13 +447,17 @@ class TD3(Algo):
 
         Parameters
         ----------
-        gradients: list of tensors
-            List of actor_critic gradients.
+        gradients : list of tensors
+            List of actor gradients.
         """
         if gradients is not None:
-            for g, p in zip(gradients, self.actor_critic.parameters()):
-                if g is not None:
-                    p.grad = torch.from_numpy(g).to(self.device)
+            set_gradients(
+                self.actor.q1, self.actor.q2,
+                gradients=gradients["q_grads"], device=self.device)
+            if "pi_grads" in gradients.keys():
+                set_gradients(
+                    self.actor.policy_net,
+                    gradients=gradients["pi_grads"], device=self.device)
 
         self.q_optimizer.step()
         if self.iter % self.target_update_interval == 0:
@@ -407,24 +466,24 @@ class TD3(Algo):
 
         # Update target networks by polyak averaging.
         self.iter += 1
-        
 
-    def set_weights(self, weights):
+
+    def set_weights(self, actor_weights):
         """
-        Update actor critic with the given weights. Update also target networks.
+        Update actor with the given weights. Update also target networks.
 
         Parameters
         ----------
-        weights: dict of tensors
-            Dict containing actor_critic weights to be set.
+        actor_weights : dict of tensors
+            Dict containing actor weights to be set.
         """
-        self.actor_critic.load_state_dict(weights)
+        self.actor.load_state_dict(actor_weights)
 
         # Update target networks by polyak averaging.
         self.iter += 1
         self.update_target_networks()
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of the algorithm, change its value
         to `new_parameter_value value`.

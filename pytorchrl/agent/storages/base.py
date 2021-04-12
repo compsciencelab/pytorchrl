@@ -7,10 +7,37 @@ class Storage(ABC):
     create new Storage classes with new or extended features.
     """
 
+    def __init__(self, size, device, actor, algorithm, *args):
+        """
+        Initialize Storage class.
+
+        Parameters
+        ----------
+        size : int
+            Storage capacity along time axis.
+        device: torch.device
+            CPU or specific GPU where data tensors will be placed and class
+            computations will take place. Should be the same device where the
+            actor model is located.
+        actor : Actor
+            Actor class instance.
+        algorithm : Algorithm
+            Algorithm class instance
+        """
+        raise NotImplementedError
+
+
     @classmethod
     @abstractmethod
-    def create_factory(cls, *args):
-        """Returns a function to create new Storage instances"""
+    def create_factory(cls, size, *args):
+        """
+        Returns a function to create new Storage instances.
+
+        Parameters
+        ----------
+        size : int
+            Storage capacity along time axis.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -26,17 +53,17 @@ class Storage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_data(self, data_to_cpu=False, *args):
+    def get_all_buffer_data(self, data_to_cpu=False, *args):
         """
-        Return currently stored data. If data_to_cpu, make sure to move
+        Return all currently stored data. If data_to_cpu, moves
         data tensors to cpu memory.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def add_data(self, new_data, *args):
+    def insert_data_slice(self, new_data, *args):
         """
-        Replace currently stored data.
+        Add new_data to the buffer stored data.
 
         Parameters
         ----------
@@ -51,7 +78,7 @@ class Storage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def insert(self, sample, *args):
+    def insert_transition(self, sample, *args):
         """
         Store new transition sample.
 
@@ -98,7 +125,7 @@ class Storage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, recurrent_ac=False, *args):
+    def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, *args):
         """
         Returns a batch iterator to update actor critic.
 
@@ -110,8 +137,6 @@ class Storage(ABC):
             Number of samples contained in each mini batch.
         num_epochs : int
             Number of epochs.
-        recurrent_ac : bool
-            Whether actor critic policy is a RNN or not.
         shuffle : bool
             Whether to shuffle collected data or generate sequential
 
@@ -119,5 +144,20 @@ class Storage(ABC):
         ------
         batch : dict
             Generated data batches.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_storage_parameter(self, parameter_name, new_parameter_value, *args):
+        """
+        If `parameter_name` is an attribute of the algorithm, change its value
+        to `new_parameter_value value`.
+
+        Parameters
+        ----------
+        parameter_name : str
+            Attribute name
+        new_parameter_value : int or float
+            New value for `parameter_name`.
         """
         raise NotImplementedError

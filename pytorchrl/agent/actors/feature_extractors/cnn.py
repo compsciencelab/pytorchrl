@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .utils import init
+from pytorchrl.agent.actors.utils import init
 
 
 class CNN(nn.Module):
@@ -9,8 +9,10 @@ class CNN(nn.Module):
 
     Parameters
     ----------
-    input_shape : tuple
-        Shape input tensors.
+    input_space : gym.Space
+        Environment observation space.
+    rgb_norm : bool
+        Whether or not to divide input by 255.
     activation : func
         Non-linear activation function.
     strides : list
@@ -21,16 +23,28 @@ class CNN(nn.Module):
         Convolutional layers kernel sizes.
     """
     def __init__(self,
-                 input_shape,
+                 input_space,
+                 rgb_norm=True,
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
                  filters=[32, 64, 32],
                  kernel_sizes=[8, 4, 3]):
+
         super(CNN, self).__init__()
+
+        input_shape = input_space.shape
+
+        if len(input_shape) != 3:
+            raise ValueError("Trying to extract features with a CNN for an obs space with len(shape) != 3")
 
         assert len(filters) == len(strides) and len(strides) == len(kernel_sizes)
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), nn.init.calculate_gain('relu'))
+        try:
+            gain = nn.init.calculate_gain(activation.__name__.lower())
+        except Exception:
+            gain = 1.0
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
 
         # Define feature extractor
         layers = []
@@ -42,19 +56,23 @@ class CNN(nn.Module):
         self.feature_extractor = nn.Sequential(*layers)
         self.train()
 
+        self.rgb_norm = rgb_norm
+
     def forward(self, inputs):
         """
         Forward pass Neural Network
-
         Parameters
         ----------
         inputs : torch.tensor
             Input data.
-
         Returns
         -------
         out : torch.tensor
             Output feature map.
         """
-        out = self.feature_extractor(inputs / 255.0)
+
+        if self.rgb_norm:
+            inputs /= 255.0
+
+        out = self.feature_extractor(inputs)
         return out

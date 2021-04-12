@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
-from ..neural_networks.feature_extractors.utils import init
+
+from pytorchrl.agent.actors.feature_extractors.utils import init
 
 
 class Categorical(nn.Module):

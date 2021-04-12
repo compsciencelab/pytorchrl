@@ -11,6 +11,8 @@ class GWorkerSet(WS):
     ----------
     num_workers : int
         Number of remote workers in the worker set.
+    index_parent : int
+        Worker index of parent gradient worker.
     local_device : str
         "cpu" or specific GPU "cuda:number`" to use for computation.
     col_execution : str
@@ -19,6 +21,8 @@ class GWorkerSet(WS):
         Communication coordination pattern for data collection.
     col_workers_factory : func
         A function that creates a set of data collection workers.
+    compress_grads_to_send : bool
+        Whether or not to compress gradients before sending then to the update worker.
     col_fraction_workers : float
         Minimum fraction of samples required to stop if collection is
         synchronously coordinated and most workers have finished their
@@ -48,7 +52,8 @@ class GWorkerSet(WS):
                  col_communication,
                  col_workers_factory,
                  col_fraction_workers,
-                 grad_worker_resources):
+                 grad_worker_resources,
+                 compress_grads_to_send=False):
 
         self.worker_class = GWorker
         self.num_workers = num_workers
@@ -60,6 +65,7 @@ class GWorkerSet(WS):
             "col_communication": col_communication,
             "col_workers_factory": col_workers_factory,
             "col_fraction_workers": col_fraction_workers,
+            "compress_grads_to_send": compress_grads_to_send,
         }
 
         super(GWorkerSet, self).__init__(
@@ -75,8 +81,9 @@ class GWorkerSet(WS):
                        num_workers,
                        col_workers_factory,
                        col_fraction_workers=1.0,
-                       col_execution="distributed",
-                       col_communication="synchronous",
+                       col_execution=prl.CENTRAL,
+                       col_communication=prl.SYNC,
+                       compress_grads_to_send=False,
                        grad_worker_resources=default_remote_config):
         """
         Returns a function to create new CWorkerSet instances.
@@ -95,6 +102,8 @@ class GWorkerSet(WS):
             Minimum fraction of samples required to stop if collection is
             synchronously coordinated and most workers have finished their
             collection task.
+        compress_grads_to_send : bool
+            Whether or not to compress gradients before sending then to the update worker.
         grad_worker_resources : dict
             Ray resource specs for the remote workers.
 
@@ -111,6 +120,8 @@ class GWorkerSet(WS):
             ----------
             device : str
                 "cpu" or specific GPU "cuda:number`" to use for computation.
+            index_parent : int
+                Worker index of parent gradient worker.
 
             Returns
             -------
@@ -125,6 +136,7 @@ class GWorkerSet(WS):
                 col_communication=col_communication,
                 col_workers_factory=col_workers_factory,
                 col_fraction_workers=col_fraction_workers,
-                grad_worker_resources=grad_worker_resources)
+                grad_worker_resources=grad_worker_resources,
+                compress_grads_to_send=compress_grads_to_send)
 
         return grad_worker_set_factory

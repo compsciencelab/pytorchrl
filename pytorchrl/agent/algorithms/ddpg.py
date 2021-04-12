@@ -5,10 +5,12 @@ from copy import deepcopy
 import torch
 import torch.optim as optim
 
-from pytorchrl.agent.algos.base import Algo
+import pytorchrl as prl
+from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
-class DDPG(Algo):
+class DDPG(Algorithm):
     """
     Deep Deterministic Policy Gradient algorithm class.
 
@@ -30,17 +32,17 @@ class DDPG(Algo):
         Q-nets optimizer learning rate.
     gamma : float
         Discount factor parameter.
-    polyak: float
+    polyak : float
         DDPG polyak averaging parameter.
-    num_updates: int
+    num_updates : int
         Num consecutive actor_critic updates before data collection continues.
-    update_every: int
+    update_every : int
         Regularity of actor_critic updates in number environment steps.
-    start_steps: int
+    start_steps : int
         Num of initial random environment steps before learning starts.
-    mini_batch_size: int
+    mini_batch_size : int
         Size of actor_critic update batches.
-    target_update_interval: float
+    target_update_interval : float
         regularity of target nets updates with respect to actor_critic Adam updates.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
@@ -54,11 +56,10 @@ class DDPG(Algo):
             num_updates=50, update_every=50, test_every=5000, start_steps=20000,
             mini_batch_size=64, num_test_episodes=0, target_update_interval=1)
     """
-    
 
     def __init__(self,
                  device,
-                 actor_critic,
+                 actor,
                  lr_q=1e-4,
                  lr_pi=1e-4,
                  gamma=0.99,
@@ -73,48 +74,50 @@ class DDPG(Algo):
 
         # ---- General algo attributes ----------------------------------------
 
+        # Discount factor
+        self._gamma = gamma
+
         # Number of steps collected with initial random policy
-        self.start_steps = start_steps
+        self._start_steps = start_steps
 
         # Times data in the buffer is re-used before data collection proceeds
-        self.num_epochs = 1 # Default to 1 for off-policy algorithms
+        self._num_epochs = 1 # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
-        self.update_every = update_every
+        self._update_every = update_every
 
         # Number mini batches per epoch
-        self.num_mini_batch = num_updates
+        self._num_mini_batch = num_updates
 
         # Size of update mini batches
-        self.mini_batch_size = mini_batch_size
+        self._mini_batch_size = mini_batch_size
 
         # Number of network updates between test evaluations
-        self.test_every = test_every
+        self._test_every = test_every
 
         # Number of episodes to complete when testing
-        self.num_test_episodes = num_test_episodes
+        self._num_test_episodes = num_test_episodes
 
         # ---- DDPG-specific attributes ----------------------------------------
 
         self.iter = 0
-        self.gamma = gamma
         self.polyak = polyak
         self.device = device
-        self.actor_critic = actor_critic
+        self.actor = actor
         self.target_update_interval = target_update_interval
 
         # Create target networks
-        self.actor_critic_targ = deepcopy(actor_critic)
+        self.actor_targ = deepcopy(actor)
 
         # Freeze target networks with respect to optimizers (only update via polyak averaging)
-        for p in self.actor_critic_targ.parameters():
+        for p in self.actor_targ.parameters():
             p.requires_grad = False
 
         # List of parameters for both Q-networks
-        q_params = itertools.chain(self.actor_critic.q1.parameters())
+        q_params = itertools.chain(self.actor.q1.parameters())
 
         # List of parameters for both Q-networks
-        p_params = itertools.chain(self.actor_critic.policy_net.parameters())
+        p_params = itertools.chain(self.actor.policy_net.parameters())
 
         # ----- Optimizers ----------------------------------------------------
         self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
@@ -170,10 +173,10 @@ class DDPG(Algo):
         def create_algo_instance(device, actor):
             return cls(lr_q=lr_q,
                        lr_pi=lr_pi,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor_critic=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,
@@ -183,50 +186,105 @@ class DDPG(Algo):
                        target_update_interval=target_update_interval)
         return create_algo_instance
 
+    @property
+    def gamma(self):
+        """Returns discount factor gamma."""
+        return self._gamma
+
+    @property
+    def start_steps(self):
+        """Returns the number of steps to collect with initial random policy."""
+        return self._start_steps
+
+    @property
+    def num_epochs(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_epochs
+
+    @property
+    def update_every(self):
+        """
+        Returns the number of data samples collected between
+        network update stages.
+        """
+        return self._update_every
+
+    @property
+    def num_mini_batch(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        return self._num_mini_batch
+
+    @property
+    def mini_batch_size(self):
+        """
+        Returns the number of mini batches per epoch.
+        """
+        return self._mini_batch_size
+
+    @property
+    def test_every(self):
+        """Number of network updates between test evaluations."""
+        return self._test_every
+
+    @property
+    def num_test_episodes(self):
+        """
+        Returns the number of episodes to complete when testing.
+        """
+        return self._num_test_episodes
+
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
-        DDPG acting function.
+        SAC acting function.
 
         Parameters
         ----------
-        obs: torch.tensor
+        obs : torch.tensor
             Current world observation
-        rhs: torch.tensor
+        rhs : torch.tensor
             RNN recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        done: torch.tensor
+        done : torch.tensor
             1.0 if current obs is the last one in the episode, else 0.0.
-        deterministic: bool
+        deterministic : bool
             Whether to randomly sample action from predicted distribution or taking the mode.
 
         Returns
         -------
-        action: torch.tensor
+        action : torch.tensor
             Predicted next action.
-        clipped_action: torch.tensor
+        clipped_action : torch.tensor
             Predicted next action (clipped to be within action space).
-        rhs: torch.tensor
+        rhs : torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        other: dict
-            Additional DDPG predictions, which are not used in other algorithms.
+        other : dict
+            Additional SAC predictions, which are not used in other algorithms.
         """
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor_critic.get_action(
+             entropy_dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
 
-    def compute_loss_q(self, data, rnn_hs, n_step=1, weights=1):
+    def compute_loss_q(self, batch, n_step=1, per_weights=1):
         """
-        Calculate DDPG Q-nets loss
+         Calculate DDPG Q-nets loss
 
         Parameters
         ----------
-        data: dict
-            Data batch dict containing all required tensors to compute DDPG losses.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
+        batch: dict
+            Data batch dict containing all required tensors to compute TD3 losses.
+        n_step : int or float
+            Number of future steps used to computed the truncated n-step return value.
+        per_weights :
+            Prioritized Experience Replay (PER) important sampling weights or 1.0.
 
         Returns
         -------
@@ -236,61 +294,61 @@ class DDPG(Algo):
             Q2-net loss.
         loss_q : torch.tensor
             Weighted average of loss_q1 and loss_q2.
-        """
+        errors : torch.tensor
+            TD errors.
+         """
 
-        o, a, r, o2, d = data["obs"], data["act"], data["rew"], data["obs2"], data["done"]
+        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        a, r = batch[prl.ACT], batch[prl.REW]
+        o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         # Q-values for all actions
-        q, _ = self.actor_critic.get_q_scores(o, a)
+        q, _, _ = self.actor.get_q_scores(o, rhs, d, a)
 
         # Bellman backup for Q functions
         with torch.no_grad():
 
             # Target actions come from *current* policy
-            a2, _, _, _, _ = self.actor_critic.get_action(o2, rnn_hs, d)
+            a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
 
             # Target Q-values
-            q_pi_targ, _ = self.actor_critic_targ.get_q_scores(o2, a2)
+            q_pi_targ, _, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
 
-            backup = r + (self.gamma ** n_step) * (1 - d) * q_pi_targ
+            backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
-        loss_q = 0.5 * (((q - backup) ** 2) * weights).mean()
+        loss_q = 0.5 * (((q - backup) ** 2) * per_weights).mean()
 
         # errors = (torch.min(q1, q2) - backup).abs()
         errors = (q - backup).abs()
 
         # reset Noise
-        self.actor_critic.dist.noise.reset()
-        
+        self.actor.dist.noise.reset()
+
         return loss_q, errors
 
-    def compute_loss_pi(self, data, weights=1):
+    def compute_loss_pi(self, batch, per_weights=1):
         """
         Calculate DDPG policy loss.
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             Data batch dict containing all required tensors to compute DDPG losses.
 
         Returns
         -------
         loss_pi : torch.tensor
             DDPG policy loss.
-        logp_pi : torch.tensor
-            Log probability of predicted next action.
-        rnn_hs : torch.tensor
-            Policy recurrent hidden state obtained with the current ActorCritic version.
         """
 
-        o, rhs, a, r, o2, d = data["obs"], data["rhs"], data["act"], data["rew"], data["obs2"], data["done"]
+        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
 
-        pi, _, _, rnn_rhs, _ = self.actor_critic.get_action(o, rhs, d)
-        q_pi, _ = self.actor_critic.get_q_scores(o, pi)
+        pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
+        q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
 
-        loss_pi = -(q_pi * weights).mean()
-        return loss_pi, rnn_rhs
+        loss_pi = - (q_pi * per_weights).mean()
+        return loss_pi
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -312,46 +370,45 @@ class DDPG(Algo):
             Dict containing current DDPG iteration information.
         """
 
+        # Recurrent burn-in
+        if self.actor.is_recurrent:
+            batch = self.actor.burn_in_recurrent_states(batch)
+
         # PER
-        weights = batch.pop("weights") if "weights" in batch else 1.0
+        per_weights = batch.pop("per_weights") if "per_weights" in batch else 1.0
 
         # N-step returns
         n_step = batch.pop("n_step") if "n_step" in batch else 1.0
 
-        # Compute policy and Q losses
-        loss_pi, rhs = self.compute_loss_pi(batch, weights)
-        loss_q, errors = self.compute_loss_q(batch, rhs, n_step, weights)
-
         # First run one gradient descent step for Q1 and Q2
+        loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
-        loss_q.backward()
+        loss_q.backward(retain_graph=True)
+        q_grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
 
-        for p in itertools.chain(self.actor_critic.q1.parameters()):
+        # Freeze Q-network so you don't waste computational effort
+        # computing gradients for them during the policy learning step.
+        for p in itertools.chain(self.actor.q1.parameters()):
             p.requires_grad = False
 
         # Next run one gradient descent step for pi.
+        loss_pi = self.compute_loss_pi(batch, per_weights)
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
+        pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
-        for p in itertools.chain(self.actor_critic.q1.parameters()):
+        for p in itertools.chain(self.actor.q1.parameters()):
             p.requires_grad = True
 
-        grads = []
-        for p in self.actor_critic.parameters():
-            if grads_to_cpu:
-                if p.grad is not None:
-                    grads.append(p.grad.data.cpu().numpy())
-                else:
-                    grads.append(None)
-            else:
-                if p.grad is not None:
-                    grads.append(p.grad)
-
         info = {
-                "algo/loss_pi": loss_pi.detach().item(),
-                "algo/loss_q1": loss_q.detach().item(),
-                "algo/errors": errors.detach().cpu().numpy()
-               }
+            "loss_pi": loss_pi.detach().item(),
+            "loss_q1": loss_q.detach().item(),
+        }
+
+        if "per_weights" in batch:
+            info.update({"errors": errors})
+
+        grads = {"q_grads": q_grads, "pi_grads": pi_grads}
 
         return grads, info
 
@@ -359,7 +416,7 @@ class DDPG(Algo):
         """Update actor critic target networks with polyak averaging"""
         if self.iter % self.target_update_interval == 0:
             with torch.no_grad():
-                for p, p_targ in zip(self.actor_critic.parameters(), self.actor_critic_targ.parameters()):
+                for p, p_targ in zip(self.actor.parameters(), self.actor_targ.parameters()):
                     p_targ.data.mul_(self.polyak)
                     p_targ.data.add_((1 - self.polyak) * p.data)
 
@@ -370,13 +427,16 @@ class DDPG(Algo):
 
         Parameters
         ----------
-        gradients: list of tensors
-            List of actor_critic gradients.
+        gradients : list of tensors
+            List of actor gradients.
         """
         if gradients is not None:
-            for g, p in zip(gradients, self.actor_critic.parameters()):
-                if g is not None:
-                    p.grad = torch.from_numpy(g).to(self.device)
+            set_gradients(
+                self.actor.policy_net,
+                gradients=gradients["pi_grads"], device=self.device)
+            set_gradients(
+                self.actor.q1,
+                gradients=gradients["q_grads"], device=self.device)
 
         self.q_optimizer.step()
         self.pi_optimizer.step()
@@ -385,22 +445,22 @@ class DDPG(Algo):
         self.iter += 1
         self.update_target_networks()
 
-    def set_weights(self, weights):
+    def set_weights(self, actor_weights):
         """
-        Update actor critic with the given weights. Update also target networks.
+        Update actor with the given weights. Update also target networks.
 
         Parameters
         ----------
-        weights: dict of tensors
-            Dict containing actor_critic weights to be set.
+        actor_weights : dict of tensors
+            Dict containing actor weights to be set.
         """
-        self.actor_critic.load_state_dict(weights)
+        self.actor.load_state_dict(actor_weights)
 
         # Update target networks by polyak averaging.
         self.iter += 1
         self.update_target_networks()
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of the algorithm, change its value
         to `new_parameter_value value`.

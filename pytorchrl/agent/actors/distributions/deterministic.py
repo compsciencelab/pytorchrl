@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
-from pytorchrl.agent.actors.neural_networks.feature_extractors.utils import init
+
+from pytorchrl.agent.actors.feature_extractors.utils import init
 from pytorchrl.agent.actors.noise import get_noise
+
 
 class Deterministic(nn.Module):
     """

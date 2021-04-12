@@ -11,6 +11,10 @@ class CWorkerSet(WS):
     ----------
     num_workers : int
         Number of remote workers in the worker set.
+    index_parent : int
+        Worker index of parent gradient worker.
+    total_parent_workers : int
+        Total number of gradient worker in the training scheme.
     algo_factory : func
         A function that creates an algorithm class.
     actor_factory : func
@@ -27,6 +31,8 @@ class CWorkerSet(WS):
         Minimum fraction of samples required to stop if collection is
         synchronously coordinated and most workers have finished their
         collection task.
+    compress_data_to_send : bool
+        Whether or not to compress data before sending it to grad worker.
     test_envs_factory : func
         A function to create test environments.
     worker_remote_config : dict
@@ -54,6 +60,7 @@ class CWorkerSet(WS):
                  initial_weights=None,
                  fraction_samples=1.0,
                  total_parent_workers=0,
+                 compress_data_to_send=False,
                  train_envs_factory=lambda x, y, z: None,
                  test_envs_factory=lambda v, x, y, c: None,
                  worker_remote_config=default_remote_config):
@@ -64,11 +71,12 @@ class CWorkerSet(WS):
         self.worker_params = {
             "index_parent": index_parent,
             "algo_factory": algo_factory,
+            "actor_factory": actor_factory,
             "storage_factory": storage_factory,
             "test_envs_factory": test_envs_factory,
             "train_envs_factory": train_envs_factory,
             "fraction_samples": fraction_samples,
-            "actor_factory": actor_factory,
+            "compress_data_to_send": compress_data_to_send
         }
 
         self.num_workers = num_workers
@@ -92,6 +100,7 @@ class CWorkerSet(WS):
                        train_envs_factory,
                        total_parent_workers=0,
                        col_fraction_samples=1.0,
+                       compress_data_to_send=False,
                        col_worker_resources=default_remote_config):
         """
         Returns a function to create new CWorkerSet instances.
@@ -114,8 +123,12 @@ class CWorkerSet(WS):
             collection task.
         test_envs_factory : func
             A function to create test environments.
+        total_parent_workers : int
+            Total number of gradient worker in the training scheme.
         col_worker_resources : dict
             Ray resource specs for the remote workers.
+        compress_data_to_send : bool
+            Whether or not to compress data before sending it to grad worker.
 
         Returns
         -------
@@ -133,6 +146,8 @@ class CWorkerSet(WS):
                 "cpu" or specific GPU "cuda:number`" to use for computation.
             initial_weights : ray object ID
                 Initial model weights.
+            index_parent : int
+                Worker index of parent gradient worker.
 
             Returns
             -------
@@ -151,6 +166,7 @@ class CWorkerSet(WS):
                 test_envs_factory=test_envs_factory,
                 train_envs_factory=train_envs_factory,
                 total_parent_workers=total_parent_workers,
-                worker_remote_config=col_worker_resources)
+                worker_remote_config=col_worker_resources,
+                compress_data_to_send=compress_data_to_send)
 
         return collection_worker_set_factory
