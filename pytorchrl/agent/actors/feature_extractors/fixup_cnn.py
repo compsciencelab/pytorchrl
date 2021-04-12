@@ -16,7 +16,7 @@ class FixupCNN(nn.Module):
     rgb_norm : bool
         Whether or not to divide input by 255.
     """
-    def __init__(self, input_space, rgb_norm=True,):
+    def __init__(self, input_space, rgb_norm=True):
         super(FixupCNN, self).__init__()
 
         self.rgb_norm = rgb_norm
@@ -52,7 +52,7 @@ class FixupCNN(nn.Module):
         """
 
         if self.rgb_norm:
-            inputs /= 255.0
+            inputs = inputs / 255.0
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
         return out

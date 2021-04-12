@@ -72,7 +72,7 @@ class CNN(nn.Module):
         """
 
         if self.rgb_norm:
-            inputs /= 255.0
+            inputs = inputs / 255.0
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
         return out

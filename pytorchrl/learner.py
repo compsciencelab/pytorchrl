@@ -63,9 +63,9 @@ class Learner:
         self.num_samples_collected += info.pop(prl.NUMSAMPLES)
 
         # Update and log metrics
-        for k, v in info.items():
-            if isinstance(v, dict):
-                for x, y in v.items():
+        for k in prl.INFO_KEYS:
+            if k in info and isinstance(info[k], dict):
+                for x, y in info[k].items():
                     if isinstance(y, (float, int)):
                         self.metrics[k][x].append(y)
                     if self.writer and isinstance(y, (float, int)):
