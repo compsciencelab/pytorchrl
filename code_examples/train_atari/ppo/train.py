@@ -8,9 +8,9 @@ import json
 import argparse
 import numpy as np
 
-from pytorchrl import Learner
+from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algos import PPO
+from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor

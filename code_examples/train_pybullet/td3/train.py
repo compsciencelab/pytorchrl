@@ -6,9 +6,9 @@ import sys
 import time
 import argparse
 
-from pytorchrl import Learner
+from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algos import TD3
+from pytorchrl.agent.algorithms import TD3
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
