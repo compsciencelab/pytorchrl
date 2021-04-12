@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 
 from pytorchrl.agent.actors.utils import init
-from pytorchrl.agent.feature_extractors.mlp import MLP
-from pytorchrl.agent.feature_extractors.cnn import CNN
+from pytorchrl.agent.actors.feature_extractors.mlp import MLP
+from pytorchrl.agent.actors.feature_extractors.cnn import CNN
 
 
 class DictNet(nn.Module):
