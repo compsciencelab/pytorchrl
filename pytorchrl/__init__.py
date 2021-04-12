@@ -65,6 +65,7 @@ DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = DataTransitionKeys
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
 
+# -----------------------------------------------------------------------------
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
