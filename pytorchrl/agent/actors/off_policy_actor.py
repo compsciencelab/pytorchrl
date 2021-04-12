@@ -383,7 +383,7 @@ class OffPolicyActor(nn.Module):
         # (T, N, -1) tensors that have been flatten to (T * N, -1)
         N = data_batch[prl.RHS]["rhs_act"].shape[0]  # number of sequences
         T = int(data_batch[prl.DONE].shape[0] / N)  # sequence lengths
-        B = int(self.sequence_overlap * T) # sequence burn-in length
+        B = int(self.sequence_overlap * T)  # sequence burn-in length
 
         if B == 0:
             return data_batch
