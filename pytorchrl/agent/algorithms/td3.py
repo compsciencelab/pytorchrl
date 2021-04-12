@@ -356,7 +356,7 @@ class TD3(Algorithm):
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
 
         pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
-        q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
+        q1_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
         # q_pi = torch.min(q1_pi, q2_pi) # commenting this out since the paper only
         # uses q1 but might be worth testing if using min gives general improvement
 
