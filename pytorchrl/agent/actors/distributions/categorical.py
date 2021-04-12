@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 
-from pytorchrl.agent.actors.feature_extractors.utils import init
+from pytorchrl.agent.actors.utils import init
 
 
 class Categorical(nn.Module):

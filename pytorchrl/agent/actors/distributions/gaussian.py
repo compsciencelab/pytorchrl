@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 
-from pytorchrl.agent.actors.feature_extractors.utils import init
+from pytorchrl.agent.actors.utils import init
 
 LOG_STD_MAX = 2  # Maximum std allowed value. Used for clipping.
 LOG_STD_MIN = -20  # Minimum std allowed value. Used for clipping.

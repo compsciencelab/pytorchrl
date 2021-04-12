@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from pytorchrl.agent.actors.feature_extractors.utils import init
+from pytorchrl.agent.actors.utils import init
 from pytorchrl.agent.actors.noise import get_noise
 
 
