@@ -320,13 +320,13 @@ class OnPolicyActor(nn.Module):
         if self.scale:
             action = self.scale(action)
 
-        action_features = self.policy_feature_extractor(obs)
+        features = self.policy_feature_extractor(obs)
         if self.recurrent_nets:
             action_features, rhs["rhs_act"] = self.policy_memory_net(
-                action_features, rhs["rhs_act"], done)
-        logp_action, entropy_dist = self.dist.evaluate_pred(action_features, action)
+                features, rhs["rhs_act"], done)
+        logp_action, entropy_dist = self.dist.evaluate_pred(features, action)
 
-        self.last_action_features = action_features
+        self.last_action_features = features
         self.last_action_rhs = rhs["rhs_act"]
 
         return logp_action, entropy_dist, rhs

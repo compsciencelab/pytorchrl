@@ -57,7 +57,7 @@ class VTraceBuffer(B):
                 self.data[prl.RHS][x][self.step].copy_(next_rhs[x])
         else:
             self.data[prl.RHS][self.step] = next_rhs
-        self.compute_returns(self.algo.gamma)
+        self.compute_returns()
 
         self.compute_vtrace()
 

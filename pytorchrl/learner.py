@@ -140,7 +140,7 @@ class Learner:
 
         print(s, flush=True)
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of the algorithm used for training,
         change its value to `new_parameter_value value`.
@@ -152,7 +152,7 @@ class Learner:
         new_parameter_value : int or float
             New value for `parameter_name`.
         """
-        self.update_worker.update_algo_parameter(parameter_name, new_parameter_value)
+        self.update_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
 
     def save_model(self):
         """

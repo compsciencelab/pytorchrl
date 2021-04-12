@@ -322,7 +322,7 @@ class CWorker(W):
         self.actor_version = actor_weights[prl.VERSION]
         self.actor.load_state_dict(actor_weights[prl.VERSION])
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of self.algo, change its value to
         `new_parameter_value value`.
@@ -334,7 +334,7 @@ class CWorker(W):
         new_parameter_value : float
             Algorithm new parameter value.
         """
-        self.algo.update_algo_parameter(parameter_name, new_parameter_value)
+        self.algo.update_algorithm_parameter(parameter_name, new_parameter_value)
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
         """

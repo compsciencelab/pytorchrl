@@ -154,7 +154,7 @@ class VanillaOnPolicyBuffer(S):
             # and done and done2
             if k in (prl.OBS, prl.RHS, prl.DONE):
                 pos = self.step + 1
-                sample_k = k + "2"
+                sample_k = "Next" + k
             else:
                 pos = self.step
                 sample_k = k
@@ -194,7 +194,7 @@ class VanillaOnPolicyBuffer(S):
         else:
             self.data[prl.RHS][self.step] = next_rhs
 
-        self.compute_returns(self.algo.gamma)
+        self.compute_returns()
         self.compute_advantages()
 
     def after_gradients(self, batch, info):

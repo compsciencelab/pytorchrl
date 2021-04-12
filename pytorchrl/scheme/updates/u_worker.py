@@ -150,7 +150,7 @@ class UWorker(W):
             e.stop.remote()
             e.terminate_worker.remote()
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of Worker.algo, change its value to
         `new_parameter_value value`.
@@ -160,9 +160,9 @@ class UWorker(W):
         parameter_name : str
             Algorithm attribute name
         """
-        self.local_worker.update_algo_parameter(parameter_name, new_parameter_value)
+        self.local_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
         for e in self.remote_workers:
-            e.update_algo_parameter.remote(parameter_name, new_parameter_value)
+            e.update_algorithm_parameter.remote(parameter_name, new_parameter_value)
 
 
 class UpdaterThread(threading.Thread):

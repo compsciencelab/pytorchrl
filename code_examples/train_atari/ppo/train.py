@@ -117,8 +117,8 @@ def main():
             break
 
         iterations += 1
-        learner.update_algo_parameter("lr", alpha[updates] * args.lr)
-        learner.update_algo_parameter("clip_param", alpha[updates] * args.clip_param)
+        learner.update_algorithm_parameter("lr", alpha[updates] * args.lr)
+        learner.update_algorithm_parameter("clip_param", alpha[updates] * args.clip_param)
 
     print("Finished!")
     sys.exit()
