@@ -51,7 +51,7 @@ class Learner:
         # Update step
         info = self.update_worker.step()
 
-        actor_version = info.pop(prl.VERSION)
+        actor_version = info.[prl.VERSION]
 
         # grad_update_lag
         info[prl.SCHEME] = {}

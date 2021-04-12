@@ -168,9 +168,12 @@ class GWorker(W):
         info : dict
             Summary dict of relevant gradient operation information.
         """
+
         self.get_data()
         grads, info = self.get_grads(distribute_gradients)
-        if distribute_gradients: self.apply_gradients()
+
+        if distribute_gradients:
+            self.apply_gradients()
 
         # Encode data if self.compress_data_to_send is True
         data_to_send = pack((grads, info)) if self.compress_grads_to_send else (grads, info)
