@@ -192,13 +192,15 @@ class OffPolicyActor(nn.Module):
 
         feature_size = int(np.prod(self.q1_common_feature_extractor(
             torch.randn(1, feature_size)).shape))
-        self.q1_memory_net = GruNet(feature_size, **recurrent_nets_kwargs) \
-            if recurrent_nets else nn.Identity()
+        self.q1_memory_net = GruNet(feature_size, **recurrent_nets_kwargs) if\
+            recurrent_nets else nn.Identity()
+        feature_size = self.q1_memory_net.num_outputs if recurrent_nets\
+            else feature_size
 
         # ---- 5. Define prediction layer -------------------------------------
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        self.q1_predictor = init_(nn.Linear(self.q1_memory_net.num_outputs, q_outputs))
+        self.q1_predictor = init_(nn.Linear(feature_size, q_outputs))
 
         # ---- 6. Concatenate all q1 net modules ------------------------------
 
@@ -217,7 +219,8 @@ class OffPolicyActor(nn.Module):
             self.q2_common_feature_extractor = common_feature_extractor(feature_size, **common_feature_extractor_kwargs)
             feature_size = int(np.prod(self.q2_common_feature_extractor(torch.randn(1, feature_size)).shape))
             self.q2_memory_net = GruNet(feature_size, **recurrent_nets_kwargs) if recurrent_nets else nn.Identity()
-            self.q2_predictor = init_(nn.Linear(self.q2_memory_net.num_outputs, q_outputs))
+            feature_size = self.q2_memory_net.num_outputs if recurrent_nets else feature_size
+            self.q2_predictor = init_(nn.Linear(feature_size, q_outputs))
             self.q2 = nn.Sequential(
                 self.q2_obs_feature_extractor,
                 self.q2_act_feature_extractor,
