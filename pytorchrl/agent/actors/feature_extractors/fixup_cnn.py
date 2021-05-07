@@ -1,3 +1,4 @@
+
 import math
 import torch
 import torch.nn as nn
@@ -8,14 +9,21 @@ class FixupCNN(nn.Module):
     """
     A larger version of the IMPALA CNN with Fixup init.
     See Fixup: https://arxiv.org/abs/1901.09321.
-
     Parameters
     ----------
-    input_shape : tuple
-        Shape input tensors.
+    input_space : gym.Space
+        Environment observation space.
+    rgb_norm : bool
+        Whether or not to divide input by 255.
     """
-    def __init__(self, input_shape):
+    def __init__(self, input_space, rgb_norm=True):
         super(FixupCNN, self).__init__()
+
+        self.rgb_norm = rgb_norm
+        input_shape = input_space.shape
+        if len(input_shape) != 3:
+            raise ValueError("Trying to extract features with Fixup CNN for "
+                             "an obs space with len(shape) != 3")
 
         depth_in = input_shape[0]
         layers = []
@@ -33,24 +41,26 @@ class FixupCNN(nn.Module):
     def forward(self, inputs):
         """
         Forward pass Neural Network
-
         Parameters
         ----------
         inputs : torch.tensor
             Input data.
-
         Returns
         -------
         out : torch.tensor
             Output feature map.
         """
-        out = self.feature_extractor(inputs / 255.0)
+
+        if self.rgb_norm:
+            inputs = inputs / 255.0
+
+        out = self.feature_extractor(inputs).view(inputs.size(0), -1)
         return out
+
 
 class FixupResidualModule(nn.Module):
     """
     FixupCNN resudial block.
-
     Parameters
     ----------
     depth : int
@@ -78,12 +88,10 @@ class FixupResidualModule(nn.Module):
     def forward(self, x):
         """
         Forward pass residual block
-
         Parameters
         ----------
         inputs : torch.tensor
             Input feature map.
-
         Returns
         -------
         out : torch.tensor

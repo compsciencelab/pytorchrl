@@ -6,11 +6,11 @@ import sys
 import time
 import argparse
 
-from pytorchrl import Learner
+from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algos import SAC
+from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import ReplayBuffer
+from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -58,12 +58,14 @@ def main():
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
         obs_space, action_space,
-        feature_extractor_network=get_feature_extractor(args.nn),
-        recurrent_policy=args.recurrent_policy,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
+    # storage_factory = NStepReplayBuffer.create_factory(size=args.buffer_size, n_step=2)
+    # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
+    # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000)
+
 
     # 6. Define scheme
     params = {}

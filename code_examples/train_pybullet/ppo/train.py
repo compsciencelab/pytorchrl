@@ -6,9 +6,9 @@ import sys
 import time
 import argparse
 
-from pytorchrl import Learner
+from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algos import PPO
+from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
@@ -59,7 +59,6 @@ def main():
     actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
-        recurrent_policy=args.recurrent_policy,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage

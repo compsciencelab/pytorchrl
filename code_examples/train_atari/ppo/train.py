@@ -8,9 +8,9 @@ import json
 import argparse
 import numpy as np
 
-from pytorchrl import Learner
+from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algos import PPO
+from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
@@ -58,9 +58,7 @@ def main():
     actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
         feature_extractor_network=get_feature_extractor(args.nn),
-        recurrent_policy=args.recurrent_policy,
-        restart_model=args.restart_model,
-    )
+        restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
@@ -119,8 +117,8 @@ def main():
             break
 
         iterations += 1
-        learner.update_algo_parameter("lr", alpha[updates] * args.lr)
-        learner.update_algo_parameter("clip_param", alpha[updates] * args.clip_param)
+        learner.update_algorithm_parameter("lr", alpha[updates] * args.lr)
+        learner.update_algorithm_parameter("clip_param", alpha[updates] * args.clip_param)
 
     print("Finished!")
     sys.exit()

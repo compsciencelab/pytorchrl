@@ -6,8 +6,9 @@ import queue
 import threading
 from collections import defaultdict
 
+import pytorchrl as prl
 from pytorchrl.scheme.base.worker import Worker as W
-from pytorchrl.scheme.utils import ray_get_and_free, average_gradients, broadcast_message
+from pytorchrl.scheme.utils import ray_get_and_free, average_gradients, broadcast_message, unpack
 
 
 class UWorker(W):
@@ -62,8 +63,8 @@ class UWorker(W):
                  grad_workers_factory,
                  index_worker=0,
                  col_fraction_workers=1.0,
-                 grad_execution="parallelised",
-                 grad_communication="synchronous",
+                 grad_execution=prl.CENTRAL,
+                 grad_communication=prl.SYNC,
                  decentralized_update_execution=False,
                  local_device=None):
 
@@ -110,9 +111,11 @@ class UWorker(W):
         return version
 
     def step(self):
-        """Pulls information from update operations from  `self.updater.outqueue`."""
+        """
+        Pulls information from update operations from  `self.updater.outqueue`.
+        """
 
-        if self.grad_communication == "synchronous": self.updater.step()
+        if self.grad_communication == prl.SYNC: self.updater.step()
         new_info = self.updater.outqueue.get()
         return new_info
 
@@ -147,7 +150,7 @@ class UWorker(W):
             e.stop.remote()
             e.terminate_worker.remote()
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of Worker.algo, change its value to
         `new_parameter_value value`.
@@ -157,9 +160,9 @@ class UWorker(W):
         parameter_name : str
             Algorithm attribute name
         """
-        self.local_worker.update_algo_parameter(parameter_name, new_parameter_value)
+        self.local_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
         for e in self.remote_workers:
-            e.update_algo_parameter.remote(parameter_name, new_parameter_value)
+            e.update_algorithm_parameter.remote(parameter_name, new_parameter_value)
 
 
 class UpdaterThread(threading.Thread):
@@ -168,8 +171,6 @@ class UpdaterThread(threading.Thread):
 
     Parameters
     ----------
-    outqueue : queue.Queue
-        Queue to store the info dicts resulting from the model update operation.
     local_worker : GWorker
         Local GWorker that acts as a parameter server.
     remote_workers : List
@@ -216,8 +217,8 @@ class UpdaterThread(threading.Thread):
                  remote_workers,
                  decentralized_update_execution,
                  col_fraction_workers=1.0,
-                 grad_execution="distributed",
-                 grad_communication="synchronous"):
+                 grad_execution=prl.CENTRAL,
+                 grad_communication=prl.SYNC):
 
         threading.Thread.__init__(self)
 
@@ -231,17 +232,17 @@ class UpdaterThread(threading.Thread):
         self.fraction_workers = col_fraction_workers
         self.grad_communication = grad_communication
 
-        if grad_execution == "centralised" and grad_communication == "synchronous":
+        if grad_execution == prl.CENTRAL and grad_communication == prl.SYNC:
             pass
 
-        elif grad_execution == "centralised" and grad_communication == "asynchronous":
-            self.start() # Start UpdaterThread
+        elif grad_execution == prl.CENTRAL and grad_communication == prl.ASYNC:
+            self.start()  # Start UpdaterThread
 
-        elif grad_execution == "parallelised" and grad_communication == "synchronous":
+        elif grad_execution == prl.PARALLEL and grad_communication == prl.SYNC:
             pass
 
-        elif grad_execution == "parallelised" and grad_communication == "asynchronous":
-            self.start() # Start UpdaterThread
+        elif grad_execution == prl.PARALLEL and grad_communication == prl.ASYNC:
+            self.start()  # Start UpdaterThread
 
     def run(self):
         while not self.stopped:
@@ -254,17 +255,19 @@ class UpdaterThread(threading.Thread):
         output queue.
         """
 
-        if self.grad_execution == "centralised" and self.grad_communication == "synchronous":
-            _, info = self.local_worker.step(self.decentralized_update_execution)
-            info["update_version"] = self.local_worker.actor_version
+        if self.grad_execution == prl.CENTRAL and self.grad_communication == prl.SYNC:
+            grads = self.local_worker.step(self.decentralized_update_execution)
+            _, info = unpack(grads) if type(grads) == str else grads
+            info[prl.VERSION][prl.UPDATE] = self.local_worker.actor_version
             self.local_worker.apply_gradients()
 
-        elif self.grad_execution == "centralised" and self.grad_communication == "asynchronous":
-            _, info = self.local_worker.step(self.decentralized_update_execution)
-            info["update_version"] = self.local_worker.actor_version
+        elif self.grad_execution == prl.CENTRAL and self.grad_communication == prl.ASYNC:
+            grads = self.local_worker.step(self.decentralized_update_execution)
+            _, info = unpack(grads) if type(grads) == str else grads
+            info[prl.VERSION][prl.UPDATE] = self.local_worker.actor_version
             self.local_worker.apply_gradients()
 
-        elif self.grad_execution == "parallelised" and self.grad_communication == "synchronous":
+        elif self.grad_execution == prl.PARALLEL and self.grad_communication == prl.SYNC:
 
             to_average = []
             step_metrics = defaultdict(float)
@@ -291,11 +294,12 @@ class UpdaterThread(threading.Thread):
 
                 # Get gradients
                 out = ray.wait(list(pending.keys()))[0][0]
-                gradients, info = ray_get_and_free(out)
+                grads = ray_get_and_free(out)
+                gradients, info = unpack(grads) if type(grads) == str else grads
                 pending.pop(out)
 
                 # Update info dict
-                info["update_version"] = self.local_worker.actor_version
+                info[prl.VERSION][prl.UPDATE] = self.local_worker.actor_version
 
                 # Update counters
                 for k, v in info.items(): step_metrics[k] += v
@@ -304,26 +308,21 @@ class UpdaterThread(threading.Thread):
                 to_average.append(gradients)
 
             # Update info dict
-            info = {k: v / self.num_workers if k != "collected_samples" else
-            v for k, v in step_metrics.items()}
+            info = {k: v / self.num_workers if k != prl.NUMSAMPLES else
+                    v for k, v in step_metrics.items()}
 
             if not self.decentralized_update_execution:
+
                 # Average and apply gradients
-                t = time.time()
                 self.local_worker.apply_gradients(average_gradients(to_average))
-                avg_grads_t = time.time() - t
-                info.update({"debug/avg_grads_time": avg_grads_t})
 
                 # Update workers with current weights
-                t = time.time()
                 self.sync_weights()
-                sync_grads_t = time.time() - t
-                info.update({"debug/sync_grads_time": sync_grads_t})
 
             else:
                 self.local_worker.local_worker.actor_version += 1
 
-        elif self.grad_execution == "parallelised" and self.grad_communication == "asynchronous":
+        elif self.grad_execution == prl.PARALLEL and self.grad_communication == prl.ASYNC:
 
             # If first call, call for gradients from all workers
             if self.local_worker.actor_version == 0:
@@ -338,19 +337,20 @@ class UpdaterThread(threading.Thread):
             future = wait_results[0][0]
 
             # Get gradients
-            gradients, info = ray_get_and_free(future)
+            grads = ray_get_and_free(future)
+            gradients, info = unpack(grads) if type(grads) == str else grads
             e = self.pending_gradients.pop(future)
 
             # Update info dict
-            info["update_version"] = self.local_worker.actor_version
+            info[prl.VERSION][prl.UPDATE] = self.local_worker.actor_version
 
             # Update local worker weights
             self.local_worker.apply_gradients(gradients)
 
             # Update remote worker model version
             weights = ray.put({
-                "version": self.local_worker.actor_version,
-                "weights": self.local_worker.get_weights()})
+                prl.VERSION: self.local_worker.actor_version,
+                prl.WEIGHTS: self.local_worker.get_weights()})
             e.set_weights.remote(weights)
 
             # Call compute_gradients in remote worker again
@@ -363,6 +363,6 @@ class UpdaterThread(threading.Thread):
     def sync_weights(self):
         """Synchronize gradient worker models with updater worker model"""
         weights = ray.put({
-            "version": self.local_worker.actor_version,
-            "weights": self.local_worker.get_weights()})
+            prl.VERSION: self.local_worker.actor_version,
+            prl.WEIGHTS: self.local_worker.get_weights()})
         for e in self.remote_workers: e.set_weights.remote(weights)

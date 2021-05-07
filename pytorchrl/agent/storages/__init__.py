@@ -1,6 +1,9 @@
-from .off_policy.replay_buffer import ReplayBuffer
-from .off_policy.hindsight_experience_replay_buffer import HindsightExperienceReplayBuffer
+from pytorchrl.agent.storages.off_policy.replay_buffer import ReplayBuffer
+from pytorchrl.agent.storages.off_policy.nstep_buffer import NStepReplayBuffer
+from pytorchrl.agent.storages.off_policy.per_buffer import PERBuffer
+from pytorchrl.agent.storages.off_policy.ere_buffer import EREBuffer
+from pytorchrl.agent.storages.off_policy.her_buffer import HERBuffer
 
-from .on_policy.gae_buffer import GAEBuffer
-from .on_policy.vtrace_buffer import VTraceBuffer
-from .on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer
+from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer
+from pytorchrl.agent.storages.on_policy.vtrace_buffer import VTraceBuffer
+from pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer

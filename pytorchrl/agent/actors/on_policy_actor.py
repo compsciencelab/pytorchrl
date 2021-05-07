@@ -1,18 +1,19 @@
+import gym
+import numpy as np
 import torch
 import torch.nn as nn
 
-from pytorchrl.agent.actors.utils import Scale, Unscale
-from pytorchrl.agent.actors.neural_networks import NNBase
 from pytorchrl.agent.actors.distributions import get_dist
-from pytorchrl.agent.actors.neural_networks.feature_extractors.utils import init
-from pytorchrl.agent.actors.neural_networks.feature_extractors import get_feature_extractor
+from pytorchrl.agent.actors.utils import Scale, Unscale, init
+from pytorchrl.agent.actors.memory_networks import GruNet
+from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor
 
 
 class OnPolicyActor(nn.Module):
     """
     Actor critic class for On-Policy algorithms.
 
-    It contains a policy network (actor) to predict next actions and a critic
+    It contains a policy network to predict next actions and a critic
     value network to predict the value score of a given obs.
 
     Parameters
@@ -21,67 +22,133 @@ class OnPolicyActor(nn.Module):
         Environment observation space.
     action_space : gym.Space
         Environment action space.
+    recurrent_nets : bool
+        Whether to use a RNNs on top of the feature extractors.
+    recurrent_nets_kwargs:
+        Keyword arguments for the memory network.
     feature_extractor_network : nn.Module
         PyTorch nn.Module used as the features extraction block in all networks.
     feature_extractor_kwargs : dict
         Keyword arguments for the feature extractor network.
-    recurrent_policy : bool
-        Whether to use a RNN as a policy.
-    recurrent_hidden_size : int
-        Policy RNN hidden size.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
     """
     def __init__(self,
                  input_space,
                  action_space,
-                 feature_extractor_network=get_feature_extractor("MLP"),
+                 recurrent_nets=False,
+                 recurrent_nets_kwargs={},
+                 feature_extractor_network=None,
                  feature_extractor_kwargs={},
-                 recurrent_policy=False,
-                 recurrent_hidden_size=256,
                  shared_policy_value_network=True):
+
+        """
+
+        This actor defines policy network as:
+        -------------------------------------
+
+        policy = obs_feature_extractor + memory_net + action_distribution
+
+        defines value network as:
+        -------------------------
+
+        value = obs_feature_extractor + memory_net + v_prediction_layer
+
+        and defines shared policy-value network as:
+        -------------------------------------------
+                                                     action_distribution
+        value = obs_feature_extractor + memory_net +
+                                                     v_prediction_layer
+        """
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
         self.action_space = action_space
+        self.recurrent_nets = recurrent_nets
         self.shared_policy_value_network = shared_policy_value_network
 
-        # ---- Input/Output spaces --------------------------------------------
+        # If feature_extractor_network not defined, take default one based on input_space
+        feature_extractor = feature_extractor_network or default_feature_extractor(input_space)
 
-        policy_inputs = [input_space.shape]
-        value_inputs = [input_space.shape]
+        #######################################################################
+        #                           POLICY NETWORK                            #
+        #######################################################################
 
-        # ---- Networks -------------------------------------------------------
+        # ---- 1. Define obs feature extractor --------------------------------
 
-        self.policy_net = NNBase(
-            policy_inputs, feature_extractor_network,
-            feature_extractor_kwargs, recurrent=recurrent_policy,
-            recurrent_hidden_size=recurrent_hidden_size, final_activation=True)
+        self.policy_feature_extractor = feature_extractor(
+            input_space, **feature_extractor_kwargs)
 
-        if self.shared_policy_value_network:
-            init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-            self.value_net = init_(nn.Linear(self.policy_net.num_outputs, 1))
-            self.last_actor_features = None
+        # ---- 2. Define memory network  --------------------------------------
 
+        feature_size = int(np.prod(self.policy_feature_extractor(
+            torch.randn(1, *input_space.shape)).shape))
+
+        self.recurrent_size = feature_size
+        if recurrent_nets:
+            self.policy_memory_net = GruNet(feature_size, **recurrent_nets_kwargs)
+            feature_size = self.policy_memory_net.num_outputs
         else:
-            self.value_net = NNBase(
-                value_inputs, feature_extractor_network,
-                feature_extractor_kwargs, output_shape=(1,))
+            self.policy_memory_net = nn.Identity()
 
-        # ---- Distributions --------------------------------------------------
+        # ---- 3. Define action distribution ----------------------------------
 
-        if action_space.__class__.__name__ == "Discrete":
-            self.dist = get_dist("Categorical")(self.policy_net.num_outputs, action_space.n)
+        if isinstance(action_space, gym.spaces.Discrete):
+            self.dist = get_dist("Categorical")(feature_size, action_space.n)
             self.scale = None
             self.unscale = None
 
-        elif action_space.__class__.__name__ == "Box":  # Continuous action space
-            self.dist = get_dist("Gaussian")(self.policy_net.num_outputs, action_space.shape[0])
+        elif isinstance(action_space, gym.spaces.Box):  # Continuous action space
+            self.dist = get_dist("Gaussian")(feature_size, action_space.shape[0])
             self.scale = Scale(action_space)
             self.unscale = Unscale(action_space)
 
-        else:
+        elif isinstance(action_space, gym.spaces.Dict):
             raise NotImplementedError
+
+        else:
+            raise ValueError("Unrecognized action space")
+
+        # ---- 4. Concatenate all policy modules ------------------------------
+
+        self.policy_net = nn.Sequential(
+            self.policy_feature_extractor,
+            self.policy_memory_net, self.dist)
+
+        #######################################################################
+        #                           VALUE NETWORK                             #
+        #######################################################################
+
+        if self.shared_policy_value_network:
+            self.value_feature_extractor = nn.Identity()
+            self.value_memory_net = nn.Identity()
+            self.last_action_features = None
+            self.last_action_rhs = None
+
+        else:
+
+            # ---- 1. Define obs feature extractor ----------------------------
+
+            self.value_feature_extractor = feature_extractor(
+                input_space, **feature_extractor_kwargs)
+
+            # ---- 2. Define memory network  ----------------------------------
+
+            if recurrent_nets:
+                self.value_memory_net = GruNet(self.recurrent_size, **recurrent_nets_kwargs)
+            else:
+                self.value_memory_net = nn.Identity()
+
+        # ---- 3. Define value predictor --------------------------------------
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        self.value_predictor = init_(nn.Linear(self.recurrent_size, 1))
+
+        # ---- 4. Concatenate all value net modules ---------------------------
+
+        self.value_net = nn.Sequential(
+            self.value_feature_extractor,
+            self.value_memory_net, self.value_predictor)
 
     @classmethod
     def create_factory(
@@ -89,11 +156,10 @@ class OnPolicyActor(nn.Module):
             input_space,
             action_space,
             restart_model=None,
-            recurrent_policy=False,
-            recurrent_hidden_size=256,
+            recurrent_nets=False,
             feature_extractor_kwargs={},
-            shared_policy_value_network=True,
-            feature_extractor_network=get_feature_extractor("MLP")):
+            feature_extractor_network=None,
+            shared_policy_value_network=True):
         """
         Returns a function that creates actor critic instances.
 
@@ -109,25 +175,22 @@ class OnPolicyActor(nn.Module):
             PyTorch nn.Module used as the features extraction block in all networks.
         feature_extractor_kwargs : dict
             Keyword arguments for the feature extractor network.
-        recurrent_policy : bool
-            Whether to use a RNN as a policy.
-        recurrent_hidden_size : int
-            Policy RNN hidden size.
+        recurrent_nets : bool
+            Whether to use a RNNs as feature extractors.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
 
         Returns
         -------
         create_actor_critic_instance : func
-            creates a new OnPolicyActorCritic class instance.
+            creates a new OnPolicyActor class instance.
         """
 
         def create_actor_critic_instance(device):
             """Create and return an actor critic instance."""
             policy = cls(input_space=input_space,
                          action_space=action_space,
-                         recurrent_policy=recurrent_policy,
-                         recurrent_hidden_size=recurrent_hidden_size,
+                         recurrent_nets=recurrent_nets,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
@@ -141,17 +204,17 @@ class OnPolicyActor(nn.Module):
 
     @property
     def is_recurrent(self):
-        """Returns True if the policy network has recurrency."""
-        return self.policy_net.is_recurrent
+        """Returns True if the actor network are recurrent."""
+        return self.recurrent_nets
 
     @property
     def recurrent_hidden_state_size(self):
         """Size of policy recurrent hidden state"""
-        return self.policy_net.recurrent_hidden_state_size
+        return self.policy_feature_extractor.recurrent_hidden_state_size
 
-    def policy_initial_states(self, obs):
+    def actor_initial_states(self, obs):
         """
-        Returns all policy inputs to predict the environment initial action.
+        Returns all actor inputs required to predict initial action.
 
         Parameters
         ----------
@@ -162,12 +225,23 @@ class OnPolicyActor(nn.Module):
         -------
         obs : torch.tensor
             Initial environment observation.
-        rhs : torch.tensor
-            Initial recurrent hidden state (will contain zeroes).
+        rhs : dict
+            Initial recurrent hidden states.
         done : torch.tensor
             Initial done tensor, indicating the environment is not done.
         """
-        obs, rhs, done = self.policy_net.initial_states(obs)
+        if isinstance(obs, dict):
+            num_proc = list(obs.values())[0].size(0)
+            dev = list(obs.values())[0].device
+        else:
+            num_proc = obs.size(0)
+            dev = obs.device
+
+        done = torch.zeros(num_proc, 1).to(dev)
+        rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
+
+        rhs = {"rhs_act": rhs_act, "rhs_q1": rhs_act.clone(), "rhs_q2": rhs_act.clone()}
+
         return obs, rhs, done
 
     def get_action(self, obs, rhs, done, deterministic=False):
@@ -178,8 +252,8 @@ class OnPolicyActor(nn.Module):
         ----------
         obs : torch.tensor
             Current environment observation.
-        rhs : torch.tensor
-            Current recurrent hidden state.
+        rhs : dict
+            Current recurrent hidden states.
         done : torch.tensor
             Current done tensor, indicating if episode has finished.
         deterministic : bool
@@ -193,17 +267,21 @@ class OnPolicyActor(nn.Module):
             Next action sampled, but clipped to be within the env action space.
         logp_action : torch.tensor
             Log probability of `action` within the predicted action distribution.
-        rhs : torch.tensor
-            Updated recurrent hidden state.
+        rhs : dict
+            Updated recurrent hidden states.
         entropy_dist : torch.tensor
             Entropy of the predicted action distribution.
         """
 
-        actor_features, rhs = self.policy_net(obs, rhs, done)
-        self.last_actor_features = actor_features
-
+        action_features = self.policy_feature_extractor(obs)
+        if self.recurrent_nets:
+            action_features, rhs["rhs_act"] = self.policy_memory_net(
+                action_features, rhs["rhs_act"], done)
         (action, clipped_action, logp_action, entropy_dist) = self.dist(
-            actor_features, deterministic=deterministic)
+            action_features, deterministic=deterministic)
+
+        self.last_action_features = action_features
+        self.last_action_rhs = rhs["rhs_act"]
 
         if self.unscale:
             action = self.unscale(action)
@@ -220,8 +298,8 @@ class OnPolicyActor(nn.Module):
         ----------
         obs : torch.tensor
             Environment observation.
-        rhs : torch.tensor
-            Recurrent hidden state.
+        rhs : dict
+            Recurrent hidden states.
         done : torch.tensor
             Done tensor, indicating if episode has finished.
         action : torch.tensor
@@ -235,16 +313,21 @@ class OnPolicyActor(nn.Module):
         entropy_dist : torch.tensor
             Entropy of the action distribution predicted with current version
             of the policy_net.
-        rhs : torch.tensor
-            Updated recurrent hidden state.
+        rhs : dict
+            Updated recurrent hidden states.
         """
 
         if self.scale:
             action = self.scale(action)
 
-        actor_features, rhs = self.policy_net(obs, rhs, done)
-        logp_action, entropy_dist = self.dist.evaluate_pred(actor_features, action)
-        self.last_actor_features = actor_features
+        features = self.policy_feature_extractor(obs)
+        if self.recurrent_nets:
+            action_features, rhs["rhs_act"] = self.policy_memory_net(
+                features, rhs["rhs_act"], done)
+        logp_action, entropy_dist = self.dist.evaluate_pred(features, action)
+
+        self.last_action_features = features
+        self.last_action_rhs = rhs["rhs_act"]
 
         return logp_action, entropy_dist, rhs
 
@@ -256,17 +339,27 @@ class OnPolicyActor(nn.Module):
         ----------
         obs : torch.tensor
             Environment observation.
+        rhs : dict
+            Recurrent hidden states.
+        done : torch.tensor
+            Done tensor, indicating if episode has finished.
 
         Returns
         -------
         value : torch.tensor
             value score according to current value_net version.
+        rhs : dict
+            Updated recurrent hidden states.
         """
-        if self.shared_policy_value_network:
-            if self.last_actor_features.shape[0] != obs.shape[0]:
-                self.last_actor_features, _ = self.policy_net(obs, rhs, done)
-            return self.value_net(self.last_actor_features)
-        else:
-            val, _ = self.value_net(obs)
-            return val
 
+        if self.shared_policy_value_network:
+            if self.last_action_features.shape[0] != done.shape[0]:
+                _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
+            return self.value_predictor(self.last_action_features), rhs
+
+        else:
+            value_features = self.value_feature_extractor(obs)
+            if self.recurrent_nets:
+                value_features, rhs["rhs_val"] = self.value_memory_net(
+                    value_features, rhs["rhs_val"], done)
+            return self.value_predictor(value_features), rhs

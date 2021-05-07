@@ -1,6 +1,8 @@
+import gym
+import numpy as np
 import torch
 import torch.nn as nn
-from .utils import init
+from pytorchrl.agent.actors.utils import init
 
 
 class MLP(nn.Module):
@@ -9,21 +11,31 @@ class MLP(nn.Module):
 
     Parameters
     ----------
-    input_shape : tuple
-        Shape input tensors.
+    input_space : gym.Space
+        Environment observation space.
     hidden_sizes : list
         Hidden layers sizes.
     activation : func
         Non-linear activation function.
     """
-    def __init__(self, input_shape, hidden_sizes=[256, 256], activation=nn.ReLU):
+    def __init__(self, input_space, hidden_sizes=[256, 256], activation=nn.ReLU):
         super(MLP, self).__init__()
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init. constant_(x, 0), nn.init.calculate_gain('relu'))
+        if isinstance(input_space, gym.Space):
+            input_shape = input_space.shape
+        else:
+            input_shape = input_space
+
+        try:
+            gain = nn.init.calculate_gain(activation.__name__.lower())
+        except Exception:
+            gain = 1.0
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init. constant_(x, 0), gain)
 
         # Define feature extractor
         layers = []
-        sizes = [input_shape[0]] + hidden_sizes
+        sizes = [np.prod(input_shape)] + hidden_sizes
         for j in range(len(sizes) - 1):
             layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
@@ -45,5 +57,6 @@ class MLP(nn.Module):
         out : torch.tensor
             Output feature map.
         """
+        inputs = inputs.view(inputs.size(0), -1)
         out = self.feature_extractor(inputs)
         return out

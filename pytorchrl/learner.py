@@ -1,12 +1,11 @@
 import os
-import sys
 import ray
 import time
-import numpy as np
 from functools import partial
 from collections import defaultdict, deque
 from torch.utils.tensorboard import SummaryWriter
-from pytorchrl.utils import colorize
+import pytorchrl as prl
+
 
 class Learner:
     """
@@ -34,7 +33,7 @@ class Learner:
 
         # Counters and metrics
         self.num_samples_collected = 0
-        self.metrics = defaultdict(partial(deque, maxlen=1))
+        self.metrics = {k: defaultdict(partial(deque, maxlen=1)) for k in prl.INFO_KEYS}
 
         # Define summary writer
         if log_dir:
@@ -52,20 +51,26 @@ class Learner:
         # Update step
         info = self.update_worker.step()
 
+        actor_version = info[prl.VERSION]
+
         # grad_update_lag
-        info["scheme/fps"] = int(self.num_samples_collected / (time.time() - self.start))
-        info["scheme/policy_lag"] = info["grad_version"] - info.pop("col_version")
-        info["scheme/gradient_asyncrony"] = info.pop("update_version") - info.pop("grad_version")
+        info[prl.SCHEME] = {}
+        info[prl.SCHEME][prl.FPS] = int(self.num_samples_collected / (time.time() - self.start))
+        info[prl.SCHEME][prl.PL] = actor_version[prl.GRADIENT] - actor_version[prl.COLLECTION]
+        info[prl.SCHEME][prl.GA] = actor_version[prl.UPDATE] - actor_version[prl.GRADIENT]
 
         # Update counters
-        self.num_samples_collected += info.pop("collected_samples")
+        self.num_samples_collected += info.pop(prl.NUMSAMPLES)
 
         # Update and log metrics
-        for k, v in info.items():
-            if np.isscalar(v):
-                self.metrics[k].append(v)
-                if self.writer: self.writer.add_scalar(
-                    k, v, self.num_samples_collected)
+        for k in prl.INFO_KEYS:
+            if k in info and isinstance(info[k], dict):
+                for x, y in info[k].items():
+                    if isinstance(y, (float, int)):
+                        self.metrics[k][x].append(y)
+                    if self.writer and isinstance(y, (float, int)):
+                        self.writer.add_scalar(os.path.join(
+                            k, x), y, self.num_samples_collected)
 
     def done(self):
         """
@@ -79,62 +84,63 @@ class Learner:
         flag = self.num_samples_collected >= self.target_steps
         if flag:
             self.update_worker.stop()
-            print(colorize("\nTraining finished!", color="green", bold=True))
+            print("\nTraining finished!")
             time.sleep(1)
-            # ray.shutdown()
         return flag
 
-    def get_metrics(self, add_algo_metrics=True, add_performace_metrics=True, add_scheme_metrics=False, add_debug_metrics=False):
+    def get_metrics(self, add_algo_metrics=True, add_episodes_metrics=False, add_scheme_metrics=False, add_time_metrics=False):
         """Returns current value of tracked metrics."""
+
         m = {}
-        for k, v in self.metrics.items():
-            if k.split("/")[0] == "algo" and add_algo_metrics:
-                m.update({k: sum(v) / len(v)})
-            elif k.split("/")[0] == "performance" and add_performace_metrics:
-                m.update({k: sum(v) / len(v)})
-            elif k.split("/")[0] == "scheme" and add_scheme_metrics:
-                m.update({k: sum(v) / len(v)})
-            elif k.split("/")[0] == "debug" and add_debug_metrics:
-                m.update({k: sum(v) / len(v)})
+
+        def include_info(key):
+            m[key] = {}
+            for k, v in self.metrics[key].items():
+                m[os.path.join(key, k)] = sum(v) / len(v)
+
+        if add_algo_metrics:
+            include_info(prl.ALGORITHM)
+
+        if add_episodes_metrics:
+            include_info(prl.EPISODES)
+
+        if add_scheme_metrics:
+            include_info(prl.SCHEME)
+
+        if add_time_metrics:
+            include_info(prl.TIME)
+
         return m
 
-    def print_info(self, add_algo_info=True, add_performace_info=True, add_scheme_info=False, add_debug_info=False):
+    def print_info(self, add_algo_info=True, add_episodes_info=True, add_scheme_info=False, add_time_info=False):
         """Print relevant information about the training process"""
 
-        s = colorize("Update {}".format(self.update_worker.actor_version), color="yellow")
+        def write_info(msg, key):
+            msg += "\n  {}: ".format(key)
+            for k, v in self.metrics[key].items():
+                msg += "{} {:.4f}, ".format(k, sum(v) / len(v))
+            msg = msg[:-2]
+            return msg
+
+        s = "Update {}".format(self.update_worker.actor_version)
         s += ", num samples collected {}, FPS {}".format(self.num_samples_collected,
             int(self.num_samples_collected / (time.time() - self.start)))
 
         if add_algo_info:
-            s += colorize("\n  algo: ", color="green")
-            for k, v in self.get_metrics().items():
-                if k.split("/")[0] == "algo":
-                    s += "{} {}, ".format(k.split("/")[-1], v)
-            s = s[:-2]
+            s = write_info(s, prl.ALGORITHM)
 
-        if add_performace_info:
-            s += colorize("\n  performance: ", color="green")
-            for k, v in self.get_metrics().items():
-                if k.split("/")[0] == "performance":
-                    s += "{} {:2f}, ".format(k.split("/")[-1], v)
-            s = s[:-2]
+        if add_episodes_info:
+            s = write_info(s, prl.EPISODES)
 
         if add_scheme_info:
-            s += colorize("\n  scheme: ", color="green")
-            for k, v in self.get_metrics().items():
-                if k.split("/")[0] == "scheme":
-                    s += "{} {}, ".format(k.split("/")[-1], v)
-            s = s[:-2]
+            s = write_info(s, prl.SCHEME)
 
-        if add_debug_info:
-            s += colorize("\n  debug: ", color="green")
-            for k, v in self.get_metrics().items():
-                if k.split("/")[0] == "debug":
-                    s += "{} {}, ".format(k.split("/")[-1], v)
+        if add_time_info:
+            s = write_info(s, prl.TIME)
 
-        print(s[:-2], flush=True)
+        print(s, flush=True)
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of the algorithm used for training,
         change its value to `new_parameter_value value`.
@@ -146,7 +152,7 @@ class Learner:
         new_parameter_value : int or float
             New value for `parameter_name`.
         """
-        self.update_worker.update_algo_parameter(parameter_name, new_parameter_value)
+        self.update_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
 
     def save_model(self):
         """

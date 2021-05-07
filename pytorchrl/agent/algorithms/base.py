@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import torch
 
 
-class Algo(ABC):
+class Algorithm(ABC):
     """Base class for all algorithms"""
 
     @classmethod
@@ -11,10 +11,71 @@ class Algo(ABC):
         """Returns a function to create new Algo instances"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def gamma(self):
+        """Returns discount factor gamma."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def start_steps(self):
+        """Returns the number of steps to collect with initial random policy."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def num_epochs(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def update_every(self):
+        """
+        Returns the number of data samples collected between
+        network update stages.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def num_mini_batch(self):
+        """
+        Returns the number of times the whole buffer is re-used before data
+        collection proceeds.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def mini_batch_size(self):
+        """
+        Returns the number of mini batches per epoch.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def test_every(self):
+        """Number of network updates between test evaluations."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def num_test_episodes(self):
+        """
+        Returns the number of episodes to complete when testing.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def acting_step(self, obs, rhs, done, deterministic=False, *args):
         """
-        PPO acting function.
+        Algorithm acting function.
 
         Parameters
         ----------
@@ -77,19 +138,19 @@ class Algo(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_weights(self, weights, *args):
+    def set_weights(self, actor_weights, *args):
         """
-        Update actor critic with the given weights
+        Update actor with the given weights
 
         Parameters
         ----------
-        weights: dict of tensors
+        actor_weights: dict of tensors
             Dict containing actor_critic weights to be set.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def update_algo_parameter(self, parameter_name, new_parameter_value, *args):
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value, *args):
         """
         If `parameter_name` is an attribute of the algorithm, change its value
         to `new_parameter_value value`.
@@ -97,7 +158,7 @@ class Algo(ABC):
         Parameters
         ----------
         parameter_name : str
-            Worker.algo attribute name
+            Attribute name
         new_parameter_value : int or float
             New value for `parameter_name`.
         """

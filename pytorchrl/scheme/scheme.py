@@ -1,3 +1,4 @@
+import pytorchrl as prl
 from pytorchrl.scheme.collection.c_worker_set import CWorkerSet
 from pytorchrl.scheme.gradients.g_worker_set import GWorkerSet
 from pytorchrl.scheme.updates.u_worker import UWorker
@@ -52,13 +53,15 @@ class Scheme:
 
                  # collection
                  num_col_workers=1,
-                 col_workers_communication="synchronous",
+                 col_compress_data=False,
+                 col_workers_communication=prl.SYNC,
                  col_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
                  col_preemption_thresholds={"fraction_samples": 1.0, "fraction_workers": 1.0},
 
                  # gradients
                  num_grad_workers=1,
-                 grad_workers_communication="synchronous",
+                 grad_compress_data=False,
+                 grad_workers_communication=prl.SYNC,
                  grad_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
 
                  # update
@@ -66,13 +69,14 @@ class Scheme:
                  decentralized_update_execution=False, # OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=8 main.py
                  ):
 
-        assert col_workers_communication in ("synchronous", "asynchronous"),\
-            "col_workers_communication can only be `synchronous` or `asynchronous`"
-        assert grad_workers_communication in ("synchronous", "asynchronous"),\
-            "grad_workers_communication can only be `synchronous` or `asynchronous`"
+        assert col_workers_communication in (prl.SYNC, prl.ASYNC),\
+            "col_workers_communication can only be `prl.SYNC` or `prl.ASYNC`"
 
-        col_execution="parallelised" if num_col_workers > 1 else "centralised"
-        grad_execution="parallelised" if num_grad_workers > 1 else "centralised"
+        assert grad_workers_communication in (prl.SYNC, prl.ASYNC),\
+            "grad_workers_communication can only be `prl.SYNC` or `prl.ASYNC`"
+
+        col_execution = prl.PARALLEL if num_col_workers > 1 else prl.CENTRAL
+        grad_execution = prl.PARALLEL if num_grad_workers > 1 else prl.CENTRAL
 
         col_workers_factory = CWorkerSet.create_factory(
 
@@ -123,3 +127,10 @@ class Scheme:
     def update_worker(self):
         """Return local worker"""
         return self._update_worker
+
+    def get_agent_components(self):
+        return {
+            "Actor": self._update_worker.local_worker.local_worker.actor.__class__.__name__,
+            "Algorithm": self._update_worker.local_worker.local_worker.algo.__class__.__name__,
+            "Storage": self._update_worker.local_worker.local_worker.storage.__class__.__name__,
+        }

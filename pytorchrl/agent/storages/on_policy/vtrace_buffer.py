@@ -1,4 +1,5 @@
 import torch
+import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer as B
 
 
@@ -15,169 +16,130 @@ class VTraceBuffer(B):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    actor : ActorCritic
+        An actor class instance.
+    algorithm : Algo
+        An algorithm class instance.
     """
 
-    # Accepted data fields. Inserting other fields will raise AssertionError
-    on_policy_data_fields = ("obs", "obs2", "rhs", "act", "rew", "val", "logp", "done")
+    # Data fields to store in buffer and contained in generated batches
+    storage_tensors = prl.OnPolicyDataKeys
 
-    def __init__(self, size, device=torch.device("cpu")):
+    def __init__(self, size, device, actor, algorithm):
 
         super(VTraceBuffer, self).__init__(
             size=size,
-            device=device)
+            device=device,
+            actor=actor,
+            algorithm=algorithm)
 
-    def before_gradients(self, actor, algo):
+    def before_gradients(self):
         """
         Before updating actor policy model, compute returns and advantages.
-
-        Parameters
-        ----------
-        actor : ActorCritic
-            An actor class instance.
-        algo : Algo
-            An algorithm class instance.
         """
+
+        last_tensors = {}
+        for k in (prl.OBS, prl.RHS, prl.DONE):
+            if isinstance(self.data[k], dict):
+                last_tensors[k] = {x: self.data[k][x][self.step - 1] for x in self.data[k]}
+            else:
+                last_tensors[k] = self.data[k][self.step - 1]
+
         with torch.no_grad():
-            _ = actor.get_action(
-                self.data["obs"][self.step - 1],
-                self.data["rhs"][self.step - 1],
-                self.data["done"][self.step - 1])
-            next_value = actor.get_value(
-                self.data["obs"][self.step - 1],
-                self.data["rhs"][self.step - 1],
-                self.data["done"][self.step - 1]
-            )
+            _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
+            next_value, next_rhs = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
 
-        self.data["ret"][self.step] = next_value
-        self.compute_returns(algo.gamma)
-        self.compute_vtrace(actor, algo)
+        self.data[prl.RET][self.step].copy_(next_value)
+        self.data[prl.VAL][self.step].copy_(next_value)
 
-    def after_gradients(self, actor, algo, batch, info):
-        """
-        After updating actor policy model, make sure self.step is at 0.
+        if isinstance(next_rhs, dict):
+            for x in self.data[prl.RHS]:
+                self.data[prl.RHS][x][self.step].copy_(next_rhs[x])
+        else:
+            self.data[prl.RHS][self.step] = next_rhs
+        self.compute_returns()
 
-        Parameters
-        ----------
-        actor : Actor class
-            An actor class instance.
-        algo : Algo class
-            An algorithm class instance.
-        batch : dict
-            Data batch used to compute the gradients.
-        info : dict
-            Additional relevant info from gradient computation.
-
-        Returns
-        -------
-        info : dict
-            info dict updated with relevant info from Storage.
-        """
-        self.data["obs"][0].copy_(self.data["obs"][self.step - 1])
-        self.data["rhs"][0].copy_(self.data["rhs"][self.step - 1])
-        self.data["done"][0].copy_(self.data["done"][self.step - 1])
-
-        if self.step != 0:
-            self.step = 0
-
-        return info
+        self.compute_vtrace()
 
     @torch.no_grad()
-    def get_updated_action_log_probs(self, actor, algo):
+    def get_updated_action_log_probs(self):
         """
         Computes new log probabilities of actions stored in `storage`
         according to current `actor` version. It also uses the current
         `actor` version to update the value predictions.
-
-        Parameters
-        ----------
-        actor : ActorCritic
-            An actor class instance.
-        algo : Algo
-            An algorithm class instance.
-
-        Returns
-        -------
-        new_logp : torch.tensor
-            New action log probabilities.
         """
 
-        len, num_proc = self.data["act"].shape[0:2]
+        l, num_proc = self.data[prl.DONE].shape[0:2]
+        l = self.step if self.step != 0 else self.max_size
 
         # Create batches without shuffling data
         batches = self.generate_batches(
-            algo.num_mini_batch, algo.mini_batch_size,
-            num_epochs=1, recurrent_ac=actor.is_recurrent, shuffle=False)
+            self.algo.num_mini_batch, self.algo.mini_batch_size,
+            num_epochs=1, shuffle=False)
 
         # Obtain new value and log probability predictions
         new_val = []
         new_logp = []
         for batch in batches:
-            obs, rhs, act, done = batch["obs"], batch["rhs"], batch["act"], batch["done"]
-            (logp, _, _) = actor.evaluate_actions(obs, rhs, done, act)
-            val = actor.get_value(obs)
+            obs, rhs, act, done = batch[prl.OBS], batch[prl.RHS], batch[prl.ACT], batch[prl.DONE]
+            (logp, _, _) = self.actor.evaluate_actions(obs, rhs, done, act)
+            val, _ = self.actor.get_value(obs, rhs, done)
             new_val.append(val)
             new_logp.append(logp)
 
         # Concatenate results
-        if actor.is_recurrent:
-            new_val = [p.view(len, num_proc // algo.num_mini_batch, -1) for p in new_val]
-            self.data["val"][:-1] = torch.cat(new_val, dim=1)
-            new_logp = [p.view(len, num_proc // algo.num_mini_batch, -1) for p in new_logp]
+        if self.actor.is_recurrent:
+            new_val = [p.view(l, num_proc // self.algo.num_mini_batch, -1) for p in new_val]
+            self.data[prl.VAL][:-1] = torch.cat(new_val, dim=1)
+            new_logp = [p.view(l, num_proc // self.algo.num_mini_batch, -1) for p in new_logp]
             new_logp = torch.cat(new_logp, dim=1)
         else:
-            self.data["val"][:-1] = torch.cat(new_val, dim=0).view(len, num_proc, 1)
-            new_logp = torch.cat(new_logp, dim=0).view(len, num_proc, 1)
+            self.data[prl.VAL][:-1] = torch.cat(new_val, dim=0).view(l, num_proc, 1)
+            new_logp = torch.cat(new_logp, dim=0).view(l, num_proc, 1)
 
         return new_logp
 
     @torch.no_grad()
-    def compute_vtrace(self, new_policy, algo, clip_rho_thres=1.0, clip_c_thres=1.0):
+    def compute_vtrace(self, clip_rho_thres=1.0, clip_c_thres=1.0):
         """
         Computes V-trace target values and advantage predictions and stores them,
         along with the updated action log probabilities, in `storage`.
 
         Parameters
         ----------
-        new_policy : Actor
-            An actor class instance.
-        algo : Algo
-            An algorithm class instance.
+        clip_rho_thres : float
+            V-trace rho threshold parameter.
+        clip_c_thres : float
+            V-trace c threshold parameter.
         """
 
         l = self.step if self.step != 0 else self.max_size
 
-        with torch.no_grad():
-            _ = new_policy.get_action(
-                self.data["obs"][self.step - 1],
-                self.data["rhs"][self.step - 1],
-                self.data["done"][self.step - 1])
-            next_value = new_policy.get_value(self.data["obs"][self.step - 1])
-        self.data["val"][self.step] = next_value
+        new_action_log_probs = self.get_updated_action_log_probs(self.actor, self.algo)
 
-        new_action_log_probs = self.get_updated_action_log_probs(new_policy, algo)
-
-        log_rhos = (new_action_log_probs - self.data["logp"])
+        log_rhos = (new_action_log_probs - self.data[prl.LOGP][:l])
         clipped_rhos = torch.clamp(torch.exp(log_rhos), max=clip_rho_thres)
         clipped_cs = torch.clamp(torch.exp(log_rhos), max=clip_c_thres)
 
         deltas = clipped_rhos * (
-            self.data["ret"][:-1] + algo.gamma * self.data["val"][1:] - self.data["val"][:-1])
+            self.data[prl.RET][:-1] + self.algo.gamma * self.data[prl.VAL][1:]
+            - self.data[prl.VAL][:-1])
 
-        acc = torch.zeros_like(self.data["val"][-1])
+        acc = torch.zeros_like(self.data[prl.VAL][-1])
         result = []
         for i in reversed(range(l)):
-            acc = deltas[i] + algo.gamma * clipped_cs[i] * acc * (1 - self.data["done"][i + 1])
+            acc = deltas[i] + self.algo.gamma * clipped_cs[i] * acc * (
+                1 - self.data[prl.DONE][i + 1])
             result.append(acc)
 
         result.reverse()
-        result.append(torch.zeros_like(self.data["val"][-1]))
+        result.append(torch.zeros_like(self.data[prl.VAL][-1]))
         vs_minus_v_xs = torch.stack(result)
 
-        vs = torch.add(vs_minus_v_xs, self.data["val"])
-        adv = clipped_rhos * (self.data["ret"][:-1] + algo.gamma * vs[1:] - self.data["val"][:-1])
+        vs = torch.add(vs_minus_v_xs, self.data[prl.VAL])
+        adv = clipped_rhos * (self.data[prl.RET][:-1] + self.algo.gamma *
+                              vs[1:] - self.data[prl.VAL][:-1])
 
-        self.data["ret"] = vs
-        self.data["logp"] = new_action_log_probs
-        self.data["adv"] = (adv - adv.mean()) / (adv.std() + 1e-8)
-
-
+        self.data[prl.RET] = vs
+        self.data[prl.LOGP] = new_action_log_probs
+        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-8)

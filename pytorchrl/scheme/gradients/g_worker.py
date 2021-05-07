@@ -8,12 +8,13 @@ import threading
 from shutil import copy2
 from copy import deepcopy
 
-
+import pytorchrl as prl
 from pytorchrl.scheme.base.worker import Worker as W
-from pytorchrl.scheme.utils import ray_get_and_free, broadcast_message
+from pytorchrl.scheme.utils import ray_get_and_free, broadcast_message, pack, unpack
 
-# Puts a capo on the allowed policy lag
+# Puts a limit to the allowed policy lag
 max_queue_size = 100
+
 
 class GWorker(W):
     """
@@ -32,6 +33,8 @@ class GWorker(W):
         A function that creates a set of data collection workers.
     col_communication : str
         Communication coordination pattern for data collection.
+    compress_grads_to_send : bool
+        Whether or not to compress gradients before sending then to the update worker.
     col_execution : str
         Execution patterns for data collection.
     col_fraction_workers : float
@@ -51,6 +54,8 @@ class GWorker(W):
         Number of times gradients have been computed and sent.
     col_communication : str
         Communication coordination pattern for data collection.
+    compress_grads_to_send : bool
+        Whether or not to compress gradients before sending then to the update worker.
     col_workers : CWorkerSet
         A CWorkerSet class instance.
     local_worker : CWorker
@@ -75,8 +80,9 @@ class GWorker(W):
     def __init__(self,
                  index_worker,
                  col_workers_factory,
-                 col_communication="synchronous",
-                 col_execution="parallelised",
+                 col_communication=prl.SYNC,
+                 compress_grads_to_send=False,
+                 col_execution=prl.CENTRAL,
                  col_fraction_workers=1.0,
                  initial_weights=None,
                  device=None):
@@ -87,6 +93,7 @@ class GWorker(W):
         # Define counters and other attributes
         self.iter = 0
         self.col_communication = col_communication
+        self.compress_grads_to_send = compress_grads_to_send
 
         # Computation device
         dev = device or "cuda" if torch.cuda.is_available() else "cpu"
@@ -104,25 +111,28 @@ class GWorker(W):
         self.algo = self.local_worker.algo
 
         # Get storage instance.
-        # If async comm, collection storage sizes reduced to minimum necessary
-        if col_communication == "asynchronous" and self.local_worker.envs_train is not None:
-            size1 = self.local_worker.storage.size
-            size2 = self.local_worker.algo.update_every
+        if col_communication == prl.ASYNC and self.local_worker.envs_train is not None:
+
+            # If async, collection storage sizes need a storage copy
+            # Define it with the minimum size required, to save memory
+            size1 = self.local_worker.storage.max_size
+            size2 = self.local_worker.algo.update_every * 2
             if size2 == None: size2 = float("Inf")
             new_size = min(size1, size2)
+
             if self.local_worker.envs_train is not None:
                 self.storage = deepcopy(self.local_worker.storage)
-                self.local_worker.storage.size = new_size
+                self.local_worker.update_storage_parameter("max_size", new_size)
             else:
                 self.storage = self.local_worker.storage
                 for e in self.remote_workers:
-                    e.update_storage_parameter.remote("size", new_size)
+                    e.update_storage_parameter.remote("max_size", new_size)
         else:
             self.storage = self.local_worker.storage
 
-        if len(self.remote_workers) > 0 or \
-                (len(self.remote_workers) == 0 and
-                        self.local_worker.envs_train is not None):
+        if len(self.remote_workers) > 0 or (len(self.remote_workers) == 0 and
+                self.local_worker.envs_train is not None):
+
             # Create CollectorThread
             self.collector = CollectorThread(
                 index_worker=index_worker,
@@ -153,31 +163,45 @@ class GWorker(W):
 
         Returns
         -------
-        grads: list of tensors
+        grads : list of tensors
             List of actor gradients.
         info : dict
             Summary dict of relevant gradient operation information.
         """
+
         self.get_data()
         grads, info = self.get_grads(distribute_gradients)
-        if distribute_gradients: self.apply_gradients()
-        return grads, info
+
+        if distribute_gradients:
+            self.apply_gradients()
+
+        # Encode data if self.compress_data_to_send is True
+        data_to_send = pack((grads, info)) if self.compress_grads_to_send else (grads, info)
+
+        return data_to_send
 
     def get_data(self):
-        """Pulls data from `self.collector.queue` and prepares batches to compute gradients."""
+        """
+        Pulls data from `self.collector.queue` and prepares batches to
+        compute gradients.
+        """
 
         try:  # Try pulling next batch
             self.next_batch = self.batches.__next__()
+            # Only use episode information once
+            self.info.pop(prl.EPISODES)
+            # Only record collected samples once
+            self.info[prl.NUMSAMPLES] = 0
 
-        except Exception: # StopIteration or AttributeError, Otherwise generate more batches
-
-            if self.col_communication == "synchronous": self.collector.step()
-            data, self.col_info = self.collector.queue.get()
-            self.storage.add_data(data)
-            self.storage.before_gradients(self.actor, self.algo)
+        # except (StopIteration, AttributeError):
+        except Exception:  # StopIteration or AttributeError
+            if self.col_communication == prl.SYNC: self.collector.step()
+            data, self.info = self.collector.queue.get()
+            self.storage.insert_data_slice(data)
+            self.storage.before_gradients()
             self.batches = self.storage.generate_batches(
                 self.algo.num_mini_batch, self.algo.mini_batch_size,
-                self.algo.num_epochs, self.actor.is_recurrent)
+                self.algo.num_epochs)
             self.next_batch = self.batches.__next__()
 
     def get_grads(self, distribute_gradients=False):
@@ -192,22 +216,26 @@ class GWorker(W):
 
         Returns
         -------
-        grads: list of tensors
+        grads : list of tensors
             List of actor gradients.
         info : dict
             Summary dict of relevant gradient operation information.
         """
 
-        grads, info = self.compute_gradients(self.next_batch, distribute_gradients)
+        # Get gradients and algorithm-related information
+        t = time.time()
+        grads, algo_info = self.compute_gradients(self.next_batch, distribute_gradients)
+        compute_time = time.time() - t
 
         # Add extra information to info dict
-        info.update(self.col_info)
-        self.col_info.update({"collected_samples": 0})
-        if "performance/train_reward" in self.col_info: self.col_info.pop("performance/train_reward")
-        if "performance/test_reward" in self.col_info: self.col_info.pop("performance/test_reward")
-        info.update({"grad_version": self.local_worker.actor_version})
-        info = self.storage.after_gradients(self.actor, self.algo, self.next_batch, info)
+        self.info[prl.ALGORITHM] = algo_info
+        self.info[prl.VERSION][prl.GRADIENT] = self.local_worker.actor_version
+        self.info[prl.TIME][prl.GRADIENT] = compute_time
 
+        # Run after gradients data process (if any)
+        info = self.storage.after_gradients(self.next_batch, self.info)
+
+        # Update iteration counter
         self.iter += 1
 
         return grads, info
@@ -226,20 +254,16 @@ class GWorker(W):
 
         Returns
         -------
-        grads: list of tensors
+        grads : list of tensors
             List of actor gradients.
         info : dict
             Summary dict with relevant gradient-related information.
         """
 
-        t = time.time()
         grads, info = self.algo.compute_gradients(batch, grads_to_cpu=not distribute_gradients)
-        compute_time = time.time() - t
-        info.update({"debug/compute_grads": compute_time})
 
         if distribute_gradients:
 
-            t = time.time()
             if torch.cuda.is_available():
                 for g in grads:
                     torch.distributed.all_reduce(g, op=torch.distributed.ReduceOp.SUM)
@@ -250,31 +274,30 @@ class GWorker(W):
                 if p.grad is not None:
                     p.grad /= self.num_workers
 
-            avg_grads_t = time.time() - t
             grads = None
-
-            info.update({"debug/avg_grads": avg_grads_t})
 
         return grads, info
 
     def apply_gradients(self, gradients=None):
         """Update Actor Critic model"""
+
         self.local_worker.actor_version += 1
         self.algo.apply_gradients(gradients)
-        if self.col_communication == "synchronous" and len(self.remote_workers) > 0:
+        if self.col_communication == prl.SYNC and len(self.remote_workers) > 0:
             self.collector.broadcast_new_weights()
 
-    def set_weights(self, weights):
+    def set_weights(self, actor_weights):
         """
         Update the worker actor version with provided weights.
 
-        weights: dict of tensors
+        weights : dict of tensors
             Dict containing actor weights to be set.
         """
-        self.local_worker.actor_version = weights["version"]
-        self.local_worker.algo.set_weights(weights["weights"])
 
-    def update_algo_parameter(self, parameter_name, new_parameter_value):
+        self.local_worker.actor_version = actor_weights[prl.VERSION]
+        self.local_worker.algo.set_weights(actor_weights[prl.WEIGHTS])
+
+    def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
         If `parameter_name` is an attribute of Worker.algo, change its value to
         `new_parameter_value value`.
@@ -284,13 +307,14 @@ class GWorker(W):
         parameter_name : str
             Algorithm attribute name
         """
-        self.local_worker.update_algo_parameter(parameter_name, new_parameter_value)
-        for e in self.remote_workers:
-            e.update_algo_parameter.remote(parameter_name, new_parameter_value)
 
-        self.algo.update_algo_parameter(parameter_name, new_parameter_value)
+        self.local_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
+        for e in self.remote_workers:
+            e.update_algorithm_parameter.remote(parameter_name, new_parameter_value)
+
+        self.algo.update_algorithm_parameter(parameter_name, new_parameter_value)
         for e in self.col_workers.remote_workers():
-            e.update_algo_parameter.remote(parameter_name, new_parameter_value)
+            e.update_algorithm_parameter.remote(parameter_name, new_parameter_value)
 
     def save_model(self, fname):
         """
@@ -306,6 +330,7 @@ class GWorker(W):
         save_name : str
             Path to saved file.
         """
+
         torch.save(self.local_worker.actor.state_dict(), fname + ".tmp")
         os.rename(fname + '.tmp', fname)
         save_name = fname + ".{}".format(self.local_worker.actor_version)
@@ -374,8 +399,8 @@ class CollectorThread(threading.Thread):
                  local_worker,
                  remote_workers,
                  col_fraction_workers=1.0,
-                 col_communication="synchronous",
-                 col_execution="parallelised",
+                 col_communication=prl.SYNC,
+                 col_execution=prl.CENTRAL,
                  broadcast_interval=1):
 
         self.index_worker = index_worker
@@ -396,16 +421,16 @@ class CollectorThread(threading.Thread):
         # Counters
         self.num_sent_since_broadcast = 0
 
-        if col_execution == "centralised" and col_communication == "synchronous":
+        if col_execution == prl.CENTRAL and col_communication == prl.SYNC:
             pass
 
-        elif col_execution == "centralised" and col_communication == "asynchronous":
-            if self.local_worker.envs_train: self.start() # Start CollectorThread
+        elif col_execution == prl.CENTRAL and col_communication == prl.ASYNC:
+            if self.local_worker.envs_train: self.start()  # Start CollectorThread
 
-        elif col_execution == "parallelised" and col_communication == "synchronous":
+        elif col_execution == prl.PARALLEL and col_communication == prl.SYNC:
             pass
 
-        elif col_execution == "parallelised" and col_communication == "asynchronous":
+        elif col_execution == prl.PARALLEL and col_communication == prl.ASYNC:
             self.pending_tasks = {}
             self.broadcast_new_weights()
             for w in self.remote_workers:
@@ -427,19 +452,21 @@ class CollectorThread(threading.Thread):
         Collects data from remote workers and puts it in the GWorker queue.
         """
 
-        if self.col_execution == "centralised" and self.col_communication == "synchronous":
+        if self.col_execution == prl.CENTRAL and self.col_communication == prl.SYNC:
 
             rollouts = self.local_worker.collect_data(listen_to=["sync"], data_to_cpu=False)
+            rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
             while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
 
-        elif self.col_execution == "centralised" and self.col_communication == "asynchronous":
+        elif self.col_execution == prl.CENTRAL and self.col_communication == prl.ASYNC:
 
             rollouts = self.local_worker.collect_data(data_to_cpu=False)
+            rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
             while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
 
-        elif self.col_execution == "parallelised" and self.col_communication == "synchronous":
+        elif self.col_execution == prl.PARALLEL and self.col_communication == prl.SYNC:
 
             # Start data collection in all workers
             worker_key = "worker_{}".format(self.index_worker)
@@ -449,7 +476,8 @@ class CollectorThread(threading.Thread):
                 listen_to=["sync", worker_key]) for e in self.remote_workers]
 
             if self.fraction_workers < 1.0:
-                # Keep checking how many workers have finished until percent% are ready
+                # Keep checking how many workers have finished until
+                # percent% are ready
                 samples_ready = []
                 while len(samples_ready) < (self.num_workers * self.fraction_workers):
                     samples_ready, samples_not_ready = ray.wait(
@@ -461,9 +489,11 @@ class CollectorThread(threading.Thread):
             # Compute model updates
             for r in pending_samples:
                 while self.queue.qsize() > max_queue_size: time.sleep(0.5)
-                self.queue.put(ray_get_and_free(r))
+                rollouts = ray_get_and_free(r)
+                rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
+                self.queue.put(rollouts)
 
-        elif self.col_execution == "parallelised" and self.col_communication == "asynchronous":
+        elif self.col_execution == prl.PARALLEL and self.col_communication == prl.ASYNC:
 
             # Wait for first worker to finish
             assert len(list(self.pending_tasks.keys())) == len(self.remote_workers)
@@ -474,7 +504,9 @@ class CollectorThread(threading.Thread):
 
             # Retrieve rollouts and add them to queue
             while self.queue.qsize() > max_queue_size: time.sleep(0.5)
-            self.queue.put(ray_get_and_free(future))
+            rollouts = ray_get_and_free(future)
+            rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
+            self.queue.put(rollouts)
 
             # Schedule a new collection task
             future = w.collect_data.remote()
@@ -488,8 +520,8 @@ class CollectorThread(threading.Thread):
         """Broadcast a new set of weights from the local worker."""
         if self.num_workers > 0:
             latest_weights = ray.put({
-                "version": self.local_worker.actor_version,
-                "weights": self.local_worker.get_weights()})
+                prl.VERSION: self.local_worker.actor_version,
+                prl.WEIGHTS: self.local_worker.get_weights()})
             for e in self.remote_workers:
                 e.set_weights.remote(latest_weights)
             self.num_sent_since_broadcast = 0
