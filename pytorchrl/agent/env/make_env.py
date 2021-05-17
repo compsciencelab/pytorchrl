@@ -1,6 +1,6 @@
 import os
 import inspect
-from baselines import bench
+from pytorchrl.agent.env.openai_baselines_dependencies.Monitor import Monitor
 
 from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
 
@@ -59,7 +59,7 @@ def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env,
 
         # Monitor provided info_keywords
         if log_dir is not None:
-            env = bench.Monitor(
+            env = Monitor(
                 env, os.path.join(path, "{}_{}_{}".format(
                     index_grad_worker, index_col_worker, str(index_env))),
                 allow_early_resets=True, info_keywords=info_keywords)

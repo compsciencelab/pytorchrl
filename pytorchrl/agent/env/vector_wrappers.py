@@ -1,5 +1,5 @@
 import torch
-from baselines.common.vec_env import VecEnvWrapper
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.vec_env import VecEnvWrapper
 
 
 class VecPyTorch(VecEnvWrapper):
