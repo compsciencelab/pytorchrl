@@ -21,10 +21,12 @@ class Learner:
     target_steps : int
         Number of environment steps to reach to complete training.
     log_dir : str
-        Target directory for Tensorboard logs.
+        Target directory for model checkpoints and, if specified, Tensorboard logs.
+    log_to_tensorboard : bool
+        Whether or not generating Tensorboard logs.
     """
 
-    def __init__(self, scheme, target_steps, log_dir=None):
+    def __init__(self, scheme, target_steps, log_dir=None, log_to_tensorboard=False):
 
         # Input attributes
         self.log_dir = log_dir
@@ -36,7 +38,7 @@ class Learner:
         self.metrics = {k: defaultdict(partial(deque, maxlen=1)) for k in prl.INFO_KEYS}
 
         # Define summary writer
-        if log_dir:
+        if log_dir and log_to_tensorboard:
             tb_log_dir = "{}/tensorboard_logs".format(log_dir)
             os.makedirs(tb_log_dir, exist_ok=True)
             self.writer = SummaryWriter(log_dir=tb_log_dir)

@@ -40,7 +40,7 @@ def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env,
     """
 
     if log_dir:
-        path = os.path.join(log_dir, mode)
+        path = os.path.join(log_dir, "monitor_logs", mode)
         os.makedirs(path, exist_ok=True)
 
     # index_worker and index_env added as paramaters
