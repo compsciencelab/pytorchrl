@@ -1,1 +1,2 @@
-from .vec_env import VecEnv
+from pytorchrl.agent.env.vec_env import VecEnv
+from pytorchrl.agent.env.openai_baselines_dependencies.load_baselines_results import load_baselines_results

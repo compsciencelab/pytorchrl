@@ -4,7 +4,7 @@ import os
 import argparse
 import numpy as np
 from glob import glob
-from baselines.bench import load_results
+from pytorchrl.agent.env import load_baselines_results
 from matplotlib import pylab as plt; plt.rcdefaults()
 from pytorchrl.utils import colorize, LoadFromFile
 
@@ -18,7 +18,7 @@ def plot(experiment_path, roll=5, save_name="results"):
         exps = glob(experiment_path)
         print(exps)
 
-        df_train = load_results(os.path.join(experiment_path, "train"))
+        df_train = load_baselines_results(os.path.join(experiment_path, "train"))
         df_train['steps'] = df_train['l'].cumsum() / 1000000
         df_train['time'] = df_train['t'] / 3600
 
@@ -34,7 +34,7 @@ def plot(experiment_path, roll=5, save_name="results"):
         print(exps)
 
         # Get data
-        df_test = load_results(os.path.join(experiment_path, "test"))
+        df_test = load_baselines_results(os.path.join(experiment_path, "test"))
         df_test['steps'] = df_test['l'].cumsum() / 1000000
         df_test['time'] = df_test['t'] / 3600
 
