@@ -327,7 +327,7 @@ class OffPolicyActor(nn.Module):
     @property
     def recurrent_hidden_state_size(self):
         """Size of policy recurrent hidden state"""
-        return self.policy_common_feature_extractor.recurrent_hidden_state_size
+        return self.recurrent_size
 
     def actor_initial_states(self, obs):
         """
