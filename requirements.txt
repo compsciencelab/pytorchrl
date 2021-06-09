@@ -3,3 +3,4 @@ gym[atari]
 ray[debug]
 pybullet
 TensorBoard
+lz4
