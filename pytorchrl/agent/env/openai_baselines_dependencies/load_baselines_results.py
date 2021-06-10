@@ -1,7 +1,7 @@
-import glob
 import json
 import pandas
 import os.path as osp
+from glob import glob
 
 
 def load_baselines_results(dir):
