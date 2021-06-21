@@ -111,6 +111,7 @@ class OffPolicyActor(nn.Module):
 
         feature_size = int(np.prod(self.policy_obs_feature_extractor(
             torch.randn(1, *input_space.shape)).shape))
+
         self.policy_common_feature_extractor = common_feature_extractor(
             feature_size, **common_feature_extractor_kwargs)
 

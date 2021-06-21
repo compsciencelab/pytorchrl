@@ -228,7 +228,7 @@ class CWorker(W):
         info = defaultdict(list)
 
         # Define number of collections steps to perform
-        num_steps = num_steps if num_steps is not None else int(self.update_every)
+        num_steps = int(num_steps) if num_steps is not None else int(self.update_every)
         min_steps = int(num_steps * self.fraction_samples)
 
         for step in range(num_steps):
@@ -320,7 +320,7 @@ class CWorker(W):
             Dict containing actor weights to be set.
         """
         self.actor_version = actor_weights[prl.VERSION]
-        self.actor.load_state_dict(actor_weights[prl.VERSION])
+        self.actor.load_state_dict(actor_weights[prl.WEIGHTS])
 
     def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """

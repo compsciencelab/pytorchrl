@@ -209,6 +209,10 @@ class ReplayBuffer(S):
                 continue
 
             if isinstance(new_data[k], dict):
+
+                if self.data[k] is None:
+                    self.data[k] = {i: None for i in new_data[k].keys()}
+
                 for x, y in new_data[k].items():
                     length = self.insert_single_tensor_slice(self.data[k], x, y)
                     lengths.append(length)

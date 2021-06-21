@@ -186,7 +186,7 @@ class EREBuffer(B):
 
         slopes = np.linspace(-1.0, 1.0, 1000)
         etas = np.linspace(1.0, self.initial_eta, 1000)
-        if "TrainReward" in info[prl.EPISODES].keys():
+        if prl.EPISODES in info.keys() and "TrainReward" in info[prl.EPISODES].keys():
             self.eps_reward.append(info[prl.EPISODES]["TrainReward"])
 
         if len(self.eps_reward) == self.eps_reward.maxlen:

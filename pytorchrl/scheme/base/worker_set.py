@@ -1,4 +1,5 @@
 import ray
+import pytorchrl as prl
 from pytorchrl.scheme.base.worker import default_remote_config
 
 
@@ -106,7 +107,7 @@ class WorkerSet:
             Number of remote workers to create.
         """
         self.worker_params.update({"initial_weights": ray.put(
-            {"version": 0, "weights": self._local_worker.get_weights()})})
+            {prl.VERSION: 0, prl.WEIGHTS: self._local_worker.get_weights()})})
         cls = self.worker_class.as_remote(**self.remote_config).remote
         self._remote_workers.extend([
             self._make_worker(cls, index_worker=i + 1, worker_params=self.worker_params)
