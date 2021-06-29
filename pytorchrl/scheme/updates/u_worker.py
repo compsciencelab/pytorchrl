@@ -4,6 +4,7 @@ import time
 import torch
 import queue
 import threading
+from functools import partial
 from collections import defaultdict
 
 import pytorchrl as prl
@@ -269,8 +270,11 @@ class UpdaterThread(threading.Thread):
 
         elif self.grad_execution == prl.PARALLEL and self.grad_communication == prl.SYNC:
 
-            to_average = []
-            step_metrics = defaultdict(float)
+            grads_to_average = []
+            grads_to_average = defaultdict(list)
+#            step_metrics = {k: defaultdict(list) for k in prl.INFO_KEYS}
+            step_metrics = {k: defaultdict(float) for k in ('Episodes', 'Time', 'ActorVersion', 'NumberSamples', 'Algorithm')}
+            total_samples = 0
 
             # Start get data in all workers that have sync collection
             broadcast_message("sync", b"start-continue")
@@ -302,19 +306,30 @@ class UpdaterThread(threading.Thread):
                 info[prl.VERSION][prl.UPDATE] = self.local_worker.actor_version
 
                 # Update counters
-                for k, v in info.items(): step_metrics[k] += v
+                for k, v in info.items():
+                    if isinstance(v, dict):
+                        for x, y in v.items():
+                            if isinstance(y, (float, int)):
+                                step_metrics[k][x] += y
+                    elif k == prl.NUMSAMPLES:
+                        total_samples += v
 
                 # Store gradients to average later
-                to_average.append(gradients)
+                for net in gradients:
+                    grads_to_average[net].append(gradients[net])
 
             # Update info dict
-            info = {k: v / self.num_workers if k != prl.NUMSAMPLES else
-                    v for k, v in step_metrics.items()}
+            for k, v in step_metrics.items():
+                if isinstance(v, dict):
+                    for x, y in v.items():
+                        info[k][x] = y / self.num_workers
+            info[prl.NUMSAMPLES] = total_samples
 
             if not self.decentralized_update_execution:
-
                 # Average and apply gradients
-                self.local_worker.apply_gradients(average_gradients(to_average))
+                for k, v in grads_to_average.items():
+                    grads_to_average[k] = average_gradients(v)
+                self.local_worker.apply_gradients(grads_to_average)
 
                 # Update workers with current weights
                 self.sync_weights()

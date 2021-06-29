@@ -83,25 +83,25 @@ class SAC(Algorithm):
         self._gamma = gamma
 
         # Number of steps collected with initial random policy
-        self._start_steps = start_steps
+        self._start_steps = int(start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = 1 # Default to 1 for off-policy algorithms
+        self._num_epochs = int(1) # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
-        self._update_every = update_every
+        self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = num_updates
+        self._num_mini_batch = int(num_updates)
 
         # Size of update mini batches
-        self._mini_batch_size = mini_batch_size
+        self._mini_batch_size = int(mini_batch_size)
 
         # Number of network updates between test evaluations
-        self._test_every = test_every
+        self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = num_test_episodes
+        self._num_test_episodes = int(num_test_episodes)
 
         # ---- SAC-specific attributes ----------------------------------------
 

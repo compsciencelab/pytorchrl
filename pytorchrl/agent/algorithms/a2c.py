@@ -49,25 +49,25 @@ class A2C(Algorithm):
         self._gamma = gamma
 
         # Number of steps collected with initial random policy
-        self._start_steps = 0  # Default to 0 for On-policy algos
+        self._start_steps = int(0)  # Default to 0 for On-policy algos
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = 1
+        self._num_epochs = int(1)
 
         # Number of data samples collected between network update stages
         self._update_every = None  # Depends on storage capacity
 
         # Number mini batches per epoch
-        self._num_mini_batch = 1
+        self._num_mini_batch = int(1)
 
         # Size of update mini batches
         self._mini_batch_size = None  # Depends on storage capacity
 
         # Number of network updates between test evaluations
-        self._test_every = test_every
+        self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = num_test_episodes
+        self._num_test_episodes = int(um_test_episodes)
 
         # ---- A2C-specific attributes ----------------------------------------
 

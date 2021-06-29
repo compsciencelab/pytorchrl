@@ -78,25 +78,25 @@ class TD3(Algorithm):
         self._gamma = gamma
 
         # Number of steps collected with initial random policy
-        self._start_steps = start_steps
+        self._start_steps = int(start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = 1 # Default to 1 for off-policy algorithms
+        self._num_epochs = 1  # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
-        self._update_every = update_every
+        self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = num_updates
+        self._num_mini_batch = int(num_updates)
 
         # Size of update mini batches
-        self._mini_batch_size = mini_batch_size
+        self._mini_batch_size = int(mini_batch_size)
 
         # Number of network updates between test evaluations
-        self._test_every = test_every
+        self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = num_test_episodes
+        self._num_test_episodes = int(um_test_episodes)
 
         # ---- TD3-specific attributes ----------------------------------------
 
@@ -106,7 +106,6 @@ class TD3(Algorithm):
         self.device = device
         self.actor = actor
         self.target_update_interval = target_update_interval
-
 
         self.action_low = self.actor.action_space.low[0] # Can sometimes be a vector?
         self.action_high = self.actor.action_space.high[0]
