@@ -79,7 +79,7 @@ class VanillaOnPolicyBuffer(S):
                 for x, v in sample[k].items():
                     self.data[k][x] = torch.zeros(self.max_size + 1, *v.shape).to(self.device)
 
-            else: # Handle non dict sample value
+            else:  # Handle non dict sample value
                 self.data[k] = torch.zeros(self.max_size + 1, *sample[k].shape).to(self.device)
 
         self.data[prl.RET] = self.data[prl.REW].clone()
@@ -150,7 +150,7 @@ class VanillaOnPolicyBuffer(S):
                 continue
 
             # We use the same tensor to store obs and obs2
-            # We also use single tensors dor rhs and rhs2,
+            # We also use single tensors for rhs and rhs2,
             # and done and done2
             if k in (prl.OBS, prl.RHS, prl.DONE):
                 pos = self.step + 1
