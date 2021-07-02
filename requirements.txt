@@ -1,6 +1,7 @@
 ray
 gym[atari]
 ray[debug]
+pandas
 pybullet
 TensorBoard
 lz4

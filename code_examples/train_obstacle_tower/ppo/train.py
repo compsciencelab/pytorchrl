@@ -13,7 +13,7 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.envs import obstacle_train_env_factory
+from pytorchrl.envs.obstacle_tower import obstacle_train_env_factory
 
 
 def main():
