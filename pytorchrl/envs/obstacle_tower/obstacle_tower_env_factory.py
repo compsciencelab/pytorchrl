@@ -3,19 +3,25 @@ import numpy as np
 import obstacle_tower_env
 from obstacle_tower_env import ObstacleTowerEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip
-from pytorchrl.envs.obstacle_tower_unity3d_challenge.wrappers import (
+from pytorchrl.envs.obstacle_tower.wrappers import (
     ReducedActionEnv, BasicObstacleEnv, RewardShapeObstacleEnv, BasicObstacleEnvTest)
 
 
 def obstacle_train_env_factory(
-        index_worker=0, rank=0, frame_skip=0, frame_stack=1, min_floor=0,
-        max_floor=50, reduced_actions=True, reward_shape=True):
+        index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, min_floor=0,
+        max_floor=50, reduced_actions=True, reward_shape=True, exe_path=None):
     """
     Create train Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
 
     Parameters
     ----------
+     index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
+    index_env : int
+        Index of this environment withing the vector of environments.
     frame_skip : int
         Return only every `frame_skip`-th observation.
     frame_stack : int
@@ -28,6 +34,8 @@ def obstacle_train_env_factory(
         Whether or not to use the action wrapper to reduce the number of available actions.
     reward_shape : bool
         Whether or not to use the reward shape wrapper.
+    exe_path : str
+        Path to obstacle environment executable.
 
     Returns
     -------
@@ -37,12 +45,16 @@ def obstacle_train_env_factory(
     if 'DISPLAY' not in os.environ.keys():
         os.environ['DISPLAY'] = ':0'
 
-    exe = os.path.join(os.path.dirname(
-        obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
+    if exe_path:
+        exe = exe_path
+    else:
+        exe = os.path.join(os.path.dirname(
+            obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
 
+    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
-        environment_filename=exe, retro=True, worker_id=index_worker + rank + np.random.randint(1, 10000),
-        greyscale=False, docker_training=False, realtime_mode=False)
+        environment_filename=exe, retro=True, worker_id=id,
+        greyscale=False, timeout_wait=60, realtime_mode=False)
 
     if reduced_actions:
         env = ReducedActionEnv(env)
@@ -60,15 +72,22 @@ def obstacle_train_env_factory(
 
     return env
 
+
 def obstacle_test_env_factory(
-        index_worker=0, rank=0, frame_skip=0, frame_stack=1, realtime=False,
-        min_floor=0, max_floor=50, reduced_actions=True):
+        index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, realtime=False,
+        min_floor=0, max_floor=50, reduced_actions=True, exe_path=None):
     """
     Create test Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
 
     Parameters
     ----------
+    index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
+    index_env : int
+        Index of this environment withing the vector of environments.
     frame_skip : int
         Return only every `frame_skip`-th observation.
     frame_stack : int
@@ -79,6 +98,8 @@ def obstacle_test_env_factory(
         Maximum floor the agent can be spawned in.
     reduced_actions : bool
         Whether or not to use the action wrapper to reduce the number of available actions.
+    exe_path : str
+        Path to obstacle environment executable.
 
     Returns
     -------
@@ -89,12 +110,16 @@ def obstacle_test_env_factory(
     if 'DISPLAY' not in os.environ.keys():
         os.environ['DISPLAY'] = ':0'
 
-    exe = os.path.join(os.path.dirname(
-        obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
+    if exe_path:
+        exe = exe_path
+    else:
+        exe = os.path.join(os.path.dirname(
+            obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
 
+    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
-        environment_filename=exe, retro=True, worker_id=index_worker + rank + np.random.randint(1, 10000),
-        greyscale=False, docker_training=False, realtime_mode=realtime)
+        environment_filename=exe, retro=True, worker_id=id,
+        greyscale=False, realtime_mode=realtime)
 
     if reduced_actions:
         env = ReducedActionEnv(env)

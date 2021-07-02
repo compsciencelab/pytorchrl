@@ -2,7 +2,7 @@ import gym
 from pytorchrl.envs.common import FrameStack, FrameSkip
 
 
-def mujoco_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1):
+def mujoco_train_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_skip=0, frame_stack=1):
     """
     Create train MuJoCo environment.
 
@@ -10,8 +10,10 @@ def mujoco_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_
     ----------
     env_id : str
         Environment name.
-    index_worker : int
-        Index of the worker running this environment.
+    index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
     index_env : int
         Index of this environment withing the vector of environments.
     seed : int
@@ -28,7 +30,7 @@ def mujoco_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_
     """
 
     env = gym.make(env_id)
-    env.seed(seed + index_worker + index_env)
+    env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
 
     if frame_skip > 0:
         env = FrameSkip(env, skip=frame_skip)
@@ -38,7 +40,8 @@ def mujoco_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_
 
     return env
 
-def mujoco_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1):
+
+def mujoco_test_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_skip=0, frame_stack=1):
     """
     Create test MuJoCo environment.
 
@@ -46,8 +49,10 @@ def mujoco_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
     ----------
     env_id : str
         Environment name.
-    index_worker : int
-        Index of the worker running this environment.
+    index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
     index_env : int
         Index of this environment withing the vector of environments.
     seed : int
@@ -63,7 +68,7 @@ def mujoco_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
         Test environment.
     """
     env = gym.make(env_id)
-    env.seed(seed + index_worker + index_env)
+    env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
 
     if frame_skip > 0:
         env = FrameSkip(env, skip=frame_skip)

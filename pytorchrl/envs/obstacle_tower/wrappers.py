@@ -1,7 +1,7 @@
 import numpy as np
 import gym
 from gym import spaces
-from pytorchrl.envs.obstacle_tower_unity3d_challenge.utils import (
+from pytorchrl.envs.obstacle_tower.utils import (
     box_is_placed, box_location, place_location, reduced_action_lookup_6,
     reduced_action_lookup_7)
 
@@ -58,6 +58,7 @@ class BasicObstacleEnv(gym.Wrapper):
 
         return self.env.reset(config=config, **kwargs)
 
+
 class BasicObstacleEnvTest(gym.Wrapper):
     def __init__(self, env, min_floor, max_floor, seed_list=[1001, 1002, 1003, 1004, 1005]):
 
@@ -110,6 +111,7 @@ class BasicObstacleEnvTest(gym.Wrapper):
 
         return self.env.reset(config=config, **kwargs)
 
+
 class RewardShapeObstacleEnv(gym.Wrapper):
 
     def __init__(self, env, killed_reward=2):
@@ -148,6 +150,7 @@ class RewardShapeObstacleEnv(gym.Wrapper):
         self.puzzle_solved = False
         self.time_remaining = None
         return self.env.reset(**kwargs)
+
 
 class ReducedActionEnv(gym.Wrapper):
     def __init__(self, env, num_actions=6):

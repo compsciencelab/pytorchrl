@@ -1,7 +1,7 @@
 from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari
 
 
-def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_stack=1):
+def atari_train_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1):
     """
     Create train Atari environment.
 
@@ -9,8 +9,10 @@ def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
     ----------
     env_id : str
         Environment name.
-    index_worker : int
-        Index of the worker running this environment.
+    index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
     index_env : int
         Index of this environment withing the vector of environments.
     seed : int
@@ -24,7 +26,7 @@ def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
         Train environment.
     """
     env = make_atari(env_id)
-    env.seed(seed + index_worker + index_env)
+    env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
         env, episode_life=True,
         clip_rewards=True,
@@ -33,7 +35,8 @@ def atari_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_s
 
     return env
 
-def atari_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_stack=1):
+
+def atari_test_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1):
     """
     Create test Atari environment.
 
@@ -41,8 +44,10 @@ def atari_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_st
     ----------
     env_id : str
         Environment name.
-    index_worker : int
-        Index of the worker running this environment.
+    index_col_worker : int
+        Index of the collection worker running this environment.
+    index_grad_worker : int
+        Index of the gradient worker running the collection worker running this environment.
     index_env : int
         Index of this environment withing the vector of environments.
     seed : int
@@ -56,7 +61,7 @@ def atari_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_st
         Test environment.
     """
     env = make_atari(env_id)
-    env.seed(seed + index_worker + index_env)
+    env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
         env, episode_life=False,
         clip_rewards=False,
