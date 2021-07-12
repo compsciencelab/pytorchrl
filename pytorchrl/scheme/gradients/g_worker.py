@@ -189,12 +189,12 @@ class GWorker(W):
         try:  # Try pulling next batch
             self.next_batch = self.batches.__next__()
             # Only use episode information once
-            self.info.pop(prl.EPISODES)
+            self.info.pop(prl.EPISODES, None)
             # Only record collected samples once
             self.info[prl.NUMSAMPLES] = 0
 
         # except (StopIteration, AttributeError):
-        except Exception:  # StopIteration or AttributeError
+        except Exception:
             if self.col_communication == prl.SYNC: self.collector.step()
             data, self.info = self.collector.queue.get()
             self.storage.insert_data_slice(data)

@@ -71,3 +71,4 @@ class VecEnv:
         cls.observation_space = dummy_env.observation_space
 
         return make_vec_env, dummy_env.action_space, dummy_env.observation_space
+

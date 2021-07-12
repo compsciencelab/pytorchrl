@@ -203,8 +203,8 @@ class PERBuffer(B):
 
                 # Since sequences overlap, update both current sequence and
                 # start of the next overlapping sequence
-                idxs = np.concatenate([idxs, idxs[:, :self.overlap_length] + self.overlap_length], axis=1)
-                errors = torch.cat([errors, errors[:, :self.overlap_length]], dim=1)
+                idxs = np.concatenate([idxs[:, -self.non_overlap_length:], idxs[:, -self.overlap_length:] + self.overlap_length], axis=1)
+                errors = torch.cat([errors, errors[:, -self.overlap_length:]], dim=1)
 
                 for i, e in zip(idxs, errors):  # each sequence in the batch
 
@@ -295,6 +295,7 @@ class PERBuffer(B):
                     probs = [np.concatenate([chunk, np.zeros(
                         (1, 1))]) for chunk in probs]
                     ext_probs = np.concatenate(probs).squeeze(1)
+                    ext_probs = ext_probs / ext_probs.sum() # sanity check
                     seq_idxs = np.random.choice(range(len(ext_probs)), size=sequences_x_batch, p=ext_probs)
 
                 # Get data indexes
@@ -308,7 +309,7 @@ class PERBuffer(B):
                 # Fill up batch with data
                 for k, v in self.data.items():
                     # Only first recurrent state in each sequence needed
-                    positions = seq_idxs * self.sequence_length if k.startswith(prl.RHS) else idxs
+                    positions = seq_idxs * self.sequence_length if k in (prl.RHS, prl.RHS2) else idxs
                     if isinstance(v, dict):
                         for x, y in v.items():
                             t = dim0_reshape(y, self.size + self.sequence_length)[positions]

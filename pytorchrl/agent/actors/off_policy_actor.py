@@ -395,7 +395,7 @@ class OffPolicyActor(nn.Module):
         non_burn_in_data = {k: {} for k in data_batch}
         for k, v in data_batch.items():
 
-            if k.startswith(prl.RHS):
+            if k in (prl.RHS, prl.RHS2):
                 burn_in_data[k] = v
                 continue
             if not isinstance(v, (torch.Tensor, dict)):
@@ -430,7 +430,7 @@ class OffPolicyActor(nn.Module):
             for k in rhs:
                 rhs[k] = rhs[k].detach()
             for k in rhs2:
-                rhs[k] = rhs[k].detach()
+                rhs2[k] = rhs2[k].detach()
 
             non_burn_in_data[prl.RHS] = rhs
             non_burn_in_data[prl.RHS2] = rhs2
