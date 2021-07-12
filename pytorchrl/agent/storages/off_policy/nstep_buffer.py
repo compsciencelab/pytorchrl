@@ -196,7 +196,7 @@ class NStepReplayBuffer(S):
                 # Fill up batch with data
                 for k, v in self.data.items():
                     # Only first recurrent state in each sequence needed
-                    positions = seq_idxs * self.sequence_length if k.startswith(prl.RHS) else idxs
+                    positions = seq_idxs * self.sequence_length if k in (prl.RHS, prl.RHS2) else idxs
                     if isinstance(v, dict):
                         for x, y in v.items():
                             t = dim0_reshape(y, self.size)[positions]

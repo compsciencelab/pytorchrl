@@ -25,7 +25,7 @@ def main():
     if args.cluster:
         ray.init(address="auto")
     else:
-        ray.init()
+        ray.init(num_cpus=0)
 
     resources = ""
     for k, v in ray.cluster_resources().items():
@@ -57,7 +57,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space,
+        obs_space, action_space, recurrent_nets=True,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
