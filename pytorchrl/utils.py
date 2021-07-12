@@ -3,6 +3,7 @@ import yaml
 import shutil
 import argparse
 
+
 def cleanup_log_dir(log_dir):
     """
     Create log directory and remove old files.
@@ -18,19 +19,25 @@ def cleanup_log_dir(log_dir):
         print("Unable to cleanup log_dir...")
     os.makedirs(log_dir, exist_ok=True)
 
-class LoadFromFile(argparse.Action):
-    #parser.add_argument('--file', type=open, action=LoadFromFile)
-    def __call__ (self, parser, namespace, values, option_string = None):
-        if values.name.endswith("yaml") or values.name.endswith("yml"):
-            with values as f:
-                namespace.__dict__.update(yaml.load(f, Loader=yaml.FullLoader))
-        else:
-            raise ValueError("configuration file must end with yaml or yml")
 
-def save_argparse(args,filename,exclude=None):
+class LoadFromFile(argparse.Action):
+    # parser.add_argument('--file', type=open, action=LoadFromFile)
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values.name.endswith('yaml') or values.name.endswith('yml'):
+            with values as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+            for key in config.keys():
+                if key not in namespace:
+                    raise ValueError(f'Unknown argument in config file: {key}')
+            namespace.__dict__.update(config)
+        else:
+            raise ValueError('Configuration file must end with yaml or yml')
+
+
+def save_argparse(args, filename, exclude=None):
     if filename.endswith('yaml') or filename.endswith('yml'):
         if isinstance(exclude, str):
-            exclude = [exclude,]
+            exclude = [exclude, ]
         args = args.__dict__.copy()
         for exl in exclude:
             del args[exl]
