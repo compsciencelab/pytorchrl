@@ -61,9 +61,9 @@ def main():
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
-    # storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
+    storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
     # storage_factory = NStepReplayBuffer.create_factory(size=args.buffer_size, n_step=2)
-    storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
+    # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
     # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000)
 
 
