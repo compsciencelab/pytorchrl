@@ -48,6 +48,8 @@ class Deterministic(nn.Module):
             Returns logp 'None' to have equal output to other distributions.
         entropy_dist: None
             Returns logp 'None' to have equal output to other distributions
+        dist : torch.Distribution
+            Action probability distribution.
         """
         mu = torch.tanh(self.action_output(x))
         if not deterministic:
@@ -55,8 +57,7 @@ class Deterministic(nn.Module):
             mu = mu + noise
         clipped_action = torch.clamp(mu, min=-1, max=1)
             
-        return mu, clipped_action, None, None
-
+        return mu, clipped_action, None, None, None
 
     def evaluate_pred(self, x):
         """
@@ -72,5 +73,10 @@ class Deterministic(nn.Module):
         -------
         pred: torch.tensor
             Predicted value.
+        entropy_dist : torch.tensor
+            Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
-        return torch.tanh(self.action_output(x))
+        pred = torch.tanh(self.action_output(x))
+        return pred, None, pred

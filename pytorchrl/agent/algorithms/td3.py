@@ -273,7 +273,7 @@ class TD3(Algorithm):
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
@@ -313,7 +313,7 @@ class TD3(Algorithm):
         with torch.no_grad():
 
             # Target actions come from *current* policy
-            a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+            a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
             noise = torch.clamp(torch.normal(mean=torch.FloatTensor(
                 [0.0]), std=torch.FloatTensor([0.2]) ).to(a2.device), min=-0.5, max=0.5)
             a2 = torch.clamp(a2 + noise, min=self.action_low, max=self.action_high)
@@ -354,7 +354,7 @@ class TD3(Algorithm):
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
 
-        pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
+        pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
         q1_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
         # q_pi = torch.min(q1_pi, q2_pi) # commenting this out since the paper only
         # uses q1 but might be worth testing if using min gives general improvement

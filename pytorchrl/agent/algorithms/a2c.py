@@ -209,7 +209,7 @@ class A2C(Algorithm):
         with torch.no_grad():
 
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
 
             value, rhs = self.actor.get_value(obs, rhs, done)
@@ -237,7 +237,7 @@ class A2C(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # Policy loss
-        logp, dist_entropy = self.actor.evaluate_actions(o, rhs, d, a)
+        logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         pi_loss = - (logp * adv).mean()
 
         # Value loss

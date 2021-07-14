@@ -293,7 +293,7 @@ class PPO(Algorithm):
         o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
-        new_logp, dist_entropy = self.actor.evaluate_actions(o, rhs, d, a)
+        new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         new_v, _ = self.actor.get_value(o, rhs, d)
 
         ratio = torch.exp(new_logp - old_logp)

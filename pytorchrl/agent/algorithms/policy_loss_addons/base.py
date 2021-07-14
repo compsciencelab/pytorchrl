@@ -11,6 +11,6 @@ class PolicyLossAddOn(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_loss_term(self, *args, **kwargs):
+    def compute_loss_term(self, actor, batch, dist_entropy=None, *args, **kwargs):
         """Calculates addon loss term."""
         raise NotImplementedError

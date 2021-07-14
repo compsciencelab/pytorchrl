@@ -471,14 +471,14 @@ class OffPolicyActor(nn.Module):
         if self.recurrent_nets:
             x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
 
-        (action, clipped_action, logp_action, entropy_dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
             x, deterministic=deterministic)
 
         if self.unscale:
             action = self.unscale(action)
             clipped_action = self.unscale(clipped_action)
 
-        return action, clipped_action, logp_action, rhs, entropy_dist
+        return action, clipped_action, logp_action, rhs, entropy_dist, dist
 
     def evaluate_actions(self, obs, rhs, done, action):
         """
@@ -516,9 +516,9 @@ class OffPolicyActor(nn.Module):
         if self.recurrent_nets:
             x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
 
-        logp_action, entropy_dist = self.dist.evaluate_pred(features, action)
+        logp_action, entropy_dist, dist = self.dist.evaluate_pred(features, action)
 
-        return logp_action, entropy_dist
+        return logp_action, entropy_dist, dist
 
     def get_q_scores(self, obs, rhs, done, actions=None):
         """

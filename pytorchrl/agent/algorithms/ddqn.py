@@ -210,7 +210,7 @@ class DDQN(Algorithm):
                 q, _ = self.actor.get_q_scores(obs)
                 action = clipped_action = torch.argmax(q, dim=1).unsqueeze(0)
         else:
-            action = clipped_action  = torch.tensor(
+            action = clipped_action = torch.tensor(
                 [self.actor.action_space.sample()]).unsqueeze(0)
 
         other = {}

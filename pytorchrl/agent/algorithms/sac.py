@@ -302,7 +302,7 @@ class SAC(Algorithm):
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
@@ -346,7 +346,7 @@ class SAC(Algorithm):
             # Bellman backup for Q functions
             with torch.no_grad():
                 # Target actions come from *current* policy
-                a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+                a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
                 p_a2 = self.actor.dist.dist.probs
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
@@ -367,7 +367,7 @@ class SAC(Algorithm):
             with torch.no_grad():
 
                 # Target actions come from *current* policy
-                a2, _, logp_a2, _, _ = self.actor.get_action(o2, rhs2, d2)
+                a2, _, logp_a2, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
                 # Target Q-values
                 q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
@@ -409,8 +409,8 @@ class SAC(Algorithm):
 
         if self.discrete_version:
 
-            pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
-            p_pi = self.actor.dist.dist.probs
+            pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
+            p_pi = dist.probs
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
@@ -419,7 +419,7 @@ class SAC(Algorithm):
 
         else:
 
-            pi, _, logp_pi, _, _ = self.actor.get_action(o, rhs, d)
+            pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
             q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d, pi)
             q_pi = torch.min(q1_pi, q2_pi)
 

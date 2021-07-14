@@ -50,6 +50,8 @@ class Categorical(nn.Module):
             Log probability of `pred` according to the predicted distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
 
         # Predict distribution parameters
@@ -57,7 +59,6 @@ class Categorical(nn.Module):
 
         # Create distribution and sample
         dist = torch.distributions.Categorical(logits=x)
-        self.dist = dist # ugly hack to handle sac discrete case
 
         if deterministic:
             pred = clipped_pred = dist.probs.argmax(dim=-1, keepdim=True)
@@ -71,8 +72,7 @@ class Categorical(nn.Module):
         # Distribution entropy
         entropy_dist = dist.entropy().mean()
 
-        return pred, clipped_pred, logp, entropy_dist
-
+        return pred, clipped_pred, logp, entropy_dist, dist
 
     def evaluate_pred(self, x, pred):
         """
@@ -92,6 +92,8 @@ class Categorical(nn.Module):
             Log probability of `pred` according to the predicted distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
 
         # Predict distribution parameters
@@ -106,4 +108,4 @@ class Categorical(nn.Module):
         # Distribution entropy
         entropy_dist = dist.entropy().mean()
 
-        return logp, entropy_dist
+        return logp, entropy_dist, dist

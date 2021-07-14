@@ -268,7 +268,7 @@ class DDPG(Algorithm):
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
@@ -309,7 +309,7 @@ class DDPG(Algorithm):
         with torch.no_grad():
 
             # Target actions come from *current* policy
-            a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+            a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
             # Target Q-values
             q_pi_targ, _, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
@@ -344,7 +344,7 @@ class DDPG(Algorithm):
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
 
-        pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
+        pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
         q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
 
         loss_pi = - (q_pi * per_weights).mean()
