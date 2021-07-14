@@ -45,6 +45,8 @@ class DDQN(Algorithm):
         initial value for DQN epsilon parameter.
     epsilon_decay : float
         Exponential decay rate for epsilon parameter.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
     """
 
     def __init__(self,
@@ -61,7 +63,8 @@ class DDQN(Algorithm):
                  num_test_episodes=5,
                  initial_epsilon=1.0,
                  epsilon_decay=0.999,
-                 target_update_interval=1):
+                 target_update_interval=1,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -110,6 +113,12 @@ class DDQN(Algorithm):
 
         self.q_optimizer = optim.Adam(self.actor.q1.parameters(), lr=lr)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup()
+
     @classmethod
     def create_factory(cls,
                        lr=1e-4,
@@ -123,7 +132,8 @@ class DDQN(Algorithm):
                        num_test_episodes=5,
                        epsilon_decay=0.999,
                        initial_epsilon=1.0,
-                       target_update_interval=1):
+                       target_update_interval=1,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new DDQN instances.
 
@@ -153,6 +163,8 @@ class DDQN(Algorithm):
             initial value for DQN epsilon parameter.
         epsilon_decay : float
             Exponential decay rate for epsilon parameter.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -174,7 +186,8 @@ class DDQN(Algorithm):
                        mini_batch_size=mini_batch_size,
                        initial_epsilon=initial_epsilon,
                        num_test_episodes=num_test_episodes,
-                       target_update_interval=target_update_interval)
+                       target_update_interval=target_update_interval,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     def acting_step(self, obs, rhs, done, deterministic=False):

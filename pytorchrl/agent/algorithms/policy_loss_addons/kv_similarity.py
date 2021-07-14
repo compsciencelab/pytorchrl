@@ -42,6 +42,8 @@ class KL(PolicyLossAddOn):
 
         o, rhs, a, d = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.DONE]
 
+        if not isinstance(actor_dist, torch.distributions.Distribution):
+            actor_dist = torch.distributions.Normal()
         # If actor distribution is not a torch.Distribution
         # do what?
 

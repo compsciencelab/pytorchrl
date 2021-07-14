@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.distributions.normal import Normal
-
 from pytorchrl.agent.actors.utils import init
 
 

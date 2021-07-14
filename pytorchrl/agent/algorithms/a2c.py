@@ -31,6 +31,8 @@ class A2C(Algorithm):
         Regularity of test evaluations in actor updates.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
     """
 
     def __init__(self,
@@ -41,7 +43,8 @@ class A2C(Algorithm):
                  gamma=0.99,
                  test_every=5000,
                  max_grad_norm=0.5,
-                 num_test_episodes=5):
+                 num_test_episodes=5,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -81,6 +84,12 @@ class A2C(Algorithm):
         self.pi_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr_pi)
         self.v_optimizer = optim.Adam(self.value_net.parameters(), lr=lr_v)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup()
+
     @classmethod
     def create_factory(cls,
                        lr_v=1e-4,
@@ -88,7 +97,8 @@ class A2C(Algorithm):
                        gamma=0.99,
                        test_every=5000,
                        max_grad_norm=0.5,
-                       num_test_episodes=5):
+                       num_test_episodes=5,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new A2C instances.
 
@@ -108,6 +118,8 @@ class A2C(Algorithm):
             Regularity of test evaluations in actor updates.
         num_test_episodes : int
             Number of episodes to complete in each test phase.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -123,7 +135,8 @@ class A2C(Algorithm):
                        actor=actor,
                        test_every=test_every,
                        max_grad_norm=max_grad_norm,
-                       num_test_episodes=num_test_episodes)
+                       num_test_episodes=num_test_episodes,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     @property
@@ -240,6 +253,10 @@ class A2C(Algorithm):
         logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         pi_loss = - (logp * adv).mean()
 
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            pi_loss += addon.compute_loss_term(self.actor, dist, data)
+
         # Value loss
         new_v = self.actor.get_value(o, rhs, d)
         value_loss = (r - new_v).pow(2).mean()
@@ -303,7 +320,6 @@ class A2C(Algorithm):
         }
 
         return grads, info
-
 
     def apply_gradients(self, gradients=None):
         """

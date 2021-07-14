@@ -45,6 +45,8 @@ class PPO(Algorithm):
         PPO value coefficient parameter.
     use_clipped_value_loss : bool
         Prevent value loss from shifting too fast.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
     Examples
     --------
@@ -69,12 +71,7 @@ class PPO(Algorithm):
                  value_loss_coef=0.5,
                  num_test_episodes=5,
                  use_clipped_value_loss=True,
-
-
-                 policy_loss_addons=[]
-
-
-                 ):
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -124,18 +121,19 @@ class PPO(Algorithm):
 
     @classmethod
     def create_factory(cls,
-                     lr=1e-4,
-                     eps=1e-8,
-                     gamma=0.99,
-                     num_epochs=4,
-                     clip_param=0.2,
-                     num_mini_batch=1,
-                     test_every=1000,
-                     max_grad_norm=0.5,
-                     entropy_coef=0.01,
-                     value_loss_coef=0.5,
-                     num_test_episodes=5,
-                     use_clipped_value_loss=True):
+                       lr=1e-4,
+                       eps=1e-8,
+                       gamma=0.99,
+                       num_epochs=4,
+                       clip_param=0.2,
+                       num_mini_batch=1,
+                       test_every=1000,
+                       max_grad_norm=0.5,
+                       entropy_coef=0.01,
+                       value_loss_coef=0.5,
+                       num_test_episodes=5,
+                       use_clipped_value_loss=True,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new PPO instances.
 
@@ -165,6 +163,8 @@ class PPO(Algorithm):
             PPO value coefficient parameter.
         use_clipped_value_loss : bool
             Prevent value loss from shifting too fast.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -185,7 +185,8 @@ class PPO(Algorithm):
                        num_mini_batch=num_mini_batch,
                        value_loss_coef=value_loss_coef,
                        num_test_episodes=num_test_episodes,
-                       use_clipped_value_loss=use_clipped_value_loss)
+                       use_clipped_value_loss=use_clipped_value_loss,
+                       policy_loss_addons=policy_loss_addons)
 
         return create_algo_instance
 
@@ -323,6 +324,7 @@ class PPO(Algorithm):
 
         loss = value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy
 
+        # Extend policy loss with addons
         for addon in self.policy_loss_addons:
             loss += addon.compute_loss_term(self.actor, dist, data)
 

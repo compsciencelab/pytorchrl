@@ -51,6 +51,8 @@ class SAC(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
     Examples
     --------
@@ -75,7 +77,8 @@ class SAC(Algorithm):
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
-                 target_update_interval=1):
+                 target_update_interval=1,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -144,6 +147,12 @@ class SAC(Algorithm):
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup()
+
     @classmethod
     def create_factory(cls,
                        lr_q=1e-4,
@@ -158,7 +167,8 @@ class SAC(Algorithm):
                        initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
-                       target_update_interval=1.0):
+                       target_update_interval=1.0,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new SAC instances.
 
@@ -190,6 +200,8 @@ class SAC(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -212,7 +224,8 @@ class SAC(Algorithm):
                        initial_alpha=initial_alpha,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
-                       target_update_interval=target_update_interval)
+                       target_update_interval=target_update_interval,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     @property
@@ -424,6 +437,10 @@ class SAC(Algorithm):
             q_pi = torch.min(q1_pi, q2_pi)
 
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
+
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            loss_pi += addon.compute_loss_term(self.actor, dist, data)
 
         return loss_pi, logp_pi
 
