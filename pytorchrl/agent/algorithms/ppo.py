@@ -68,7 +68,13 @@ class PPO(Algorithm):
                  entropy_coef=0.01,
                  value_loss_coef=0.5,
                  num_test_episodes=5,
-                 use_clipped_value_loss=True):
+                 use_clipped_value_loss=True,
+
+
+                 policy_loss_addons=[]
+
+
+                 ):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -109,6 +115,12 @@ class PPO(Algorithm):
         # ----- Optimizers ----------------------------------------------------
 
         self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
+
+        # ----- Policy Loss Addons --------------------------------------------
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup()
 
     @classmethod
     def create_factory(cls,
@@ -310,6 +322,9 @@ class PPO(Algorithm):
             value_loss = 0.5 * (r - new_v).pow(2).mean()
 
         loss = value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy
+
+        for addon in self.policy_loss_addons:
+            loss += addon.compute_loss_term(self.actor, dist, data)
 
         return value_loss, action_loss, dist_entropy, loss
 
