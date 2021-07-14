@@ -237,7 +237,7 @@ class A2C(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # Policy loss
-        logp, dist_entropy, _ = self.actor.evaluate_actions(o, rhs, d, a)
+        logp, dist_entropy = self.actor.evaluate_actions(o, rhs, d, a)
         pi_loss = - (logp * adv).mean()
 
         # Value loss

@@ -152,8 +152,6 @@ class Actor(nn.Module, ABC):
         entropy_dist : torch.tensor
             Entropy of the action distribution predicted with current version
             of the policy_net.
-        rhs : dict
-            Updated recurrent hidden states.
         """
         raise NotImplementedError
 
