@@ -57,7 +57,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space, recurrent_nets=True,
+        obs_space, action_space, recurrent_nets=False,
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
@@ -118,6 +118,7 @@ def main():
 
     print("Finished!")
     sys.exit()
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')

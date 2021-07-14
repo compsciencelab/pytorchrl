@@ -49,7 +49,6 @@ def main():
     # 4. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space,
-        feature_extractor_network=get_feature_extractor(args.nn),
         restart_model=args.restart_model)
 
     # 5. Define rollouts storage
@@ -105,6 +104,7 @@ def main():
 
     print("Finished!")
     sys.exit()
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
@@ -210,6 +210,7 @@ def get_args():
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
     return args
+
 
 if __name__ == "__main__":
     main()
