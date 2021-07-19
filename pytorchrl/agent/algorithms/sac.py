@@ -160,6 +160,8 @@ class SAC(Algorithm):
                 assert isinstance(addon, PolicyLossAddOn), \
                 "SAC policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
                 "or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
