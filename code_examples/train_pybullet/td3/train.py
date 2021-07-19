@@ -15,6 +15,9 @@ from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
+# Testing
+from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+
 
 def main():
 
@@ -48,20 +51,28 @@ def main():
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack})
 
-    # 3. Define RL training algorithm
-    algo_factory = TD3.create_factory(
-        lr_pi=args.lr, lr_q=args.lr, gamma=args.gamma, 
-        polyak=args.polyak, num_updates=args.num_updates,
-        update_every=args.update_every, start_steps=args.start_steps,
-        mini_batch_size=args.mini_batch_size)
-
-    # 4. Define RL Policy
+    # 3. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
         obs_space, action_space,
         restart_model=args.restart_model,
         create_double_q_critic=True,
         deterministic=True,
         noise=args.noise)
+
+    # Define KL similarity to add to policy loss
+    kl_addon = AttractionKL(
+        behavior_factories=[actor_factory, actor_factory],
+        behavior_weights=[0.3, 0.7],
+        loss_term_weight=1.0)
+
+    # 4. Define RL training algorithm
+    algo_factory = TD3.create_factory(
+        lr_pi=args.lr, lr_q=args.lr, gamma=args.gamma, 
+        polyak=args.polyak, num_updates=args.num_updates,
+        update_every=args.update_every, start_steps=args.start_steps,
+        mini_batch_size=args.mini_batch_size,
+        policy_loss_addons=kl_addon,
+    )
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
