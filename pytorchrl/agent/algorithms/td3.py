@@ -8,6 +8,7 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
 class TD3(Algorithm):
@@ -99,7 +100,7 @@ class TD3(Algorithm):
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(um_test_episodes)
+        self._num_test_episodes = int(num_test_episodes)
 
         # ---- TD3-specific attributes ----------------------------------------
 
@@ -133,6 +134,17 @@ class TD3(Algorithm):
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
 
         # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "TD3 policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                "TD3 policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+                "or a list of PolicyLossAddOn instances"
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:

@@ -57,7 +57,7 @@ class Deterministic(nn.Module):
             mu = mu + noise
         clipped_action = torch.clamp(mu, min=-1, max=1)
             
-        return mu, clipped_action, None, None, None
+        return mu, clipped_action, None, None, clipped_action
 
     def evaluate_pred(self, x):
         """
@@ -79,4 +79,6 @@ class Deterministic(nn.Module):
             Action probability distribution.
         """
         pred = torch.tanh(self.action_output(x))
-        return pred, None, pred
+        pred = torch.clamp(pred, min=-1, max=1)
+
+        return None, None, pred

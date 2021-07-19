@@ -516,7 +516,7 @@ class OffPolicyActor(nn.Module):
         if self.recurrent_nets:
             x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
 
-        logp_action, entropy_dist, dist = self.dist.evaluate_pred(features, action)
+        logp_action, entropy_dist, dist = self.dist.evaluate_pred(x, action)
 
         return logp_action, entropy_dist, dist
 

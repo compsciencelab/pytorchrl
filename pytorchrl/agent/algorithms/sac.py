@@ -8,6 +8,7 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
 class SAC(Algorithm):
@@ -148,6 +149,17 @@ class SAC(Algorithm):
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
         # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "SAC policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                "SAC policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+                "or a list of PolicyLossAddOn instances"
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:

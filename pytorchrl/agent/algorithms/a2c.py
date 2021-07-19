@@ -5,6 +5,7 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
 class A2C(Algorithm):
@@ -85,6 +86,17 @@ class A2C(Algorithm):
         self.v_optimizer = optim.Adam(self.value_net.parameters(), lr=lr_v)
 
         # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "A2C policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                "A2C policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+                "or a list of PolicyLossAddOn instances"
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
