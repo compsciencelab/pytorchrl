@@ -95,8 +95,8 @@ class A2C(Algorithm):
         if isinstance(policy_loss_addons, list):
             for addon in policy_loss_addons:
                 assert isinstance(addon, PolicyLossAddOn), \
-                "A2C policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
-                "or a list of PolicyLossAddOn instances"
+                    "A2C policy_loss_addons parameter should be a  PolicyLossAddOn" \
+                    " instance or a list of PolicyLossAddOn instances"
         else:
             policy_loss_addons = [policy_loss_addons]
 
