@@ -59,20 +59,24 @@ class Deterministic(nn.Module):
             
         return mu, clipped_action, None, None, clipped_action
 
-    def evaluate_pred(self, x):
+    def evaluate_pred(self, x, pred):
         """
         Predict distribution parameters from x (obs features)
         and returns predicted mu value of the distribution.
+        Ignores the pred input parameter.
 
         Parameters
         ----------
         x : torch.tensor
             Feature maps extracted from environment observations.
+        pred : torch.tensor
+            Prediction to evaluate.
 
         Returns
         -------
-        pred: torch.tensor
-            Predicted value.
+        logp : torch.tensor
+            Log probability of `pred` according to the predicted
+             distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
         dist : torch.Distribution
