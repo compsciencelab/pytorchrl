@@ -339,14 +339,8 @@ class PPO(Algorithm):
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
-        grads = []
-        for p in self.actor.parameters():
-            if grads_to_cpu:
-                if p.grad is not None: grads.append(p.grad.data.cpu().numpy())
-                else: grads.append(None)
-            else:
-                if p.grad is not None:
-                    grads.append(p.grad)
+        pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
+        v_grads = get_gradients(self.actor.value_net, grads_to_cpu=grads_to_cpu)
 
         info = {
             "loss": loss.item(),
@@ -354,6 +348,8 @@ class PPO(Algorithm):
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item()
         }
+
+        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         return grads, info
 
