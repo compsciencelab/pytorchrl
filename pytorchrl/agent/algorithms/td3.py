@@ -96,7 +96,7 @@ class TD3(Algorithm):
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(um_test_episodes)
+        self._num_test_episodes = int(num_test_episodes)
 
         # ---- TD3-specific attributes ----------------------------------------
 
