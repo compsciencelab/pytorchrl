@@ -4,6 +4,7 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
 class PPO(Algorithm):
