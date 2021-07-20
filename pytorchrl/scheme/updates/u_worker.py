@@ -1,10 +1,8 @@
 import sys
 import ray
-import time
 import torch
 import queue
 import threading
-from functools import partial
 from collections import defaultdict
 
 import pytorchrl as prl
@@ -270,11 +268,9 @@ class UpdaterThread(threading.Thread):
 
         elif self.grad_execution == prl.PARALLEL and self.grad_communication == prl.SYNC:
 
-            grads_to_average = []
-            grads_to_average = defaultdict(list)
-#            step_metrics = {k: defaultdict(list) for k in prl.INFO_KEYS}
-            step_metrics = {k: defaultdict(float) for k in ('Episodes', 'Time', 'ActorVersion', 'NumberSamples', 'Algorithm')}
             total_samples = 0
+            grads_to_average = defaultdict(list)
+            step_metrics = {k: defaultdict(float) for k in ('Episodes', 'Time', 'ActorVersion', 'NumberSamples', 'Algorithm')}
 
             # Start get data in all workers that have sync collection
             broadcast_message("sync", b"start-continue")

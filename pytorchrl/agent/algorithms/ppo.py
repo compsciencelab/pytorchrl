@@ -342,6 +342,7 @@ class PPO(Algorithm):
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net, grads_to_cpu=grads_to_cpu)
+        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         info = {
             "loss": loss.item(),
@@ -349,8 +350,6 @@ class PPO(Algorithm):
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item()
         }
-
-        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         return grads, info
 
@@ -363,12 +362,13 @@ class PPO(Algorithm):
         gradients: list of tensors
             List of actor gradients.
         """
-        set_gradients(
-            self.actor.policy_net,
-            gradients=gradients["pi_grads"], device=self.device)
-        set_gradients(
-            self.actor.value_net, self.actor.q2,
-            gradients=gradients["v_grads"], device=self.device)
+        if gradients is not None:
+            set_gradients(
+                self.actor.policy_net,
+                gradients=gradients["pi_grads"], device=self.device)
+            set_gradients(
+                self.actor.value_net,
+                gradients=gradients["v_grads"], device=self.device)
         self.optimizer.step()
 
     def set_weights(self, actor_weights):

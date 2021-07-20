@@ -408,7 +408,6 @@ class CollectorThread(threading.Thread):
 
         self.stopped = False
         self.queue = queue.SimpleQueue()
-        self.index_worker = index_worker
         self.col_execution = col_execution
         self.col_communication = col_communication
         self.broadcast_interval = broadcast_interval
