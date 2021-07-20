@@ -116,8 +116,8 @@ class GWorker(W):
             # If async, collection storage sizes need a storage copy
             # Define it with the minimum size required, to save memory
             size1 = self.local_worker.storage.max_size
-            size2 = self.local_worker.algo.update_every * 2
-            if size2 == None: size2 = float("Inf")
+            size2 = self.local_worker.algo.update_every
+            size2 = size2 * 2 if size2 is not None else float("Inf")
             new_size = min(size1, size2)
 
             if self.local_worker.envs_train is not None:
