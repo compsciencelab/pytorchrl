@@ -363,10 +363,12 @@ class PPO(Algorithm):
         gradients: list of tensors
             List of actor gradients.
         """
-        if gradients:
-            for g, p in zip(gradients, self.actor.parameters()):
-                if g is not None:
-                    p.grad = torch.from_numpy(g).to(self.device)
+        set_gradients(
+            self.actor.policy_net,
+            gradients=gradients["pi_grads"], device=self.device)
+        set_gradients(
+            self.actor.value_net, self.actor.q2,
+            gradients=gradients["v_grads"], device=self.device)
         self.optimizer.step()
 
     def set_weights(self, actor_weights):
