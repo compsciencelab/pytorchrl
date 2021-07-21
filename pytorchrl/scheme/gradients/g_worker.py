@@ -13,7 +13,7 @@ from pytorchrl.scheme.base.worker import Worker as W
 from pytorchrl.scheme.utils import ray_get_and_free, broadcast_message, pack, unpack
 
 # Puts a limit to the allowed policy lag
-max_queue_size = 100
+max_queue_size = 10
 
 
 class GWorker(W):
@@ -455,15 +455,17 @@ class CollectorThread(threading.Thread):
 
             rollouts = self.local_worker.collect_data(listen_to=["sync"], data_to_cpu=False)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
         elif self.col_execution == prl.CENTRAL and self.col_communication == prl.ASYNC:
 
             rollouts = self.local_worker.collect_data(data_to_cpu=False)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
         elif self.col_execution == prl.PARALLEL and self.col_communication == prl.SYNC:
 
@@ -487,10 +489,11 @@ class CollectorThread(threading.Thread):
 
             # Compute model updates
             for r in pending_samples:
-                while self.queue.qsize() > max_queue_size: time.sleep(0.5)
                 rollouts = ray_get_and_free(r)
                 rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
                 self.queue.put(rollouts)
+                while self.queue.qsize() >= max_queue_size:
+                    time.sleep(0.5)
 
         elif self.col_execution == prl.PARALLEL and self.col_communication == prl.ASYNC:
 
@@ -502,10 +505,12 @@ class CollectorThread(threading.Thread):
             w = self.pending_tasks.pop(future)
 
             # Retrieve rollouts and add them to queue
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             rollouts = ray_get_and_free(future)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
             self.queue.put(rollouts)
+
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
             # Schedule a new collection task
             future = w.collect_data.remote()
