@@ -60,7 +60,7 @@ class AttractionKL(PolicyLossAddOn):
         """
         Calculate and add KL Attraction loss term.
             1. Calculate KL between actor policy and all behaviors.
-            2. Compute weighted sum of KL similarities.
+            2. Compute biased KL similarities and select minimum value.
             3. Multiply the result by the loss_term_weight.
             4. Change sign of the loss term so KL between behaviors is minimized.
 
