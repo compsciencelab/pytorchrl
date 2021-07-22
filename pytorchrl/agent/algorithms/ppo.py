@@ -288,7 +288,7 @@ class PPO(Algorithm):
         with torch.no_grad():
 
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
 
             value, rhs = self.actor.get_value(obs, rhs, done)
