@@ -181,7 +181,7 @@ class RepulsionKL(PolicyLossAddOn):
             # If deterministic policy, use action as mean as fix scale to 1.0
             actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
 
-        kl_div = torch.tensor(0.0, dtype=torch.float32)
+        kl_div = torch.tensor(0.0, dtype=torch.float32).to(self.device)
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
             with torch.no_grad():
