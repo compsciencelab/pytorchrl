@@ -13,10 +13,18 @@ class AttractionKL(PolicyLossAddOn):
                  behavior_weights,
                  loss_term_weight=1.0):
         """
+        Class to enforce similarity of any algorithm policy to specified list of behaviors.
+        We use the same loss term as in https://arxiv.org/pdf/2105.12196.pdf.
+
         Parameters
         ----------
-        behavior_generators
-        behavior_weights
+        behavior_factories : list
+            List of methods creating the agent behaviors.
+        behavior_weights : list
+            List of floats giving relative weight to each agent behavior. All weights should be
+            positive. Otherwise AssertionError will be raised.
+        loss_term_weight : float
+            Weight of the KL term in the algorithm policy loss.
         """
 
         # Check sizes match
@@ -37,23 +45,32 @@ class AttractionKL(PolicyLossAddOn):
         self.device = torch.device(dev)
 
     def setup(self):
-        """ _ """
+        """Setup addon module by initializing agent behaviors."""
         # Create behavior instances
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
 
     def compute_loss_term(self, actor, actor_dist, data):
         """
+        Calculate and add KL Attraction loss term.
+            1. Calculate KL between actor policy and all behaviors.
+            2. Compute weighted sum of KL similarities.
+            3. Multiply the result by the loss_term_weight.
+            4. Change sign of the loss term so KL between behaviors is minimized.
 
         Parameters
         ----------
-        actor
-        actor_dist
-        data
+        actor : Actor
+            Training algorithm's Actor_critic class instance.
+        actor_dist : torch.distributions.Distribution
+            Actor action distribution for actions in data[prl.OBS]
+        data : dict
+            data batch containing all required tensors to compute loss term.
 
         Returns
         -------
-
+        attraction_kl_loss_term : torch.tensor
+            KL loss term.
         """
 
         o, rhs, a, d = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.DONE]
@@ -62,9 +79,7 @@ class AttractionKL(PolicyLossAddOn):
             # If deterministic policy, use action as mean as fix scale to 1.0
             actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
 
-        # OPTION 1
-        # Is this the same as KL(pi, sum of behavior dists) ???
-        kl_div = 0
+        kl_div = []
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
             with torch.no_grad():
@@ -74,12 +89,87 @@ class AttractionKL(PolicyLossAddOn):
                 # If deterministic policy, use action as mean as fix scale to 1.0
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
-            kl_div += (weight * kl_divergence(dist_b, actor_dist)).mean()
+            # - torch.log(weight)
+            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean()
 
-        print("OPTION 1 {}".format(kl_div))
+        kl_div = torch.min(kl_div)
 
-        # OPTION 2 FROM DEEPMIND PAPER
-        # min𝑖 (𝐷𝐾𝐿 (𝑝||𝑞𝑖) − log 𝛼𝑖)
+        return -1 * self.loss_term_weight + kl_div
+
+
+class RepulsionKL(PolicyLossAddOn):
+
+    def __init__(self,
+                 behavior_factories,
+                 behavior_weights,
+                 loss_term_weight=1.0):
+        """
+        Class to enforce similarity of any algorithm policy to specified list of behaviors.
+        We use the same loss term as in https://arxiv.org/pdf/2105.12196.pdf.
+
+        Parameters
+        ----------
+        behavior_factories : list
+            List of methods creating the agent behaviors.
+        behavior_weights : list
+            List of floats giving relative weight to each agent behavior. All weights should be
+            positive. Otherwise AssertionError will be raised.
+        loss_term_weight : float
+            Weight of the KL term in the algorithm policy loss.
+        """
+
+        # Check sizes match
+        assert len(behavior_factories) == len(behavior_weights)
+
+        self.behaviors = []
+        self.loss_term_weight = loss_term_weight
+        self.behavior_factories = behavior_factories
+
+        # Check all behavior weights are positive
+        assert (np.array(behavior_weights) >= 0.0).all()
+
+        # Normalize behavior_weights
+        self.behavior_weights = behavior_weights
+        self.behavior_weights /= np.sum(self.behavior_weights)
+
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(dev)
+
+    def setup(self):
+        """Setup addon module by initializing agent behaviors."""
+        # Create behavior instances
+        for b in self.behavior_factories:
+            self.behaviors.append(b(self.device))
+
+    def compute_loss_term(self, actor, actor_dist, data):
+        """
+        Calculate and add KL Repulsion loss term.
+            1. Calculate KL between actor policy and all behaviors.
+            2. Compute weighted sum of KL similarities.
+            3. Multiply the result by the loss_term_weight.
+            4. Keep sign of the loss term so KL between behaviors is maximized.
+
+        Parameters
+        ----------
+        actor : Actor
+            Training algorithm's Actor_critic class instance.
+        actor_dist : torch.distributions.Distribution
+            Actor action distribution for actions in data[prl.OBS]
+        data : dict
+            data batch containing all required tensors to compute loss term.
+
+        Returns
+        -------
+        attraction_kl_loss_term : torch.tensor
+            KL loss term.
+        """
+
+        o, rhs, a, d = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.DONE]
+
+        if not isinstance(actor_dist, torch.distributions.Distribution):
+            # If deterministic policy, use action as mean as fix scale to 1.0
+            actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
+
         kl_div = []
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
@@ -92,27 +182,6 @@ class AttractionKL(PolicyLossAddOn):
 
             kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean()
 
-        import ipdb; ipdb.set_trace()
         kl_div = torch.min(kl_div)
 
-        print("OPTION 2 {}".format(kl_div))
-
         return self.loss_term_weight + kl_div
-
-
-class RepulsionKL(PolicyLossAddOn):
-
-    def __init__(self,
-                 behavior_factories,
-                 behavior_weights,
-                 attraction_weight=1.0,
-                 repulsion_weight=1.0,
-                 ):
-        """
-        Parameters
-        ----------
-        behavior_factories
-        behavior_weights
-        attraction_weight
-        repulsion_weight
-        """
