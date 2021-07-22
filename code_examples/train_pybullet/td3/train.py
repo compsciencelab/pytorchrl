@@ -16,7 +16,7 @@ from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # Testing
-from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL, RepulsionKL
 
 
 def main():
@@ -59,8 +59,12 @@ def main():
         deterministic=True,
         noise=args.noise)
 
-    # Define KL similarity to add to policy loss
-    kl_addon = AttractionKL(
+    # Define KL similarity components to add to policy loss
+    kl_attraction_addon = AttractionKL(
+        behavior_factories=[actor_factory, actor_factory],
+        behavior_weights=[0.3, 0.7],
+        loss_term_weight=1.0)
+    kl_repulsion_addon = AttractionKL(
         behavior_factories=[actor_factory, actor_factory],
         behavior_weights=[0.3, 0.7],
         loss_term_weight=1.0)
@@ -71,7 +75,7 @@ def main():
         polyak=args.polyak, num_updates=args.num_updates,
         update_every=args.update_every, start_steps=args.start_steps,
         mini_batch_size=args.mini_batch_size,
-        policy_loss_addons=kl_addon,
+        policy_loss_addons=[kl_attraction_addon, kl_repulsion_addon],
     )
 
     # 5. Define rollouts storage
