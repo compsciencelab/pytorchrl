@@ -132,7 +132,7 @@ class PPO(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup()
+            addon.setup(self.device)
 
     @classmethod
     def create_factory(cls,

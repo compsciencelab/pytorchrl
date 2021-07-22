@@ -41,11 +41,17 @@ class AttractionKL(PolicyLossAddOn):
         self.behavior_weights = behavior_weights
         self.behavior_weights /= np.sum(self.behavior_weights)
 
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = torch.device(dev)
+    def setup(self, device):
+        """
+        Setup addon module by casting behavior weights to torch tensors and
+        initializing agent behaviors.
+        """
 
-    def setup(self):
-        """Setup addon module by initializing agent behaviors."""
+        self.device = device
+
+        # Cast behavior weights to torch tensors
+        self.behavior_weights = [torch.tensor(w).to(device) for w in self.behavior_weights]
+
         # Create behavior instances
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
@@ -90,7 +96,7 @@ class AttractionKL(PolicyLossAddOn):
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
             # - torch.log(weight)
-            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean()
+            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight).mean())
 
         kl_div = torch.min(kl_div)
 
@@ -132,15 +138,20 @@ class RepulsionKL(PolicyLossAddOn):
         self.behavior_weights = behavior_weights
         self.behavior_weights /= np.sum(self.behavior_weights)
 
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = torch.device(dev)
+    def setup(self, device):
+        """
+        Setup addon module by casting behavior weights to torch tensors and
+        initializing agent behaviors.
+        """
 
-    def setup(self):
-        """Setup addon module by initializing agent behaviors."""
+        self.device = device
+
+        # Cast behavior weights to torch tensors
+        self.behavior_weights = [torch.tensor(w).to(device) for w in self.behavior_weights]
+
         # Create behavior instances
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
-
     def compute_loss_term(self, actor, actor_dist, data):
         """
         Calculate and add KL Repulsion loss term.
@@ -180,7 +191,7 @@ class RepulsionKL(PolicyLossAddOn):
                 # If deterministic policy, use action as mean as fix scale to 1.0
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
-            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean()
+            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight).mean())
 
         kl_div = torch.min(kl_div)
 

@@ -64,7 +64,7 @@ def main():
         behavior_factories=[actor_factory, actor_factory],
         behavior_weights=[0.3, 0.7],
         loss_term_weight=1.0)
-    kl_repulsion_addon = AttractionKL(
+    kl_repulsion_addon = RepulsionKL(
         behavior_factories=[actor_factory, actor_factory],
         behavior_weights=[0.3, 0.7],
         loss_term_weight=1.0)
