@@ -5,6 +5,7 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
 class PPO(Algorithm):
@@ -370,14 +371,9 @@ class PPO(Algorithm):
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
-        grads = []
-        for p in self.actor.parameters():
-            if grads_to_cpu:
-                if p.grad is not None: grads.append(p.grad.data.cpu().numpy())
-                else: grads.append(None)
-            else:
-                if p.grad is not None:
-                    grads.append(p.grad)
+        pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
+        v_grads = get_gradients(self.actor.value_net, grads_to_cpu=grads_to_cpu)
+        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         info = {
             "loss": loss.item(),
@@ -397,10 +393,13 @@ class PPO(Algorithm):
         gradients: list of tensors
             List of actor gradients.
         """
-        if gradients:
-            for g, p in zip(gradients, self.actor.parameters()):
-                if g is not None:
-                    p.grad = torch.from_numpy(g).to(self.device)
+        if gradients is not None:
+            set_gradients(
+                self.actor.policy_net,
+                gradients=gradients["pi_grads"], device=self.device)
+            set_gradients(
+                self.actor.value_net,
+                gradients=gradients["v_grads"], device=self.device)
         self.optimizer.step()
 
     def set_weights(self, actor_weights):

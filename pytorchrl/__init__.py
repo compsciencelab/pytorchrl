@@ -1,9 +1,9 @@
-__version__ = "1.3.10"
+__version__ = "1.3.13"
 
 from collections import namedtuple
 
 __all__ = [
-    "ALGORITHM", "EPISODES", "SCHEME", "DEBUG", "INFO_KEYS",
+    "ALGORITHM", "EPISODES", "SCHEME", "TIME", "INFO_KEYS",
     "COLLECTION", "GRADIENT", "UPDATE", "OP_KEYS",
     "VERSION", "WEIGHTS", "NUMSAMPLES",
     "SYNC", "ASYNC", "CENTRAL", "PARALLEL", "FPS", "PL", "GA",

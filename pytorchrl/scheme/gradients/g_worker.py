@@ -13,7 +13,7 @@ from pytorchrl.scheme.base.worker import Worker as W
 from pytorchrl.scheme.utils import ray_get_and_free, broadcast_message, pack, unpack
 
 # Puts a limit to the allowed policy lag
-max_queue_size = 100
+max_queue_size = 10
 
 
 class GWorker(W):
@@ -116,8 +116,8 @@ class GWorker(W):
             # If async, collection storage sizes need a storage copy
             # Define it with the minimum size required, to save memory
             size1 = self.local_worker.storage.max_size
-            size2 = self.local_worker.algo.update_every * 2
-            if size2 == None: size2 = float("Inf")
+            size2 = self.local_worker.algo.update_every
+            size2 = size2 * 2 if size2 is not None else float("Inf")
             new_size = min(size1, size2)
 
             if self.local_worker.envs_train is not None:
@@ -408,7 +408,6 @@ class CollectorThread(threading.Thread):
 
         self.stopped = False
         self.queue = queue.SimpleQueue()
-        self.index_worker = index_worker
         self.col_execution = col_execution
         self.col_communication = col_communication
         self.broadcast_interval = broadcast_interval
@@ -456,15 +455,17 @@ class CollectorThread(threading.Thread):
 
             rollouts = self.local_worker.collect_data(listen_to=["sync"], data_to_cpu=False)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
         elif self.col_execution == prl.CENTRAL and self.col_communication == prl.ASYNC:
 
             rollouts = self.local_worker.collect_data(data_to_cpu=False)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             self.queue.put(rollouts)
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
         elif self.col_execution == prl.PARALLEL and self.col_communication == prl.SYNC:
 
@@ -488,10 +489,11 @@ class CollectorThread(threading.Thread):
 
             # Compute model updates
             for r in pending_samples:
-                while self.queue.qsize() > max_queue_size: time.sleep(0.5)
                 rollouts = ray_get_and_free(r)
                 rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
                 self.queue.put(rollouts)
+                while self.queue.qsize() >= max_queue_size:
+                    time.sleep(0.5)
 
         elif self.col_execution == prl.PARALLEL and self.col_communication == prl.ASYNC:
 
@@ -503,10 +505,12 @@ class CollectorThread(threading.Thread):
             w = self.pending_tasks.pop(future)
 
             # Retrieve rollouts and add them to queue
-            while self.queue.qsize() > max_queue_size: time.sleep(0.5)
             rollouts = ray_get_and_free(future)
             rollouts = unpack(rollouts) if type(rollouts) == str else rollouts
             self.queue.put(rollouts)
+
+            while self.queue.qsize() >= max_queue_size:
+                time.sleep(0.5)
 
             # Schedule a new collection task
             future = w.collect_data.remote()
