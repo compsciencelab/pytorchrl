@@ -96,11 +96,11 @@ class AttractionKL(PolicyLossAddOn):
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
             # - torch.log(weight)
-            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight).mean())
+            kl_div.append((kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean())
 
-        kl_div = torch.min(kl_div)
+        kl_div = min(kl_div)
 
-        return -1 * self.loss_term_weight + kl_div
+        return -1 * self.loss_term_weight * kl_div
 
 
 class RepulsionKL(PolicyLossAddOn):
@@ -110,8 +110,7 @@ class RepulsionKL(PolicyLossAddOn):
                  behavior_weights,
                  loss_term_weight=1.0):
         """
-        Class to enforce similarity of any algorithm policy to specified list of behaviors.
-        We use the same loss term as in https://arxiv.org/pdf/2105.12196.pdf.
+        Class to enforce dissimilarity of any algorithm policy to specified list of behaviors.
 
         Parameters
         ----------
@@ -152,6 +151,7 @@ class RepulsionKL(PolicyLossAddOn):
         # Create behavior instances
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
+
     def compute_loss_term(self, actor, actor_dist, data):
         """
         Calculate and add KL Repulsion loss term.
@@ -181,7 +181,7 @@ class RepulsionKL(PolicyLossAddOn):
             # If deterministic policy, use action as mean as fix scale to 1.0
             actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
 
-        kl_div = []
+        kl_div = torch.tensor(0.0, dtype=torch.float32)
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
             with torch.no_grad():
@@ -191,8 +191,6 @@ class RepulsionKL(PolicyLossAddOn):
                 # If deterministic policy, use action as mean as fix scale to 1.0
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
-            kl_div.append(kl_divergence(dist_b, actor_dist) - torch.log(weight).mean())
+            kl_div += kl_divergence(dist_b, actor_dist).mean()
 
-        kl_div = torch.min(kl_div)
-
-        return self.loss_term_weight + kl_div
+        return self.loss_term_weight * kl_div
