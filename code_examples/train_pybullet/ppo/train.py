@@ -58,7 +58,8 @@ def main():
 
     # Define KL similarity components to add to policy loss
     kl_attraction_addon = AttractionKL(
-        behavior_factories=[actor_factory, actor_factory],
+        behavior_factories=[OnPolicyActor.create_factory(
+        obs_space, action_space, restart_model="/tmp/pybullet_ppo")],
         behavior_weights=[0.3, 0.7],
         loss_term_weight=1.0)
     kl_repulsion_addon = RepulsionKL(
@@ -71,7 +72,12 @@ def main():
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-        gamma=args.gamma, policy_loss_addons=[kl_attraction_addon, kl_repulsion_addon])
+        gamma=args.gamma,
+        policy_loss_addons=[
+            kl_attraction_addon,
+            kl_repulsion_addon,
+        ]
+    )
 
     # 5. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)

@@ -11,7 +11,8 @@ class AttractionKL(PolicyLossAddOn):
     def __init__(self,
                  behavior_factories,
                  behavior_weights,
-                 loss_term_weight=1.0):
+                 loss_term_weight=1.0,
+                 eps=1e-8):
         """
         Class to enforce similarity of any algorithm policy to specified list of behaviors.
         We use the same loss term as in https://arxiv.org/pdf/2105.12196.pdf.
@@ -25,11 +26,14 @@ class AttractionKL(PolicyLossAddOn):
             positive. Otherwise AssertionError will be raised.
         loss_term_weight : float
             Weight of the KL term in the algorithm policy loss.
+        eps : float
+            Lower bound for prob values, used to clip action probs.
         """
 
         # Check sizes match
         assert len(behavior_factories) == len(behavior_weights)
 
+        self.eps = eps
         self.behaviors = []
         self.loss_term_weight = loss_term_weight
         self.behavior_factories = behavior_factories
@@ -85,6 +89,8 @@ class AttractionKL(PolicyLossAddOn):
             # If deterministic policy, use action as mean as fix scale to 1.0
             actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
 
+        actor_dist.probs = torch.clamp(actor_dist.probs, self.eps, 1.0 - self.eps)
+
         kl_div = []
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
@@ -95,12 +101,17 @@ class AttractionKL(PolicyLossAddOn):
                 # If deterministic policy, use action as mean as fix scale to 1.0
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
-            # - torch.log(weight)
-            kl_div.append((kl_divergence(dist_b, actor_dist) - torch.log(weight)).mean())
+            dist_b.probs = torch.clamp(dist_b.probs, self.eps, 1.0 - self.eps)
+
+            div = (kl_divergence(dist_b, actor_dist) - torch.log(weight))
+
+            # div *= torch.exp(- 2 * dist_b.entropy()).detach()
+
+            kl_div.append(div.mean())
 
         kl_div = min(kl_div)
 
-        return -1 * self.loss_term_weight * kl_div
+        return self.loss_term_weight * kl_div
 
 
 class RepulsionKL(PolicyLossAddOn):
@@ -108,7 +119,8 @@ class RepulsionKL(PolicyLossAddOn):
     def __init__(self,
                  behavior_factories,
                  behavior_weights,
-                 loss_term_weight=1.0):
+                 loss_term_weight=1.0,
+                 eps=1e-8):
         """
         Class to enforce dissimilarity of any algorithm policy to specified list of behaviors.
 
@@ -121,11 +133,14 @@ class RepulsionKL(PolicyLossAddOn):
             positive. Otherwise AssertionError will be raised.
         loss_term_weight : float
             Weight of the KL term in the algorithm policy loss.
+        eps : float
+            Lower bound for prob values, used to clip action probs.
         """
 
         # Check sizes match
         assert len(behavior_factories) == len(behavior_weights)
 
+        self.eps = eps
         self.behaviors = []
         self.loss_term_weight = loss_term_weight
         self.behavior_factories = behavior_factories
@@ -181,6 +196,8 @@ class RepulsionKL(PolicyLossAddOn):
             # If deterministic policy, use action as mean as fix scale to 1.0
             actor_dist = torch.distributions.Normal(loc=a, scale=1.0)
 
+        actor_dist.probs = torch.clamp(actor_dist.probs, self.eps, 1.0 - self.eps)
+
         kl_div = torch.tensor(0.0, dtype=torch.float32).to(self.device)
         for behavior, weight in zip(self.behaviors, self.behavior_weights):
 
@@ -191,6 +208,12 @@ class RepulsionKL(PolicyLossAddOn):
                 # If deterministic policy, use action as mean as fix scale to 1.0
                 dist_b = torch.distributions.Normal(loc=dist_b, scale=1.0)
 
-            kl_div += kl_divergence(dist_b, actor_dist).mean()
+            dist_b.probs = torch.clamp(dist_b.probs, self.eps, 1.0 - self.eps)
 
-        return self.loss_term_weight * kl_div
+            div = kl_divergence(dist_b, actor_dist)
+
+            # div *= torch.exp(- 2 * dist_b.entropy()).detach()
+
+            kl_div += div.mean()
+
+        return -1 * self.loss_term_weight * kl_div
