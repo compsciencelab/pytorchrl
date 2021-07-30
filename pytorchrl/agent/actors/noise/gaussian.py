@@ -1,5 +1,6 @@
 import torch
 
+
 class Normal:
     """ Gaussian Noise """
     def __init__(self, action_size, mean=0, std=0.1):
@@ -10,8 +11,7 @@ class Normal:
         # each dimension 
         
     def sample(self):
-        return torch.normal(mean=self.mean,
-                            std=self.std)
+        return torch.normal(mean=self.mean, std=self.std)
     
     def reset(self,):
         pass

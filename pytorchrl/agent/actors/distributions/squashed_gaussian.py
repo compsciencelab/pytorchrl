@@ -6,8 +6,9 @@ from torch.distributions.normal import Normal
 
 from pytorchrl.agent.actors.utils import init
 
-LOG_STD_MAX = 2 # Maximum std allowed value. Used for clipping.
-LOG_STD_MIN = -20 # Minimum std allowed value. Used for clipping.
+LOG_STD_MAX = 2  # Maximum std allowed value. Used for clipping.
+LOG_STD_MIN = -20  # Minimum std allowed value. Used for clipping.
+
 
 class SquashedGaussian(nn.Module):
     """
@@ -58,6 +59,8 @@ class SquashedGaussian(nn.Module):
             Log probability of `pred` according to the predicted distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
 
         # Predict distribution parameters
@@ -84,4 +87,44 @@ class SquashedGaussian(nn.Module):
         # Distribution entropy
         entropy_dist = - logp.mean()
 
-        return pred, clipped_pred, logp, entropy_dist
+        return pred, clipped_pred, logp, entropy_dist, dist
+
+    def evaluate_pred(self, x, pred):
+        """
+        Return log prob of `pred` under the distribution generated from
+        x (obs features). Also return entropy of the generated distribution.
+
+        Parameters
+        ----------
+        x : torch.tensor
+            obs feature map obtained from a policy_net.
+        pred : torch.tensor
+            Prediction to evaluate.
+
+        Returns
+        -------
+        logp : torch.tensor
+            Log probability of `pred` according to the predicted distribution.
+        entropy_dist : torch.tensor
+            Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
+        """
+
+        # Predict distribution parameters
+        mean = self.mean(x)
+        logstd = self.log_std(x) if self.predict_log_std else torch.zeros(
+            mean.size()).to(x.device) + self.log_std
+        logstd = torch.clamp(logstd, LOG_STD_MIN, LOG_STD_MAX)
+
+        # Create distribution
+        dist = Normal(mean, logstd.exp())
+
+        # Evaluate log prob under dist
+        logp = dist.log_prob(pred).sum(axis=-1, keepdim=True)
+        logp -= (2 * (np.log(2) - pred - F.softplus(-2 * pred))).sum(axis=1, keepdim=True)
+
+        # Distribution entropy
+        entropy_dist = - logp.mean()
+
+        return logp, entropy_dist, dist

@@ -277,7 +277,7 @@ class OnPolicyActor(nn.Module):
         if self.recurrent_nets:
             action_features, rhs["rhs_act"] = self.policy_memory_net(
                 action_features, rhs["rhs_act"], done)
-        (action, clipped_action, logp_action, entropy_dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
             action_features, deterministic=deterministic)
 
         self.last_action_features = action_features
@@ -287,7 +287,7 @@ class OnPolicyActor(nn.Module):
             action = self.unscale(action)
             clipped_action = self.unscale(clipped_action)
 
-        return action, clipped_action, logp_action, rhs, entropy_dist
+        return action, clipped_action, logp_action, rhs, entropy_dist, dist
 
     def evaluate_actions(self, obs, rhs, done, action):
         """
@@ -321,15 +321,16 @@ class OnPolicyActor(nn.Module):
             action = self.scale(action)
 
         features = self.policy_feature_extractor(obs)
+
         if self.recurrent_nets:
             action_features, rhs["rhs_act"] = self.policy_memory_net(
                 features, rhs["rhs_act"], done)
-        logp_action, entropy_dist = self.dist.evaluate_pred(features, action)
+            
+        logp_action, entropy_dist, dist = self.dist.evaluate_pred(features, action)
 
         self.last_action_features = features
-        self.last_action_rhs = rhs["rhs_act"]
 
-        return logp_action, entropy_dist, rhs
+        return logp_action, entropy_dist, dist
 
     def get_value(self, obs, rhs, done):
         """

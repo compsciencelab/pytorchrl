@@ -5,6 +5,7 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
@@ -32,6 +33,8 @@ class A2C(Algorithm):
         Regularity of test evaluations in actor updates.
     num_test_episodes : int
         Number of episodes to complete in each test phase.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
     """
 
     def __init__(self,
@@ -42,7 +45,8 @@ class A2C(Algorithm):
                  gamma=0.99,
                  test_every=5000,
                  max_grad_norm=0.5,
-                 num_test_episodes=5):
+                 num_test_episodes=5,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -82,6 +86,25 @@ class A2C(Algorithm):
         self.pi_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr_pi)
         self.v_optimizer = optim.Adam(self.value_net.parameters(), lr=lr_v)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "A2C policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                    "A2C policy_loss_addons parameter should be a  PolicyLossAddOn" \
+                    " instance or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup(self.device)
+
     @classmethod
     def create_factory(cls,
                        lr_v=1e-4,
@@ -89,7 +112,8 @@ class A2C(Algorithm):
                        gamma=0.99,
                        test_every=5000,
                        max_grad_norm=0.5,
-                       num_test_episodes=5):
+                       num_test_episodes=5,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new A2C instances.
 
@@ -109,6 +133,8 @@ class A2C(Algorithm):
             Regularity of test evaluations in actor updates.
         num_test_episodes : int
             Number of episodes to complete in each test phase.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -124,7 +150,8 @@ class A2C(Algorithm):
                        actor=actor,
                        test_every=test_every,
                        max_grad_norm=max_grad_norm,
-                       num_test_episodes=num_test_episodes)
+                       num_test_episodes=num_test_episodes,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     @property
@@ -210,7 +237,7 @@ class A2C(Algorithm):
         with torch.no_grad():
 
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
 
             value, rhs = self.actor.get_value(obs, rhs, done)
@@ -238,8 +265,12 @@ class A2C(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # Policy loss
-        logp, dist_entropy, _ = self.actor.evaluate_actions(o, rhs, d, a)
+        logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         pi_loss = - (logp * adv).mean()
+
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            pi_loss += addon.compute_loss_term(self.actor, dist, data)
 
         # Value loss
         new_v = self.actor.get_value(o, rhs, d)
@@ -297,7 +328,6 @@ class A2C(Algorithm):
         }
 
         return grads, info
-
 
     def apply_gradients(self, gradients=None):
         """

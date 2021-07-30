@@ -8,6 +8,7 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
 class SAC(Algorithm):
@@ -51,6 +52,8 @@ class SAC(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
     Examples
     --------
@@ -75,7 +78,8 @@ class SAC(Algorithm):
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
-                 target_update_interval=1):
+                 target_update_interval=1,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -144,6 +148,25 @@ class SAC(Algorithm):
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "SAC policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                    "SAC policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "instance or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup(self.device)
+
     @classmethod
     def create_factory(cls,
                        lr_q=1e-4,
@@ -158,7 +181,8 @@ class SAC(Algorithm):
                        initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
-                       target_update_interval=1.0):
+                       target_update_interval=1.0,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new SAC instances.
 
@@ -190,6 +214,8 @@ class SAC(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -212,7 +238,8 @@ class SAC(Algorithm):
                        initial_alpha=initial_alpha,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
-                       target_update_interval=target_update_interval)
+                       target_update_interval=target_update_interval,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     @property
@@ -302,7 +329,7 @@ class SAC(Algorithm):
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
@@ -346,7 +373,7 @@ class SAC(Algorithm):
             # Bellman backup for Q functions
             with torch.no_grad():
                 # Target actions come from *current* policy
-                a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+                a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
                 p_a2 = self.actor.dist.dist.probs
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
@@ -367,7 +394,7 @@ class SAC(Algorithm):
             with torch.no_grad():
 
                 # Target actions come from *current* policy
-                a2, _, logp_a2, _, _ = self.actor.get_action(o2, rhs2, d2)
+                a2, _, logp_a2, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
                 # Target Q-values
                 q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
@@ -409,8 +436,8 @@ class SAC(Algorithm):
 
         if self.discrete_version:
 
-            pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
-            p_pi = self.actor.dist.dist.probs
+            pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
+            p_pi = dist.probs
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
@@ -419,11 +446,15 @@ class SAC(Algorithm):
 
         else:
 
-            pi, _, logp_pi, _, _ = self.actor.get_action(o, rhs, d)
+            pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
             q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d, pi)
             q_pi = torch.min(q1_pi, q2_pi)
 
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
+
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            loss_pi += addon.compute_loss_term(self.actor, dist, data)
 
         return loss_pi, logp_pi
 

@@ -471,14 +471,54 @@ class OffPolicyActor(nn.Module):
         if self.recurrent_nets:
             x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
 
-        (action, clipped_action, logp_action, entropy_dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
             x, deterministic=deterministic)
 
         if self.unscale:
             action = self.unscale(action)
             clipped_action = self.unscale(clipped_action)
 
-        return action, clipped_action, logp_action, rhs, entropy_dist
+        return action, clipped_action, logp_action, rhs, entropy_dist, dist
+
+    def evaluate_actions(self, obs, rhs, done, action):
+        """
+        Evaluate log likelihood of action given obs and the current
+        policy network. Returns also entropy distribution.
+
+        Parameters
+        ----------
+        obs : torch.tensor
+            Environment observation.
+        rhs : dict
+            Recurrent hidden states.
+        done : torch.tensor
+            Done tensor, indicating if episode has finished.
+        action : torch.tensor
+            Evaluated action.
+
+        Returns
+        -------
+        logp_action : torch.tensor
+            Log probability of `action` according to the action distribution
+            predicted with current version of the policy_net.
+        entropy_dist : torch.tensor
+            Entropy of the action distribution predicted with current version
+            of the policy_net.
+        rhs : dict
+            Updated recurrent hidden states.
+        """
+
+        if self.scale:
+            action = self.scale(action)
+
+        x = self.policy_common_feature_extractor(self.policy_obs_feature_extractor(obs))
+
+        if self.recurrent_nets:
+            x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
+
+        logp_action, entropy_dist, dist = self.dist.evaluate_pred(x, action)
+
+        return logp_action, entropy_dist, dist
 
     def get_q_scores(self, obs, rhs, done, actions=None):
         """

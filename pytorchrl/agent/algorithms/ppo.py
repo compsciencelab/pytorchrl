@@ -4,6 +4,7 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
@@ -46,6 +47,8 @@ class PPO(Algorithm):
         PPO value coefficient parameter.
     use_clipped_value_loss : bool
         Prevent value loss from shifting too fast.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
     Examples
     --------
@@ -69,7 +72,8 @@ class PPO(Algorithm):
                  entropy_coef=0.01,
                  value_loss_coef=0.5,
                  num_test_episodes=5,
-                 use_clipped_value_loss=True):
+                 use_clipped_value_loss=True,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -111,20 +115,40 @@ class PPO(Algorithm):
 
         self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
 
+        # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "PPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                    "PPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "instance or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup(self.device)
+
     @classmethod
     def create_factory(cls,
-                     lr=1e-4,
-                     eps=1e-8,
-                     gamma=0.99,
-                     num_epochs=4,
-                     clip_param=0.2,
-                     num_mini_batch=1,
-                     test_every=1000,
-                     max_grad_norm=0.5,
-                     entropy_coef=0.01,
-                     value_loss_coef=0.5,
-                     num_test_episodes=5,
-                     use_clipped_value_loss=True):
+                       lr=1e-4,
+                       eps=1e-8,
+                       gamma=0.99,
+                       num_epochs=4,
+                       clip_param=0.2,
+                       num_mini_batch=1,
+                       test_every=1000,
+                       max_grad_norm=0.5,
+                       entropy_coef=0.01,
+                       value_loss_coef=0.5,
+                       num_test_episodes=5,
+                       use_clipped_value_loss=True,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new PPO instances.
 
@@ -154,6 +178,8 @@ class PPO(Algorithm):
             PPO value coefficient parameter.
         use_clipped_value_loss : bool
             Prevent value loss from shifting too fast.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -174,7 +200,8 @@ class PPO(Algorithm):
                        num_mini_batch=num_mini_batch,
                        value_loss_coef=value_loss_coef,
                        num_test_episodes=num_test_episodes,
-                       use_clipped_value_loss=use_clipped_value_loss)
+                       use_clipped_value_loss=use_clipped_value_loss,
+                       policy_loss_addons=policy_loss_addons)
 
         return create_algo_instance
 
@@ -261,7 +288,7 @@ class PPO(Algorithm):
         with torch.no_grad():
 
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
 
             value, rhs = self.actor.get_value(obs, rhs, done)
@@ -294,7 +321,7 @@ class PPO(Algorithm):
         o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
-        new_logp, dist_entropy, _ = self.actor.evaluate_actions(o, rhs, d, a)
+        new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         new_v, _ = self.actor.get_value(o, rhs, d)
 
         ratio = torch.exp(new_logp - old_logp)
@@ -311,6 +338,10 @@ class PPO(Algorithm):
             value_loss = 0.5 * (r - new_v).pow(2).mean()
 
         loss = value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy
+
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            loss += addon.compute_loss_term(self.actor, dist, data)
 
         return value_loss, action_loss, dist_entropy, loss
 

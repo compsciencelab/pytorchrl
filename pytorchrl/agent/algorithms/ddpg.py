@@ -7,6 +7,7 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
+from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
@@ -48,6 +49,8 @@ class DDPG(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor_critic updates.
+    policy_loss_addons : list
+        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
     Examples
     --------
@@ -70,7 +73,8 @@ class DDPG(Algorithm):
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
-                 target_update_interval=1):
+                 target_update_interval=1,
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -120,8 +124,28 @@ class DDPG(Algorithm):
         p_params = itertools.chain(self.actor.policy_net.parameters())
 
         # ----- Optimizers ----------------------------------------------------
+
         self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
+
+        # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "DDPG policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                    "DDPG policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "instance or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup(self.device)
 
     @classmethod
     def create_factory(cls,
@@ -135,7 +159,8 @@ class DDPG(Algorithm):
                 start_steps=1000,
                 mini_batch_size=64,
                 num_test_episodes=5,
-                target_update_interval=1.0):
+                target_update_interval=1.0,
+                policy_loss_addons=[]):
         """
         Returns a function to create new DDPG instances.
 
@@ -163,6 +188,8 @@ class DDPG(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor_critic updates.
+        policy_loss_addons : list
+            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
         Returns
         -------
@@ -183,7 +210,8 @@ class DDPG(Algorithm):
                        update_every=update_every,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
-                       target_update_interval=target_update_interval)
+                       target_update_interval=target_update_interval,
+                       policy_loss_addons=policy_loss_addons)
         return create_algo_instance
 
     @property
@@ -268,18 +296,18 @@ class DDPG(Algorithm):
 
         with torch.no_grad():
             (action, clipped_action, logp_action, rhs,
-             entropy_dist) = self.actor.get_action(
+             entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
         return action, clipped_action, rhs, {}
 
-    def compute_loss_q(self, batch, n_step=1, per_weights=1):
+    def compute_loss_q(self, data, n_step=1, per_weights=1):
         """
          Calculate DDPG Q-nets loss
 
         Parameters
         ----------
-        batch: dict
+        data: dict
             Data batch dict containing all required tensors to compute TD3 losses.
         n_step : int or float
             Number of future steps used to computed the truncated n-step return value.
@@ -298,9 +326,9 @@ class DDPG(Algorithm):
             TD errors.
          """
 
-        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
-        a, r = batch[prl.ACT], batch[prl.REW]
-        o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
+        o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
+        a, r = data[prl.ACT], data[prl.REW]
+        o2, rhs2, d2 = data[prl.OBS2], data[prl.RHS2], data[prl.DONE2]
 
         # Q-values for all actions
         q, _, _ = self.actor.get_q_scores(o, rhs, d, a)
@@ -309,7 +337,7 @@ class DDPG(Algorithm):
         with torch.no_grad():
 
             # Target actions come from *current* policy
-            a2, _, _, _, _ = self.actor.get_action(o2, rhs2, d2)
+            a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
             # Target Q-values
             q_pi_targ, _, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
@@ -327,13 +355,13 @@ class DDPG(Algorithm):
 
         return loss_q, errors
 
-    def compute_loss_pi(self, batch, per_weights=1):
+    def compute_loss_pi(self, data, per_weights=1):
         """
         Calculate DDPG policy loss.
 
         Parameters
         ----------
-        batch: dict
+        data: dict
             Data batch dict containing all required tensors to compute DDPG losses.
 
         Returns
@@ -342,12 +370,17 @@ class DDPG(Algorithm):
             DDPG policy loss.
         """
 
-        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
 
-        pi, _, _, _, _ = self.actor.get_action(o, rhs, d)
+        pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
         q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
 
         loss_pi = - (q_pi * per_weights).mean()
+
+        # Extend policy loss with addons
+        for addon in self.policy_loss_addons:
+            loss_pi += addon.compute_loss_term(self.actor, dist, data)
+
         return loss_pi
 
     def compute_gradients(self, batch, grads_to_cpu=True):
@@ -357,7 +390,7 @@ class DDPG(Algorithm):
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             data batch containing all required tensors to compute DDPG losses.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.

@@ -7,6 +7,7 @@ from pytorchrl.agent.actors.utils import init
 LOG_STD_MAX = 2  # Maximum std allowed value. Used for clipping.
 LOG_STD_MIN = -20  # Minimum std allowed value. Used for clipping.
 
+
 class DiagGaussian(nn.Module):
     """
     Isotropic gaussian probability distribution.
@@ -57,6 +58,8 @@ class DiagGaussian(nn.Module):
             Log probability of `pred` according to the predicted distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
         # Predict distribution parameters
         mean = self.mean(x)
@@ -82,7 +85,7 @@ class DiagGaussian(nn.Module):
         # Distribution entropy
         entropy_dist = dist.entropy().sum(-1).mean()
 
-        return pred, clipped_pred, logp, entropy_dist
+        return pred, clipped_pred, logp, entropy_dist, dist
 
     def evaluate_pred(self, x, pred):
         """
@@ -102,10 +105,11 @@ class DiagGaussian(nn.Module):
             Log probability of `pred` according to the predicted distribution.
         entropy_dist : torch.tensor
             Entropy of the predicted distribution.
+        dist : torch.Distribution
+            Action probability distribution.
         """
 
         # Predict distribution parameters
-
         mean = self.mean(x)
         logstd = self.log_std(x) if self.predict_log_std else torch.zeros(
             mean.size()).to(x.device) + self.log_std
@@ -121,4 +125,4 @@ class DiagGaussian(nn.Module):
         # Distribution entropy
         entropy_dist = dist.entropy().sum(-1).mean()
 
-        return logp, entropy_dist
+        return logp, entropy_dist, dist
