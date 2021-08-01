@@ -3,11 +3,13 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
+from torch.distributions.kl import kl_divergence
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
-from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients, gaussian_kl
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
@@ -166,6 +168,54 @@ class MPO(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.device)
+
+        self.dual_constraint = 0.1
+        self.kl_mean_constraint = 0.01
+        self.kl_var_constraint = 0.0001
+        self.kl_constraint = 0.01
+        self.discount_factor = 0.99
+        self.alpha_mean_scale = 1.0
+        self.alpha_var_scale = 100.0
+        self.alpha_scale = 10.0
+        self.alpha_mean_max = 0.1
+        self.alpha_var_max = 10.0
+        self.alpha_max = 1.0
+        self.sample_episode_num = 30
+        self.sample_episode_maxstep = 200
+        self.sample_action_num = 64
+        self.batch_size = 256
+        self.episode_rerun_num = 3
+        self.mstep_iteration_num = 5
+        self.evaluate_period = 10
+        self.evaluate_episode_num = 100
+        self.evaluate_episode_maxstep = 200
+
+        self.ε_dual = self.dual_constraint
+        self.ε_kl_μ = self.kl_mean_constraint
+        self.ε_kl_Σ = self.kl_var_constraint
+        self.ε_kl = self.kl_constraint
+        self.γ = self.discount_factor
+        self.α_μ_scale = self.alpha_mean_scale
+        self.α_Σ_scale = self.alpha_var_scale
+        self.α_scale = self.alpha_scale
+        self.α_μ_max = self.alpha_mean_max
+        self.α_Σ_max = self.alpha_var_max
+        self.α_max = self.alpha_max
+        self.sample_episode_num = self.sample_episode_num
+        self.sample_episode_maxstep = self.sample_episode_maxstep
+        self.sample_action_num = self.sample_action_num
+        self.batch_size = self.batch_size
+        self.episode_rerun_num = self.episode_rerun_num
+        self.mstep_iteration_num = self.mstep_iteration_num
+        self.evaluate_period = self.evaluate_period
+        self.evaluate_episode_num = self.evaluate_episode_num
+        self.evaluate_episode_maxstep = self.evaluate_episode_maxstep
+
+        self.η = np.random.rand()
+        self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.α_Σ = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.α = 0.0  # lagrangian multiplier for discrete action space in the M-step
+
 
     @classmethod
     def create_factory(cls,
@@ -332,9 +382,7 @@ class MPO(Algorithm):
              entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
-        other = {prl.ACTPROBS: dist.probs}
-
-        return action, clipped_action, rhs, other
+        return action, clipped_action, rhs, {}
 
     def compute_loss_q(self, batch, n_step=1, per_weights=1):
         """
@@ -362,7 +410,7 @@ class MPO(Algorithm):
         """
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
-        a, aprobs, r = batch[prl.ACT], batch[prl.ACTPROBS], batch[prl.REW]
+        a, r = batch[prl.ACT], batch[prl.REW]
         o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         if self.discrete_version:
@@ -376,7 +424,7 @@ class MPO(Algorithm):
             with torch.no_grad():
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-                p_a2 = self.actor.dist.dist.probs
+                p_a2 = dist.probs
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
 
@@ -435,30 +483,147 @@ class MPO(Algorithm):
         """
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        bs = o.shape[0]
+
+        # E-Step of Policy Improvement
+        # [2] 4.1 Finding action weights (Step 2)
+        pi_targ, _, logp_pi_targ, _, _, dist_targ = self.actor_targ.get_action(o, rhs, d)
+
+        N = 64
+
+        sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
+        expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
+        expanded_d = d[None, ...].expand(N, -1, -1)  # (N, bs, 1)
+        expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
+        expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
+
+        target_q1, target_q2, _ = self.actor_targ.get_q_scores(
+            expanded_obs.reshape(-1, expanded_obs.shape[-1]),  # (N * bs, ds)
+            expanded_reshaped_rhs,  # get expanded rhs
+            expanded_d.reshape(-1, 1),  # (N * bs, ds)
+            sampled_actions.reshape(-1, sampled_actions.shape[-1]),  # (N * bs, ds)
+        )
+
+        target_q1 = target_q1.reshape(N, bs)  # (N, bs)
+        target_q2 = target_q2.reshape(N, bs)  # (N, bs)
 
         if self.discrete_version:
-
-            pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-            p_pi = dist.probs
-            z = (p_pi == 0.0).float() * 1e-8
-            logp_pi = torch.log(p_pi + z)
-            logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d)
-            q_pi = torch.sum(torch.min(q1_pi, q2_pi) * p_pi, dim=1, keepdim=True)
-
+            actions = torch.arange(da)[..., None].expand(da, K).to(self.device)  # (da, bs)
+            b_prob_np = dist_targ.probs.cpu().transpose(0, 1).numpy()  # (bs, da)
+            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, da)
         else:
+            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
-            pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d, pi)
-            q_pi = torch.min(q1_pi, q2_pi)
+        # https://arxiv.org/pdf/1812.02256.pdf
+        # [2] 4.1 Finding action weights (Step 2)
+        #   Using an exponential transformation of the Q-values
+        if self.discrete_version:
+            def dual(η):
+                """
+                dual function of the non-parametric variational
+                g(η) = η*ε + η*mean(log(sum(π(a|s)*exp(Q(s, a)/η))))
+                We have to multiply π by exp because this is expectation.
+                This equation is correspond to last equation of the [2] p.15
+                For numerical stabilization, this can be modified to
+                Qj = max(Q(s, a), along=a)
+                g(η) = η*ε + mean(Qj, along=j) + η*mean(log(sum(π(a|s)*(exp(Q(s, a)-Qj)/η))))
+                """
+                max_q = np.max(target_q1_np, 1)
+                return η * self.ε_dual + np.mean(max_q) + η * np.mean(np.log(np.sum(
+                    b_prob_np * np.exp((target_q1_np - max_q[:, None]) / η), axis=1)))
+        else:  # discrete action space
+            def dual(η):
+                """
+                dual function of the non-parametric variational
+                Q = target_q_np  (K, N)
+                g(η) = η*ε + η*mean(log(mean(exp(Q(s, a)/η), along=a)), along=s)
+                For numerical stabilization, this can be modified to
+                Qj = max(Q(s, a), along=a)
+                g(η) = η*ε + mean(Qj, along=j) + η*mean(log(mean(exp((Q(s, a)-Qj)/η), along=a)), along=s)
+                """
+                max_q = np.max(target_q1_np, 1)
+                return η * self.ε_dual + np.mean(max_q) + η * np.mean(np.log(
+                    np.mean(np.exp((target_q1_np - max_q[:, None]) / η), axis=1)))
 
-        loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
+        from scipy.optimize import minimize
+        bounds = [(1e-6, None)]
+        res = minimize(dual, np.array([self.η]), method='SLSQP', bounds=bounds)
+        self.η = res.x[0]
+        qij = torch.softmax(target_q1 / self.η, dim=0)  # (N, K) or (da, K)
+
+        # M-Step of Policy Improvement
+        # [2] 4.2 Fitting an improved policy (Step 3)
+        for _ in range(self.mstep_iteration_num):
+            if self.discrete_version:
+
+                import ipdb; ipdb.set_trace()
+
+                pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
+                loss_pi = torch.mean(qij * dist.expand((da, bs)).log_prob(actions))
+                kl = kl_divergence(dist, dist_targ)
+
+                if np.isnan(kl.item()):  # This should not happen
+                    raise RuntimeError('kl is nan')
+
+                    # Update lagrange multipliers by gradient descent
+                    # this equation is derived from last eq of [2] p.5,
+                    # just differentiate with respect to α
+                    # and update α so that the equation is to be minimized.
+                self.α -= self.α_scale * (self.ε_kl - kl).detach().item()
+                self.α = np.clip(self.α, 0.0, self.α_max)
+
+                self.actor_optimizer.zero_grad()
+                # last eq of [2] p.5
+                loss_l = -(loss_pi + self.α * (self.ε_kl - kl))
+
+            else:
+
+
+                pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
+
+                loss_pi = torch.mean(
+                    qij * (dist_targ.log_prob(sampled_actions).sum(-1)  # (N, K)
+                            + dist.log_prob(sampled_actions).sum(-1)  # (N, K)
+                    )
+                )
+
+                import ipdb; ipdb.set_trace()
+
+
+                kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=dist_targ.variance, A=dist.variance)
+
+                import ipdb; ipdb.set_trace()
+
+                if np.isnan(kl_μ.item()):  # This should not happen
+                    raise RuntimeError('kl_μ is nan')
+                if np.isnan(kl_Σ.item()):  # This should not happen
+                    raise RuntimeError('kl_Σ is nan')
+
+                # Update lagrange multipliers by gradient descent
+                # this equation is derived from last eq of [2] p.5,
+                # just differentiate with respect to α
+                # and update α so that the equation is to be minimized.
+                self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
+                self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
+
+                self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
+                self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
+
+                self.actor_optimizer.zero_grad()
+                # last eq of [2] p.5
+                loss_l = -(
+                        loss_pi
+                        + self.α_μ * (self.ε_kl_μ - kl_μ)
+                        + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
+                )
+
+        import ipdb; ipdb.set_trace()
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, data)
+            loss_l += addon.compute_loss_term(self.actor, dist, batch)
 
-        return loss_pi, logp_pi
+        return loss_l
 
     def compute_loss_alpha(self, log_probs, per_weights=1):
         """
