@@ -454,7 +454,7 @@ class SAC(Algorithm):
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, data)
+            loss_pi += addon.compute_loss_term(self.actor, dist, batch)
 
         return loss_pi, logp_pi
 
