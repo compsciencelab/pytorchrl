@@ -11,14 +11,14 @@ from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
-class SAC(Algorithm):
+class MPO(Algorithm):
     """
-    Soft Actor Critic algorithm class.
+    Maximum a Posteriori Policy Optimization algorithm class.
 
-    Algorithm class to execute SAC, from Haarnoja et al.
-    (https://arxiv.org/abs/1812.05905). Algorithms are modules generally
-    required by multiple workers, so SAC.algo_factory(...) returns a function
-    that can be passed on to workers to instantiate their own SAC module.
+    Algorithm class to execute MPO, from  A Abdolmaleki et al.
+    (https://arxiv.org/abs/1806.06920). Algorithms are modules generally
+    required by multiple workers, so MPO.algo_factory(...) returns a function
+    that can be passed on to workers to instantiate their own MPO module.
 
     Parameters
     ----------
@@ -57,7 +57,7 @@ class SAC(Algorithm):
 
     Examples
     --------
-    >>> create_algo = SAC.create_factory(
+    >>> create_algo = MPO.create_factory(
             lr_q=1e-4, lr_pi=1e-4, lr_alpha=1e-4, gamma=0.99, polyak=0.995,
             num_updates=50, update_every=50, test_every=5000, start_steps=20000,
             mini_batch_size=64, alpha=1.0, num_test_episodes=0, target_update_interval=1)
@@ -332,7 +332,9 @@ class SAC(Algorithm):
              entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
-        return action, clipped_action, rhs, {}
+        other = {prl.ACTPROBS: dist.probs}
+
+        return action, clipped_action, rhs, other
 
     def compute_loss_q(self, batch, n_step=1, per_weights=1):
         """
@@ -360,7 +362,7 @@ class SAC(Algorithm):
         """
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
-        a, r = batch[prl.ACT], batch[prl.REW]
+        a, aprobs, r = batch[prl.ACT], batch[prl.ACTPROBS], batch[prl.REW]
         o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         if self.discrete_version:
@@ -454,7 +456,7 @@ class SAC(Algorithm):
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, batch)
+            loss_pi += addon.compute_loss_term(self.actor, dist, data)
 
         return loss_pi, logp_pi
 

@@ -52,6 +52,7 @@ OBS = "Observation"
 RHS = "RecurrentHiddenStates"
 DONE = "Done"
 ACT = "Action"
+ACTPROBS = "ActionProbs"
 REW = "Reward"
 OBS2 = "NextObservation"
 RHS2 = "NextRecurrentHiddenStates"
@@ -62,7 +63,7 @@ ADV = "Advantage"
 RET = "Return"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
-OffPolicyDataKeys = DataTransitionKeys
+OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
 
 # -----------------------------------------------------------------------------
