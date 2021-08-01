@@ -211,11 +211,25 @@ class MPO(Algorithm):
         self.evaluate_episode_num = self.evaluate_episode_num
         self.evaluate_episode_maxstep = self.evaluate_episode_maxstep
 
-        self.η = np.random.rand()
-        self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
-        self.α_Σ = 0.0  # lagrangian multiplier for continuous action space in the M-step
-        self.α = 0.0  # lagrangian multiplier for discrete action space in the M-step
+        dual_constraint = 0.1
+        kl_constraint = 0.01
+        learning_rate = 0.99
+        alpha = 1.0
+        episodes = 1000
+        sample_episodes = 1
+        episode_length = 1000,
+        lagrange_it = 5
 
+        self.α = alpha
+        self.ε = dual_constraint
+        self.ε_kl = kl_constraint
+        self.γ = learning_rate
+        self.episodes = episodes
+        self.sample_episodes = sample_episodes
+        self.episode_length = episode_length
+        self.lagrange_it = lagrange_it
+        self.η = np.random.rand()
+        self.η_kl = 0.0
 
     @classmethod
     def create_factory(cls,
@@ -482,36 +496,46 @@ class MPO(Algorithm):
             Log probability of predicted next action.
         """
 
-        o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
-        bs = o.shape[0]
+        o, rhs, d, a = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE], batch[prl.ACT]
+        bs, ds = o.shape[0], o.shape[-1]
 
         # E-Step of Policy Improvement
         # [2] 4.1 Finding action weights (Step 2)
-        pi_targ, _, logp_pi_targ, _, _, dist_targ = self.actor_targ.get_action(o, rhs, d)
 
-        N = 64
-
-        sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
-        expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
-        expanded_d = d[None, ...].expand(N, -1, -1)  # (N, bs, 1)
-        expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
-        expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
-
-        target_q1, target_q2, _ = self.actor_targ.get_q_scores(
-            expanded_obs.reshape(-1, expanded_obs.shape[-1]),  # (N * bs, ds)
-            expanded_reshaped_rhs,  # get expanded rhs
-            expanded_d.reshape(-1, 1),  # (N * bs, ds)
-            sampled_actions.reshape(-1, sampled_actions.shape[-1]),  # (N * bs, ds)
-        )
-
-        target_q1 = target_q1.reshape(N, bs)  # (N, bs)
-        target_q2 = target_q2.reshape(N, bs)  # (N, bs)
+        _, _, _, _, _, dist_targ = self.actor_targ.get_action(o, rhs, d)
 
         if self.discrete_version:
-            actions = torch.arange(da)[..., None].expand(da, K).to(self.device)  # (da, bs)
-            b_prob_np = dist_targ.probs.cpu().transpose(0, 1).numpy()  # (bs, da)
-            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, da)
+
+            da = dist_targ.probs.shape[-1]
+            actions = torch.arange(da)[..., None].expand(da, bs).to(self.device)  # (da, bs) ??????? ok, for each state in the batch, any possible action
+            dist_targ_log_probs = dist_targ.expand((da, bs)).log_prob(actions).exp()
+
+            target_q1, target_q2, _ = self.actor_targ.get_q_scores(o, rhs, d)  # (K, da)
+            target_q1 = target_q1.transpose(1, 0)  # (da, K)
+            target_q2 = target_q2.transpose(1, 0)  # (da, K)
+
+            b_prob_np = dist_targ_log_probs.cpu().transpose(0, 1).numpy()  # (K, da)
+            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (K, da)
+
         else:
+
+            N = 64
+            da = a.shape[-1]
+
+            sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
+            expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
+            expanded_d = d[None, ...].expand(N, -1, -1)  # (N, bs, 1)
+            expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
+            expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
+
+            target_q1, target_q2, _ = self.actor_targ.get_q_scores(
+                expanded_obs.reshape(-1, ds),  # (N * bs, ds)
+                expanded_reshaped_rhs,  # get expanded rhs
+                expanded_d.reshape(-1, 1),  # (N * bs, ds)
+                sampled_actions.reshape(-1, da),  # (N * bs, da)
+            )
+            target_q1 = target_q1.reshape(N, bs)  # (N, bs)
+            target_q2 = target_q2.reshape(N, bs)  # (N, bs)
             target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
         # https://arxiv.org/pdf/1812.02256.pdf
@@ -551,79 +575,70 @@ class MPO(Algorithm):
         self.η = res.x[0]
         qij = torch.softmax(target_q1 / self.η, dim=0)  # (N, K) or (da, K)
 
+        ################################################################################################################
+
         # M-Step of Policy Improvement
         # [2] 4.2 Fitting an improved policy (Step 3)
         for _ in range(self.mstep_iteration_num):
             if self.discrete_version:
 
-                import ipdb; ipdb.set_trace()
-
-                pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
+                _, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
                 loss_pi = torch.mean(qij * dist.expand((da, bs)).log_prob(actions))
-                kl = kl_divergence(dist, dist_targ)
+                kl = kl_divergence(dist, dist_targ).mean()
 
-                if np.isnan(kl.item()):  # This should not happen
-                    raise RuntimeError('kl is nan')
+                # Update lagrange multipliers by gradient descent
+                self.η_kl -= self.α * (self.ε_kl - kl).detach().item()
 
-                    # Update lagrange multipliers by gradient descent
-                    # this equation is derived from last eq of [2] p.5,
-                    # just differentiate with respect to α
-                    # and update α so that the equation is to be minimized.
-                self.α -= self.α_scale * (self.ε_kl - kl).detach().item()
-                self.α = np.clip(self.α, 0.0, self.α_max)
+                if self.η_kl < 0.0:
+                    self.η_kl = 0.0
 
-                self.actor_optimizer.zero_grad()
-                # last eq of [2] p.5
-                loss_l = -(loss_pi + self.α * (self.ε_kl - kl))
+                loss_policy = -(loss_pi + self.η_kl * (self.ε_kl - kl))
 
             else:
 
-
-                pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-
-                loss_pi = torch.mean(
-                    qij * (dist_targ.log_prob(sampled_actions).sum(-1)  # (N, K)
-                            + dist.log_prob(sampled_actions).sum(-1)  # (N, K)
-                    )
-                )
-
                 import ipdb; ipdb.set_trace()
-
-
-                kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=dist_targ.variance, A=dist.variance)
-
-                import ipdb; ipdb.set_trace()
-
-                if np.isnan(kl_μ.item()):  # This should not happen
-                    raise RuntimeError('kl_μ is nan')
-                if np.isnan(kl_Σ.item()):  # This should not happen
-                    raise RuntimeError('kl_Σ is nan')
-
-                # Update lagrange multipliers by gradient descent
-                # this equation is derived from last eq of [2] p.5,
-                # just differentiate with respect to α
-                # and update α so that the equation is to be minimized.
-                self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
-                self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
-
-                self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
-                self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
-
-                self.actor_optimizer.zero_grad()
-                # last eq of [2] p.5
-                loss_l = -(
-                        loss_pi
-                        + self.α_μ * (self.ε_kl_μ - kl_μ)
-                        + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
-                )
-
-        import ipdb; ipdb.set_trace()
+                #
+                # pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
+                #
+                # loss_pi = torch.mean(
+                #     qij * (dist_targ.log_prob(sampled_actions).sum(-1)  # (N, K)
+                #             + dist.log_prob(sampled_actions).sum(-1)  # (N, K)
+                #     )
+                # )
+                #
+                # kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=dist_targ.variance, A=dist.variance)
+                #
+                # import ipdb; ipdb.set_trace()
+                #
+                # if np.isnan(kl_μ.item()):  # This should not happen
+                #     raise RuntimeError('kl_μ is nan')
+                # if np.isnan(kl_Σ.item()):  # This should not happen
+                #     raise RuntimeError('kl_Σ is nan')
+                #
+                # # Update lagrange multipliers by gradient descent
+                # # this equation is derived from last eq of [2] p.5,
+                # # just differentiate with respect to α
+                # # and update α so that the equation is to be minimized.
+                # self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
+                # self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
+                #
+                # self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
+                # self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
+                #
+                # self.actor_optimizer.zero_grad()
+                # # last eq of [2] p.5
+                # loss_l = -(
+                #         loss_pi
+                #         + self.α_μ * (self.ε_kl_μ - kl_μ)
+                #         + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
+                # )
 
         # Extend policy loss with addons
-        for addon in self.policy_loss_addons:
-            loss_l += addon.compute_loss_term(self.actor, dist, batch)
 
-        return loss_l
+        #for addon in self.policy_loss_addons:
+        #    loss_policy += addon.compute_loss_term(self.actor, dist, batch)
+
+        return loss_policy
 
     def compute_loss_alpha(self, log_probs, per_weights=1):
         """
@@ -696,7 +711,8 @@ class MPO(Algorithm):
             p.requires_grad = False
 
         # Run one gradient descent step for pi.
-        loss_pi, logp_pi = self.compute_loss_pi(batch, per_weights)
+        loss_pi = self.compute_loss_pi(batch, per_weights)
+
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
@@ -704,17 +720,10 @@ class MPO(Algorithm):
         for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
             p.requires_grad = True
 
-        # Run one gradient descent step for alpha.
-        self.alpha_optimizer.zero_grad()
-        loss_alpha = self.compute_loss_alpha(logp_pi, per_weights)
-        loss_alpha.backward()
-
         info = {
             "loss_q1": loss_q1.detach().item(),
             "loss_q2": loss_q2.detach().item(),
             "loss_pi": loss_pi.detach().item(),
-            "loss_alpha": loss_alpha.detach().item(),
-            "alpha": self.alpha.detach().item(),
         }
 
         if "per_weights" in batch:

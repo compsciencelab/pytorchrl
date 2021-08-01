@@ -374,7 +374,7 @@ class SAC(Algorithm):
             with torch.no_grad():
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-                p_a2 = self.actor.dist.probs
+                p_a2 = dist.probs
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
 
