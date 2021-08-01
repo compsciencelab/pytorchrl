@@ -167,6 +167,28 @@ class MPO(Algorithm):
         for addon in self.policy_loss_addons:
             addon.setup(self.device)
 
+        self.dual_constraint = 0.1
+        self.kl_mean_constraint = 0.01
+        self.kl_var_constraint = 0.0001
+        self.kl_constraint = 0.01
+        self.discount_factor = 0.99
+        self.alpha_mean_scale = 1.0
+        self.alpha_var_scale = 100.0
+        self.alpha_scale = 10.0
+        self.alpha_mean_max = 0.1
+        self.alpha_var_max = 10.0
+        self.alpha_max = 1.0
+        self.sample_episode_num = 30
+        self.sample_episode_maxstep = 200
+        self.sample_action_num = 64
+        self.batch_size = 256
+        self.episode_rerun_num = 3
+        self.mstep_iteration_num = 5
+        self.evaluate_period = 10
+        self.evaluate_episode_num = 100
+        self.evaluate_episode_maxstep = 200
+
+
     @classmethod
     def create_factory(cls,
                        lr_q=1e-4,
@@ -332,6 +354,8 @@ class MPO(Algorithm):
              entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic=deterministic)
 
+        import pdb; pdb.set_trace()
+
         other = {prl.ACTPROBS: dist.probs}
 
         return action, clipped_action, rhs, other
@@ -435,22 +459,35 @@ class MPO(Algorithm):
         """
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
+        bs = o.shape[0]
+
+        # E-Step of Policy Improvement
+        pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
+        # here I need probs with shape (bs, ) !!!
+        import ipdb;
+        ipdb.set_trace()
+        N = 64
+        sampled_actions = dist.sample((N,))  # (N, bs, da)
+        expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
+        expanded_d = d[None, ...].expand(N, -1, -1)  # (N, bs, ds)
+        expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
+        expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
+
+        target_q1, target_q2, _ = self.actor.get_q_scores(
+            expanded_obs.reshape(-1, expanded_obs.shape[-1]),  # (N * bs, ds)
+            expanded_reshaped_rhs,  # get expanded rhs
+            expanded_d.reshape(-1, 1),  # (N * bs, ds)
+            sampled_actions.reshape(-1, sampled_actions.shape[-1]),  # (N * bs, ds)
+        )
+
+        target_q1 = target_q1.reshape(N, bs)  # (N, K)
+        target_q2 = target_q2.reshape(N, bs)  # (N, K)
 
         if self.discrete_version:
-
-            pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-            p_pi = dist.probs
-            z = (p_pi == 0.0).float() * 1e-8
-            logp_pi = torch.log(p_pi + z)
-            logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d)
-            q_pi = torch.sum(torch.min(q1_pi, q2_pi) * p_pi, dim=1, keepdim=True)
-
+            b_prob_np = dist.probs.cpu().transpose(0, 1).numpy()  # (K, da)
+            target_q_np = target_q1.cpu().transpose(0, 1).numpy()  # (K, da)
         else:
-
-            pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d, pi)
-            q_pi = torch.min(q1_pi, q2_pi)
+            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (K, N)
 
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
 
