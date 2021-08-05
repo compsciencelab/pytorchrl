@@ -312,8 +312,6 @@ class DDQN(Algorithm):
         # PER
         per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
 
-        #######################################################################
-
         # Compute DDQN loss and gradients
         loss, errors = self.compute_loss(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
