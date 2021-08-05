@@ -506,9 +506,11 @@ class MPO(Algorithm):
 
         if self.discrete_version:
 
-            da = dist_targ.probs.shape[-1]
-            actions = torch.arange(da)[..., None].expand(da, bs).to(self.device)  # (da, bs) ??????? ok, for each state in the batch, any possible action
-            dist_targ_log_probs = dist_targ.expand((da, bs)).log_prob(actions).exp()
+            N = dist_targ.probs.shape[-1]  # num actions
+            # da = ??? need to account for multi discrete actions
+
+            actions = torch.arange(N)[..., None].expand(N, bs).to(self.device)  # (da, bs) ??????? ok, for each state in the batch, any possible action
+            dist_targ_log_probs = dist_targ.expand((N, bs)).log_prob(actions).exp()
 
             target_q1, target_q2, _ = self.actor_targ.get_q_scores(o, rhs, d)  # (K, da)
             target_q1 = target_q1.transpose(1, 0)  # (da, K)
@@ -519,9 +521,8 @@ class MPO(Algorithm):
 
         else:
 
-            N = 64
-            da = a.shape[-1]
-
+            N = 64  # num sampled actions
+            da = a.shape[-1]  # num action dimensions
             sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
             expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
             expanded_d = d[None, ...].expand(N, -1, -1)  # (N, bs, 1)
@@ -583,7 +584,7 @@ class MPO(Algorithm):
             if self.discrete_version:
 
                 _, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-                loss_pi = torch.mean(qij * dist.expand((da, bs)).log_prob(actions))
+                loss_pi = torch.mean(qij * dist.expand((N, bs)).log_prob(actions))
                 kl = kl_divergence(dist, dist_targ).mean()
 
                 # Update lagrange multipliers by gradient descent
@@ -596,16 +597,25 @@ class MPO(Algorithm):
 
             else:
 
-                import ipdb; ipdb.set_trace()
-                #
-                # pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-                #
-                # loss_pi = torch.mean(
-                #     qij * (dist_targ.log_prob(sampled_actions).sum(-1)  # (N, K)
-                #             + dist.log_prob(sampled_actions).sum(-1)  # (N, K)
-                #     )
-                # )
-                #
+                _, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
+
+                loss_pi = torch.mean(
+                    qij * (
+                            dist_targ.expand((N, bs, da)).log_prob(sampled_actions).sum(-1)  # (N, K)
+                            + dist.expand((N, bs, da)).log_prob(sampled_actions).sum(-1)  # (N, K)
+                    )
+                )
+
+                kl = kl_divergence(dist, dist_targ).mean()
+
+                # Update lagrange multipliers by gradient descent
+                self.η_kl -= self.α * (self.ε_kl - kl).detach().item()
+
+                if self.η_kl < 0.0:
+                    self.η_kl = 0.0
+
+                loss_policy = -(loss_pi + self.η_kl * (self.ε_kl - kl))
+
                 # kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=dist_targ.variance, A=dist.variance)
                 #
                 # import ipdb; ipdb.set_trace()
@@ -635,8 +645,8 @@ class MPO(Algorithm):
 
         # Extend policy loss with addons
 
-        #for addon in self.policy_loss_addons:
-        #    loss_policy += addon.compute_loss_term(self.actor, dist, batch)
+        for addon in self.policy_loss_addons:
+           loss_policy += addon.compute_loss_term(self.actor, dist, batch)
 
         return loss_policy
 
