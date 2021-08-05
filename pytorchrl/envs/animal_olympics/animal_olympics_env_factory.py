@@ -2,13 +2,13 @@ import os
 from baselines import bench
 import animalai
 from animalai.envs.gym.environment import AnimalAIEnv
-from pytorchrl.envs.common import FrameSkipEnv, TransposeImage
+from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, LabAnimal, RewardShaping
 
 
 def animal_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
-        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None):
+        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -32,6 +32,8 @@ def animal_train_env_factory(
         Whether or not to use the reward shape wrapper.
     exe_path : str
         Path to obstacle environment executable.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -49,7 +51,7 @@ def animal_train_env_factory(
     id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
                       seed=0, n_arenas=1, arenas_configurations=None,
-                      greyscale=False, inference=realtime, resolution=None)
+                      greyscale=False, inference=False, resolution=None)
 
     env = RetroEnv(env)
 
@@ -66,13 +68,16 @@ def animal_train_env_factory(
 
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
+
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
 
     return env
 
 
 def animal_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
-        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None):
+        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -96,6 +101,8 @@ def animal_test_env_factory(
         Whether or not to use the reward shape wrapper.
     exe_path : str
         Path to obstacle environment executable.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -113,7 +120,7 @@ def animal_test_env_factory(
     id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
                       seed=0, n_arenas=1, arenas_configurations=None,
-                      greyscale=False, inference=realtime, resolution=None)
+                      greyscale=False, inference=False, resolution=None)
 
     env = RetroEnv(env)
 
@@ -130,5 +137,8 @@ def animal_test_env_factory(
 
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
+
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
 
     return env

@@ -3,6 +3,7 @@ from gym import spaces
 from collections import deque
 import numpy as np
 
+
 class FrameSkip(gym.Wrapper):
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
@@ -32,9 +33,11 @@ class FrameSkip(gym.Wrapper):
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
 
+
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):
-        """Stack k last frames.
+        """
+        Stack k last frames.
 
         Returns lazy array, which is much more memory efficient.
 
@@ -63,3 +66,35 @@ class FrameStack(gym.Wrapper):
         assert len(self.frames) == self.k
         # return LazyFrames(list(self.frames))
         return np.concatenate(self.frames, axis=-1)
+
+
+class DelayedReward(gym.Wrapper):
+    def __init__(self, env, delay=1):
+        """
+        Returns accumulated non-zero reward only every `delay`-th steps.
+        Can be used to simulate sparse-rewards environments.
+        """
+        gym.Wrapper.__init__(self, env)
+        self._delay = delay
+        self._step = 0
+        self._reward = 0.0
+
+    def step(self, action):
+        """Repeat action, sum reward, and max over last observations."""
+
+        self._step += 1
+        obs, reward, done, info = self.env.step(action)
+        self._reward += reward
+
+        if self._step % self._delay == 0 or done:
+            reward = self._reward
+            self._reward = 0.0
+        else:
+            reward = 0.0
+
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        self._step = 0
+        self._reward = 0.0
+        return self.env.reset(**kwargs)
