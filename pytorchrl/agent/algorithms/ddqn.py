@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
@@ -42,6 +43,8 @@ class DDQN(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     initial_epsilon : float
         initial value for DQN epsilon parameter.
     epsilon_decay : float
@@ -59,6 +62,7 @@ class DDQN(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=5000,
+                 max_grad_norm=0.5,
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
@@ -100,6 +104,7 @@ class DDQN(Algorithm):
         self.polyak = polyak
         self.epsilon = initial_epsilon
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.epsilon_decay = epsilon_decay
         self.target_update_interval = target_update_interval
 
@@ -142,6 +147,7 @@ class DDQN(Algorithm):
                        update_every=50,
                        test_every=5000,
                        start_steps=20000,
+                       max_grad_norm=0.5,
                        mini_batch_size=64,
                        num_test_episodes=5,
                        epsilon_decay=0.999,
@@ -173,6 +179,8 @@ class DDQN(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         initial_epsilon : float
             initial value for DQN epsilon parameter.
         epsilon_decay : float
@@ -197,6 +205,7 @@ class DDQN(Algorithm):
                        num_updates=num_updates,
                        update_every=update_every,
                        epsilon_decay=epsilon_decay,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        initial_epsilon=initial_epsilon,
                        num_test_episodes=num_test_episodes,
@@ -312,12 +321,11 @@ class DDQN(Algorithm):
         # PER
         per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
 
-        #######################################################################
-
         # Compute DDQN loss and gradients
         loss, errors = self.compute_loss(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss.backward()
+        nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
         grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
 
         info = {
