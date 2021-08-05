@@ -2,6 +2,7 @@ import itertools
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
@@ -48,6 +49,8 @@ class TD3(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor_critic updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -69,6 +72,7 @@ class TD3(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
+                 max_grad_norm=0.5,
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
@@ -108,6 +112,7 @@ class TD3(Algorithm):
         self.polyak = polyak
         self.device = device
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
         self.action_low = self.actor.action_space.low[0] # Can sometimes be a vector?
@@ -161,6 +166,7 @@ class TD3(Algorithm):
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
+                       max_grad_norm=0.5,
                        mini_batch_size=100,
                        num_test_episodes=5,
                        target_update_interval=1.0,
@@ -192,6 +198,8 @@ class TD3(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor_critic updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -212,6 +220,7 @@ class TD3(Algorithm):
                        start_steps=start_steps,
                        num_updates=num_updates,
                        update_every=update_every,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -428,6 +437,8 @@ class TD3(Algorithm):
         loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss_q.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(itertools.chain(
+            self.actor.q1.parameters(), self.actor.q2.parameters()), self.max_grad_norm)
         q_grads = get_gradients(self.actor.q1, self.actor.q2, grads_to_cpu=grads_to_cpu)
         grads = {"q_grads": q_grads}
 
@@ -444,6 +455,7 @@ class TD3(Algorithm):
             self.pi_optimizer.zero_grad()
             loss_pi.backward()
             self.prev_loss_pi = loss_pi
+            nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
             pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
             grads.update({"pi_grads": pi_grads})
 
