@@ -1,8 +1,9 @@
 import gym
 import pybullet_envs
-from pytorchrl.envs.common import FrameStack, FrameSkip
+from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 
-def pybullet_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1):
+
+def pybullet_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1, reward_delay=1):
     """
     Create train PyBullet environment.
 
@@ -20,6 +21,8 @@ def pybullet_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, fram
         Return only every `frame_skip`-th observation.
     frame_stack : int
         Observations composed of last `frame_stack` frames stacked.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -36,9 +39,13 @@ def pybullet_train_env_factory(env_id, index_worker=0, index_env=0, seed=0, fram
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
 
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
+
     return env
 
-def pybullet_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1):
+
+def pybullet_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame_skip=0, frame_stack=1, reward_delay=1):
     """
     Create test PyBullet environment.
 
@@ -56,6 +63,8 @@ def pybullet_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame
         Return only every `frame_skip`-th observation.
     frame_stack : int
         Observations composed of last `frame_stack` frames stacked.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -71,5 +80,8 @@ def pybullet_test_env_factory(env_id, index_worker=0, index_env=0, seed=0, frame
 
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
+
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
 
     return env
