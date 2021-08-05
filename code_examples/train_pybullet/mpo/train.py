@@ -51,7 +51,7 @@ def main():
 
     # 3. Define RL training algorithm
     algo_factory = MPO.create_factory(
-        lr_pi=args.lr, lr_q=args.lr, lr_alpha=args.lr, initial_alpha=args.alpha,
+        lr_pi=args.lr, lr_q=args.lr,
         gamma=args.gamma, polyak=args.polyak, num_updates=args.num_updates,
         update_every=args.update_every, start_steps=args.start_steps,
         mini_batch_size=args.mini_batch_size)

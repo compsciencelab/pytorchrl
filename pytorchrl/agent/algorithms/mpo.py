@@ -32,12 +32,8 @@ class MPO(Algorithm):
         Policy optimizer learning rate.
     lr_q : float
         Q-nets optimizer learning rate.
-    lr_alpha : float
-        Alpha optimizer learning rate.
     gamma : float
         Discount factor parameter.
-    initial_alpha : float
-        Initial entropy coefficient value (temperature).
     polyak : float
         SAC polyak averaging parameter.
     num_updates : int
@@ -70,13 +66,11 @@ class MPO(Algorithm):
                  actor,
                  lr_q=1e-4,
                  lr_pi=1e-4,
-                 lr_alpha=1e-4,
                  gamma=0.99,
                  polyak=0.995,
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
-                 initial_alpha=1.0,
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
@@ -120,17 +114,6 @@ class MPO(Algorithm):
         if self.actor.q2 is None:
             raise ValueError("SAC requires double q critic")
 
-        self.log_alpha = torch.tensor(
-            data=[np.log(initial_alpha)], dtype=torch.float32,
-            requires_grad=True, device=device)
-        self.alpha = self.log_alpha.detach().exp()
-
-        # Compute target entropy
-        target_entropy = self.calculate_target_entropy()
-        self.target_entropy = torch.tensor(
-            data=target_entropy, dtype=torch.float32,
-            requires_grad=False, device=device)
-
         # Create target networks
         self.actor_targ = deepcopy(actor)
 
@@ -148,19 +131,18 @@ class MPO(Algorithm):
 
         self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
-        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
         # or a list of PolicyLossAddOn instances
         assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
-            "SAC policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "MPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
             "or a list of PolicyLossAddOn instances"
         if isinstance(policy_loss_addons, list):
             for addon in policy_loss_addons:
                 assert isinstance(addon, PolicyLossAddOn), \
-                    "SAC policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "MPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
                     "instance or a list of PolicyLossAddOn instances"
         else:
             policy_loss_addons = [policy_loss_addons]
@@ -169,65 +151,55 @@ class MPO(Algorithm):
         for addon in self.policy_loss_addons:
             addon.setup(self.device)
 
-        self.dual_constraint = 0.1
-        self.kl_mean_constraint = 0.01
-        self.kl_var_constraint = 0.0001
-        self.kl_constraint = 0.01
-        self.discount_factor = 0.99
-        self.alpha_mean_scale = 1.0
-        self.alpha_var_scale = 100.0
-        self.alpha_scale = 10.0
-        self.alpha_mean_max = 0.1
-        self.alpha_var_max = 10.0
-        self.alpha_max = 1.0
-        self.sample_episode_num = 30
-        self.sample_episode_maxstep = 200
-        self.sample_action_num = 64
-        self.batch_size = 256
-        self.episode_rerun_num = 3
-        self.mstep_iteration_num = 5
-        self.evaluate_period = 10
-        self.evaluate_episode_num = 100
-        self.evaluate_episode_maxstep = 200
-
-        self.ε_dual = self.dual_constraint
-        self.ε_kl_μ = self.kl_mean_constraint
-        self.ε_kl_Σ = self.kl_var_constraint
-        self.ε_kl = self.kl_constraint
-        self.γ = self.discount_factor
-        self.α_μ_scale = self.alpha_mean_scale
-        self.α_Σ_scale = self.alpha_var_scale
-        self.α_scale = self.alpha_scale
-        self.α_μ_max = self.alpha_mean_max
-        self.α_Σ_max = self.alpha_var_max
-        self.α_max = self.alpha_max
-        self.sample_episode_num = self.sample_episode_num
-        self.sample_episode_maxstep = self.sample_episode_maxstep
-        self.sample_action_num = self.sample_action_num
-        self.batch_size = self.batch_size
-        self.episode_rerun_num = self.episode_rerun_num
-        self.mstep_iteration_num = self.mstep_iteration_num
-        self.evaluate_period = self.evaluate_period
-        self.evaluate_episode_num = self.evaluate_episode_num
-        self.evaluate_episode_maxstep = self.evaluate_episode_maxstep
+        # self.kl_mean_constraint = 0.01
+        # self.kl_var_constraint = 0.0001
+        # self.kl_constraint = 0.01
+        # self.alpha_mean_scale = 1.0
+        # self.alpha_var_scale = 100.0
+        # self.alpha_scale = 10.0
+        # self.alpha_mean_max = 0.1
+        # self.alpha_var_max = 10.0
+        # self.alpha_max = 1.0
+        # self.sample_episode_num = 30
+        # self.sample_episode_maxstep = 200
+        # self.sample_action_num = 64
+        # self.batch_size = 256
+        # self.episode_rerun_num = 3
+        # self.mstep_iteration_num = 5
+        # self.evaluate_period = 10
+        # self.evaluate_episode_num = 100
+        # self.evaluate_episode_maxstep = 200
+        #
+        # self.ε_kl_μ = self.kl_mean_constraint
+        # self.ε_kl_Σ = self.kl_var_constraint
+        # self.α_μ_scale = self.alpha_mean_scale
+        # self.α_Σ_scale = self.alpha_var_scale
+        # self.α_scale = self.alpha_scale
+        # self.α_μ_max = self.alpha_mean_max
+        # self.α_Σ_max = self.alpha_var_max
+        # self.α_max = self.alpha_max
+        # self.sample_episode_num = self.sample_episode_num
+        # self.sample_episode_maxstep = self.sample_episode_maxstep
+        # self.sample_action_num = self.sample_action_num
+        # self.batch_size = self.batch_size
+        # self.episode_rerun_num = self.episode_rerun_num
+        # self.mstep_iteration_num = self.mstep_iteration_num
+        # self.evaluate_period = self.evaluate_period
+        # self.evaluate_episode_num = self.evaluate_episode_num
+        # self.evaluate_episode_maxstep = self.evaluate_episode_maxstep
 
         dual_constraint = 0.1
         kl_constraint = 0.01
-        learning_rate = 0.99
         alpha = 1.0
-        episodes = 1000
-        sample_episodes = 1
-        episode_length = 1000,
-        lagrange_it = 5
+        mstep_iterations = 5
 
         self.α = alpha
-        self.ε = dual_constraint
+        self.ε_dual = dual_constraint
         self.ε_kl = kl_constraint
-        self.γ = learning_rate
-        self.episodes = episodes
-        self.sample_episodes = sample_episodes
-        self.episode_length = episode_length
-        self.lagrange_it = lagrange_it
+        self.γ = gamma
+        self.mstep_iterations = mstep_iterations
+
+        # initialize Lagrange Multiplier
         self.η = np.random.rand()
         self.η_kl = 0.0
 
@@ -235,20 +207,18 @@ class MPO(Algorithm):
     def create_factory(cls,
                        lr_q=1e-4,
                        lr_pi=1e-4,
-                       lr_alpha=1e-4,
                        gamma=0.99,
                        polyak=0.995,
                        num_updates=50,
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
-                       initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
                        target_update_interval=1.0,
                        policy_loss_addons=[]):
         """
-        Returns a function to create new SAC instances.
+        Returns a function to create new MPO instances.
 
         Parameters
         ----------
@@ -256,14 +226,10 @@ class MPO(Algorithm):
             Policy optimizer learning rate.
         lr_q : float
             Q-nets optimizer learning rate.
-        lr_alpha : float
-            Alpha optimizer learning rate.
         gamma : float
             Discount factor parameter.
-        initial_alpha : float
-            Initial entropy coefficient value.
         polyak : float
-            SAC polyak averaging parameter.
+            Polyak averaging parameter.
         num_updates : int
             Num consecutive actor updates before data collection continues.
         update_every : int
@@ -284,13 +250,12 @@ class MPO(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new SAC class instance.
+            creates a new MPO class instance.
         """
 
         def create_algo_instance(device, actor):
             return cls(lr_q=lr_q,
                        lr_pi=lr_pi,
-                       lr_alpha=lr_alpha,
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
@@ -299,7 +264,6 @@ class MPO(Algorithm):
                        start_steps=start_steps,
                        num_updates=num_updates,
                        update_every=update_every,
-                       initial_alpha=initial_alpha,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -366,7 +330,7 @@ class MPO(Algorithm):
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
-        SAC acting function.
+        MPO acting function.
 
         Parameters
         ----------
@@ -388,7 +352,7 @@ class MPO(Algorithm):
         rhs : torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
         other : dict
-            Additional SAC predictions, which are not used in other algorithms.
+            Additional MPO predictions, which are not used in other algorithms.
         """
 
         with torch.no_grad():
@@ -400,12 +364,12 @@ class MPO(Algorithm):
 
     def compute_loss_q(self, batch, n_step=1, per_weights=1):
         """
-        Calculate SAC Q-nets loss
+        Calculate MPO Q-nets loss
 
         Parameters
         ----------
         batch : dict
-            Data batch dict containing all required tensors to compute SAC losses.
+            Data batch dict containing all required tensors to compute MPO losses.
         n_step : int or float
             Number of future steps used to computed the truncated n-step return value.
         per_weights :
@@ -438,13 +402,21 @@ class MPO(Algorithm):
             with torch.no_grad():
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-                p_a2 = dist.probs
-                z = (p_a2 == 0.0).float() * 1e-8
-                logp_a2 = torch.log(p_a2 + z)
+
+                # Option 1
+                # p_a2 = dist.probs
+
+                # Option 2 - CAN THAT IMPROVE SAC DISCRETE ???????
+                bs, ds = o.shape[0], o.shape[-1]
+                N = dist.probs.shape[-1]  # num actions
+                actions = torch.arange(N)[..., None].expand(-1, bs).to(self.device)  # (da, bs)
+                p_a2 = dist.expand((N, bs)).log_prob(actions).exp().transpose(0, 1)  # (bs, da)
 
                 # Target Q-values
                 q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
-                q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ) - self.alpha * logp_a2)).sum(dim=1, keepdim=True)
+
+                # q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ))).sum(dim=1, keepdim=True)
+                q_pi_targ = (p_a2 * q1_pi_targ).sum(dim=1, keepdim=True)
 
                 assert r.shape == q_pi_targ.shape
                 backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
@@ -462,9 +434,10 @@ class MPO(Algorithm):
 
                 # Target Q-values
                 q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-                q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+                # q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+                q_pi_targ = q1_pi_targ
 
-                backup = r + (self.gamma ** n_step) * (1 - d2) * (q_pi_targ - self.alpha * logp_a2)
+                backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
         loss_q1 = (((q1 - backup) ** 2) * per_weights).mean()
@@ -479,19 +452,19 @@ class MPO(Algorithm):
 
     def compute_loss_pi(self, batch, per_weights=1):
         """
-        Calculate SAC policy loss.
+        Calculate MPO policy loss.
 
         Parameters
         ----------
         batch : dict
-            Data batch dict containing all required tensors to compute SAC losses.
+            Data batch dict containing all required tensors to compute MPO losses.
         per_weights :
             Prioritized Experience Replay (PER) important sampling weights or 1.0.
 
         Returns
         -------
         loss_pi : torch.tensor
-            SAC policy loss.
+            MPO policy loss.
         logp_pi : torch.tensor
             Log probability of predicted next action.
         """
@@ -580,7 +553,7 @@ class MPO(Algorithm):
 
         # M-Step of Policy Improvement
         # [2] 4.2 Fitting an improved policy (Step 3)
-        for _ in range(self.mstep_iteration_num):
+        for _ in range(self.mstep_iterations):
             if self.discrete_version:
 
                 _, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
@@ -652,7 +625,7 @@ class MPO(Algorithm):
 
     def compute_loss_alpha(self, log_probs, per_weights=1):
         """
-        Calculate SAC entropy loss.
+        Calculate MPO entropy loss.
 
         Parameters
         ----------
@@ -664,13 +637,13 @@ class MPO(Algorithm):
         Returns
         -------
         alpha_loss : torch.tensor
-            SAC entropy loss.
+            MPO entropy loss.
         """
         alpha_loss = - ((self.log_alpha * (log_probs + self.target_entropy).detach()) * per_weights).mean()
         return alpha_loss
 
     def calculate_target_entropy(self):
-        """Calculate SAC target entropy"""
+        """Calculate MPO target entropy"""
         if self.discrete_version:
             target = - np.log(1.0 / self.actor.action_space.n) * 0.98
         else:
@@ -687,7 +660,7 @@ class MPO(Algorithm):
         Parameters
         ----------
         batch : dict
-            data batch containing all required tensors to compute SAC losses.
+            data batch containing all required tensors to compute MPO losses.
         grads_to_cpu : bool
             If gradient tensor will be sent to another node, need to be in CPU.
 
@@ -696,7 +669,7 @@ class MPO(Algorithm):
         grads : list of tensors
             List of actor gradients.
         info : dict
-            Dict containing current SAC iteration information.
+            Dict containing current MPO iteration information.
         """
 
         # Recurrent burn-in
@@ -771,8 +744,6 @@ class MPO(Algorithm):
 
         self.q_optimizer.step()
         self.pi_optimizer.step()
-        self.alpha_optimizer.step()
-        self.alpha = self.log_alpha.detach().exp()
 
         # Update target networks by polyak averaging.
         self.iter += 1
@@ -788,8 +759,6 @@ class MPO(Algorithm):
             Dict containing actor weights to be set.
         """
         self.actor.load_state_dict(actor_weights)
-        self.alpha_optimizer.step()
-        self.alpha = self.log_alpha.detach().exp()
 
         # Update target networks by polyak averaging.
         self.iter += 1
@@ -813,6 +782,4 @@ class MPO(Algorithm):
             for param_group in self.pi_optimizer.param_groups:
                 param_group['lr'] = new_parameter_value
             for param_group in self.q_optimizer.param_groups:
-                param_group['lr'] = new_parameter_value
-            for param_group in self.alpha_optimizer.param_groups:
                 param_group['lr'] = new_parameter_value
