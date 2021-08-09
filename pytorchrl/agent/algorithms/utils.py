@@ -56,6 +56,8 @@ def gaussian_kl(μi, μ, Ai, A):
     :return: mean of determinanats of Σi, Σ
     ref : https://stanford.edu/~jduchi/projects/general_notes.pdf page.13
     """
+    import ipdb; ipdb.set_trace()
+
     n = A.size(-1)
     μi = μi.unsqueeze(-1)  # (B, n, 1)
     μ = μ.unsqueeze(-1)  # (B, n, 1)

@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 from copy import deepcopy
+from scipy.optimize import minimize
 
 import torch
 import torch.nn as nn
@@ -11,6 +12,9 @@ import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients, gaussian_kl
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
+
+
+# TODO. Review continuous MPO, now not working!
 
 
 class MPO(Algorithm):
@@ -67,7 +71,7 @@ class MPO(Algorithm):
                  lr_q=1e-4,
                  lr_pi=1e-4,
                  gamma=0.99,
-                 polyak=0.995,
+                 polyak=1.0,
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
@@ -75,7 +79,8 @@ class MPO(Algorithm):
                  mini_batch_size=64,
                  num_test_episodes=5,
                  target_update_interval=1,
-                 policy_loss_addons=[]):
+                 policy_loss_addons=[],
+                 ):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -86,7 +91,7 @@ class MPO(Algorithm):
         self._start_steps = int(start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(1) # Default to 1 for off-policy algorithms
+        self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
 
         # Number of data samples collected between network update stages
         self._update_every = int(update_every)
@@ -103,7 +108,7 @@ class MPO(Algorithm):
         # Number of episodes to complete when testing
         self._num_test_episodes = int(num_test_episodes)
 
-        # ---- SAC-specific attributes ----------------------------------------
+        # ---- MPO-specific attributes ----------------------------------------
 
         self.iter = 0
         self.polyak = polyak
@@ -111,8 +116,41 @@ class MPO(Algorithm):
         self.actor = actor
         self.target_update_interval = target_update_interval
 
-        if self.actor.q2 is None:
-            raise ValueError("SAC requires double q critic")
+        kl_mean_constraint = 0.01
+        kl_var_constraint = 0.0001
+        alpha_mean_scale = 1.0
+        alpha_var_scale = 100.0
+        alpha_scale = 10.0
+        alpha_mean_max = 0.1
+        alpha_var_max = 10.0
+        alpha_max = 1.0
+        dual_constraint = 0.1
+        kl_constraint = 0.01
+        alpha = 1.0
+        mstep_iterations = 5
+        sample_action_num = 64
+        max_grad_norm = 0.5
+
+        self.ε_kl_μ = kl_mean_constraint
+        self.ε_kl_Σ = kl_var_constraint
+        self.α_μ_scale = alpha_mean_scale
+        self.α_Σ_scale = alpha_var_scale
+        self.α_scale = alpha_scale
+        self.α_μ_max = alpha_mean_max
+        self.α_Σ_max = alpha_var_max
+        self.α_max = alpha_max
+        self.ε_dual = dual_constraint
+        self.ε_kl = kl_constraint
+        self.γ = gamma  # unused
+        self.mstep_iterations = mstep_iterations
+        self.sample_action_num = sample_action_num
+        self.max_grad_norm = max_grad_norm
+
+        # initialize Lagrange Multiplier
+        self.η = np.random.rand()
+        self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.α_Σ = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.α = 0.0  # lagrangian multiplier for discrete action space in the M-step
 
         # Create target networks
         self.actor_targ = deepcopy(actor)
@@ -122,7 +160,8 @@ class MPO(Algorithm):
             p.requires_grad = False
 
         # List of parameters for both Q-networks
-        q_params = itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters())
+        # q_params = itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters())
+        q_params = self.actor.q1.parameters()
 
         # List of parameters for policy network
         p_params = itertools.chain(self.actor.policy_net.parameters())
@@ -150,58 +189,6 @@ class MPO(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.device)
-
-        # self.kl_mean_constraint = 0.01
-        # self.kl_var_constraint = 0.0001
-        # self.kl_constraint = 0.01
-        # self.alpha_mean_scale = 1.0
-        # self.alpha_var_scale = 100.0
-        # self.alpha_scale = 10.0
-        # self.alpha_mean_max = 0.1
-        # self.alpha_var_max = 10.0
-        # self.alpha_max = 1.0
-        # self.sample_episode_num = 30
-        # self.sample_episode_maxstep = 200
-        # self.sample_action_num = 64
-        # self.batch_size = 256
-        # self.episode_rerun_num = 3
-        # self.mstep_iteration_num = 5
-        # self.evaluate_period = 10
-        # self.evaluate_episode_num = 100
-        # self.evaluate_episode_maxstep = 200
-        #
-        # self.ε_kl_μ = self.kl_mean_constraint
-        # self.ε_kl_Σ = self.kl_var_constraint
-        # self.α_μ_scale = self.alpha_mean_scale
-        # self.α_Σ_scale = self.alpha_var_scale
-        # self.α_scale = self.alpha_scale
-        # self.α_μ_max = self.alpha_mean_max
-        # self.α_Σ_max = self.alpha_var_max
-        # self.α_max = self.alpha_max
-        # self.sample_episode_num = self.sample_episode_num
-        # self.sample_episode_maxstep = self.sample_episode_maxstep
-        # self.sample_action_num = self.sample_action_num
-        # self.batch_size = self.batch_size
-        # self.episode_rerun_num = self.episode_rerun_num
-        # self.mstep_iteration_num = self.mstep_iteration_num
-        # self.evaluate_period = self.evaluate_period
-        # self.evaluate_episode_num = self.evaluate_episode_num
-        # self.evaluate_episode_maxstep = self.evaluate_episode_maxstep
-
-        dual_constraint = 0.1
-        kl_constraint = 0.01
-        alpha = 1.0
-        mstep_iterations = 5
-
-        self.α = alpha
-        self.ε_dual = dual_constraint
-        self.ε_kl = kl_constraint
-        self.γ = gamma
-        self.mstep_iterations = mstep_iterations
-
-        # initialize Lagrange Multiplier
-        self.η = np.random.rand()
-        self.η_kl = 0.0
 
     @classmethod
     def create_factory(cls,
@@ -391,23 +378,20 @@ class MPO(Algorithm):
         a, r = batch[prl.ACT], batch[prl.REW]
         o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
+        bs, ds = o.shape[0], o.shape[-1]
+
         if self.discrete_version:
 
             # Q-values for all actions
-            q1, q2, _ = self.actor.get_q_scores(o, rhs, d)
+            q1, _, _ = self.actor.get_q_scores(o, rhs, d)
             q1 = q1.gather(1, a.long())
-            q2 = q2.gather(1, a.long())
 
             # Bellman backup for Q functions
             with torch.no_grad():
                 # Target actions come from *current* policy
-                a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-
-                # Option 1
-                # p_a2 = dist.probs
+                a2, _, _, _, _, dist = self.actor_targ.get_action(o2, rhs2, d2)
 
                 # Option 2 - CAN THAT IMPROVE SAC DISCRETE ???????
-                bs, ds = o.shape[0], o.shape[-1]
                 N = dist.probs.shape[-1]  # num actions
                 actions = torch.arange(N)[..., None].expand(-1, bs).to(self.device)  # (da, bs)
                 p_a2 = dist.expand((N, bs)).log_prob(actions).exp().transpose(0, 1)  # (bs, da)
@@ -423,32 +407,46 @@ class MPO(Algorithm):
 
         else:
 
+            N = self.sample_action_num
+            da = a.shape[-1]  # num action dimensions
+
             # Q-values for all actions
-            q1, q2, _ = self.actor.get_q_scores(o, rhs, d, a)
+            q1, _, _ = self.actor.get_q_scores(o, rhs, d, a)
 
             # Bellman backup for Q functions
             with torch.no_grad():
 
                 # Target actions come from *current* policy
-                a2, _, logp_a2, _, _, dist = self.actor.get_action(o2, rhs2, d2)
+                a2, _, logp_a2, _, _, dist = self.actor_targ.get_action(o2, rhs2, d2)
 
-                # Target Q-values
-                q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-                # q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
-                q_pi_targ = q1_pi_targ
+                sampled_actions = dist.sample((N,)).transpose(0, 1)  # (bs, N, da)
+                expanded_obs2 = o2[:, None, :].expand(-1, N, -1)  # (bs, N, ds)
+                expanded_d2 = d2[:, None, :].expand(-1, N, -1)  # (bs, N, 1)
+                expanded_rhs2 = {k: v[:, None, :].expand(-1, N, -1) for k, v in rhs2.items()}
+                expanded_reshaped_rhs2 = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs2.items()}
+
+                next_q1, _, _ = self.actor_targ.get_q_scores(
+                    expanded_obs2.reshape(-1, ds),  # (N * bs, ds)
+                    expanded_reshaped_rhs2,  # get expanded rhs
+                    expanded_d2.reshape(-1, 1),  # (N * bs, ds)
+                    sampled_actions.reshape(-1, da),  # (N * bs, da)
+                )  # (N * bs, 1)
+
+                expected_next_q1 = next_q1.reshape(bs, N).mean(dim=1, keepdim=True)  # (B,)
+                q_pi_targ = expected_next_q1
 
                 backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
-        loss_q1 = (((q1 - backup) ** 2) * per_weights).mean()
-        loss_q2 = (((q2 - backup) ** 2) * per_weights).mean()
-        loss_q = 0.5 * loss_q1 + 0.5 * loss_q2
+        loss_q = (((q1 - backup) ** 2) * per_weights).mean()
+        # loss_q = (((q1 - backup).abs()) * per_weights).mean()
 
         # errors = (torch.min(q1, q2) - backup).abs().detach().cpu()
         # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
-        errors = (0.5 * (q1 - backup).abs() + 0.5 * (q2 - backup).abs()).detach().cpu()
+        # errors = (0.5 * (q1 - backup).abs() + 0.5 * (q2 - backup).abs()).detach().cpu()
+        errors = ((q1 - backup).abs()).detach().cpu()
 
-        return loss_q1, loss_q2, loss_q, errors
+        return loss_q, errors
 
     def compute_loss_pi(self, batch, per_weights=1):
         """
@@ -479,22 +477,22 @@ class MPO(Algorithm):
 
         if self.discrete_version:
 
-            N = dist_targ.probs.shape[-1]  # num actions
-            # da = ??? need to account for multi discrete actions
+            N = dist_targ.probs.shape[-1]  # num possible actions actions, env.action_space.n
 
-            actions = torch.arange(N)[..., None].expand(N, bs).to(self.device)  # (da, bs) ??????? ok, for each state in the batch, any possible action
-            dist_targ_log_probs = dist_targ.expand((N, bs)).log_prob(actions).exp()
+            # for each state in the batch, any possible action
+            actions = torch.arange(N)[..., None].expand(N, bs).to(self.device)  # (N, bs)
+            dist_targ_probs = dist_targ.expand((N, bs)).log_prob(actions).exp()  # (N, bs)
 
-            target_q1, target_q2, _ = self.actor_targ.get_q_scores(o, rhs, d)  # (K, da)
-            target_q1 = target_q1.transpose(1, 0)  # (da, K)
-            target_q2 = target_q2.transpose(1, 0)  # (da, K)
+            target_q1, _, _ = self.actor_targ.get_q_scores(o, rhs, d)  # (bs, N)
+            target_q1 = target_q1.transpose(1, 0)  # (N, K)
 
-            b_prob_np = dist_targ_log_probs.cpu().transpose(0, 1).numpy()  # (K, da)
-            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (K, da)
+            b_prob_np = dist_targ_probs.cpu().transpose(0, 1).numpy()  # (bs, N)
+            target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
         else:
 
-            N = 64  # num sampled actions
+            # TODO. are these expands correct ?
+            N = self.sample_action_num
             da = a.shape[-1]  # num action dimensions
             sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
             expanded_obs = o[None, ...].expand(N, -1, -1)  # (N, bs, ds)
@@ -502,14 +500,13 @@ class MPO(Algorithm):
             expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
             expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
 
-            target_q1, target_q2, _ = self.actor_targ.get_q_scores(
+            target_q1, _, _ = self.actor_targ.get_q_scores(
                 expanded_obs.reshape(-1, ds),  # (N * bs, ds)
                 expanded_reshaped_rhs,  # get expanded rhs
                 expanded_d.reshape(-1, 1),  # (N * bs, ds)
                 sampled_actions.reshape(-1, da),  # (N * bs, da)
             )
             target_q1 = target_q1.reshape(N, bs)  # (N, bs)
-            target_q2 = target_q2.reshape(N, bs)  # (N, bs)
             target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
         # https://arxiv.org/pdf/1812.02256.pdf
@@ -543,13 +540,10 @@ class MPO(Algorithm):
                 return η * self.ε_dual + np.mean(max_q) + η * np.mean(np.log(
                     np.mean(np.exp((target_q1_np - max_q[:, None]) / η), axis=1)))
 
-        from scipy.optimize import minimize
         bounds = [(1e-6, None)]
         res = minimize(dual, np.array([self.η]), method='SLSQP', bounds=bounds)
         self.η = res.x[0]
-        qij = torch.softmax(target_q1 / self.η, dim=0)  # (N, K) or (da, K)
-
-        ################################################################################################################
+        qij = torch.softmax(target_q1 / self.η, dim=0)  # (N, bs)
 
         # M-Step of Policy Improvement
         # [2] 4.2 Fitting an improved policy (Step 3)
@@ -561,12 +555,13 @@ class MPO(Algorithm):
                 kl = kl_divergence(dist, dist_targ).mean()
 
                 # Update lagrange multipliers by gradient descent
-                self.η_kl -= self.α * (self.ε_kl - kl).detach().item()
-
-                if self.η_kl < 0.0:
-                    self.η_kl = 0.0
-
-                loss_policy = -(loss_pi + self.η_kl * (self.ε_kl - kl))
+                # this equation is derived from last eq of [2] p.5,
+                # just differentiate with respect to α
+                # and update α so that the equation is to be minimized.
+                self.α -= self.α_scale * (self.ε_kl - kl).detach().item()
+                self.α = np.clip(self.α, 0.0, self.α_max)
+                # last eq of [2] p.5
+                loss_policy = -(loss_pi + self.α * (self.ε_kl - kl))
 
             else:
 
@@ -579,45 +574,34 @@ class MPO(Algorithm):
                     )
                 )
 
-                kl = kl_divergence(dist, dist_targ).mean()
+                # TODO. is this correct ? or does the gradient flow with this?
+                A = torch.eye(dist.variance.shape[-1]).to(self.device) * dist.variance.unsqueeze(2).expand(*dist.variance.size(), dist.variance.size(1))
+                Ai = torch.eye(dist_targ.variance.shape[-1]).to(self.device) * dist_targ.variance.unsqueeze(2).expand(*dist_targ.variance.size(), dist_targ.variance.size(1))
+                kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=Ai, A=A)
+
+                if np.isnan(kl_μ.item()):  # This should not happen
+                    raise RuntimeError('kl_μ is nan')
+                if np.isnan(kl_Σ.item()):  # This should not happen
+                    raise RuntimeError('kl_Σ is nan')
 
                 # Update lagrange multipliers by gradient descent
-                self.η_kl -= self.α * (self.ε_kl - kl).detach().item()
+                # this equation is derived from last eq of [2] p.5,
+                # just differentiate with respect to α
+                # and update α so that the equation is to be minimized.
+                self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
+                self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
 
-                if self.η_kl < 0.0:
-                    self.η_kl = 0.0
+                self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
+                self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
 
-                loss_policy = -(loss_pi + self.η_kl * (self.ε_kl - kl))
-
-                # kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=dist_targ.variance, A=dist.variance)
-                #
-                # import ipdb; ipdb.set_trace()
-                #
-                # if np.isnan(kl_μ.item()):  # This should not happen
-                #     raise RuntimeError('kl_μ is nan')
-                # if np.isnan(kl_Σ.item()):  # This should not happen
-                #     raise RuntimeError('kl_Σ is nan')
-                #
-                # # Update lagrange multipliers by gradient descent
-                # # this equation is derived from last eq of [2] p.5,
-                # # just differentiate with respect to α
-                # # and update α so that the equation is to be minimized.
-                # self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
-                # self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
-                #
-                # self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
-                # self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
-                #
-                # self.actor_optimizer.zero_grad()
-                # # last eq of [2] p.5
-                # loss_l = -(
-                #         loss_pi
-                #         + self.α_μ * (self.ε_kl_μ - kl_μ)
-                #         + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
-                # )
+                # last eq of [2] p.5
+                loss_policy = -(
+                        loss_pi
+                        + self.α_μ * (self.ε_kl_μ - kl_μ)
+                        + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
+                )
 
         # Extend policy loss with addons
-
         for addon in self.policy_loss_addons:
            loss_policy += addon.compute_loss_term(self.actor, dist, batch)
 
@@ -683,9 +667,10 @@ class MPO(Algorithm):
         per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
 
         # Run one gradient descent step for Q1 and Q2
-        loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
+        loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss_q.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
         q_grads = get_gradients(self.actor.q1, self.actor.q2, grads_to_cpu=grads_to_cpu)
 
         # Freeze Q-networks so you don't waste computational effort
@@ -698,14 +683,14 @@ class MPO(Algorithm):
 
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
+        nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
         for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
             p.requires_grad = True
 
         info = {
-            "loss_q1": loss_q1.detach().item(),
-            "loss_q2": loss_q2.detach().item(),
+            "loss_q": loss_q.detach().item(),
             "loss_pi": loss_pi.detach().item(),
         }
 
