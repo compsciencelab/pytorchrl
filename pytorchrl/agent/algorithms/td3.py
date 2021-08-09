@@ -360,7 +360,7 @@ class TD3(Algorithm):
         # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
 
         # reset Noise
-        self.actor.dist.noise.reset()
+        self.actor.policy_net.dist.noise.reset()
 
         return loss_q1, loss_q2, loss_q, errors
 

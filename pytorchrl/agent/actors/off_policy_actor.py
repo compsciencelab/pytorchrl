@@ -2,6 +2,7 @@ import gym
 import torch
 import torch.nn as nn
 import numpy as np
+from collections import OrderedDict
 
 import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
@@ -310,10 +311,10 @@ class OffPolicyActor(nn.Module):
             act2, _, _, rhs2, _ = self.get_action(
                 burn_in_data[prl.OBS2], burn_in_data[prl.RHS2], burn_in_data[prl.DONE2])
 
-            _, _, rhs = self.get_q_scores(
-                burn_in_data[prl.OBS], rhs, burn_in_data[prl.DONE], act)
-            _, _, rhs2 = self.get_q_scores(
-                burn_in_data[prl.OBS2], rhs2, burn_in_data[prl.DONE2], act2)
+            rhs = self.get_q_scores(
+                burn_in_data[prl.OBS], rhs, burn_in_data[prl.DONE], act).get("rhs")
+            rhs2 = self.get_q_scores(
+                burn_in_data[prl.OBS2], rhs2, burn_in_data[prl.DONE2], act2).get("rhs2")
 
             for k in rhs:
                 rhs[k] = rhs[k].detach()
@@ -354,12 +355,12 @@ class OffPolicyActor(nn.Module):
             Entropy of the predicted action distribution.
         """
 
-        x = self.policy_common_feature_extractor(self.policy_obs_feature_extractor(obs))
+        x = self.policy_net.common_feature_extractor(self.policy_net.obs_feature_extractor(obs))
 
         if self.recurrent_nets:
-            x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
+            x, rhs["rhs_act"] = self.policy_net.memory_net(x, rhs["rhs_act"], done)
 
-        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
             x, deterministic=deterministic)
 
         if self.unscale:
@@ -433,7 +434,7 @@ class OffPolicyActor(nn.Module):
             Updated recurrent hidden states.
         """
 
-        outputs = []
+        outputs = {}
         for i in range(self.number_of_critics):
             q = getattr(self, "q{}".format(i + 1))
             features = q.obs_feature_extractor(obs)
@@ -448,11 +449,10 @@ class OffPolicyActor(nn.Module):
                     features, rhs["rhs_q{}".format(i + 1)], done)
 
             q_scores = q.predictor(features)
-            outputs.append(q_scores)
+            outputs["q{}".format(i + 1)] = q_scores
 
-        outputs.append(rhs)
-
-        return tuple(outputs)
+        outputs["rhs"] = rhs
+        return outputs
 
     def create_critic(self, name):
         """
@@ -479,7 +479,7 @@ class OffPolicyActor(nn.Module):
         obs_extractor = self.obs_feature_extractor or nn.Identity
         q_obs_feature_extractor = obs_extractor(
             self.input_space, **self.obs_feature_extractor_kwargs)
-        obs_feature_size = int(np.prod(self.q1_obs_feature_extractor(
+        obs_feature_size = int(np.prod(q_obs_feature_extractor(
             torch.randn(1, *self.input_space.shape)).shape))
 
         # ---- 3. Define shared feature extractor -----------------------------
@@ -489,7 +489,7 @@ class OffPolicyActor(nn.Module):
             q_outputs = self.action_space.n
 
         elif isinstance(self.action_space, gym.spaces.Box):
-            act_feature_size = int(np.prod(self.q1_act_feature_extractor(
+            act_feature_size = int(np.prod(q_act_feature_extractor(
                 torch.randn(1, *self.action_space.shape)).shape)) if self.act_feature_extractor \
                 else np.prod(self.action_space.shape)
             q_outputs = 1
@@ -503,7 +503,7 @@ class OffPolicyActor(nn.Module):
 
         # ---- 4. Define memory network ---------------------------------------
 
-        feature_size = int(np.prod(self.q1_common_feature_extractor(
+        feature_size = int(np.prod(q_common_feature_extractor(
             torch.randn(1, feature_size)).shape))
         q_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs) if\
             self.recurrent_nets else nn.Identity()
@@ -517,7 +517,7 @@ class OffPolicyActor(nn.Module):
 
         # ---- 6. Concatenate all q1 net modules ------------------------------
 
-        q_net = nn.Sequential(nn.OrderedDict([
+        q_net = nn.Sequential(OrderedDict([
             ('obs_feature_extractor', q_obs_feature_extractor),
             ('act_feature_extractor', q_act_feature_extractor),
             ('common_feature_extractor', q_common_feature_extractor),
@@ -551,7 +551,7 @@ class OffPolicyActor(nn.Module):
 
         # ---- 2. Define Common feature extractor -----------------------------
 
-        feature_size = int(np.prod(self.policy_obs_feature_extractor(
+        feature_size = int(np.prod(policy_obs_feature_extractor(
             torch.randn(1, *self.input_space.shape)).shape))
 
         policy_common_feature_extractor = self.common_feature_extractor(
@@ -559,7 +559,7 @@ class OffPolicyActor(nn.Module):
 
         # ---- 3. Define memory network  --------------------------------------
 
-        feature_size = int(np.prod(self.policy_common_feature_extractor(
+        feature_size = int(np.prod(policy_common_feature_extractor(
             torch.randn(1, feature_size)).shape))
         self.recurrent_size = feature_size
         if self.recurrent_nets:
@@ -590,7 +590,7 @@ class OffPolicyActor(nn.Module):
 
         # ---- 5. Concatenate all policy modules ------------------------------
 
-        policy_net = nn.Sequential(nn.OrderedDict([
+        policy_net = nn.Sequential(OrderedDict([
             ('obs_feature_extractor', policy_obs_feature_extractor),
             ('common_feature_extractor', policy_common_feature_extractor),
             ('memory_net', policy_memory_net), ('dist', dist),
