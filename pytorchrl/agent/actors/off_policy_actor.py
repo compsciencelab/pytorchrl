@@ -90,15 +90,10 @@ class OffPolicyActor(nn.Module):
 
         super(OffPolicyActor, self).__init__()
 
+        self.noise = noise
         self.input_space = input_space
         self.action_space = action_space
         self.deterministic = deterministic
-        self.recurrent_nets = recurrent_nets
-        self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
-
-        # NEW
-        self.noise = noise
-        self.number_of_critics = number_of_critics
         self.act_feature_extractor = act_feature_extractor
         self.act_feature_extractor_kwargs = act_feature_extractor_kwargs
         self.obs_feature_extractor = obs_feature_extractor
@@ -107,6 +102,8 @@ class OffPolicyActor(nn.Module):
         self.common_feature_extractor_kwargs = common_feature_extractor_kwargs
         self.recurrent_nets = recurrent_nets
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
+        self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
+        self.number_of_critics = number_of_critics
 
         #######################################################################
         #                           POLICY NETWORK                            #
