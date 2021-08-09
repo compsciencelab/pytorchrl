@@ -69,25 +69,6 @@ class OffPolicyActor(nn.Module):
                  common_feature_extractor_kwargs={},
                  number_of_critics=2):
 
-        """
-        This actor defines policy network as:
-        -------------------------------------
-
-        policy = obs_feature_extractor + common_feature_extractor +
-
-                + memory_net + action distribution
-
-        and defines q networks as:
-        -------------------------
-
-            obs_feature_extractor
-        q =                       + common_feature_extractor +
-            act_feature_extractor
-
-            + memory_net + q_prediction_layer
-
-        """
-
         super(OffPolicyActor, self).__init__()
 
         self.noise = noise
@@ -454,6 +435,16 @@ class OffPolicyActor(nn.Module):
     def create_critic(self, name):
         """
 
+        This actor defines defines q networks as:
+        -----------------------------------------
+
+            obs_feature_extractor
+        q =                       + common_feature_extractor +
+            act_feature_extractor
+
+            + memory_net + q_prediction_layer
+
+
         Parameters
         ----------
         name
@@ -462,8 +453,6 @@ class OffPolicyActor(nn.Module):
         -------
 
         """
-
-        # Maybe instead of name should be number ? so name="q{}".format(number)
 
         # ---- 1. Define action feature extractor -----------------------------
 
@@ -527,6 +516,14 @@ class OffPolicyActor(nn.Module):
     def create_policy(self, name):
         """
 
+        This actor defines policy network as:
+        -------------------------------------
+
+        policy = obs_feature_extractor + common_feature_extractor +
+
+                + memory_net + action distribution
+
+
         Parameters
         ----------
         name
@@ -535,8 +532,6 @@ class OffPolicyActor(nn.Module):
         -------
 
         """
-
-        # Default name is policy net, but it open the door to define also adversary!
 
         # ---- 1. Define Obs feature extractor --------------------------------
 
