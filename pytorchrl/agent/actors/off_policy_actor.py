@@ -66,7 +66,7 @@ class OffPolicyActor(nn.Module):
                  act_feature_extractor_kwargs={},
                  common_feature_extractor=MLP,
                  common_feature_extractor_kwargs={},
-                 create_double_q_critic=True):
+                 number_of_critics=2):
 
         """
         This actor defines policy network as:
@@ -95,143 +95,30 @@ class OffPolicyActor(nn.Module):
         self.recurrent_nets = recurrent_nets
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
 
+        # NEW
+        self.noise = noise
+        self.number_of_critics = number_of_critics
+        self.act_feature_extractor = act_feature_extractor
+        self.act_feature_extractor_kwargs = act_feature_extractor_kwargs
+        self.obs_feature_extractor = obs_feature_extractor
+        self.obs_feature_extractor_kwargs = obs_feature_extractor_kwargs
+        self.common_feature_extractor = common_feature_extractor
+        self.common_feature_extractor_kwargs = common_feature_extractor_kwargs
+        self.recurrent_nets = recurrent_nets
+        self.recurrent_nets_kwargs = recurrent_nets_kwargs
+
         #######################################################################
         #                           POLICY NETWORK                            #
         #######################################################################
 
-        # ---- 1. Define Obs feature extractor --------------------------------
-
-        if len(input_space.shape) == 3:  # If inputs are images, CNN required
-            obs_feature_extractor = default_feature_extractor(input_space)
-        obs_extractor = obs_feature_extractor or nn.Identity
-        self.policy_obs_feature_extractor = obs_extractor(
-            input_space, **obs_feature_extractor_kwargs)
-
-        # ---- 2. Define Common feature extractor -----------------------------
-
-        feature_size = int(np.prod(self.policy_obs_feature_extractor(
-            torch.randn(1, *input_space.shape)).shape))
-
-        self.policy_common_feature_extractor = common_feature_extractor(
-            feature_size, **common_feature_extractor_kwargs)
-
-        # ---- 3. Define memory network  --------------------------------------
-
-        feature_size = int(np.prod(self.policy_common_feature_extractor(
-            torch.randn(1, feature_size)).shape))
-        self.recurrent_size = feature_size
-        if recurrent_nets:
-            self.policy_memory_net = GruNet(feature_size, **recurrent_nets_kwargs)
-            feature_size = self.policy_memory_net.num_outputs
-        else:
-            self.policy_memory_net = nn.Identity()
-
-        # ---- 4. Define action distribution ----------------------------------
-
-        if isinstance(action_space, gym.spaces.Discrete):
-            self.dist = get_dist("Categorical")(feature_size, action_space.n)
-            self.scale = None
-            self.unscale = None
-
-        elif isinstance(action_space, gym.spaces.Box) and not deterministic:
-            self.dist = get_dist("SquashedGaussian")(feature_size, action_space.shape[0])
-            self.scale = Scale(action_space)
-            self.unscale = Unscale(action_space)
-
-        elif isinstance(action_space, gym.spaces.Box) and deterministic:
-            self.dist = get_dist("Deterministic")(feature_size,
-                action_space.shape[0], noise=noise)
-            self.scale = Scale(action_space)
-            self.unscale = Unscale(action_space)
-        else:
-            raise NotImplementedError
-
-        # ---- 5. Concatenate all policy modules ------------------------------
-
-        self.policy_net = nn.Sequential(
-            self.policy_obs_feature_extractor,
-            self.policy_common_feature_extractor,
-            self.policy_memory_net, self.dist)
+        self.create_policy("policy_net")
 
         #######################################################################
         #                             Q-NETWORKS                              #
         #######################################################################
 
-        # ---- 1. Define action feature extractor -----------------------------
-
-        act_extractor = act_feature_extractor or nn.Identity
-        self.q1_act_feature_extractor = act_extractor(
-            action_space, **act_feature_extractor_kwargs)
-
-        # ---- 2. Define obs feature extractor -----------------------------
-
-        self.q1_obs_feature_extractor = obs_extractor(
-            input_space, **obs_feature_extractor_kwargs)
-        obs_feature_size = int(np.prod(self.q1_obs_feature_extractor(
-            torch.randn(1, *input_space.shape)).shape))
-
-        # ---- 3. Define shared feature extractor -----------------------------
-
-        if isinstance(action_space, gym.spaces.Discrete):
-            act_feature_size = 0
-            q_outputs = action_space.n
-
-        elif isinstance(action_space, gym.spaces.Box):
-            act_feature_size = int(np.prod(self.q1_act_feature_extractor(
-                torch.randn(1, *action_space.shape)).shape)) if act_feature_extractor \
-                else np.prod(action_space.shape)
-            q_outputs = 1
-
-        else:
-            raise NotImplementedError
-
-        feature_size = obs_feature_size + act_feature_size
-        self.q1_common_feature_extractor = common_feature_extractor(
-            feature_size, **common_feature_extractor_kwargs)
-
-        # ---- 4. Define memory network ---------------------------------------
-
-        feature_size = int(np.prod(self.q1_common_feature_extractor(
-            torch.randn(1, feature_size)).shape))
-        self.q1_memory_net = GruNet(feature_size, **recurrent_nets_kwargs) if\
-            recurrent_nets else nn.Identity()
-        feature_size = self.q1_memory_net.num_outputs if recurrent_nets\
-            else feature_size
-
-        # ---- 5. Define prediction layer -------------------------------------
-
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        self.q1_predictor = init_(nn.Linear(feature_size, q_outputs))
-
-        # ---- 6. Concatenate all q1 net modules ------------------------------
-
-        self.q1 = nn.Sequential(
-            self.q1_obs_feature_extractor,
-            self.q1_act_feature_extractor,
-            self.q1_common_feature_extractor,
-            self.q1_memory_net, self.q1_predictor)
-
-        # ---- 7. If create_double_q_critic, duplicate q1 net -----------------
-
-        if create_double_q_critic:
-            self.q2_obs_feature_extractor = obs_extractor(input_space, **obs_feature_extractor_kwargs)
-            self.q2_act_feature_extractor = act_extractor(action_space, **act_feature_extractor_kwargs)
-            feature_size = obs_feature_size + act_feature_size
-            self.q2_common_feature_extractor = common_feature_extractor(feature_size, **common_feature_extractor_kwargs)
-            feature_size = int(np.prod(self.q2_common_feature_extractor(torch.randn(1, feature_size)).shape))
-            self.q2_memory_net = GruNet(feature_size, **recurrent_nets_kwargs) if recurrent_nets else nn.Identity()
-            feature_size = self.q2_memory_net.num_outputs if recurrent_nets else feature_size
-            self.q2_predictor = init_(nn.Linear(feature_size, q_outputs))
-            self.q2 = nn.Sequential(
-                self.q2_obs_feature_extractor,
-                self.q2_act_feature_extractor,
-                self.q2_common_feature_extractor,
-                self.q1_memory_net, self.q2_predictor)
-
-        else:
-            self.q2_predictor = None
-            self.q2 = torch.nn.Identity()
-
+        for i in range(number_of_critics):
+            self.create_critic("q{}".format(i + 1))
 
     @classmethod
     def create_factory(
@@ -359,7 +246,8 @@ class OffPolicyActor(nn.Module):
         done = torch.zeros(num_proc, 1).to(dev)
         rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
-        rhs = {"rhs_act": rhs_act, "rhs_q1": rhs_act.clone(), "rhs_q2": rhs_act.clone()}
+        rhs = {"rhs_act": rhs_act}
+        rhs.update({"rhs_q{}".format(i + 1): rhs_act.clone() for i in range(self.number_of_critics)})
 
         return obs, rhs, done
 
@@ -545,26 +433,167 @@ class OffPolicyActor(nn.Module):
             Updated recurrent hidden states.
         """
 
-        features = self.q1_obs_feature_extractor(obs)
-        if actions is not None:
-            act_features = self.q1_act_feature_extractor(actions)
-            features = torch.cat([features, act_features], -1)
-        features = self.q1_common_feature_extractor(features)
-        if self.recurrent_nets:
-            features, rhs["rhs_q1"] = self.q1_memory_net(features, rhs["rhs_q1"], done)
-        q1_scores = self.q1_predictor(features)
+        outputs = []
+        for i in range(self.number_of_critics):
+            q = getattr(self, "q{}".format(i + 1))
+            features = q.obs_feature_extractor(obs)
 
-        if self.q2_predictor:
-            features = self.q2_obs_feature_extractor(obs)
             if actions is not None:
-                act_features = self.q2_act_feature_extractor(actions)
+                act_features = q.act_feature_extractor(actions)
                 features = torch.cat([features, act_features], -1)
-            features = self.q2_common_feature_extractor(features)
+            features = q.common_feature_extractor(features)
+
             if self.recurrent_nets:
-                features, rhs["rhs_q2"] = self.q2_memory_net(features, rhs["rhs_q2"], done)
-            q2_scores = self.q2_predictor(features)
+                features, rhs["rhs_q{}".format(1 + 1)] = self.q1_memory_net(
+                    features, rhs["rhs_q{}".format(i + 1)], done)
+
+            q_scores = q.predictor(features)
+            outputs.append(q_scores)
+
+        outputs.append(rhs)
+        
+        return tuple(outputs)
+
+    def create_critic(self, name):
+        """
+
+        Parameters
+        ----------
+        name
+
+        Returns
+        -------
+
+        """
+
+        # Maybe instead of name should be number ? so name="q{}".format(number)
+
+        # ---- 1. Define action feature extractor -----------------------------
+
+        act_extractor = self.act_feature_extractor or nn.Identity
+        q_act_feature_extractor = act_extractor(
+            self.action_space, **self.act_feature_extractor_kwargs)
+
+        # ---- 2. Define obs feature extractor -----------------------------
+
+        obs_extractor = self.obs_feature_extractor or nn.Identity
+        q_obs_feature_extractor = obs_extractor(
+            self.input_space, **self.obs_feature_extractor_kwargs)
+        obs_feature_size = int(np.prod(self.q1_obs_feature_extractor(
+            torch.randn(1, *self.input_space.shape)).shape))
+
+        # ---- 3. Define shared feature extractor -----------------------------
+
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            act_feature_size = 0
+            q_outputs = self.action_space.n
+
+        elif isinstance(self.action_space, gym.spaces.Box):
+            act_feature_size = int(np.prod(self.q1_act_feature_extractor(
+                torch.randn(1, *self.action_space.shape)).shape)) if self.act_feature_extractor \
+                else np.prod(self.action_space.shape)
+            q_outputs = 1
 
         else:
-            q2_scores = None
+            raise NotImplementedError
 
-        return q1_scores, q2_scores, rhs
+        feature_size = obs_feature_size + act_feature_size
+        q_common_feature_extractor = self.common_feature_extractor(
+            feature_size, **self.common_feature_extractor_kwargs)
+
+        # ---- 4. Define memory network ---------------------------------------
+
+        feature_size = int(np.prod(self.q1_common_feature_extractor(
+            torch.randn(1, feature_size)).shape))
+        q_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs) if\
+            self.recurrent_nets else nn.Identity()
+        feature_size = self.q1_memory_net.num_outputs if self.recurrent_nets\
+            else feature_size
+
+        # ---- 5. Define prediction layer -------------------------------------
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        q_predictor = init_(nn.Linear(feature_size, q_outputs))
+
+        # ---- 6. Concatenate all q1 net modules ------------------------------
+
+        q_net = nn.Sequential(nn.OrderedDict([
+            ('obs_feature_extractor', q_obs_feature_extractor),
+            ('act_feature_extractor', q_act_feature_extractor),
+            ('common_feature_extractor', q_common_feature_extractor),
+            ('memory_net', q_memory_net),
+            ("predictor", q_predictor),
+        ]))
+
+        setattr(self, name, q_net)
+
+    def create_policy(self, name):
+        """
+
+        Parameters
+        ----------
+        name
+
+        Returns
+        -------
+
+        """
+
+        # Default name is policy net, but it open the door to define also adversary!
+
+        # ---- 1. Define Obs feature extractor --------------------------------
+
+        if len(self.input_space.shape) == 3:  # If inputs are images, CNN required
+            self.obs_feature_extractor = default_feature_extractor(self.input_space)
+        obs_extractor = self.obs_feature_extractor or nn.Identity
+        policy_obs_feature_extractor = obs_extractor(
+            self.input_space, **self.obs_feature_extractor_kwargs)
+
+        # ---- 2. Define Common feature extractor -----------------------------
+
+        feature_size = int(np.prod(self.policy_obs_feature_extractor(
+            torch.randn(1, *self.input_space.shape)).shape))
+
+        policy_common_feature_extractor = self.common_feature_extractor(
+            feature_size, **self.common_feature_extractor_kwargs)
+
+        # ---- 3. Define memory network  --------------------------------------
+
+        feature_size = int(np.prod(self.policy_common_feature_extractor(
+            torch.randn(1, feature_size)).shape))
+        self.recurrent_size = feature_size
+        if self.recurrent_nets:
+            policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+            feature_size = self.policy_memory_net.num_outputs
+        else:
+            policy_memory_net = nn.Identity()
+
+        # ---- 4. Define action distribution ----------------------------------
+
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            dist = get_dist("Categorical")(feature_size, self.action_space.n)
+            self.scale = None
+            self.unscale = None
+
+        elif isinstance(self.action_space, gym.spaces.Box) and not self.deterministic:
+            dist = get_dist("SquashedGaussian")(feature_size, self.action_space.shape[0])
+            self.scale = Scale(self.action_space)
+            self.unscale = Unscale(self.action_space)
+
+        elif isinstance(self.action_space, gym.spaces.Box) and self.deterministic:
+            dist = get_dist("Deterministic")(feature_size,
+                self.action_space.shape[0], noise=self.noise)
+            self.scale = Scale(self.action_space)
+            self.unscale = Unscale(self.action_space)
+        else:
+            raise NotImplementedError
+
+        # ---- 5. Concatenate all policy modules ------------------------------
+
+        policy_net = nn.Sequential(nn.OrderedDict([
+            ('obs_feature_extractor', policy_obs_feature_extractor),
+            ('common_feature_extractor', policy_common_feature_extractor),
+            ('memory_net', policy_memory_net), ('dist', dist),
+        ]))
+
+        setattr(self, name, policy_net)
