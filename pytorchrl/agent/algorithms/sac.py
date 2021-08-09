@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
@@ -52,6 +53,8 @@ class SAC(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -74,6 +77,7 @@ class SAC(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
+                 max_grad_norm=0.5,
                  initial_alpha=1.0,
                  start_steps=20000,
                  mini_batch_size=64,
@@ -113,6 +117,7 @@ class SAC(Algorithm):
         self.polyak = polyak
         self.device = device
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
         if self.actor.q2 is None:
@@ -178,6 +183,7 @@ class SAC(Algorithm):
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
+                       max_grad_norm=0.5,
                        initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
@@ -214,6 +220,8 @@ class SAC(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -236,6 +244,7 @@ class SAC(Algorithm):
                        num_updates=num_updates,
                        update_every=update_every,
                        initial_alpha=initial_alpha,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -532,6 +541,8 @@ class SAC(Algorithm):
         loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss_q.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(itertools.chain(
+            self.actor.q1.parameters(), self.actor.q2.parameters()), self.max_grad_norm)
         q_grads = get_gradients(self.actor.q1, self.actor.q2, grads_to_cpu=grads_to_cpu)
 
         # Freeze Q-networks so you don't waste computational effort
@@ -543,6 +554,7 @@ class SAC(Algorithm):
         loss_pi, logp_pi = self.compute_loss_pi(batch, per_weights)
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
+        nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
         for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
