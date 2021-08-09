@@ -334,7 +334,9 @@ class TD3(Algorithm):
         o2, rhs2, d2 = data[prl.OBS2], data[prl.RHS2], data[prl.DONE2]
 
         # Q-values for all actions
-        q1, q2, _ = self.actor.get_q_scores(o, rhs, d, a)
+        q_scores = self.actor.get_q_scores(o, rhs, d, a)
+        q1 = q_scores.get("q1")
+        q2 = q_scores.get("q2")
 
         # Bellman backup for Q functions
         with torch.no_grad():
@@ -346,8 +348,10 @@ class TD3(Algorithm):
             a2 = torch.clamp(a2 + noise, min=self.action_low, max=self.action_high)
 
             # Target Q-values
-            q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-            q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+            q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+            q1_targ = q_scores_targ.get("q1")
+            q2_targ = q_scores_targ.get("q2")
+            q_pi_targ = torch.min(q1_targ, q2_targ)
 
             backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
@@ -382,7 +386,9 @@ class TD3(Algorithm):
         o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
 
         pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-        q1_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
+        q_scores = self.actor.get_q_scores(o, rhs, d, pi)
+        q1_pi = q_scores.get("q1")
+
         # q_pi = torch.min(q1_pi, q2_pi) # commenting this out since the paper only
         # uses q1 but might be worth testing if using min gives general improvement
 

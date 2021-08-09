@@ -367,7 +367,7 @@ class SAC(Algorithm):
 
             # Q-values for all actions
             q_scores = self.actor.get_q_scores(o, rhs, d)
-            q1 = q_scores.get("q1").gather(1, a.long()) # TODO. is q1 te proper name for q1_value?
+            q1 = q_scores.get("q1").gather(1, a.long())
             q2 = q_scores.get("q2").gather(1, a.long())
 
             # Bellman backup for Q functions
@@ -379,14 +379,14 @@ class SAC(Algorithm):
                 logp_a2 = torch.log(p_a2 + z)
 
                 # Target Q-values
-                q_pi_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2)
-                q1_pi_targ = q_pi_scores_targ.get("q1")
-                q2_pi_targ = q_pi_scores_targ.get("q2")
+                q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2)
+                q1_targ = q_scores_targ.get("q1")
+                q2_targ = q_scores_targ.get("q2")
 
-                q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ) - self.alpha * logp_a2)).sum(dim=1, keepdim=True)
+                q_targ = (p_a2 * (torch.min(q1_targ, q2_targ) - self.alpha * logp_a2)).sum(dim=1, keepdim=True)
 
-                assert r.shape == q_pi_targ.shape
-                backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
+                assert r.shape == q_targ.shape
+                backup = r + (self.gamma ** n_step) * (1 - d2) * q_targ
 
         else:
 
@@ -402,11 +402,11 @@ class SAC(Algorithm):
                 a2, _, logp_a2, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
                 # Target Q-values
-                q_pi_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-                q1_pi_targ = q_pi_scores_targ.get("q1")
-                q2_pi_targ = q_pi_scores_targ.get("q2")
+                q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+                q1_targ = q_scores_targ.get("q1")
+                q2_targ = q_scores_targ.get("q2")
 
-                q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+                q_pi_targ = torch.min(q1_targ, q2_targ)
                 backup = r + (self.gamma ** n_step) * (1 - d2) * (q_pi_targ - self.alpha * logp_a2)
 
         # MSE loss against Bellman backup
@@ -448,16 +448,18 @@ class SAC(Algorithm):
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d)
-            q_pi = torch.sum(torch.min(q1_pi, q2_pi) * p_pi, dim=1, keepdim=True)
+            q_scores = self.actor.get_q_scores(o, rhs, d)
+            q1 = q_scores.get("q1")
+            q2 = q_scores.get("q2")
+            q_pi = torch.sum(torch.min(q1, q2) * p_pi, dim=1, keepdim=True)
 
         else:
 
             pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-            q_pi_scores = self.actor.get_q_scores(o, rhs, d, pi)
-            q1_pi = q_pi_scores.get("q1")
-            q2_pi = q_pi_scores.get("q2")
-            q_pi = torch.min(q1_pi, q2_pi)
+            q_scores = self.actor.get_q_scores(o, rhs, d, pi)
+            q1 = q_scores.get("q1")
+            q2 = q_scores.get("q2")
+            q_pi = torch.min(q1, q2)
 
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
 
