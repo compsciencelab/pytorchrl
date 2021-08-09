@@ -137,7 +137,7 @@ class OffPolicyActor(nn.Module):
             act_feature_extractor_kwargs={},
             common_feature_extractor=MLP,
             common_feature_extractor_kwargs={},
-            create_double_q_critic=True
+            number_of_critics=2
 
     ):
         """
@@ -196,7 +196,7 @@ class OffPolicyActor(nn.Module):
                          act_feature_extractor_kwargs=act_feature_extractor_kwargs,
                          common_feature_extractor=common_feature_extractor,
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
-                         create_double_q_critic=create_double_q_critic)
+                         number_of_critics=number_of_critics)
 
             if restart_model:
                 policy.load_state_dict(
@@ -451,7 +451,7 @@ class OffPolicyActor(nn.Module):
             outputs.append(q_scores)
 
         outputs.append(rhs)
-        
+
         return tuple(outputs)
 
     def create_critic(self, name):
