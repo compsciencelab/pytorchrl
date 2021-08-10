@@ -291,7 +291,9 @@ class PPO(Algorithm):
              entropy_dist, dist) = self.actor.get_action(
                 obs, rhs, done, deterministic)
 
-            value, rhs = self.actor.get_value(obs, rhs, done)
+            value_dict = self.actor.get_value(obs, rhs, done)
+            value = value_dict.get("value_net1")
+            rhs = value_dict.get("rhs")
 
             other = {prl.VAL: value, prl.LOGP: logp_action}
 
@@ -322,7 +324,7 @@ class PPO(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
-        new_v, _ = self.actor.get_value(o, rhs, d)
+        new_v = self.actor.get_value(o, rhs, d).get("value_net1")
 
         ratio = torch.exp(new_logp - old_logp)
         surr1 = ratio * adv

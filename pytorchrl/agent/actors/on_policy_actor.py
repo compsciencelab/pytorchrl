@@ -64,7 +64,8 @@ class OnPolicyActor(nn.Module):
         #                           VALUE NETWORK                             #
         #######################################################################
 
-        self.create_critic("value_net")
+        for i in range(number_of_critics):
+            self.create_critic("value_net{}".format(i + 1))
 
     @classmethod
     def create_factory(
@@ -156,7 +157,8 @@ class OnPolicyActor(nn.Module):
         done = torch.zeros(num_proc, 1).to(dev)
         rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
-        rhs = {"rhs_act": rhs_act, "rhs_q1": rhs_act.clone(), "rhs_q2": rhs_act.clone()}
+        rhs = {"rhs_act": rhs_act}
+        rhs.update({"rhs_val{}".format(i + 1): rhs_act.clone() for i in range(self.number_of_critics)})
 
         return obs, rhs, done
 
@@ -269,17 +271,26 @@ class OnPolicyActor(nn.Module):
             Updated recurrent hidden states.
         """
 
-        if self.shared_policy_value_network:
-            if self.last_action_features.shape[0] != done.shape[0]:
-                _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
-            return self.value_net.predictor(self.last_action_features), rhs
+        outputs = {}
+        for i in range(self.number_of_critics):
+            value_net = getattr(self, "value_net{}".format(i + 1))
 
-        else:
-            value_features = self.value_feature_extractor(obs)
-            if self.recurrent_nets:
-                value_features, rhs["rhs_val"] = self.value_net.memory_net(
-                    value_features, rhs["rhs_val"], done)
-            return self.value_net.predictor(value_features), rhs
+            if self.shared_policy_value_network:
+                if self.last_action_features.shape[0] != done.shape[0]:
+                    _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
+                value = value_net.predictor(self.last_action_features), rhs
+
+            else:
+                value_features = value_net.feature_extractor(obs)
+                if self.recurrent_nets:
+                    value_features, rhs["rhs_val{}".format(i + 1)] = value_net.memory_net(
+                        value_features, rhs["rhs_val{}".format(i + 1)], done)
+                value = value_net.predictor(value_features), rhs
+
+            outputs["value_net{}".format(i + 1)] = value
+
+        outputs["rhs"] = rhs
+        return outputs
 
     def create_critic(self, name):
         """
@@ -309,8 +320,8 @@ class OnPolicyActor(nn.Module):
         if self.shared_policy_value_network:
             value_feature_extractor = nn.Identity()
             value_memory_net = nn.Identity()
-            self.last_action_features = None  # TODO. should be a dict
-            self.last_action_rhs = None  # TODO. should be a dict
+            self.last_action_features = None
+            self.last_action_rhs = None
 
         else:
 
