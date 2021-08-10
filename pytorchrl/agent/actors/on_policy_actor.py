@@ -42,26 +42,8 @@ class OnPolicyActor(nn.Module):
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
+                 number_of_critics=1,
                  shared_policy_value_network=True):
-
-        """
-
-        This actor defines policy network as:
-        -------------------------------------
-
-        policy = obs_feature_extractor + memory_net + action_distribution
-
-        defines value network as:
-        -------------------------
-
-        value = obs_feature_extractor + memory_net + v_prediction_layer
-
-        and defines shared policy-value network as:
-        -------------------------------------------
-                                                     action_distribution
-        value = obs_feature_extractor + memory_net +
-                                                     v_prediction_layer
-        """
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
@@ -207,11 +189,11 @@ class OnPolicyActor(nn.Module):
             Entropy of the predicted action distribution.
         """
 
-        action_features = self.policy_feature_extractor(obs)
+        action_features = self.policy_net.feature_extractor(obs)
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_memory_net(
+            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
                 action_features, rhs["rhs_act"], done)
-        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
             action_features, deterministic=deterministic)
 
         self.last_action_features = action_features
@@ -254,13 +236,13 @@ class OnPolicyActor(nn.Module):
         if self.scale:
             action = self.scale(action)
 
-        features = self.policy_feature_extractor(obs)
+        features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_memory_net(
+            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
                 features, rhs["rhs_act"], done)
 
-        logp_action, entropy_dist, dist = self.dist.evaluate_pred(features, action)
+        logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
 
         self.last_action_features = features
 
@@ -290,17 +272,27 @@ class OnPolicyActor(nn.Module):
         if self.shared_policy_value_network:
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
-            return self.value_predictor(self.last_action_features), rhs
+            return self.value_net.predictor(self.last_action_features), rhs
 
         else:
             value_features = self.value_feature_extractor(obs)
             if self.recurrent_nets:
-                value_features, rhs["rhs_val"] = self.value_memory_net(
+                value_features, rhs["rhs_val"] = self.value_net.memory_net(
                     value_features, rhs["rhs_val"], done)
-            return self.value_predictor(value_features), rhs
+            return self.value_net.predictor(value_features), rhs
 
     def create_critic(self, name):
         """
+        This actor defines value network as:
+        -------------------------------------
+
+        value = obs_feature_extractor + memory_net + v_prediction_layer
+
+        and defines shared policy-value network as:
+        -------------------------------------------
+                                                     action_distribution
+        value = obs_feature_extractor + memory_net +
+                                                     v_prediction_layer
 
         Parameters
         ----------
@@ -352,6 +344,12 @@ class OnPolicyActor(nn.Module):
     def create_policy(self, name):
         """
 
+        This actor defines policy network as:
+        -------------------------------------
+
+        policy = obs_feature_extractor + memory_net + action_distribution
+
+
         Parameters
         ----------
         name
@@ -371,7 +369,7 @@ class OnPolicyActor(nn.Module):
 
         # ---- 2. Define memory network  --------------------------------------
 
-        feature_size = int(np.prod(self.policy_feature_extractor(
+        feature_size = int(np.prod(policy_feature_extractor(
             torch.randn(1, *self.input_space.shape)).shape))
 
         self.recurrent_size = feature_size
@@ -401,10 +399,6 @@ class OnPolicyActor(nn.Module):
 
         # ---- 4. Concatenate all policy modules ------------------------------
 
-        self.policy_net = nn.Sequential(
-            self.policy_feature_extractor,
-            self.policy_memory_net, self.dist)
-
         policy_net = nn.Sequential(OrderedDict([
             ('feature_extractor', policy_feature_extractor),
             ('memory_net', policy_memory_net),
@@ -412,4 +406,3 @@ class OnPolicyActor(nn.Module):
         ]))
 
         setattr(self, name, policy_net)
-
