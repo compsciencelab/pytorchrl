@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
-from pytorchrl.agent.actors.utils import Scale, Unscale, init
+from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor
 
@@ -177,9 +177,11 @@ class OffPolicyActor(nn.Module):
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
                          num_critics=num_critics)
 
-            if restart_model:
-                policy.load_state_dict(
-                    torch.load(restart_model, map_location=device))
+            if isinstance(restart_model, str):
+                policy.load_state_dict(torch.load(restart_model, map_location=device))
+            elif isinstance(restart_model, dict):
+                for submodule, checkpoint in restart_model.items():
+                    partially_load_checkpoint(policy, submodule, checkpoint)
             policy.to(device)
 
             return policy
