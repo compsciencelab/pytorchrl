@@ -117,7 +117,7 @@ class VTraceBuffer(B):
 
         l = self.step if self.step != 0 else self.max_size
 
-        new_action_log_probs = self.get_updated_action_log_probs(self.actor, self.algo)
+        new_action_log_probs = self.get_updated_action_log_probs()
 
         log_rhos = (new_action_log_probs - self.data[prl.LOGP][:l])
         clipped_rhos = torch.clamp(torch.exp(log_rhos), max=clip_rho_thres)
