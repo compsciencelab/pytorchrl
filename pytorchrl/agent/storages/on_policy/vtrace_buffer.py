@@ -47,7 +47,9 @@ class VTraceBuffer(B):
 
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value, next_rhs = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
+            value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
+            next_value = value_dict.get("value_net1")
+            next_rhs = value_dict.get("rhs")
 
         self.data[prl.RET][self.step].copy_(next_value)
         self.data[prl.VAL][self.step].copy_(next_value)
@@ -83,7 +85,7 @@ class VTraceBuffer(B):
         for batch in batches:
             obs, rhs, act, done = batch[prl.OBS], batch[prl.RHS], batch[prl.ACT], batch[prl.DONE]
             (logp, _, _) = self.actor.evaluate_actions(obs, rhs, done, act)
-            val, _ = self.actor.get_value(obs, rhs, done)
+            val = self.actor.get_value(obs, rhs, done).get("value_net1")
             new_val.append(val)
             new_logp.append(logp)
 
@@ -115,7 +117,7 @@ class VTraceBuffer(B):
 
         l = self.step if self.step != 0 else self.max_size
 
-        new_action_log_probs = self.get_updated_action_log_probs(self.actor, self.algo)
+        new_action_log_probs = self.get_updated_action_log_probs()
 
         log_rhos = (new_action_log_probs - self.data[prl.LOGP][:l])
         clipped_rhos = torch.clamp(torch.exp(log_rhos), max=clip_rho_thres)

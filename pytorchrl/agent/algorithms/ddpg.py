@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
@@ -25,8 +26,8 @@ class DDPG(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        Actor_critic class instance.
+    actor : Actor
+        Actor class instance.
     lr_pi : float
         Policy optimizer learning rate.
     lr_q : float
@@ -49,6 +50,8 @@ class DDPG(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor_critic updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -70,6 +73,7 @@ class DDPG(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
+                 max_grad_norm=0.5,
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
@@ -108,7 +112,10 @@ class DDPG(Algorithm):
         self.polyak = polyak
         self.device = device
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
+
+        assert hasattr(self.actor, "q1"), "DDPG requires q critic (num_critics=1)"
 
         # Create target networks
         self.actor_targ = deepcopy(actor)
@@ -149,18 +156,19 @@ class DDPG(Algorithm):
 
     @classmethod
     def create_factory(cls,
-                lr_q=1e-3,
-                lr_pi=1e-4,
-                gamma=0.99,
-                polyak=0.995,
-                num_updates=50,
-                test_every=5000,
-                update_every=50,
-                start_steps=1000,
-                mini_batch_size=64,
-                num_test_episodes=5,
-                target_update_interval=1.0,
-                policy_loss_addons=[]):
+                       lr_q=1e-3,
+                       lr_pi=1e-4,
+                       gamma=0.99,
+                       polyak=0.995,
+                       num_updates=50,
+                       test_every=5000,
+                       update_every=50,
+                       start_steps=1000,
+                       max_grad_norm=0.5,
+                       mini_batch_size=64,
+                       num_test_episodes=5,
+                       target_update_interval=1.0,
+                       policy_loss_addons=[]):
         """
         Returns a function to create new DDPG instances.
 
@@ -188,6 +196,8 @@ class DDPG(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor_critic updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -208,6 +218,7 @@ class DDPG(Algorithm):
                        start_steps=start_steps,
                        num_updates=num_updates,
                        update_every=update_every,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -331,7 +342,7 @@ class DDPG(Algorithm):
         o2, rhs2, d2 = data[prl.OBS2], data[prl.RHS2], data[prl.DONE2]
 
         # Q-values for all actions
-        q, _, _ = self.actor.get_q_scores(o, rhs, d, a)
+        q = self.actor.get_q_scores(o, rhs, d, a).get("q1")
 
         # Bellman backup for Q functions
         with torch.no_grad():
@@ -340,9 +351,9 @@ class DDPG(Algorithm):
             a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
             # Target Q-values
-            q_pi_targ, _, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+            q_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2).get("q1")
 
-            backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
+            backup = r + (self.gamma ** n_step) * (1 - d2) * q_targ
 
         # MSE loss against Bellman backup
         loss_q = 0.5 * (((q - backup) ** 2) * per_weights).mean()
@@ -351,7 +362,7 @@ class DDPG(Algorithm):
         errors = (q - backup).abs()
 
         # reset Noise
-        self.actor.dist.noise.reset()
+        self.actor.policy_net.dist.noise.reset()
 
         return loss_q, errors
 
@@ -373,7 +384,7 @@ class DDPG(Algorithm):
         o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
 
         pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-        q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
+        q_pi = self.actor.get_q_scores(o, rhs, d, pi).get("q1")
 
         loss_pi = - (q_pi * per_weights).mean()
 
@@ -417,6 +428,7 @@ class DDPG(Algorithm):
         loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss_q.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
         q_grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
 
         # Freeze Q-network so you don't waste computational effort
@@ -428,6 +440,7 @@ class DDPG(Algorithm):
         loss_pi = self.compute_loss_pi(batch, per_weights)
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
+        nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
         for p in itertools.chain(self.actor.q1.parameters()):

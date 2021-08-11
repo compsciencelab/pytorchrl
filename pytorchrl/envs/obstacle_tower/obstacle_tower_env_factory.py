@@ -2,14 +2,14 @@ import os
 import numpy as np
 import obstacle_tower_env
 from obstacle_tower_env import ObstacleTowerEnv
-from pytorchrl.envs.common import FrameStack, FrameSkip
+from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 from pytorchrl.envs.obstacle_tower.wrappers import (
     ReducedActionEnv, BasicObstacleEnv, RewardShapeObstacleEnv, BasicObstacleEnvTest)
 
 
 def obstacle_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, min_floor=0,
-        max_floor=50, reduced_actions=True, reward_shape=True, exe_path=None):
+        max_floor=50, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1):
     """
     Create train Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
@@ -36,6 +36,8 @@ def obstacle_train_env_factory(
         Whether or not to use the reward shape wrapper.
     exe_path : str
         Path to obstacle environment executable.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -70,12 +72,15 @@ def obstacle_train_env_factory(
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
 
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
+
     return env
 
 
 def obstacle_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, realtime=False,
-        min_floor=0, max_floor=50, reduced_actions=True, exe_path=None):
+        min_floor=0, max_floor=50, reduced_actions=True, exe_path=None, reward_delay=1):
     """
     Create test Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
@@ -100,6 +105,8 @@ def obstacle_test_env_factory(
         Whether or not to use the action wrapper to reduce the number of available actions.
     exe_path : str
         Path to obstacle environment executable.
+    reward_delay : int
+        Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
     Returns
     -------
@@ -131,5 +138,8 @@ def obstacle_test_env_factory(
 
     if frame_stack > 1:
         env = FrameStack(env, k=frame_stack)
+
+    if reward_delay > 1:
+        env = DelayedReward(env, delay=reward_delay)
 
     return env

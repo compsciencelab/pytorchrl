@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import torch
 import torch.nn as nn
+from collections import OrderedDict
 
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init
@@ -32,7 +33,10 @@ class OnPolicyActor(nn.Module):
         Keyword arguments for the feature extractor network.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
+    num_critics : int
+        Number of Value networks to be instantiated.
     """
+
     def __init__(self,
                  input_space,
                  action_space,
@@ -40,115 +44,31 @@ class OnPolicyActor(nn.Module):
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
-                 shared_policy_value_network=True):
-
-        """
-
-        This actor defines policy network as:
-        -------------------------------------
-
-        policy = obs_feature_extractor + memory_net + action_distribution
-
-        defines value network as:
-        -------------------------
-
-        value = obs_feature_extractor + memory_net + v_prediction_layer
-
-        and defines shared policy-value network as:
-        -------------------------------------------
-                                                     action_distribution
-        value = obs_feature_extractor + memory_net +
-                                                     v_prediction_layer
-        """
+                 shared_policy_value_network=True,
+                 num_critics=1):
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
         self.action_space = action_space
         self.recurrent_nets = recurrent_nets
+        self.recurrent_nets_kwargs = recurrent_nets_kwargs
+        self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
-
-        # If feature_extractor_network not defined, take default one based on input_space
-        feature_extractor = feature_extractor_network or default_feature_extractor(input_space)
+        self.feature_extractor_kwargs = feature_extractor_kwargs
+        self.num_critics = num_critics
 
         #######################################################################
         #                           POLICY NETWORK                            #
         #######################################################################
 
-        # ---- 1. Define obs feature extractor --------------------------------
-
-        self.policy_feature_extractor = feature_extractor(
-            input_space, **feature_extractor_kwargs)
-
-        # ---- 2. Define memory network  --------------------------------------
-
-        feature_size = int(np.prod(self.policy_feature_extractor(
-            torch.randn(1, *input_space.shape)).shape))
-
-        self.recurrent_size = feature_size
-        if recurrent_nets:
-            self.policy_memory_net = GruNet(feature_size, **recurrent_nets_kwargs)
-            feature_size = self.policy_memory_net.num_outputs
-        else:
-            self.policy_memory_net = nn.Identity()
-
-        # ---- 3. Define action distribution ----------------------------------
-
-        if isinstance(action_space, gym.spaces.Discrete):
-            self.dist = get_dist("Categorical")(feature_size, action_space.n)
-            self.scale = None
-            self.unscale = None
-
-        elif isinstance(action_space, gym.spaces.Box):  # Continuous action space
-            self.dist = get_dist("Gaussian")(feature_size, action_space.shape[0])
-            self.scale = Scale(action_space)
-            self.unscale = Unscale(action_space)
-
-        elif isinstance(action_space, gym.spaces.Dict):
-            raise NotImplementedError
-
-        else:
-            raise ValueError("Unrecognized action space")
-
-        # ---- 4. Concatenate all policy modules ------------------------------
-
-        self.policy_net = nn.Sequential(
-            self.policy_feature_extractor,
-            self.policy_memory_net, self.dist)
+        self.create_policy("policy_net")
 
         #######################################################################
         #                           VALUE NETWORK                             #
         #######################################################################
 
-        if self.shared_policy_value_network:
-            self.value_feature_extractor = nn.Identity()
-            self.value_memory_net = nn.Identity()
-            self.last_action_features = None
-            self.last_action_rhs = None
-
-        else:
-
-            # ---- 1. Define obs feature extractor ----------------------------
-
-            self.value_feature_extractor = feature_extractor(
-                input_space, **feature_extractor_kwargs)
-
-            # ---- 2. Define memory network  ----------------------------------
-
-            if recurrent_nets:
-                self.value_memory_net = GruNet(self.recurrent_size, **recurrent_nets_kwargs)
-            else:
-                self.value_memory_net = nn.Identity()
-
-        # ---- 3. Define value predictor --------------------------------------
-
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        self.value_predictor = init_(nn.Linear(self.recurrent_size, 1))
-
-        # ---- 4. Concatenate all value net modules ---------------------------
-
-        self.value_net = nn.Sequential(
-            self.value_feature_extractor,
-            self.value_memory_net, self.value_predictor)
+        for i in range(num_critics):
+            self.create_critic("value_net{}".format(i + 1))
 
     @classmethod
     def create_factory(
@@ -159,7 +79,8 @@ class OnPolicyActor(nn.Module):
             recurrent_nets=False,
             feature_extractor_kwargs={},
             feature_extractor_network=None,
-            shared_policy_value_network=True):
+            shared_policy_value_network=True,
+            num_critics=1):
         """
         Returns a function that creates actor critic instances.
 
@@ -179,6 +100,8 @@ class OnPolicyActor(nn.Module):
             Whether to use a RNNs as feature extractors.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
+        num_critics : int
+            Number of Value networks to be instantiated.
 
         Returns
         -------
@@ -193,7 +116,8 @@ class OnPolicyActor(nn.Module):
                          recurrent_nets=recurrent_nets,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
-                         shared_policy_value_network=shared_policy_value_network)
+                         shared_policy_value_network=shared_policy_value_network,
+                         num_critics=num_critics)
             if restart_model:
                 policy.load_state_dict(
                     torch.load(restart_model, map_location=device))
@@ -240,7 +164,8 @@ class OnPolicyActor(nn.Module):
         done = torch.zeros(num_proc, 1).to(dev)
         rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
-        rhs = {"rhs_act": rhs_act, "rhs_q1": rhs_act.clone(), "rhs_q2": rhs_act.clone()}
+        rhs = {"rhs_act": rhs_act}
+        rhs.update({"rhs_val{}".format(i + 1): rhs_act.clone() for i in range(self.num_critics)})
 
         return obs, rhs, done
 
@@ -271,13 +196,15 @@ class OnPolicyActor(nn.Module):
             Updated recurrent hidden states.
         entropy_dist : torch.tensor
             Entropy of the predicted action distribution.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
-        action_features = self.policy_feature_extractor(obs)
+        action_features = self.policy_net.feature_extractor(obs)
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_memory_net(
+            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
                 action_features, rhs["rhs_act"], done)
-        (action, clipped_action, logp_action, entropy_dist, dist) = self.dist(
+        (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
             action_features, deterministic=deterministic)
 
         self.last_action_features = action_features
@@ -313,20 +240,20 @@ class OnPolicyActor(nn.Module):
         entropy_dist : torch.tensor
             Entropy of the action distribution predicted with current version
             of the policy_net.
-        rhs : dict
-            Updated recurrent hidden states.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
         if self.scale:
             action = self.scale(action)
 
-        features = self.policy_feature_extractor(obs)
+        features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_memory_net(
+            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
                 features, rhs["rhs_act"], done)
-            
-        logp_action, entropy_dist, dist = self.dist.evaluate_pred(features, action)
+
+        logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
 
         self.last_action_features = features
 
@@ -347,20 +274,145 @@ class OnPolicyActor(nn.Module):
 
         Returns
         -------
-        value : torch.tensor
-            value score according to current value_net version.
-        rhs : dict
-            Updated recurrent hidden states.
+        output : dict
+            Dict containing value prediction from each critic under keys "value_net1", "value_net2", etc
+            as well as the recurrent hidden states under the key "rhs".
         """
 
+        outputs = {}
+        for i in range(self.num_critics):
+            value_net = getattr(self, "value_net{}".format(i + 1))
+
+            if self.shared_policy_value_network:
+                if self.last_action_features.shape[0] != done.shape[0]:
+                    _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
+                value = value_net.predictor(self.last_action_features)
+
+            else:
+                value_features = value_net.feature_extractor(obs)
+                if self.recurrent_nets:
+                    value_features, rhs["rhs_val{}".format(i + 1)] = value_net.memory_net(
+                        value_features, rhs["rhs_val{}".format(i + 1)], done)
+                value = value_net.predictor(value_features)
+
+            outputs["value_net{}".format(i + 1)] = value
+
+        outputs["rhs"] = rhs
+        return outputs
+
+    def create_critic(self, name):
+        """
+        Create a critic value network and define it as class attribute under the name `name`.
+        This actor defines defines value networks as:
+
+        value = obs_feature_extractor + memory_net + v_prediction_layer
+
+        and defines shared policy-value network as:
+                                                     action_distribution
+        value = obs_feature_extractor + memory_net +
+                                                     v_prediction_layer
+
+        Parameters
+        ----------
+        name : str
+            Critic network name.
+        """
+
+        # If feature_extractor_network not defined, take default one based on input_space
+        feature_extractor = self.feature_extractor_network or default_feature_extractor(self.input_space)
+
         if self.shared_policy_value_network:
-            if self.last_action_features.shape[0] != done.shape[0]:
-                _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
-            return self.value_predictor(self.last_action_features), rhs
+            value_feature_extractor = nn.Identity()
+            value_memory_net = nn.Identity()
+            self.last_action_features = None
+            self.last_action_rhs = None
 
         else:
-            value_features = self.value_feature_extractor(obs)
+
+            # ---- 1. Define obs feature extractor ----------------------------
+
+            value_feature_extractor = feature_extractor(
+                self.input_space, **self.feature_extractor_kwargs)
+
+            # ---- 2. Define memory network  ----------------------------------
+
             if self.recurrent_nets:
-                value_features, rhs["rhs_val"] = self.value_memory_net(
-                    value_features, rhs["rhs_val"], done)
-            return self.value_predictor(value_features), rhs
+                value_memory_net = GruNet(self.recurrent_size, **self.recurrent_nets_kwargs)
+            else:
+                value_memory_net = nn.Identity()
+
+        # ---- 3. Define value predictor --------------------------------------
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        value_predictor = init_(nn.Linear(self.recurrent_size, 1))
+
+        # ---- 4. Concatenate all value net modules ---------------------------
+
+        v_net = nn.Sequential(OrderedDict([
+            ('feature_extractor', value_feature_extractor),
+            ('memory_net', value_memory_net),
+            ("predictor", value_predictor),
+        ]))
+
+        setattr(self, name, v_net)
+
+    def create_policy(self, name):
+        """
+        Create a policy network and define it as class attribute under the name `name`.
+        This actor defines policy network as:
+
+        policy = obs_feature_extractor + memory_net + action_distribution
+
+        Parameters
+        ----------
+        name : str
+            Policy network name.
+        """
+
+        # If feature_extractor_network not defined, take default one based on input_space
+        feature_extractor = self.feature_extractor_network or default_feature_extractor(self.input_space)
+
+        # ---- 1. Define obs feature extractor --------------------------------
+
+        policy_feature_extractor = feature_extractor(
+            self.input_space, **self.feature_extractor_kwargs)
+
+        # ---- 2. Define memory network  --------------------------------------
+
+        feature_size = int(np.prod(policy_feature_extractor(
+            torch.randn(1, *self.input_space.shape)).shape))
+
+        self.recurrent_size = feature_size
+        if self.recurrent_nets:
+            policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+            feature_size = policy_memory_net.num_outputs
+        else:
+            policy_memory_net = nn.Identity()
+
+        # ---- 3. Define action distribution ----------------------------------
+
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            dist = get_dist("Categorical")(feature_size, self.action_space.n)
+            self.scale = None
+            self.unscale = None
+
+        elif isinstance(self.action_space, gym.spaces.Box):  # Continuous action space
+            dist = get_dist("Gaussian")(feature_size, self.action_space.shape[0])
+            self.scale = Scale(self.action_space)
+            self.unscale = Unscale(self.action_space)
+
+        elif isinstance(self.action_space, gym.spaces.Dict):
+            raise NotImplementedError
+
+        else:
+            raise ValueError("Unrecognized action space")
+
+        # ---- 4. Concatenate all policy modules ------------------------------
+
+        policy_net = nn.Sequential(OrderedDict([
+            ('feature_extractor', policy_feature_extractor),
+            ('memory_net', policy_memory_net),
+            ('dist', dist),
+        ]))
+
+        setattr(self, name, policy_net)

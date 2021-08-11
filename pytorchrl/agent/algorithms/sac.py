@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
@@ -52,6 +53,8 @@ class SAC(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -74,6 +77,7 @@ class SAC(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=1000,
+                 max_grad_norm=0.5,
                  initial_alpha=1.0,
                  start_steps=20000,
                  mini_batch_size=64,
@@ -113,10 +117,11 @@ class SAC(Algorithm):
         self.polyak = polyak
         self.device = device
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
-        if self.actor.q2 is None:
-            raise ValueError("SAC requires double q critic")
+        assert hasattr(self.actor, "q1"), "SAC requires double q critic (num_critics=2)"
+        assert hasattr(self.actor, "q2"), "SAC requires double q critic (num_critics=2)"
 
         self.log_alpha = torch.tensor(
             data=[np.log(initial_alpha)], dtype=torch.float32,
@@ -178,6 +183,7 @@ class SAC(Algorithm):
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
+                       max_grad_norm=0.5,
                        initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
@@ -214,6 +220,8 @@ class SAC(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -236,6 +244,7 @@ class SAC(Algorithm):
                        num_updates=num_updates,
                        update_every=update_every,
                        initial_alpha=initial_alpha,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -366,9 +375,9 @@ class SAC(Algorithm):
         if self.discrete_version:
 
             # Q-values for all actions
-            q1, q2, _ = self.actor.get_q_scores(o, rhs, d)
-            q1 = q1.gather(1, a.long())
-            q2 = q2.gather(1, a.long())
+            q_scores = self.actor.get_q_scores(o, rhs, d)
+            q1 = q_scores.get("q1").gather(1, a.long())
+            q2 = q_scores.get("q2").gather(1, a.long())
 
             # Bellman backup for Q functions
             with torch.no_grad():
@@ -379,16 +388,21 @@ class SAC(Algorithm):
                 logp_a2 = torch.log(p_a2 + z)
 
                 # Target Q-values
-                q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
-                q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ) - self.alpha * logp_a2)).sum(dim=1, keepdim=True)
+                q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2)
+                q1_targ = q_scores_targ.get("q1")
+                q2_targ = q_scores_targ.get("q2")
 
-                assert r.shape == q_pi_targ.shape
-                backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
+                q_targ = (p_a2 * (torch.min(q1_targ, q2_targ) - self.alpha * logp_a2)).sum(dim=1, keepdim=True)
+
+                assert r.shape == q_targ.shape
+                backup = r + (self.gamma ** n_step) * (1 - d2) * q_targ
 
         else:
 
             # Q-values for all actions
-            q1, q2, _ = self.actor.get_q_scores(o, rhs, d, a)
+            q_scores = self.actor.get_q_scores(o, rhs, d, a)
+            q1 = q_scores.get("q1")
+            q2 = q_scores.get("q2")
 
             # Bellman backup for Q functions
             with torch.no_grad():
@@ -397,9 +411,11 @@ class SAC(Algorithm):
                 a2, _, logp_a2, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
                 # Target Q-values
-                q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-                q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+                q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+                q1_targ = q_scores_targ.get("q1")
+                q2_targ = q_scores_targ.get("q2")
 
+                q_pi_targ = torch.min(q1_targ, q2_targ)
                 backup = r + (self.gamma ** n_step) * (1 - d2) * (q_pi_targ - self.alpha * logp_a2)
 
         # MSE loss against Bellman backup
@@ -441,14 +457,18 @@ class SAC(Algorithm):
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d)
-            q_pi = torch.sum(torch.min(q1_pi, q2_pi) * p_pi, dim=1, keepdim=True)
+            q_scores = self.actor.get_q_scores(o, rhs, d)
+            q1 = q_scores.get("q1")
+            q2 = q_scores.get("q2")
+            q_pi = torch.sum(torch.min(q1, q2) * p_pi, dim=1, keepdim=True)
 
         else:
 
             pi, _, logp_pi, _, _, dist = self.actor.get_action(o, rhs, d)
-            q1_pi, q2_pi, _ = self.actor.get_q_scores(o, rhs, d, pi)
-            q_pi = torch.min(q1_pi, q2_pi)
+            q_scores = self.actor.get_q_scores(o, rhs, d, pi)
+            q1 = q_scores.get("q1")
+            q2 = q_scores.get("q2")
+            q_pi = torch.min(q1, q2)
 
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
 
@@ -521,6 +541,8 @@ class SAC(Algorithm):
         loss_q1, loss_q2, loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss_q.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(itertools.chain(
+            self.actor.q1.parameters(), self.actor.q2.parameters()), self.max_grad_norm)
         q_grads = get_gradients(self.actor.q1, self.actor.q2, grads_to_cpu=grads_to_cpu)
 
         # Freeze Q-networks so you don't waste computational effort
@@ -532,6 +554,7 @@ class SAC(Algorithm):
         loss_pi, logp_pi = self.compute_loss_pi(batch, per_weights)
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
+        nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
         for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):

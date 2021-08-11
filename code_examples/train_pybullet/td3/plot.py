@@ -6,7 +6,7 @@ import numpy as np
 from glob import glob
 from matplotlib import pylab as plt; plt.rcdefaults()
 from pytorchrl.agent.env import load_baselines_results
-from pytorchrl.utils import colorize, LoadFromFile
+from pytorchrl.utils import LoadFromFile
 
 
 def plot(experiment_path, roll=5, save_name="results"):
@@ -53,7 +53,7 @@ def plot(experiment_path, roll=5, save_name="results"):
     # Save figure
     save_name = os.path.join(experiment_path, save_name) + ".jpg"
     ax.get_figure().savefig(save_name)
-    print(colorize("Plot save as: {}".format(save_name), color="green"))
+    print("Plot saved as: {}".format(save_name))
     plt.clf()
 
 

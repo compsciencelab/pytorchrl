@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
@@ -42,6 +43,8 @@ class DDQN(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    max_grad_norm : float
+        Gradient clipping parameter.
     initial_epsilon : float
         initial value for DQN epsilon parameter.
     epsilon_decay : float
@@ -59,6 +62,7 @@ class DDQN(Algorithm):
                  num_updates=1,
                  update_every=50,
                  test_every=5000,
+                 max_grad_norm=0.5,
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
@@ -100,8 +104,11 @@ class DDQN(Algorithm):
         self.polyak = polyak
         self.epsilon = initial_epsilon
         self.actor = actor
+        self.max_grad_norm = max_grad_norm
         self.epsilon_decay = epsilon_decay
         self.target_update_interval = target_update_interval
+
+        assert hasattr(self.actor, "q1"), "DDPG requires q critic (num_critics=1)"
 
         # Create target network
         self.actor_targ = deepcopy(actor)
@@ -142,6 +149,7 @@ class DDQN(Algorithm):
                        update_every=50,
                        test_every=5000,
                        start_steps=20000,
+                       max_grad_norm=0.5,
                        mini_batch_size=64,
                        num_test_episodes=5,
                        epsilon_decay=0.999,
@@ -173,6 +181,8 @@ class DDQN(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        max_grad_norm : float
+            Gradient clipping parameter.
         initial_epsilon : float
             initial value for DQN epsilon parameter.
         epsilon_decay : float
@@ -197,6 +207,7 @@ class DDQN(Algorithm):
                        num_updates=num_updates,
                        update_every=update_every,
                        epsilon_decay=epsilon_decay,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        initial_epsilon=initial_epsilon,
                        num_test_episodes=num_test_episodes,
@@ -234,7 +245,7 @@ class DDQN(Algorithm):
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
             with torch.no_grad():
-                q, _ = self.actor.get_q_scores(obs)
+                q = self.actor.get_q_scores(obs).get("q1")
                 action = clipped_action = torch.argmax(q, dim=1).unsqueeze(0)
         else:
             action = clipped_action = torch.tensor(
@@ -265,14 +276,14 @@ class DDQN(Algorithm):
         o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         # Get max predicted Q values (for next states) from target model
-        q_targ_vals, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
+        q_targ_vals = self.actor_targ.get_q_scores(o2, rhs2, d2).get("q1")
         q_targ_next = q_targ_vals.max(dim=1)[0].unsqueeze(1)
 
         # Compute Q targets for current states
         q_targ = r + (self.gamma ** n_step) * (1 - d2) * q_targ_next
 
         # Get expected Q values from local model
-        q_vals, _ = self.actor.get_q_scores(o, rhs, d)
+        q_vals = self.actor.get_q_scores(o, rhs, d).get("q1")
         q_exp = q_vals.gather(1, a.long())
 
         # Compute loss
@@ -312,12 +323,11 @@ class DDQN(Algorithm):
         # PER
         per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
 
-        #######################################################################
-
         # Compute DDQN loss and gradients
         loss, errors = self.compute_loss(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss.backward()
+        nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
         grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
 
         info = {
