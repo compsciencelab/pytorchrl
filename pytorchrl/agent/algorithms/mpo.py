@@ -383,7 +383,7 @@ class MPO(Algorithm):
         if self.discrete_version:
 
             # Q-values for all actions
-            q1, _, _ = self.actor.get_q_scores(o, rhs, d)
+            q1 = self.actor.get_q_scores(o, rhs, d).get("q1")
             q1 = q1.gather(1, a.long())
 
             # Bellman backup for Q functions
@@ -397,7 +397,7 @@ class MPO(Algorithm):
                 p_a2 = dist.expand((N, bs)).log_prob(actions).exp().transpose(0, 1)  # (bs, da)
 
                 # Target Q-values
-                q1_pi_targ, q2_pi_targ, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
+                q1_pi_targ = self.actor_targ.get_q_scores(o2, rhs2, d2).get("q1")
 
                 # q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ))).sum(dim=1, keepdim=True)
                 q_pi_targ = (p_a2 * q1_pi_targ).sum(dim=1, keepdim=True)
@@ -411,7 +411,7 @@ class MPO(Algorithm):
             da = a.shape[-1]  # num action dimensions
 
             # Q-values for all actions
-            q1, _, _ = self.actor.get_q_scores(o, rhs, d, a)
+            q1 = self.actor.get_q_scores(o, rhs, d, a).get("q1")
 
             # Bellman backup for Q functions
             with torch.no_grad():
@@ -425,12 +425,12 @@ class MPO(Algorithm):
                 expanded_rhs2 = {k: v[:, None, :].expand(-1, N, -1) for k, v in rhs2.items()}
                 expanded_reshaped_rhs2 = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs2.items()}
 
-                next_q1, _, _ = self.actor_targ.get_q_scores(
+                next_q1 = self.actor_targ.get_q_scores(
                     expanded_obs2.reshape(-1, ds),  # (N * bs, ds)
                     expanded_reshaped_rhs2,  # get expanded rhs
                     expanded_d2.reshape(-1, 1),  # (N * bs, ds)
                     sampled_actions.reshape(-1, da),  # (N * bs, da)
-                )  # (N * bs, 1)
+                ).get("q1")  # (N * bs, 1)
 
                 expected_next_q1 = next_q1.reshape(bs, N).mean(dim=1, keepdim=True)  # (B,)
                 q_pi_targ = expected_next_q1
@@ -483,7 +483,7 @@ class MPO(Algorithm):
             actions = torch.arange(N)[..., None].expand(N, bs).to(self.device)  # (N, bs)
             dist_targ_probs = dist_targ.expand((N, bs)).log_prob(actions).exp()  # (N, bs)
 
-            target_q1, _, _ = self.actor_targ.get_q_scores(o, rhs, d)  # (bs, N)
+            target_q1 = self.actor_targ.get_q_scores(o, rhs, d).get("q1") # (bs, N)
             target_q1 = target_q1.transpose(1, 0)  # (N, K)
 
             b_prob_np = dist_targ_probs.cpu().transpose(0, 1).numpy()  # (bs, N)
@@ -500,12 +500,12 @@ class MPO(Algorithm):
             expanded_rhs = {k: v[None, ...].expand(N, -1, -1) for k, v in rhs.items()}
             expanded_reshaped_rhs = {k: v.reshape(-1, v.shape[-1]) for k, v in expanded_rhs.items()}
 
-            target_q1, _, _ = self.actor_targ.get_q_scores(
+            target_q1 = self.actor_targ.get_q_scores(
                 expanded_obs.reshape(-1, ds),  # (N * bs, ds)
                 expanded_reshaped_rhs,  # get expanded rhs
                 expanded_d.reshape(-1, 1),  # (N * bs, ds)
                 sampled_actions.reshape(-1, da),  # (N * bs, da)
-            )
+            ).get("q1")
             target_q1 = target_q1.reshape(N, bs)  # (N, bs)
             target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
