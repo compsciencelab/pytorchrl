@@ -66,7 +66,6 @@ def main():
     # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
     # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000)
 
-
     # 6. Define scheme
     params = {}
 
