@@ -120,8 +120,8 @@ class SAC(Algorithm):
         self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
-        if self.actor.q2 is None:
-            raise ValueError("SAC requires double q critic")
+        assert hasattr(self.actor, "q1"), "SAC requires double q critic (num_critics=2)"
+        assert hasattr(self.actor, "q2"), "SAC requires double q critic (num_critics=2)"
 
         self.log_alpha = torch.tensor(
             data=[np.log(initial_alpha)], dtype=torch.float32,

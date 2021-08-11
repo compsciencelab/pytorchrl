@@ -108,6 +108,8 @@ class DDQN(Algorithm):
         self.epsilon_decay = epsilon_decay
         self.target_update_interval = target_update_interval
 
+        assert hasattr(self.actor, "q1"), "DDPG requires q critic (num_critics=1)"
+
         # Create target network
         self.actor_targ = deepcopy(actor)
 

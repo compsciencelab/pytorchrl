@@ -33,7 +33,7 @@ class OnPolicyActor(nn.Module):
         Keyword arguments for the feature extractor network.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
-    number_of_critics : int
+    num_critics : int
         Number of Value networks to be instantiated.
     """
 
@@ -45,7 +45,7 @@ class OnPolicyActor(nn.Module):
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
                  shared_policy_value_network=True,
-                 number_of_critics=1):
+                 num_critics=1):
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
@@ -55,7 +55,7 @@ class OnPolicyActor(nn.Module):
         self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
-        self.number_of_critics = number_of_critics
+        self.num_critics = num_critics
 
         #######################################################################
         #                           POLICY NETWORK                            #
@@ -67,7 +67,7 @@ class OnPolicyActor(nn.Module):
         #                           VALUE NETWORK                             #
         #######################################################################
 
-        for i in range(number_of_critics):
+        for i in range(num_critics):
             self.create_critic("value_net{}".format(i + 1))
 
     @classmethod
@@ -80,7 +80,7 @@ class OnPolicyActor(nn.Module):
             feature_extractor_kwargs={},
             feature_extractor_network=None,
             shared_policy_value_network=True,
-            number_of_critics=1):
+            num_critics=1):
         """
         Returns a function that creates actor critic instances.
 
@@ -100,7 +100,7 @@ class OnPolicyActor(nn.Module):
             Whether to use a RNNs as feature extractors.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
-        number_of_critics : int
+        num_critics : int
             Number of Value networks to be instantiated.
 
         Returns
@@ -117,7 +117,7 @@ class OnPolicyActor(nn.Module):
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network,
-                         number_of_critics=number_of_critics)
+                         num_critics=num_critics)
             if restart_model:
                 policy.load_state_dict(
                     torch.load(restart_model, map_location=device))
@@ -165,7 +165,7 @@ class OnPolicyActor(nn.Module):
         rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
         rhs = {"rhs_act": rhs_act}
-        rhs.update({"rhs_val{}".format(i + 1): rhs_act.clone() for i in range(self.number_of_critics)})
+        rhs.update({"rhs_val{}".format(i + 1): rhs_act.clone() for i in range(self.num_critics)})
 
         return obs, rhs, done
 
@@ -280,7 +280,7 @@ class OnPolicyActor(nn.Module):
         """
 
         outputs = {}
-        for i in range(self.number_of_critics):
+        for i in range(self.num_critics):
             value_net = getattr(self, "value_net{}".format(i + 1))
 
             if self.shared_policy_value_network:

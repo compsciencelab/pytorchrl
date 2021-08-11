@@ -47,7 +47,7 @@ class OffPolicyActor(nn.Module):
         From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
     recurrent_nets_kwargs : dict
         Keyword arguments for the memory network.
-    number_of_critics : int
+    num_critics : int
         Number of Q networks to be instantiated.
 
     Examples
@@ -67,7 +67,7 @@ class OffPolicyActor(nn.Module):
                  act_feature_extractor_kwargs={},
                  common_feature_extractor=MLP,
                  common_feature_extractor_kwargs={},
-                 number_of_critics=2):
+                 num_critics=2):
 
         super(OffPolicyActor, self).__init__()
 
@@ -84,7 +84,7 @@ class OffPolicyActor(nn.Module):
         self.recurrent_nets = recurrent_nets
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
-        self.number_of_critics = number_of_critics
+        self.num_critics = num_critics
 
         #######################################################################
         #                           POLICY NETWORK                            #
@@ -96,7 +96,7 @@ class OffPolicyActor(nn.Module):
         #                             Q-NETWORKS                              #
         #######################################################################
 
-        for i in range(number_of_critics):
+        for i in range(num_critics):
             self.create_critic("q{}".format(i + 1))
 
     @classmethod
@@ -116,7 +116,7 @@ class OffPolicyActor(nn.Module):
             act_feature_extractor_kwargs={},
             common_feature_extractor=MLP,
             common_feature_extractor_kwargs={},
-            number_of_critics=2
+            num_critics=2
 
     ):
         """
@@ -151,7 +151,7 @@ class OffPolicyActor(nn.Module):
             From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
         recurrent_nets_kwargs : dict
             Keyword arguments for the memory network.
-        number_of_critics : int
+        num_critics : int
             Number of Q networks to be instantiated.
 
         Returns
@@ -175,7 +175,7 @@ class OffPolicyActor(nn.Module):
                          act_feature_extractor_kwargs=act_feature_extractor_kwargs,
                          common_feature_extractor=common_feature_extractor,
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
-                         number_of_critics=number_of_critics)
+                         num_critics=num_critics)
 
             if restart_model:
                 policy.load_state_dict(
@@ -226,7 +226,7 @@ class OffPolicyActor(nn.Module):
         rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
         rhs = {"rhs_act": rhs_act}
-        rhs.update({"rhs_q{}".format(i + 1): rhs_act.clone() for i in range(self.number_of_critics)})
+        rhs.update({"rhs_q{}".format(i + 1): rhs_act.clone() for i in range(self.num_critics)})
 
         return obs, rhs, done
 
@@ -412,7 +412,7 @@ class OffPolicyActor(nn.Module):
         """
 
         outputs = {}
-        for i in range(self.number_of_critics):
+        for i in range(self.num_critics):
             q = getattr(self, "q{}".format(i + 1))
             features = q.obs_feature_extractor(obs)
 

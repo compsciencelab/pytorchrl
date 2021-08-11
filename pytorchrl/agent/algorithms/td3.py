@@ -25,8 +25,8 @@ class TD3(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        Actor_critic class instance.
+    actor : Actor
+        Actor class instance.
     lr_pi : float
         Policy optimizer learning rate.
     lr_q : float
@@ -115,8 +115,11 @@ class TD3(Algorithm):
         self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
-        self.action_low = self.actor.action_space.low[0] # Can sometimes be a vector?
+        self.action_low = self.actor.action_space.low[0]  # Can sometimes be a vector?
         self.action_high = self.actor.action_space.high[0]
+
+        assert hasattr(self.actor, "q1"), "TD3 requires double q critic (num_critics=2)"
+        assert hasattr(self.actor, "q2"), "TD3 requires double q critic (num_critics=2)"
 
         # Create target networks
         self.actor_targ = deepcopy(actor)
@@ -126,8 +129,7 @@ class TD3(Algorithm):
             p.requires_grad = False
 
         # List of parameters for both Q-networks
-        q_params = itertools.chain(self.actor.q1.parameters(),
-                                   self.actor.q2.parameters())
+        q_params = itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters())
 
         # List of parameters for both Q-networks
         p_params = itertools.chain(self.actor.policy_net.parameters())

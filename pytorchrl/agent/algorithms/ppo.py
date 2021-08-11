@@ -111,6 +111,8 @@ class PPO(Algorithm):
         self.value_loss_coef = value_loss_coef
         self.use_clipped_value_loss = use_clipped_value_loss
 
+        assert hasattr(self.actor, "value_net1"), "PPO requires value critic (num_critics=1)"
+
         # ----- Optimizers ----------------------------------------------------
 
         self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)

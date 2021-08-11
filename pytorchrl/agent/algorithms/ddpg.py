@@ -26,8 +26,8 @@ class DDPG(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
-    actor_critic : ActorCritic
-        Actor_critic class instance.
+    actor : Actor
+        Actor class instance.
     lr_pi : float
         Policy optimizer learning rate.
     lr_q : float
@@ -114,6 +114,8 @@ class DDPG(Algorithm):
         self.actor = actor
         self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
+
+        assert hasattr(self.actor, "q1"), "DDPG requires q critic (num_critics=1)"
 
         # Create target networks
         self.actor_targ = deepcopy(actor)
