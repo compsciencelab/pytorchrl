@@ -374,7 +374,7 @@ class PPO(Algorithm):
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
-        v_grads = get_gradients(self.actor.value_net, grads_to_cpu=grads_to_cpu)
+        v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
         grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         info = {
@@ -400,7 +400,7 @@ class PPO(Algorithm):
                 self.actor.policy_net,
                 gradients=gradients["pi_grads"], device=self.device)
             set_gradients(
-                self.actor.value_net,
+                self.actor.value_net1,
                 gradients=gradients["v_grads"], device=self.device)
         self.optimizer.step()
 

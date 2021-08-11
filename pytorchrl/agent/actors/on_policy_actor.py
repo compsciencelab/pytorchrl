@@ -53,6 +53,7 @@ class OnPolicyActor(nn.Module):
         self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
+        self.number_of_critics = number_of_critics
 
         #######################################################################
         #                           POLICY NETWORK                            #
@@ -278,14 +279,14 @@ class OnPolicyActor(nn.Module):
             if self.shared_policy_value_network:
                 if self.last_action_features.shape[0] != done.shape[0]:
                     _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
-                value = value_net.predictor(self.last_action_features), rhs
+                value = value_net.predictor(self.last_action_features)
 
             else:
                 value_features = value_net.feature_extractor(obs)
                 if self.recurrent_nets:
                     value_features, rhs["rhs_val{}".format(i + 1)] = value_net.memory_net(
                         value_features, rhs["rhs_val{}".format(i + 1)], done)
-                value = value_net.predictor(value_features), rhs
+                value = value_net.predictor(value_features)
 
             outputs["value_net{}".format(i + 1)] = value
 
