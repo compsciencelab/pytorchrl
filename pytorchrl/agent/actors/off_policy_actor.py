@@ -47,8 +47,8 @@ class OffPolicyActor(nn.Module):
         From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
     recurrent_nets_kwargs : dict
         Keyword arguments for the memory network.
-    create_double_q_critic : bool
-        Whether to instantiate a second Q network or not.
+    number_of_critics : int
+        Number of Q networks to be instantiated.
 
     Examples
     --------
@@ -151,8 +151,8 @@ class OffPolicyActor(nn.Module):
             From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
         recurrent_nets_kwargs : dict
             Keyword arguments for the memory network.
-        create_double_q_critic : bool
-            Whether to instantiate a second Q network or not.
+        number_of_critics : int
+            Number of Q networks to be instantiated.
 
         Returns
         -------
@@ -331,6 +331,8 @@ class OffPolicyActor(nn.Module):
             Updated recurrent hidden states.
         entropy_dist : torch.tensor
             Entropy of the predicted action distribution.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
         x = self.policy_net.common_feature_extractor(self.policy_net.obs_feature_extractor(obs))
@@ -371,8 +373,8 @@ class OffPolicyActor(nn.Module):
         entropy_dist : torch.tensor
             Entropy of the action distribution predicted with current version
             of the policy_net.
-        rhs : dict
-            Updated recurrent hidden states.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
         if self.scale:
@@ -404,12 +406,9 @@ class OffPolicyActor(nn.Module):
 
         Returns
         -------
-        q1 : torch.tensor
-            Q score according to current q1 network version.
-        q2 : torch.tensor
-            Q score according to current q2 network version.
-        rhs : dict
-            Updated recurrent hidden states.
+        output : dict
+            Dict containing value prediction from each critic under keys "q1", "q2", etc
+            as well as the recurrent hidden states under the key "rhs".
         """
 
         outputs = {}
@@ -434,24 +433,17 @@ class OffPolicyActor(nn.Module):
 
     def create_critic(self, name):
         """
-
+        Create a critic q network and define it as class attribute under the name `name`.
         This actor defines defines q networks as:
-        -----------------------------------------
 
             obs_feature_extractor
-        q =                       + common_feature_extractor +
+        q =                       + common_feature_extractor + memory_net + q_prediction_layer
             act_feature_extractor
-
-            + memory_net + q_prediction_layer
-
 
         Parameters
         ----------
-        name
-
-        Returns
-        -------
-
+        name : str
+            Critic network name.
         """
 
         # ---- 1. Define action feature extractor -----------------------------
@@ -515,22 +507,15 @@ class OffPolicyActor(nn.Module):
 
     def create_policy(self, name):
         """
-
+        Create a policy network and define it as class attribute under the name `name`.
         This actor defines policy network as:
-        -------------------------------------
 
-        policy = obs_feature_extractor + common_feature_extractor +
-
-                + memory_net + action distribution
-
+        policy = obs_feature_extractor + common_feature_extractor + memory_net + action distribution
 
         Parameters
         ----------
-        name
-
-        Returns
-        -------
-
+        name : str
+            Policy network name.
         """
 
         # ---- 1. Define Obs feature extractor --------------------------------

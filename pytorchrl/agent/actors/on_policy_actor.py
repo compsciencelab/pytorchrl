@@ -33,6 +33,8 @@ class OnPolicyActor(nn.Module):
         Keyword arguments for the feature extractor network.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
+    number_of_critics : int
+        Number of Value networks to be instantiated.
     """
 
     def __init__(self,
@@ -42,8 +44,8 @@ class OnPolicyActor(nn.Module):
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
-                 number_of_critics=1,
-                 shared_policy_value_network=True):
+                 shared_policy_value_network=True,
+                 number_of_critics=1):
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
@@ -77,7 +79,8 @@ class OnPolicyActor(nn.Module):
             recurrent_nets=False,
             feature_extractor_kwargs={},
             feature_extractor_network=None,
-            shared_policy_value_network=True):
+            shared_policy_value_network=True,
+            number_of_critics=1):
         """
         Returns a function that creates actor critic instances.
 
@@ -97,6 +100,8 @@ class OnPolicyActor(nn.Module):
             Whether to use a RNNs as feature extractors.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
+        number_of_critics : int
+            Number of Value networks to be instantiated.
 
         Returns
         -------
@@ -111,7 +116,8 @@ class OnPolicyActor(nn.Module):
                          recurrent_nets=recurrent_nets,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
-                         shared_policy_value_network=shared_policy_value_network)
+                         shared_policy_value_network=shared_policy_value_network,
+                         number_of_critics=number_of_critics)
             if restart_model:
                 policy.load_state_dict(
                     torch.load(restart_model, map_location=device))
@@ -190,6 +196,8 @@ class OnPolicyActor(nn.Module):
             Updated recurrent hidden states.
         entropy_dist : torch.tensor
             Entropy of the predicted action distribution.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
         action_features = self.policy_net.feature_extractor(obs)
@@ -232,8 +240,8 @@ class OnPolicyActor(nn.Module):
         entropy_dist : torch.tensor
             Entropy of the action distribution predicted with current version
             of the policy_net.
-        rhs : dict
-            Updated recurrent hidden states.
+        dist : torch.Distribution
+            Predicted probability distribution over next action.
         """
 
         if self.scale:
@@ -266,10 +274,9 @@ class OnPolicyActor(nn.Module):
 
         Returns
         -------
-        value : torch.tensor
-            value score according to current value_net version.
-        rhs : dict
-            Updated recurrent hidden states.
+        output : dict
+            Dict containing value prediction from each critic under keys "value_net1", "value_net2", etc
+            as well as the recurrent hidden states under the key "rhs".
         """
 
         outputs = {}
@@ -295,24 +302,20 @@ class OnPolicyActor(nn.Module):
 
     def create_critic(self, name):
         """
-        This actor defines value network as:
-        -------------------------------------
+        Create a critic value network and define it as class attribute under the name `name`.
+        This actor defines defines value networks as:
 
         value = obs_feature_extractor + memory_net + v_prediction_layer
 
         and defines shared policy-value network as:
-        -------------------------------------------
                                                      action_distribution
         value = obs_feature_extractor + memory_net +
                                                      v_prediction_layer
 
         Parameters
         ----------
-        name
-
-        Returns
-        -------
-
+        name : str
+            Critic network name.
         """
 
         # If feature_extractor_network not defined, take default one based on input_space
@@ -355,20 +358,15 @@ class OnPolicyActor(nn.Module):
 
     def create_policy(self, name):
         """
-
+        Create a policy network and define it as class attribute under the name `name`.
         This actor defines policy network as:
-        -------------------------------------
 
         policy = obs_feature_extractor + memory_net + action_distribution
 
-
         Parameters
         ----------
-        name
-
-        Returns
-        -------
-
+        name : str
+            Policy network name.
         """
 
         # If feature_extractor_network not defined, take default one based on input_space
