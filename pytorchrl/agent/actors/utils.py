@@ -90,22 +90,14 @@ def init(module, weight_init, bias_init, gain=1):
 
 
 def partially_load_checkpoint(module, submodule_name, checkpoint):
-    """
-    Should be possible to provide to the actor a dict such as:
-    {
-    "policy_net": "/path/from/where/to/load/policy_net",
-    "q1": "/path/from/where/to/load/q1",
-    "q2": "/path/from/where/to/load/q2",
-    }
-    """
+    """Load `submodule_name` to `module` from checkpoint."""
 
     current_state = module.state_dict()
     checkpoint_state = torch.load(checkpoint)
 
-    assert current_state.keys() == checkpoint_state.keys()
+    # assert current_state.keys() == checkpoint_state.keys()
 
     for name, param in checkpoint_state.items():
         if name.startswith(submodule_name):
             current_state[name].copy_(param)
 
-    import ipdb; ipdb.set_trace()

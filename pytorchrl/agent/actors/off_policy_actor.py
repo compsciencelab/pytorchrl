@@ -182,7 +182,6 @@ class OffPolicyActor(nn.Module):
             elif isinstance(restart_model, dict):
                 for submodule, checkpoint in restart_model.items():
                     partially_load_checkpoint(policy, submodule, checkpoint)
-
             policy.to(device)
 
             return policy
