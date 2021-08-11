@@ -246,7 +246,7 @@ class EREBuffer(B):
                 if num_proc * self.size < self.cmin:  # Standard
 
                     seq_idxs = np.random.randint(0, num_proc * sequences_x_proc, size=sequences_x_batch)
-                    per_weigths, ck, start, end = 1.0, N
+                    per_weigths, ck = 1.0, N
                     start, end = int((N - ck) * self.sequence_length), int(self.size)
 
                 elif self.alpha == 0.0:  # ERE

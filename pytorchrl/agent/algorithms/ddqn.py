@@ -243,7 +243,7 @@ class DDQN(Algorithm):
         # Epsilon-greedy action selection
         if random.random() > self.epsilon:
             with torch.no_grad():
-                q, _ = self.actor.get_q_scores(obs)
+                q = self.actor.get_q_scores(obs).get("q1")
                 action = clipped_action = torch.argmax(q, dim=1).unsqueeze(0)
         else:
             action = clipped_action = torch.tensor(
@@ -274,14 +274,14 @@ class DDQN(Algorithm):
         o2, rhs2, d2 = batch[prl.OBS2], batch[prl.RHS2], batch[prl.DONE2]
 
         # Get max predicted Q values (for next states) from target model
-        q_targ_vals, _ = self.actor_targ.get_q_scores(o2, rhs2, d2)
+        q_targ_vals = self.actor_targ.get_q_scores(o2, rhs2, d2).get("q1")
         q_targ_next = q_targ_vals.max(dim=1)[0].unsqueeze(1)
 
         # Compute Q targets for current states
         q_targ = r + (self.gamma ** n_step) * (1 - d2) * q_targ_next
 
         # Get expected Q values from local model
-        q_vals, _ = self.actor.get_q_scores(o, rhs, d)
+        q_vals = self.actor.get_q_scores(o, rhs, d).get("q1")
         q_exp = q_vals.gather(1, a.long())
 
         # Compute loss

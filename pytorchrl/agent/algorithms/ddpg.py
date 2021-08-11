@@ -340,7 +340,7 @@ class DDPG(Algorithm):
         o2, rhs2, d2 = data[prl.OBS2], data[prl.RHS2], data[prl.DONE2]
 
         # Q-values for all actions
-        q, _, _ = self.actor.get_q_scores(o, rhs, d, a)
+        q = self.actor.get_q_scores(o, rhs, d, a).get("q1")
 
         # Bellman backup for Q functions
         with torch.no_grad():
@@ -349,9 +349,9 @@ class DDPG(Algorithm):
             a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
             # Target Q-values
-            q_pi_targ, _, _ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+            q_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2).get("q1")
 
-            backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
+            backup = r + (self.gamma ** n_step) * (1 - d2) * q_targ
 
         # MSE loss against Bellman backup
         loss_q = 0.5 * (((q - backup) ** 2) * per_weights).mean()
@@ -360,7 +360,7 @@ class DDPG(Algorithm):
         errors = (q - backup).abs()
 
         # reset Noise
-        self.actor.dist.noise.reset()
+        self.actor.policy_net.dist.noise.reset()
 
         return loss_q, errors
 
@@ -382,7 +382,7 @@ class DDPG(Algorithm):
         o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
 
         pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-        q_pi, _, _ = self.actor.get_q_scores(o, rhs, d, pi)
+        q_pi = self.actor.get_q_scores(o, rhs, d, pi).get("q1")
 
         loss_pi = - (q_pi * per_weights).mean()
 

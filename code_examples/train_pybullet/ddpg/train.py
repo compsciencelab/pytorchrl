@@ -59,7 +59,6 @@ def main():
     actor_factory = OffPolicyActor.create_factory(
         obs_space, action_space,
         restart_model=args.restart_model,
-        create_double_q_critic=False,
         deterministic=True,
         noise=args.noise)
 

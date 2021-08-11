@@ -183,7 +183,9 @@ class VanillaOnPolicyBuffer(S):
 
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value, next_rhs = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
+            value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
+            next_value = value_dict.get("value_net1")
+            next_rhs = value_dict.get("rhs")
 
         self.data[prl.RET][self.step].copy_(next_value)
         self.data[prl.VAL][self.step].copy_(next_value)
