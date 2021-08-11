@@ -87,3 +87,15 @@ def init(module, weight_init, bias_init, gain=1):
     weight_init(module.weight.data)
     bias_init(module.bias.data)
     return module
+
+
+def partially_load_checkpoint(module, submodule_name, checkpoint):
+    """
+    Should be possible to provide to the actor a dict such as:
+    {
+    "policy_net": "/path/from/where/to/load/policy_net",
+    "q1": "/path/from/where/to/load/q1",
+    "q2": "/path/from/where/to/load/q2",
+    }
+    """
+    import ipdb; ipdb.set_trace()
