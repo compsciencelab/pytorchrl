@@ -129,7 +129,7 @@ class MPO(Algorithm):
         alpha = 1.0
         mstep_iterations = 5
         sample_action_num = 64
-        max_grad_norm = 0.5
+        max_grad_norm = 0.1
 
         self.ε_kl_μ = kl_mean_constraint
         self.ε_kl_Σ = kl_var_constraint

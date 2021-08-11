@@ -123,7 +123,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
+    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
     # Environment specs
     parser.add_argument(
