@@ -98,4 +98,14 @@ def partially_load_checkpoint(module, submodule_name, checkpoint):
     "q2": "/path/from/where/to/load/q2",
     }
     """
+
+    current_state = module.state_dict()
+    checkpoint_state = torch.load(checkpoint)
+
+    assert current_state.keys() == checkpoint_state.keys()
+
+    for name, param in checkpoint_state.items():
+        if name.startswith(submodule_name):
+            current_state[name].copy_(param)
+
     import ipdb; ipdb.set_trace()

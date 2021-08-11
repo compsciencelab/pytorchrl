@@ -180,7 +180,7 @@ class OffPolicyActor(nn.Module):
             if isinstance(restart_model, str):
                 policy.load_state_dict(torch.load(restart_model, map_location=device))
             elif isinstance(restart_model, dict):
-                for submodule, checkpoint in restart_model:
+                for submodule, checkpoint in restart_model.items():
                     partially_load_checkpoint(policy, submodule, checkpoint)
 
             policy.to(device)
