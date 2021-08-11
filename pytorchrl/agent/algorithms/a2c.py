@@ -81,7 +81,7 @@ class A2C(Algorithm):
         self.actor = actor
         self.max_grad_norm = max_grad_norm
 
-        assert hasattr(self.actor, "value_net1"), "PPO requires value critic (num_critics=1)"
+        assert hasattr(self.actor, "value_net1"), "A2C requires value critic (num_critics=1)"
 
         # ----- Optimizer -----------------------------------------------------
 
