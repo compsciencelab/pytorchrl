@@ -87,3 +87,17 @@ def init(module, weight_init, bias_init, gain=1):
     weight_init(module.weight.data)
     bias_init(module.bias.data)
     return module
+
+
+def partially_load_checkpoint(module, submodule_name, checkpoint):
+    """Load `submodule_name` to `module` from checkpoint."""
+
+    current_state = module.state_dict()
+    checkpoint_state = torch.load(checkpoint)
+
+    # assert current_state.keys() == checkpoint_state.keys()
+
+    for name, param in checkpoint_state.items():
+        if name.startswith(submodule_name):
+            current_state[name].copy_(param)
+
