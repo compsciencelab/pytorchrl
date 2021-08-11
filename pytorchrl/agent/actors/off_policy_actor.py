@@ -284,15 +284,15 @@ class OffPolicyActor(nn.Module):
         # Do burn-in
         with torch.no_grad():
 
-            act, _, _, rhs, _ = self.get_action(
+            act, _, _, rhs, _, _ = self.get_action(
                 burn_in_data[prl.OBS], burn_in_data[prl.RHS], burn_in_data[prl.DONE])
-            act2, _, _, rhs2, _ = self.get_action(
+            act2, _, _, rhs2, _, _ = self.get_action(
                 burn_in_data[prl.OBS2], burn_in_data[prl.RHS2], burn_in_data[prl.DONE2])
 
             rhs = self.get_q_scores(
                 burn_in_data[prl.OBS], rhs, burn_in_data[prl.DONE], act).get("rhs")
             rhs2 = self.get_q_scores(
-                burn_in_data[prl.OBS2], rhs2, burn_in_data[prl.DONE2], act2).get("rhs2")
+                burn_in_data[prl.OBS2], rhs2, burn_in_data[prl.DONE2], act2).get("rhs")
 
             for k in rhs:
                 rhs[k] = rhs[k].detach()
@@ -378,12 +378,12 @@ class OffPolicyActor(nn.Module):
         if self.scale:
             action = self.scale(action)
 
-        x = self.policy_common_feature_extractor(self.policy_obs_feature_extractor(obs))
+        x = self.policy_net.common_feature_extractor(self.policy_obs_feature_extractor(obs))
 
         if self.recurrent_nets:
-            x, rhs["rhs_act"] = self.policy_memory_net(x, rhs["rhs_act"], done)
+            x, rhs["rhs_act"] = self.policy_net.memory_net(x, rhs["rhs_act"], done)
 
-        logp_action, entropy_dist, dist = self.dist.evaluate_pred(x, action)
+        logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(x, action)
 
         return logp_action, entropy_dist, dist
 
@@ -423,7 +423,7 @@ class OffPolicyActor(nn.Module):
             features = q.common_feature_extractor(features)
 
             if self.recurrent_nets:
-                features, rhs["rhs_q{}".format(1 + 1)] = self.q1_memory_net(
+                features, rhs["rhs_q{}".format(1 + 1)] = q.memory_net(
                     features, rhs["rhs_q{}".format(i + 1)], done)
 
             q_scores = q.predictor(features)
@@ -493,7 +493,7 @@ class OffPolicyActor(nn.Module):
             torch.randn(1, feature_size)).shape))
         q_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs) if\
             self.recurrent_nets else nn.Identity()
-        feature_size = self.q1_memory_net.num_outputs if self.recurrent_nets\
+        feature_size = q_memory_net.num_outputs if self.recurrent_nets\
             else feature_size
 
         # ---- 5. Define prediction layer -------------------------------------
@@ -556,7 +556,7 @@ class OffPolicyActor(nn.Module):
         self.recurrent_size = feature_size
         if self.recurrent_nets:
             policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
-            feature_size = self.policy_memory_net.num_outputs
+            feature_size = policy_memory_net.num_outputs
         else:
             policy_memory_net = nn.Identity()
 

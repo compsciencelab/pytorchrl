@@ -83,8 +83,8 @@ class A2C(Algorithm):
 
         # ----- Optimizer -----------------------------------------------------
 
-        self.pi_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr_pi)
-        self.v_optimizer = optim.Adam(self.value_net1.parameters(), lr=lr_v)
+        self.pi_optimizer = optim.Adam(self.actor.policy_net.parameters(), lr=lr_pi)
+        self.v_optimizer = optim.Adam(self.actor.value_net1.parameters(), lr=lr_v)
 
         # ----- Policy Loss Addons --------------------------------------------
 
@@ -307,14 +307,14 @@ class A2C(Algorithm):
         self.pi_optimizer.zero_grad()
         action_loss.backward(retain_graph=True)
 
-        for p in self.policy_net.parameters():
+        for p in self.actor.policy_net.parameters():
             p.requires_grad = False
 
         # Compute value gradients
         self.v_optimizer.zero_grad()
         value_loss.backward()
 
-        for p in self.policy_net.parameters():
+        for p in self.actor.policy_net.parameters():
             p.requires_grad = True
 
         # Clip gradients to max value
