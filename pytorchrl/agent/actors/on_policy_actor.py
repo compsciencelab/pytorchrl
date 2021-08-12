@@ -23,6 +23,8 @@ class OnPolicyActor(nn.Module):
         Environment observation space.
     action_space : gym.Space
         Environment action space.
+    algorithm : str
+        Name of the RL algorithm used for learning.
     recurrent_nets : bool
         Whether to use a RNNs on top of the feature extractors.
     recurrent_nets_kwargs:
@@ -40,6 +42,7 @@ class OnPolicyActor(nn.Module):
     def __init__(self,
                  input_space,
                  action_space,
+                 algorithm,
                  recurrent_nets=False,
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
@@ -57,15 +60,11 @@ class OnPolicyActor(nn.Module):
         self.feature_extractor_kwargs = feature_extractor_kwargs
         self.num_critics = num_critics
 
-        #######################################################################
-        #                           POLICY NETWORK                            #
-        #######################################################################
+        # ----- Policy Network ----------------------------------------------------
 
         self.create_policy("policy_net")
 
-        #######################################################################
-        #                           VALUE NETWORK                             #
-        #######################################################################
+        # ----- Value Networks ----------------------------------------------------
 
         for i in range(num_critics):
             self.create_critic("value_net{}".format(i + 1))
@@ -75,6 +74,7 @@ class OnPolicyActor(nn.Module):
             cls,
             input_space,
             action_space,
+            algorithm,
             restart_model=None,
             recurrent_nets=False,
             feature_extractor_kwargs={},
@@ -90,6 +90,8 @@ class OnPolicyActor(nn.Module):
             Environment observation space.
         action_space : gym.Space
             Environment action space.
+        algorithm : str
+            Name of the RL algorithm used for learning.
         restart_model : str
             Path to a previously trained ActorCritic checkpoint to be loaded.
         feature_extractor_network : nn.Module
@@ -113,6 +115,7 @@ class OnPolicyActor(nn.Module):
             """Create and return an actor critic instance."""
             policy = cls(input_space=input_space,
                          action_space=action_space,
+                         algorithm=algorithm,
                          recurrent_nets=recurrent_nets,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,

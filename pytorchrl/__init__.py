@@ -1,4 +1,4 @@
-__version__ = "1.3.22"
+__version__ = "1.3.30"
 
 from collections import namedtuple
 
@@ -52,6 +52,7 @@ OBS = "Observation"
 RHS = "RecurrentHiddenStates"
 DONE = "Done"
 ACT = "Action"
+ACTPROBS = "ActionProbs"
 REW = "Reward"
 OBS2 = "NextObservation"
 RHS2 = "NextRecurrentHiddenStates"
@@ -62,8 +63,17 @@ ADV = "Advantage"
 RET = "Return"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
-OffPolicyDataKeys = DataTransitionKeys
+OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
+
+# ALGORITHMS
+A2C = "A2C"
+PPO = "PPO"
+SAC = "SAC"
+MPO = "MPO"
+TD3 = "TD3"
+DDPG = "DDPG"
+DDQN = "DDQN"
 
 # -----------------------------------------------------------------------------
 

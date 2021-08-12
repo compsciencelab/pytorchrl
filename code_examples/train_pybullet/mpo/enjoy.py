@@ -1,67 +1,55 @@
 #!/usr/bin/env python3
 
 import os
+import torch
 import argparse
-import numpy as np
-from glob import glob
-from matplotlib import pylab as plt; plt.rcdefaults()
-from pytorchrl.agent.env import load_baselines_results
+from pytorchrl.envs import pybullet_test_env_factory
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 
 
-def plot(experiment_path, roll=5, save_name="results"):
+def enjoy():
 
-    fig = plt.figure(figsize=(20, 10))
+    args = get_args()
 
-    if len(glob(os.path.join(experiment_path, "train/*monitor*"))) != 0:
+    # Define single copy of the environment
+    env = pybullet_test_env_factory(env_id=args.env_id)
+    env.render()
 
-        exps = glob(experiment_path)
-        print(exps)
+    # Define agent device and agent
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        df_train = load_baselines_results(os.path.join(experiment_path, "train"))
-        df_train['steps'] = df_train['l'].cumsum() / 1000000
-        df_train['time'] = df_train['t'] / 3600
+    policy = OffPolicyActor.create_factory(
+        env.observation_space, env.action_space,
+        restart_model=os.path.join(args.log_dir, "model.state_dict"))(device)
 
-        ax = plt.subplot(1, 1, 1)
-        df_train.rolling(roll).mean().plot('steps', 'r',  style='-',  ax=ax,  legend=False)
+    # Define initial Tensors
+    obs, done = env.reset(), False
+    _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
+    episode_reward = 0
 
-    if len(glob(os.path.join(experiment_path, "test/*monitor*"))) != 0:
+    # Execute episodes
+    while not done:
 
-        exps = glob(experiment_path)
-        print(exps)
+        env.render()
+        obs = torch.Tensor(obs).view(1, -1).to(device)
+        done = torch.Tensor([done]).view(1, -1).to(device)
+        with torch.no_grad():
+            _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
+        obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
+        episode_reward += reward
 
-        df_test = load_baselines_results(os.path.join(experiment_path, "test"))
-        df_test['steps'] = df_test['l'].cumsum() / 1000000
-        df_test['time'] = df_test['t'] / 3600
-
-        # Map test steps with corresponding number of training steps
-        df_test["steps"] = df_test["steps"].map(
-            lambda a: df_train["steps"][np.argmin(abs(df_test["time"][df_test["steps"].index[
-                df_test["steps"] == a]].to_numpy() - df_train["time"]))])
-
-        ax = plt.subplot(1, 1, 1)
-        df_test.rolling(roll).mean().plot('steps', 'r', style='-', ax=ax, legend=False)
-
-    fig.legend(["train", "test"], loc="lower center", ncol=2)
-    ax.set_title(args.env_id)
-    ax.set_xlabel('Num steps (M)')
-    ax.set_ylabel('Reward')
-    ax.grid(True)
-
-    fig.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.1, hspace=0.2)
-
-    # Save figure
-    save_name = os.path.join(experiment_path, save_name) + ".jpg"
-    ax.get_figure().savefig(save_name)
-    print("Plot saved as: {}".format(save_name))
-    plt.clf()
+        if done:
+            print("EPISODE: reward: {}".format(episode_reward), flush=True)
+            done, episode_reward = 0, False
+            obs = env.reset()
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
-    # Configuration file
-    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+    # Configuration file, keep first
+    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
 
     # Environment specs
     parser.add_argument(
@@ -155,18 +143,10 @@ def get_args():
         '--log-dir', default='/tmp/pybullet_sac',
         help='directory to save agent logs (default: /tmp/pybullet_sac)')
 
-    parser.add_argument(
-        '--save-name', default='results',
-        help='plot save name (default: results)')
-
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
-
     return args
 
 
 if __name__ == "__main__":
-
-    args = get_args()
-    plot(experiment_path=args.log_dir, save_name=args.save_name)
-    quit()
+    enjoy()

@@ -186,7 +186,9 @@ class PPO(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new PPO class instance.
+            Function that creates a new PPO class instance.
+        algo_name : str
+            Name of the algorithm.
         """
         def create_algo_instance(device, actor):
             return cls(lr=lr,
@@ -205,7 +207,7 @@ class PPO(Algorithm):
                        use_clipped_value_loss=use_clipped_value_loss,
                        policy_loss_addons=policy_loss_addons)
 
-        return create_algo_instance
+        return create_algo_instance, prl.PPO
 
     @property
     def gamma(self):

@@ -400,3 +400,4 @@ class ReplayBuffer(S):
                 new_parameter_value = (new_parameter_value // self.sequence_length) * self.sequence_length
                 new_parameter_value *= 2
             setattr(self, parameter_name, new_parameter_value)
+

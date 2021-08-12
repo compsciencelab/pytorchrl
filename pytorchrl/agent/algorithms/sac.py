@@ -228,7 +228,9 @@ class SAC(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new SAC class instance.
+            Function that creates a new SAC class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -249,7 +251,8 @@ class SAC(Algorithm):
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.SAC
 
     @property
     def gamma(self):
@@ -381,9 +384,14 @@ class SAC(Algorithm):
 
             # Bellman backup for Q functions
             with torch.no_grad():
+
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-                p_a2 = dist.probs
+
+                # Get action log probs
+                bs, n = o.shape[0], dist.probs.shape[-1]
+                actions = torch.arange(n)[..., None].expand(-1, bs).to(self.device)
+                p_a2 = dist.expand((n, bs)).log_prob(actions).exp().transpose(0, 1)
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
 

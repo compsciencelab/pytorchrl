@@ -48,7 +48,7 @@ def main():
         vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
     # 3. Define RL training algorithm
-    algo_factory = PPO.create_factory(
+    algo_factory, algo_name = PPO.create_factory(
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
@@ -56,8 +56,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
-        obs_space, action_space,
-        restart_model=args.restart_model)
+        obs_space, action_space, algo_name, restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
@@ -127,7 +126,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
+    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
     # Environment specs
     parser.add_argument(
@@ -223,6 +222,7 @@ def get_args():
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
     return args
+
 
 if __name__ == "__main__":
     main()

@@ -1,66 +1,129 @@
 #!/usr/bin/env python3
 
 import os
+import ray
+import sys
+import time
 import argparse
-import numpy as np
-from glob import glob
-from matplotlib import pylab as plt; plt.rcdefaults()
-from pytorchrl.agent.env import load_baselines_results
-from pytorchrl.utils import LoadFromFile
+
+from pytorchrl.learner import Learner
+from pytorchrl.scheme import Scheme
+from pytorchrl.agent.algorithms import MPO
+from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
+from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
+from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 
-def plot(experiment_path, roll=5, save_name="results"):
 
-    fig = plt.figure(figsize=(20, 10))
+def main():
 
-    if len(glob(os.path.join(experiment_path, "train/*monitor*"))) != 0:
+    args = get_args()
+    cleanup_log_dir(args.log_dir)
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
 
-        exps = glob(experiment_path)
-        print(exps)
+    if args.cluster:
+        ray.init(address="auto")
+    else:
+        ray.init(num_cpus=0)
 
-        df_train = load_baselines_results(os.path.join(experiment_path, "train"))
-        df_train['steps'] = df_train['l'].cumsum() / 1000000
-        df_train['time'] = df_train['t'] / 3600
+    resources = ""
+    for k, v in ray.cluster_resources().items():
+        resources += "{} {}, ".format(k, v)
+    print(resources[:-2], flush=True)
 
-        ax = plt.subplot(1, 1, 1)
-        df_train.rolling(roll).mean().plot('steps', 'r',  style='-',  ax=ax,  legend=False)
+    # 1. Define Train Vector of Envs
+    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+        env_fn=pybullet_train_env_factory, env_kwargs={
+            "env_id": args.env_id,
+            "frame_skip": args.frame_skip,
+            "frame_stack": args.frame_stack})
 
-    if len(glob(os.path.join(experiment_path, "test/*monitor*"))) != 0:
+    # 2. Define Test Vector of Envs (Optional)
+    test_envs_factory, _, _ = VecEnv.create_factory(
+        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+        env_fn=pybullet_test_env_factory, env_kwargs={
+            "env_id": args.env_id,
+            "frame_skip": args.frame_skip,
+            "frame_stack": args.frame_stack})
 
-        exps = glob(experiment_path)
-        print(exps)
+    # 3. Define RL training algorithm
+    algo_factory, algo_name = MPO.create_factory(
+        lr_pi=args.lr_pi, lr_q=args.lr_q,
+        gamma=args.gamma, polyak=args.polyak, num_updates=args.num_updates,
+        update_every=args.update_every, start_steps=args.start_steps,
+        mini_batch_size=args.mini_batch_size)
 
-        df_test = load_baselines_results(os.path.join(experiment_path, "test"))
-        df_test['steps'] = df_test['l'].cumsum() / 1000000
-        df_test['time'] = df_test['t'] / 3600
+    # 4. Define RL Policy
+    actor_factory = OffPolicyActor.create_factory(
+        obs_space, action_space, algo_name, recurrent_nets=False,
+        restart_model=args.restart_model)
 
-        # Map test steps with corresponding number of training steps
-        df_test["steps"] = df_test["steps"].map(
-            lambda a: df_train["steps"][np.argmin(abs(df_test["time"][df_test["steps"].index[
-                df_test["steps"] == a]].to_numpy() - df_train["time"]))])
+    # 5. Define rollouts storage
+    storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
+    # storage_factory = NStepReplayBuffer.create_factory(size=args.buffer_size, n_step=2)
+    # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
+    # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000)
 
-        ax = plt.subplot(1, 1, 1)
-        df_test.rolling(roll).mean().plot('steps', 'r', style='-', ax=ax, legend=False)
+    # 6. Define scheme
+    params = {}
 
-    fig.legend(["train", "test"], loc="lower center", ncol=2)
-    ax.set_title(args.env_id)
-    ax.set_xlabel('Num steps (M)')
-    ax.set_ylabel('Reward')
-    ax.grid(True)
+    # add core modules
+    params.update({
+        "algo_factory": algo_factory,
+        "actor_factory": actor_factory,
+        "storage_factory": storage_factory,
+        "train_envs_factory": train_envs_factory,
+        "test_envs_factory": test_envs_factory,
+    })
 
-    fig.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.1, hspace=0.2)
+    # add collection specs
+    params.update({
+        "num_col_workers": args.num_col_workers,
+        "col_workers_communication": args.com_col_workers,
+        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+    })
 
-    # Save figure
-    save_name = os.path.join(experiment_path, save_name) + ".jpg"
-    ax.get_figure().savefig(save_name)
-    print("Plot saved as: {}".format(save_name))
-    plt.clf()
+    # add gradient specs
+    params.update({
+        "num_grad_workers": args.num_grad_workers,
+        "grad_workers_communication": args.com_grad_workers,
+        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+    })
+
+    scheme = Scheme(**params)
+
+    # 7. Define learner
+    learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
+
+    # 8. Define train loop
+    iterations = 0
+    start_time = time.time()
+    while not learner.done():
+
+        learner.step()
+
+        if iterations % args.log_interval == 0:
+            learner.print_info()
+
+        if iterations % args.save_interval == 0:
+            save_name = learner.save_model()
+
+        if args.max_time != -1 and (time.time() - start_time) > args.max_time:
+            break
+
+        iterations += 1
+
+    print("Finished!")
+    sys.exit()
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
-    # Configuration file
+    # Configuration file, keep first
     parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
     # Environment specs
@@ -76,7 +139,9 @@ def get_args():
 
     # SAC specs
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        '--lr_q', type=float, default=7e-4, help='q net learning rate (default: 7e-4)')
+    parser.add_argument(
+        '--lr_pi', type=float, default=7e-4, help='policy learning rate (default: 7e-4)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
@@ -155,18 +220,10 @@ def get_args():
         '--log-dir', default='/tmp/pybullet_sac',
         help='directory to save agent logs (default: /tmp/pybullet_sac)')
 
-    parser.add_argument(
-        '--save-name', default='results',
-        help='plot save name (default: results)')
-
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
-
     return args
 
 
 if __name__ == "__main__":
-
-    args = get_args()
-    plot(experiment_path=args.log_dir, save_name=args.save_name)
-    quit()
+    main()
