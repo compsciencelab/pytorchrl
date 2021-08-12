@@ -76,7 +76,9 @@ def get_args():
 
     # SAC specs
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        '--lr_q', type=float, default=7e-4, help='q net learning rate (default: 7e-4)')
+    parser.add_argument(
+        '--lr_pi', type=float, default=7e-4, help='policy learning rate (default: 7e-4)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
