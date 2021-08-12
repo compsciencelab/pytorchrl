@@ -512,9 +512,8 @@ class MPO(Algorithm):
                 backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
-        # loss_q = 0.5 * (((q1 - backup) ** 2) * per_weights).mean()
-        # loss_q = (((q1 - backup).abs()) * per_weights).mean()
-        loss_q = self.norm_loss_q(backup, q1)
+        loss_q = 0.5 * (((q1 - backup) ** 2) * per_weights).mean()
+        # loss_q = self.norm_loss_q(backup, q1)
 
         # errors = (torch.min(q1, q2) - backup).abs().detach().cpu()
         # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
