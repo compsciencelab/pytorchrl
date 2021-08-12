@@ -204,7 +204,9 @@ class DDPG(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new DDPG class instance.
+            Function that creates a new DDPG class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -223,7 +225,8 @@ class DDPG(Algorithm):
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.DDPG
 
     @property
     def gamma(self):

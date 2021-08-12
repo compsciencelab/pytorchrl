@@ -228,7 +228,9 @@ class SAC(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new SAC class instance.
+            Function that creates a new SAC class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -249,7 +251,8 @@ class SAC(Algorithm):
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.SAC
 
     @property
     def gamma(self):

@@ -193,7 +193,9 @@ class DDQN(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new DDQN class instance.
+            Function that creates a new DDQN class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -213,7 +215,8 @@ class DDQN(Algorithm):
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.DDQN
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """

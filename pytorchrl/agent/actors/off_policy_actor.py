@@ -24,10 +24,10 @@ class OffPolicyActor(nn.Module):
         Environment observation space.
     action_space : gym.Space
         Environment action space.
+    algorithm : str
+        Name of the RL algorithm used for learning.
     noise : str
         Type of exploration noise that will be added to the deterministic actions.
-    deterministic : bool
-        Whether using DDPG, TD3 or any other deterministic off-policy actor.
     obs_feature_extractor : nn.Module
         PyTorch nn.Module to extract features from observation in all networks.
     obs_feature_extractor_kwargs : dict
@@ -56,11 +56,11 @@ class OffPolicyActor(nn.Module):
     def __init__(self,
                  input_space,
                  action_space,
+                 algorithm,
                  noise=None,
-                 deterministic=False,
                  sequence_overlap=0.5,
-                 recurrent_nets_kwargs={},
                  recurrent_nets=False,
+                 recurrent_nets_kwargs={},
                  obs_feature_extractor=None,
                  obs_feature_extractor_kwargs={},
                  act_feature_extractor=None,
@@ -72,9 +72,9 @@ class OffPolicyActor(nn.Module):
         super(OffPolicyActor, self).__init__()
 
         self.noise = noise
+        self.algorithm = algorithm
         self.input_space = input_space
         self.action_space = action_space
-        self.deterministic = deterministic
         self.act_feature_extractor = act_feature_extractor
         self.act_feature_extractor_kwargs = act_feature_extractor_kwargs
         self.obs_feature_extractor = obs_feature_extractor
@@ -85,16 +85,13 @@ class OffPolicyActor(nn.Module):
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
         self.num_critics = num_critics
+        self.deterministic = algorithm in [prl.DDPG, prl.TD3]
 
-        #######################################################################
-        #                           POLICY NETWORK                            #
-        #######################################################################
+        # ----- Policy Network ----------------------------------------------------
 
         self.create_policy("policy_net")
 
-        #######################################################################
-        #                             Q-NETWORKS                              #
-        #######################################################################
+        # ----- Q Networks ----------------------------------------------------
 
         for i in range(num_critics):
             self.create_critic("q{}".format(i + 1))
@@ -104,8 +101,8 @@ class OffPolicyActor(nn.Module):
             cls,
             input_space,
             action_space,
+            algorithm,
             noise=None,
-            deterministic=False,
             restart_model=None,
             sequence_overlap=0.5,
             recurrent_nets_kwargs={},
@@ -128,10 +125,10 @@ class OffPolicyActor(nn.Module):
             Environment observation space.
         action_space : gym.Space
             Environment action space.
+        algorithm : str
+            Name of the RL algorithm used for learning.
         noise : str
             Type of exploration noise that will be added to the deterministic actions.
-        deterministic : bool
-            Whether using DDPG, TD3 or any other deterministic off-policy actor.
         obs_feature_extractor : nn.Module
             PyTorch nn.Module to extract features from observation in all networks.
         obs_feature_extractor_kwargs : dict
@@ -164,8 +161,8 @@ class OffPolicyActor(nn.Module):
             """Create and return an actor critic instance."""
             policy = cls(input_space=input_space,
                          action_space=action_space,
+                         algorithm=algorithm,
                          noise=noise,
-                         deterministic=deterministic,
                          sequence_overlap=sequence_overlap,
                          recurrent_nets_kwargs=recurrent_nets_kwargs,
                          recurrent_nets=recurrent_nets,
@@ -555,13 +552,16 @@ class OffPolicyActor(nn.Module):
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.Box) and not self.deterministic:
-            dist = get_dist("SquashedGaussian")(feature_size, self.action_space.shape[0])
+            if self.algorithm in [prl.SAC]:
+                dist = get_dist("SquashedGaussian")(feature_size, self.action_space.shape[0])
+            else:
+                dist = get_dist("Gaussian")(feature_size, self.action_space.shape[0])
             self.scale = Scale(self.action_space)
             self.unscale = Unscale(self.action_space)
 
         elif isinstance(self.action_space, gym.spaces.Box) and self.deterministic:
-            dist = get_dist("Deterministic")(feature_size,
-                self.action_space.shape[0], noise=self.noise)
+            dist = get_dist("Deterministic")(
+                feature_size, self.action_space.shape[0], noise=self.noise)
             self.scale = Scale(self.action_space)
             self.unscale = Unscale(self.action_space)
         else:

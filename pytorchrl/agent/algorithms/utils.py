@@ -31,7 +31,7 @@ def set_gradients(*nets, gradients, device):
             p.grad = torch.from_numpy(g).to(device)
 
 
-########################################################################################################################
+###### KL DIVERGENCE ###################################################################################################
 
 
 def bt(m):
@@ -42,35 +42,55 @@ def btr(m):
     return m.diagonal(dim1=-2, dim2=-1).sum(-1)
 
 
-def gaussian_kl(μi, μ, Ai, A):
+def gaussian_kl(mu1, mu2, cov1, cov2):
     """
-    decoupled KL between two multivariate gaussian distribution
+    Decoupled KL between two multivariate gaussian distribution
+
     C_μ = KL(f(x|μi,Σi)||f(x|μ,Σi))
     C_Σ = KL(f(x|μi,Σi)||f(x|μi,Σ))
-    :param μi: (B, n)
-    :param μ: (B, n)
-    :param Ai: (B, n, n)
-    :param A: (B, n, n)
-    :return: C_μ, C_Σ: scalar
-        mean and covariance terms of the KL
-    :return: mean of determinanats of Σi, Σ
+
+    Adapted from https://github.com/daisatojp/mpo/blob/master/mpo/mpo.py
+
+    Parameters
+    ----------
+    mu1: torch.tensor
+        Mean distribution 1 - (B, n).
+    mu2: torch.tensor
+        Mean distribution 2 - (B, n).
+    cov1: torch.tensor
+        Covariance matrix distribution 1 - (B, n, n).
+    cov2:
+        Covariance matrix distribution 2 - (B, n, n)
+
+    Returns
+    -------
+    kl_mu: scalar
+        Mean term of the KL.
+    kl_sigma: scalar
+        Covariance term of the KL.
+
     ref : https://stanford.edu/~jduchi/projects/general_notes.pdf page.13
     """
-    n = A.size(-1)
-    μi = μi.unsqueeze(-1)  # (B, n, 1)
-    μ = μ.unsqueeze(-1)  # (B, n, 1)
-    Σi = Ai @ bt(Ai)  # (B, n, n)
-    Σ = A @ bt(A)  # (B, n, n)
-    Σi_det = Σi.det()  # (B,)
-    Σ_det = Σ.det()  # (B,)
+
+    n = cov2.size(-1)
+    mu1 = mu1.unsqueeze(-1)  # (B, n, 1)
+    mu2 = mu2.unsqueeze(-1)  # (B, n, 1)
+
+    sigma1 = cov1 @ bt(cov1)  # (B, n, n)
+    sigma2 = cov2 @ bt(cov2)  # (B, n, n)
+    sigma1_det = sigma1.det()  # (B,)
+    sigma2_det = sigma2.det()  # (B,)
+    sigma1_inv = sigma1.inverse()  # (B, n, n)
+    sigma2_inv = sigma2.inverse()  # (B, n, n)
+
     # determinant can be minus due to numerical calculation error
     # https://github.com/daisatojp/mpo/issues/11
-    Σi_det = torch.clamp_min(Σi_det, 1e-6)
-    Σ_det = torch.clamp_min(Σ_det, 1e-6)
-    Σi_inv = Σi.inverse()  # (B, n, n)
-    Σ_inv = Σ.inverse()  # (B, n, n)
-    inner_μ = ((μ - μi).transpose(-2, -1) @ Σi_inv @ (μ - μi)).squeeze()  # (B,)
-    inner_Σ = torch.log(Σ_det / Σi_det) - n + btr(Σ_inv @ Σi)  # (B,)
-    C_μ = 0.5 * torch.mean(inner_μ)
-    C_Σ = 0.5 * torch.mean(inner_Σ)
-    return C_μ, C_Σ, torch.mean(Σi_det), torch.mean(Σ_det)
+    sigma1_det = torch.clamp_min(sigma1_det, 1e-6)
+    sigma2_det = torch.clamp_min(sigma2_det, 1e-6)
+
+    inner_mu = ((mu2 - mu1).transpose(-2, -1) @ sigma1_inv @ (mu2 - mu1)).squeeze()  # (B,)
+    inner_sigma = torch.log(sigma1_det / sigma2_det) - n + btr(sigma2_inv @ sigma1_inv)  # (B,)
+    kl_mu = 0.5 * torch.mean(inner_mu)
+    kl_sigma = 0.5 * torch.mean(inner_sigma)
+
+    return kl_mu, kl_sigma

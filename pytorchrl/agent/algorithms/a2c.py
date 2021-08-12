@@ -141,7 +141,9 @@ class A2C(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new A2C class instance.
+            Function that creates a new A2C class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -154,7 +156,8 @@ class A2C(Algorithm):
                        max_grad_norm=max_grad_norm,
                        num_test_episodes=num_test_episodes,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.A2C
 
     @property
     def gamma(self):

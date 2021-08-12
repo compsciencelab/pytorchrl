@@ -66,6 +66,15 @@ DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
 
+# ALGORITHMS
+A2C = "A2C"
+PPO = "PPO"
+SAC = "SAC"
+MPO = "MPO"
+TD3 = "TD3"
+DDPG = "DDPG"
+DDQN = "DDQN"
+
 # -----------------------------------------------------------------------------
 
 from pytorchrl.learner import Learner

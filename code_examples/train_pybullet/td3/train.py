@@ -48,20 +48,18 @@ def main():
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack})
 
-    # 3. Define RL Policy
-    actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space,
-        restart_model=args.restart_model,
-        deterministic=True,
-        noise=args.noise)
-
-    # 4. Define RL training algorithm
-    algo_factory = TD3.create_factory(
-        lr_pi=args.lr, lr_q=args.lr, gamma=args.gamma, 
+    # 3. Define RL training algorithm
+    algo_factory, algo_name = TD3.create_factory(
+        lr_pi=args.lr, lr_q=args.lr, gamma=args.gamma,
         polyak=args.polyak, num_updates=args.num_updates,
         update_every=args.update_every, start_steps=args.start_steps,
         mini_batch_size=args.mini_batch_size,
     )
+
+    # 4. Define RL Policy
+    actor_factory = OffPolicyActor.create_factory(
+        obs_space, action_space, algo_name,
+        restart_model=args.restart_model, noise=args.noise)
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)

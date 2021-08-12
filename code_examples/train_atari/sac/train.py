@@ -47,7 +47,7 @@ def main():
         vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
     # 3. Define RL training algorithm
-    algo_factory = SAC.create_factory(
+    algo_factory, algo_name = SAC.create_factory(
         lr_pi=args.lr, lr_q=args.lr, lr_alpha=args.lr, initial_alpha=args.alpha,
         gamma=args.gamma, polyak=args.polyak, num_updates=args.num_updates,
         update_every=args.update_every, start_steps=args.start_steps,
@@ -55,8 +55,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space,
-        restart_model=args.restart_model)
+        obs_space, action_space, algo_name, restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)

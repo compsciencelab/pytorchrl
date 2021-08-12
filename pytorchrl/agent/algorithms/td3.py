@@ -208,7 +208,9 @@ class TD3(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new TD3 class instance.
+            Function that creates a new TD3 class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -227,7 +229,8 @@ class TD3(Algorithm):
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.TD3
 
     @property
     def gamma(self):

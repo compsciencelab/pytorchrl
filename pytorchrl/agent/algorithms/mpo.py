@@ -14,9 +14,6 @@ from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients, gauss
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
-# TODO. Review continuous MPO, now not working!
-
-
 class MPO(Algorithm):
     """
     Maximum a Posteriori Policy Optimization algorithm class.
@@ -120,8 +117,7 @@ class MPO(Algorithm):
                  mstep_iterations=5,
                  sample_action_num=64,
                  max_grad_norm=0.1,
-                 policy_loss_addons=[],
-                 ):
+                 policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -152,33 +148,33 @@ class MPO(Algorithm):
         # ---- MPO-specific attributes ----------------------------------------
 
         self.iter = 0
-        self.polyak = polyak
-        self.device = device
         self.actor = actor
-        self.ε_dual = dual_constraint
+        self.device = device
+        self.polyak = polyak
+        self.dual_constraint = dual_constraint
         self.max_grad_norm = max_grad_norm
         self.mstep_iterations = mstep_iterations
         self.sample_action_num = sample_action_num
         self.target_update_interval = target_update_interval
 
         # For continuous action space
-        self.ε_kl_μ = kl_mean_constraint
-        self.ε_kl_Σ = kl_var_constraint
-        self.α_μ_scale = alpha_mean_scale
-        self.α_Σ_scale = alpha_var_scale
-        self.α_μ_max = alpha_mean_max
-        self.α_Σ_max = alpha_var_max
+        self.kl_mean_constraint = kl_mean_constraint
+        self.kl_var_constraint = kl_var_constraint
+        self.alpha_mean_scale = alpha_mean_scale
+        self.alpha_var_scale = alpha_var_scale
+        self.alpha_mean_max = alpha_mean_max
+        self.alpha_var_max = alpha_var_max
 
         # For discrete action space
-        self.α_max = alpha_max
-        self.ε_kl = kl_constraint
-        self.α_scale = alpha_scale
+        self.alpha_max = alpha_max
+        self.kl_constraint = kl_constraint
+        self.alpha_scale = alpha_scale
 
         # Initialize Lagrange Multiplier
-        self.η = np.random.rand()
-        self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
-        self.α_Σ = 0.0  # lagrangian multiplier for continuous action space in the M-step
-        self.α = 0.0  # lagrangian multiplier for discrete action space in the M-step
+        self.eta = np.random.rand()
+        self.alpha_mu = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.alpha_sigma = 0.0  # lagrangian multiplier for continuous action space in the M-step
+        self.alpha = 0.0  # lagrangian multiplier for discrete action space in the M-step
 
         assert hasattr(self.actor, "q1"), "MPO requires q critic (num_critics=1)"
 
@@ -238,8 +234,8 @@ class MPO(Algorithm):
                        kl_var_constraint=0.0001,
                        kl_constraint=0.01,
                        alpha_scale=10.0,
-                       alpha_mean_scale=10.0,  # 1.0
-                       alpha_var_scale=10.0,  # 100.0
+                       alpha_mean_scale=1.0,
+                       alpha_var_scale=100.0,
                        alpha_mean_max=0.1,
                        alpha_var_max=10.0,
                        alpha_max=1.0,
@@ -306,7 +302,9 @@ class MPO(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            creates a new MPO class instance.
+            Function that creates a new MPO class instance.
+        algo_name : str
+            Name of the algorithm.
         """
 
         def create_algo_instance(device, actor):
@@ -323,8 +321,18 @@ class MPO(Algorithm):
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
+                       dual_constraint=dual_constraint,
+                       kl_mean_constraint=kl_mean_constraint,
+                       kl_var_constraint=kl_var_constraint,
+                       kl_constraint=kl_constraint,
+                       alpha_scale=alpha_scale,
+                       alpha_mean_scale=alpha_mean_scale,
+                       alpha_var_scale=alpha_var_scale,
+                       alpha_mean_max=alpha_mean_max,
+                       alpha_var_max=alpha_var_max,
                        policy_loss_addons=policy_loss_addons)
-        return create_algo_instance
+
+        return create_algo_instance, prl.MPO
 
     @property
     def gamma(self):
@@ -483,8 +491,6 @@ class MPO(Algorithm):
                 # Target actions come from *current* policy
                 a2, _, logp_a2, _, _, dist = self.actor_targ.get_action(o2, rhs2, d2)
 
-                ##########################################################################################
-
                 sampled_actions = dist.sample((N,)).transpose(0, 1)  # (bs, N, da)
                 expanded_obs2 = o2[:, None, :].expand(-1, N, -1)  # (bs, N, ds)
                 expanded_d2 = d2[:, None, :].expand(-1, N, -1)  # (bs, N, 1)
@@ -501,23 +507,12 @@ class MPO(Algorithm):
                 expected_next_q1 = next_q1.reshape(bs, N).mean(dim=1, keepdim=True)  # (B,)
                 q_pi_targ = expected_next_q1
 
-                ##########################################################################################
-
-                # # Target Q-values
-                # q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
-                # q_pi_targ = q_scores_targ.get("q1")
-
-                ##########################################################################################
-
                 backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
         loss_q = 0.5 * (((q1 - backup) ** 2) * per_weights).mean()
         # loss_q = self.norm_loss_q(backup, q1)
 
-        # errors = (torch.min(q1, q2) - backup).abs().detach().cpu()
-        # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
-        # errors = (0.5 * (q1 - backup).abs() + 0.5 * (q2 - backup).abs()).detach().cpu()
         errors = ((q1 - backup).abs()).detach().cpu()
 
         return loss_q, errors
@@ -563,7 +558,6 @@ class MPO(Algorithm):
 
         else:
 
-            # TODO. are these expands correct ?
             N = self.sample_action_num
             da = a.shape[-1]  # num action dimensions
             sampled_actions = dist_targ.sample((N,))  # (N, bs, da)
@@ -586,7 +580,7 @@ class MPO(Algorithm):
         # [2] 4.1 Finding action weights (Step 2)
         #   Using an exponential transformation of the Q-values
         if self.discrete_version:
-            def dual(η):
+            def dual(eta):
                 """
                 dual function of the non-parametric variational
                 g(η) = η*ε + η*mean(log(sum(π(a|s)*exp(Q(s, a)/η))))
@@ -597,10 +591,10 @@ class MPO(Algorithm):
                 g(η) = η*ε + mean(Qj, along=j) + η*mean(log(sum(π(a|s)*(exp(Q(s, a)-Qj)/η))))
                 """
                 max_q = np.max(target_q1_np, 1)
-                return η * self.ε_dual + np.mean(max_q) + η * np.mean(np.log(np.sum(
-                    b_prob_np * np.exp((target_q1_np - max_q[:, None]) / η), axis=1)))
+                return eta * self.dual_constraint + np.mean(max_q) + eta * np.mean(np.log(np.sum(
+                    b_prob_np * np.exp((target_q1_np - max_q[:, None]) / eta), axis=1)))
         else:  # discrete action space
-            def dual(η):
+            def dual(eta):
                 """
                 dual function of the non-parametric variational
                 Q = target_q_np  (K, N)
@@ -610,13 +604,13 @@ class MPO(Algorithm):
                 g(η) = η*ε + mean(Qj, along=j) + η*mean(log(mean(exp((Q(s, a)-Qj)/η), along=a)), along=s)
                 """
                 max_q = np.max(target_q1_np, 1)
-                return η * self.ε_dual + np.mean(max_q) + η * np.mean(np.log(
-                    np.mean(np.exp((target_q1_np - max_q[:, None]) / η), axis=1)))
+                return eta * self.dual_constraint + np.mean(max_q) + eta * np.mean(np.log(
+                    np.mean(np.exp((target_q1_np - max_q[:, None]) / eta), axis=1)))
 
         bounds = [(1e-6, None)]
-        res = minimize(dual, np.array([self.η]), method='SLSQP', bounds=bounds)
-        self.η = res.x[0]
-        qij = torch.softmax(target_q1 / self.η, dim=0)  # (N, bs)
+        res = minimize(dual, np.array([self.eta]), method='SLSQP', bounds=bounds)
+        self.eta = res.x[0]
+        qij = torch.softmax(target_q1 / self.eta, dim=0)  # (N, bs)
 
         # M-Step of Policy Improvement
         # [2] 4.2 Fitting an improved policy (Step 3)
@@ -631,11 +625,11 @@ class MPO(Algorithm):
                 # this equation is derived from last eq of [2] p.5,
                 # just differentiate with respect to α
                 # and update α so that the equation is to be minimized.
-                self.α -= self.α_scale * (self.ε_kl - kl).detach().item()
-                self.α = np.clip(self.α, 0.0, self.α_max)
+                self.alpha -= self.alpha_scale * (self.kl_constraint - kl).detach().item()
+                self.alpha = np.clip(self.alpha, 0.0, self.alpha_max)
 
                 # last eq of [2] p.5
-                loss_policy = -(loss_pi + self.α * (self.ε_kl - kl))
+                loss_policy = -(loss_pi + self.alpha * (self.kl_constraint - kl))
 
             else:
 
@@ -648,29 +642,30 @@ class MPO(Algorithm):
                     )
                 )
 
-                # TODO. is this correct ? or does the gradient flow with this?
-                A = torch.eye(dist.variance.shape[-1]).to(self.device) * dist.variance.unsqueeze(
+                # Define diag covariance matrices
+                cov1 = torch.eye(dist.variance.shape[-1]).to(self.device) * dist.variance.unsqueeze(
                     2).expand(*dist.variance.size(), dist.variance.size(1))
-                Ai = torch.eye(dist_targ.variance.shape[-1]).to(self.device) * dist_targ.variance.unsqueeze(
+                cov2 = torch.eye(dist_targ.variance.shape[-1]).to(self.device) * dist_targ.variance.unsqueeze(
                     2).expand(*dist_targ.variance.size(), dist_targ.variance.size(1))
-                kl_μ, kl_Σ, _, _ = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=Ai, A=A)
+                kl_mu, kl_sigma = gaussian_kl(dist_targ.mean, dist.mean, cov1, cov2)
 
-                if np.isnan(kl_μ.item()):  # This should not happen
-                    raise RuntimeError('kl_μ is nan')
-                if np.isnan(kl_Σ.item()):  # This should not happen
-                    raise RuntimeError('kl_Σ is nan')
+                if np.isnan(kl_mu.item()):  # This should not happen
+                    raise RuntimeError('kl_mu is nan')
+                if np.isnan(kl_sigma.item()):  # This should not happen
+                    raise RuntimeError('kl_sigma is nan')
 
                 # Update lagrange multipliers by gradient descent
                 # this equation is derived from last eq of [2] p.5, just differentiate with
                 # respect to α and update α so that the equation is to be minimized.
-                self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
-                self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
+                self.alpha_mu -= self.alpha_mean_scale * (self.kl_mean_constraint - kl_mu).detach().item()
+                self.alpha_sigma -= self.alpha_var_scale * (self.kl_var_constraint - kl_mu).detach().item()
 
-                self.α_μ = np.clip(self.α_μ, 0.0, self.α_μ_max)
-                self.α_Σ = np.clip(self.α_Σ, 0.0, self.α_Σ_max)
+                self.alpha_mu = np.clip(self.alpha_mu, 0.0, self.alpha_mean_max)
+                self.alpha_sigma = np.clip(self.alpha_sigma, 0.0, self.alpha_var_max)
 
                 # last eq of [2] p.5
-                loss_policy = -(loss_pi + self.α_μ * (self.ε_kl_μ - kl_μ)  + self.α_Σ * (self.ε_kl_Σ - kl_Σ))
+                loss_policy = -(loss_pi + self.alpha_mu * (self.kl_mean_constraint - kl_mu) +
+                                self.alpha_sigma * (self.kl_var_constraint - kl_sigma))
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
