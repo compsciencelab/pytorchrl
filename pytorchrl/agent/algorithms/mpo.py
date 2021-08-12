@@ -26,6 +26,8 @@ class MPO(Algorithm):
     required by multiple workers, so MPO.algo_factory(...) returns a function
     that can be passed on to workers to instantiate their own MPO module.
 
+    This code has been adapted from https://github.com/daisatojp/mpo.
+
     Parameters
     ----------
     device : torch.device
@@ -54,6 +56,32 @@ class MPO(Algorithm):
         Number of episodes to complete in each test phase.
     test_every : int
         Regularity of test evaluations in actor updates.
+    dual_constraint : float
+        Hard constraint of the dual formulation in the E-step corresponding to [2] p.4 ε.
+    kl_mean_constraint : float
+        Hard constraint of the mean in the M-step corresponding to [2] p.6 ε_μ for continuous action space.
+    kl_var_constraint : float
+        Hard constraint of the covariance in the M-step corresponding to [2] p.6 ε_Σ for continuous action space.
+    kl_constraint : float
+        Hard constraint in the M-step corresponding to [2] p.6 ε_π for discrete action space.
+    alpha_scale: float
+        Scaling factor of the lagrangian multiplier in the M-step for dicrete action spaces.
+    alpha_max : float
+        Higher bound used for clipping the lagrangian lagrangian in discrete action spaces.
+    alpha_mean_scale : float
+        Mean scaling factor of the lagrangian multiplier in the M-step for continuous action spaces.
+    alpha_var_scale : float
+        Varience scaling factor of the lagrangian lagrangian in the M-step for continuous action spaces.
+    alpha_mean_max : float
+        Higher bound used for clipping the lagrangian lagrangian in continuous action spaces.
+    alpha_var_max : float
+        Higher bound used for clipping the lagrangian lagrangian in continuous action spaces.
+    mstep_iterations : int
+        The number of iterations of the M-step
+    sample_action_num : int
+        For continuous action spaces, number of samples used to compute expected Q scores.
+    max_grad_norm : float
+        Gradient clipping parameter.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -79,6 +107,19 @@ class MPO(Algorithm):
                  mini_batch_size=64,
                  num_test_episodes=5,
                  target_update_interval=1,
+                 dual_constraint=0.1,
+                 kl_mean_constraint=0.01,
+                 kl_var_constraint=0.0001,
+                 kl_constraint=0.01,
+                 alpha_scale=10.0,
+                 alpha_mean_scale=1.0,
+                 alpha_var_scale=100.0,
+                 alpha_mean_max=0.1,
+                 alpha_var_max=10.0,
+                 alpha_max=1.0,
+                 mstep_iterations=5,
+                 sample_action_num=64,
+                 max_grad_norm=0.1,
                  policy_loss_addons=[],
                  ):
 
@@ -114,43 +155,32 @@ class MPO(Algorithm):
         self.polyak = polyak
         self.device = device
         self.actor = actor
+        self.ε_dual = dual_constraint
+        self.max_grad_norm = max_grad_norm
+        self.mstep_iterations = mstep_iterations
+        self.sample_action_num = sample_action_num
         self.target_update_interval = target_update_interval
 
-        kl_mean_constraint = 0.01
-        kl_var_constraint = 0.0001
-        alpha_mean_scale = 1.0
-        alpha_var_scale = 100.0
-        alpha_scale = 10.0
-        alpha_mean_max = 0.1
-        alpha_var_max = 10.0
-        alpha_max = 1.0
-        dual_constraint = 0.1
-        kl_constraint = 0.01
-        alpha = 1.0
-        mstep_iterations = 5
-        sample_action_num = 64
-        max_grad_norm = 0.1
-
+        # For continuous action space
         self.ε_kl_μ = kl_mean_constraint
         self.ε_kl_Σ = kl_var_constraint
         self.α_μ_scale = alpha_mean_scale
         self.α_Σ_scale = alpha_var_scale
-        self.α_scale = alpha_scale
         self.α_μ_max = alpha_mean_max
         self.α_Σ_max = alpha_var_max
-        self.α_max = alpha_max
-        self.ε_dual = dual_constraint
-        self.ε_kl = kl_constraint
-        self.γ = gamma  # unused
-        self.mstep_iterations = mstep_iterations
-        self.sample_action_num = sample_action_num
-        self.max_grad_norm = max_grad_norm
 
-        # initialize Lagrange Multiplier
+        # For discrete action space
+        self.α_max = alpha_max
+        self.ε_kl = kl_constraint
+        self.α_scale = alpha_scale
+
+        # Initialize Lagrange Multiplier
         self.η = np.random.rand()
         self.α_μ = 0.0  # lagrangian multiplier for continuous action space in the M-step
         self.α_Σ = 0.0  # lagrangian multiplier for continuous action space in the M-step
         self.α = 0.0  # lagrangian multiplier for discrete action space in the M-step
+
+        assert hasattr(self.actor, "q1"), "MPO requires q critic (num_critics=1)"
 
         # Create target networks
         self.actor_targ = deepcopy(actor)
@@ -160,7 +190,6 @@ class MPO(Algorithm):
             p.requires_grad = False
 
         # List of parameters for both Q-networks
-        # q_params = itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters())
         q_params = self.actor.q1.parameters()
 
         # List of parameters for policy network
@@ -168,6 +197,7 @@ class MPO(Algorithm):
 
         # ----- Optimizers ----------------------------------------------------
 
+        self.norm_loss_q = nn.SmoothL1Loss()
         self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
         self.q_optimizer = optim.Adam(q_params, lr=lr_q)
 
@@ -203,6 +233,19 @@ class MPO(Algorithm):
                        mini_batch_size=64,
                        num_test_episodes=5,
                        target_update_interval=1.0,
+                       dual_constraint=0.1,
+                       kl_mean_constraint=0.01,
+                       kl_var_constraint=0.0001,
+                       kl_constraint=0.01,
+                       alpha_scale=10.0,
+                       alpha_mean_scale=10.0,  # 1.0
+                       alpha_var_scale=10.0,  # 100.0
+                       alpha_mean_max=0.1,
+                       alpha_var_max=10.0,
+                       alpha_max=1.0,
+                       mstep_iterations=5,
+                       sample_action_num=64,
+                       max_grad_norm=0.1,
                        policy_loss_addons=[]):
         """
         Returns a function to create new MPO instances.
@@ -216,7 +259,7 @@ class MPO(Algorithm):
         gamma : float
             Discount factor parameter.
         polyak : float
-            Polyak averaging parameter.
+            SAC polyak averaging parameter.
         num_updates : int
             Num consecutive actor updates before data collection continues.
         update_every : int
@@ -231,6 +274,32 @@ class MPO(Algorithm):
             Number of episodes to complete in each test phase.
         test_every : int
             Regularity of test evaluations in actor updates.
+        dual_constraint : float
+            Hard constraint of the dual formulation in the E-step corresponding to [2] p.4 ε.
+        kl_mean_constraint : float
+            Hard constraint of the mean in the M-step corresponding to [2] p.6 ε_μ for continuous action space.
+        kl_var_constraint : float
+            Hard constraint of the covariance in the M-step corresponding to [2] p.6 ε_Σ for continuous action space.
+        kl_constraint : float
+            Hard constraint in the M-step corresponding to [2] p.6 ε_π for discrete action space.
+        alpha_scale: float
+            Scaling factor of the lagrangian multiplier in the M-step for dicrete action spaces.
+        alpha_max : float
+            Higher bound used for clipping the lagrangian lagrangian in discrete action spaces.
+        alpha_mean_scale : float
+            Mean scaling factor of the lagrangian multiplier in the M-step for continuous action spaces.
+        alpha_var_scale : float
+            Varience scaling factor of the lagrangian lagrangian in the M-step for continuous action spaces.
+        alpha_mean_max : float
+            Higher bound used for clipping the lagrangian lagrangian in continuous action spaces.
+        alpha_var_max : float
+            Higher bound used for clipping the lagrangian lagrangian in continuous action spaces.
+        mstep_iterations : int
+            The number of iterations of the M-step
+        sample_action_num : int
+            For continuous action spaces, number of samples used to compute expected Q scores.
+        max_grad_norm : float
+            Gradient clipping parameter.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
@@ -364,15 +433,13 @@ class MPO(Algorithm):
 
         Returns
         -------
-        loss_q1 : torch.tensor
-            Q1-net loss.
-        loss_q2 : torch.tensor
-            Q2-net loss.
         loss_q : torch.tensor
-            Weighted average of loss_q1 and loss_q2.
+            Q-net loss.
         errors : torch.tensor
             TD errors.
         """
+
+        # [2] 3 Policy Evaluation (Step 1)
 
         o, rhs, d = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE]
         a, r = batch[prl.ACT], batch[prl.REW]
@@ -391,15 +458,12 @@ class MPO(Algorithm):
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor_targ.get_action(o2, rhs2, d2)
 
-                # Option 2 - CAN THAT IMPROVE SAC DISCRETE ???????
                 N = dist.probs.shape[-1]  # num actions
                 actions = torch.arange(N)[..., None].expand(-1, bs).to(self.device)  # (da, bs)
                 p_a2 = dist.expand((N, bs)).log_prob(actions).exp().transpose(0, 1)  # (bs, da)
 
                 # Target Q-values
                 q1_pi_targ = self.actor_targ.get_q_scores(o2, rhs2, d2).get("q1")
-
-                # q_pi_targ = (p_a2 * (torch.min(q1_pi_targ, q2_pi_targ))).sum(dim=1, keepdim=True)
                 q_pi_targ = (p_a2 * q1_pi_targ).sum(dim=1, keepdim=True)
 
                 assert r.shape == q_pi_targ.shape
@@ -419,6 +483,8 @@ class MPO(Algorithm):
                 # Target actions come from *current* policy
                 a2, _, logp_a2, _, _, dist = self.actor_targ.get_action(o2, rhs2, d2)
 
+                ##########################################################################################
+
                 sampled_actions = dist.sample((N,)).transpose(0, 1)  # (bs, N, da)
                 expanded_obs2 = o2[:, None, :].expand(-1, N, -1)  # (bs, N, ds)
                 expanded_d2 = d2[:, None, :].expand(-1, N, -1)  # (bs, N, 1)
@@ -435,11 +501,20 @@ class MPO(Algorithm):
                 expected_next_q1 = next_q1.reshape(bs, N).mean(dim=1, keepdim=True)  # (B,)
                 q_pi_targ = expected_next_q1
 
+                ##########################################################################################
+
+                # # Target Q-values
+                # q_scores_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2)
+                # q_pi_targ = q_scores_targ.get("q1")
+
+                ##########################################################################################
+
                 backup = r + (self.gamma ** n_step) * (1 - d2) * q_pi_targ
 
         # MSE loss against Bellman backup
-        loss_q = (((q1 - backup) ** 2) * per_weights).mean()
+        # loss_q = 0.5 * (((q1 - backup) ** 2) * per_weights).mean()
         # loss_q = (((q1 - backup).abs()) * per_weights).mean()
+        loss_q = self.norm_loss_q(backup, q1)
 
         # errors = (torch.min(q1, q2) - backup).abs().detach().cpu()
         # errors = torch.max((q1 - backup).abs(), (q2 - backup).abs()).detach().cpu()
@@ -461,10 +536,8 @@ class MPO(Algorithm):
 
         Returns
         -------
-        loss_pi : torch.tensor
+        loss_policy : torch.tensor
             MPO policy loss.
-        logp_pi : torch.tensor
-            Log probability of predicted next action.
         """
 
         o, rhs, d, a = batch[prl.OBS], batch[prl.RHS], batch[prl.DONE], batch[prl.ACT]
@@ -483,8 +556,8 @@ class MPO(Algorithm):
             actions = torch.arange(N)[..., None].expand(N, bs).to(self.device)  # (N, bs)
             dist_targ_probs = dist_targ.expand((N, bs)).log_prob(actions).exp()  # (N, bs)
 
-            target_q1 = self.actor_targ.get_q_scores(o, rhs, d).get("q1") # (bs, N)
-            target_q1 = target_q1.transpose(1, 0)  # (N, K)
+            target_q1 = self.actor_targ.get_q_scores(o, rhs, d).get("q1")  # (bs, N)
+            target_q1 = target_q1.transpose(1, 0)  # (N, bs)
 
             b_prob_np = dist_targ_probs.cpu().transpose(0, 1).numpy()  # (bs, N)
             target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
@@ -506,6 +579,7 @@ class MPO(Algorithm):
                 expanded_d.reshape(-1, 1),  # (N * bs, ds)
                 sampled_actions.reshape(-1, da),  # (N * bs, da)
             ).get("q1")
+
             target_q1 = target_q1.reshape(N, bs)  # (N, bs)
             target_q1_np = target_q1.cpu().transpose(0, 1).numpy()  # (bs, N)
 
@@ -560,6 +634,7 @@ class MPO(Algorithm):
                 # and update α so that the equation is to be minimized.
                 self.α -= self.α_scale * (self.ε_kl - kl).detach().item()
                 self.α = np.clip(self.α, 0.0, self.α_max)
+
                 # last eq of [2] p.5
                 loss_policy = -(loss_pi + self.α * (self.ε_kl - kl))
 
@@ -575,9 +650,11 @@ class MPO(Algorithm):
                 )
 
                 # TODO. is this correct ? or does the gradient flow with this?
-                A = torch.eye(dist.variance.shape[-1]).to(self.device) * dist.variance.unsqueeze(2).expand(*dist.variance.size(), dist.variance.size(1))
-                Ai = torch.eye(dist_targ.variance.shape[-1]).to(self.device) * dist_targ.variance.unsqueeze(2).expand(*dist_targ.variance.size(), dist_targ.variance.size(1))
-                kl_μ, kl_Σ, Σi_det, Σ_det = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=Ai, A=A)
+                A = torch.eye(dist.variance.shape[-1]).to(self.device) * dist.variance.unsqueeze(
+                    2).expand(*dist.variance.size(), dist.variance.size(1))
+                Ai = torch.eye(dist_targ.variance.shape[-1]).to(self.device) * dist_targ.variance.unsqueeze(
+                    2).expand(*dist_targ.variance.size(), dist_targ.variance.size(1))
+                kl_μ, kl_Σ, _, _ = gaussian_kl(μi=dist_targ.mean, μ=dist.mean,  Ai=Ai, A=A)
 
                 if np.isnan(kl_μ.item()):  # This should not happen
                     raise RuntimeError('kl_μ is nan')
@@ -585,56 +662,22 @@ class MPO(Algorithm):
                     raise RuntimeError('kl_Σ is nan')
 
                 # Update lagrange multipliers by gradient descent
-                # this equation is derived from last eq of [2] p.5,
-                # just differentiate with respect to α
-                # and update α so that the equation is to be minimized.
+                # this equation is derived from last eq of [2] p.5, just differentiate with
+                # respect to α and update α so that the equation is to be minimized.
                 self.α_μ -= self.α_μ_scale * (self.ε_kl_μ - kl_μ).detach().item()
                 self.α_Σ -= self.α_Σ_scale * (self.ε_kl_Σ - kl_Σ).detach().item()
 
-                self.α_μ = np.clip(0.0, self.α_μ, self.α_μ_max)
-                self.α_Σ = np.clip(0.0, self.α_Σ, self.α_Σ_max)
+                self.α_μ = np.clip(self.α_μ, 0.0, self.α_μ_max)
+                self.α_Σ = np.clip(self.α_Σ, 0.0, self.α_Σ_max)
 
                 # last eq of [2] p.5
-                loss_policy = -(
-                        loss_pi
-                        + self.α_μ * (self.ε_kl_μ - kl_μ)
-                        + self.α_Σ * (self.ε_kl_Σ - kl_Σ)
-                )
+                loss_policy = -(loss_pi + self.α_μ * (self.ε_kl_μ - kl_μ)  + self.α_Σ * (self.ε_kl_Σ - kl_Σ))
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
            loss_policy += addon.compute_loss_term(self.actor, dist, batch)
 
         return loss_policy
-
-    def compute_loss_alpha(self, log_probs, per_weights=1):
-        """
-        Calculate MPO entropy loss.
-
-        Parameters
-        ----------
-        log_probs : torch.tensor
-            Log probability of predicted next action.
-        per_weights :
-            Prioritized Experience Replay (PER) important sampling weights or 1.0.
-
-        Returns
-        -------
-        alpha_loss : torch.tensor
-            MPO entropy loss.
-        """
-        alpha_loss = - ((self.log_alpha * (log_probs + self.target_entropy).detach()) * per_weights).mean()
-        return alpha_loss
-
-    def calculate_target_entropy(self):
-        """Calculate MPO target entropy"""
-        if self.discrete_version:
-            target = - np.log(1.0 / self.actor.action_space.n) * 0.98
-        else:
-            target_old = - self.actor.action_space.shape[0]
-            target = - np.prod(self.actor.action_space.shape)
-            assert target_old == target
-        return target
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -675,7 +718,7 @@ class MPO(Algorithm):
 
         # Freeze Q-networks so you don't waste computational effort
         # computing gradients for them during the policy learning step.
-        for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
+        for p in self.actor.q1.parameters():
             p.requires_grad = False
 
         # Run one gradient descent step for pi.
@@ -686,7 +729,7 @@ class MPO(Algorithm):
         nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
 
-        for p in itertools.chain(self.actor.q1.parameters(), self.actor.q2.parameters()):
+        for p in self.actor.q1.parameters():
             p.requires_grad = True
 
         info = {
@@ -702,7 +745,7 @@ class MPO(Algorithm):
         return grads, info
 
     def update_target_networks(self):
-        """Update actor critic target networks with polyak averaging"""
+        """Update actor critic target networks with polyak averaging."""
         if self.iter % self.target_update_interval == 0:
             with torch.no_grad():
                 for p, p_targ in zip(self.actor.parameters(), self.actor_targ.parameters()):
@@ -719,7 +762,7 @@ class MPO(Algorithm):
         gradients : list of tensors
             List of actor gradients.
         """
-        if gradients is not None:
+        if gradients:
             set_gradients(
                 self.actor.policy_net,
                 gradients=gradients["pi_grads"], device=self.device)

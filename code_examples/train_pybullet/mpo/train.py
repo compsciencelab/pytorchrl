@@ -51,7 +51,7 @@ def main():
 
     # 3. Define RL training algorithm
     algo_factory = MPO.create_factory(
-        lr_pi=args.lr, lr_q=args.lr,
+        lr_pi=args.lr_pi, lr_q=args.lr_q,
         gamma=args.gamma, polyak=args.polyak, num_updates=args.num_updates,
         update_every=args.update_every, start_steps=args.start_steps,
         mini_batch_size=args.mini_batch_size)
@@ -124,7 +124,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
+    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
     # Environment specs
     parser.add_argument(
@@ -139,7 +139,9 @@ def get_args():
 
     # SAC specs
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        '--lr_q', type=float, default=7e-4, help='q net learning rate (default: 7e-4)')
+    parser.add_argument(
+        '--lr_pi', type=float, default=7e-4, help='policy learning rate (default: 7e-4)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')

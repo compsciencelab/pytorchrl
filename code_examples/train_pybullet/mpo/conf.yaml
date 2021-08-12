@@ -4,7 +4,8 @@ log_dir: /tmp/pybullet_sac
 frame_skip: 0
 frame_stack: 1
 nn: MLP
-lr: 3.0e-4
+lr_q: 3.0e-4
+lr_pi: 3.0e-4
 gamma: 0.99
 polyak: 0.995
 max_time: 86400
