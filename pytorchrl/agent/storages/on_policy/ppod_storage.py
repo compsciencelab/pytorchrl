@@ -53,8 +53,6 @@ class PPODBuffer(B):
             gae_lambda=gae_lambda,
         )
 
-        import ipdb; ipdb.set_trace()
-
         # PPO + D parameters
         self.rho = rho
         self.phi = phi
@@ -117,8 +115,6 @@ class PPODBuffer(B):
         algo : an algorithm class
             An algorithm class instance.
         """
-
-        # self.apply_ppod_logic(actor, algo)
 
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi))
@@ -192,27 +188,31 @@ class PPODBuffer(B):
                 demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
                 rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
                 obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step]  # get last obs
-                done = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][demo_step]
+                done = 0.0  # TODO. this will crash, need tensor and to device
 
                 _, _, rhs2, algo_data = self.algorithm.acting_step(obs, rhs, done)
 
                 # TODO. will need to adapt to
                 self.data[prl.OBS][self.step].copy_(obs)
-                self.data[prl.DONE][self.step].copy_(done)
+                self.data[prl.DONE][self.step].copy_(0.0)
                 self.data[prl.ACT][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.ACT][demo_step])
                 self.data[prl.REW][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.REW][demo_step])
-                self.data[prl.OBS2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1])
-                self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][demo_step + 1])
 
                 # TODO. this is a dict
                 self.data[prl.RHS][self.step].copy_(rhs)
                 self.data[prl.RHS2][self.step].copy_(rhs2)
 
-                # Here reset demo environment if end of demo reached
-                self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
-                if self.demos_in_progress["env{}".format(i + 1)]["Step"] == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"]:
+                self.data[prl.LOGP][self.step].copy_(0.0)
+                self.data[prl.VAL][self.step].copy_(algo_data[prl.VAL])
+
+                if self.demos_in_progress["env{}".format(i + 1)]["Step"] == \
+                        self.demos_in_progress["env{}".format(i + 1)]["DemoLength"]:
                     self.demos_in_progress["env{}".format(i + 1)]["Active"] = False
-                    new_episode_obs = self.envs.reset_single_env(env_id=i)
+                    self.data[prl.OBS2][self.step].copy_(self.envs.reset_single_env(env_id=i))  # TODO. make sure it is obs in next transition
+                    self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][1.0])  # TODO. make sure it is done in next transition
+                else:
+                    self.data[prl.OBS2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1])
+                    self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][1.0])
 
         # Here start demo if done last episode and prob says a demo goes now
         for i in range(self.num_envs):
@@ -344,63 +344,6 @@ class PPODBuffer(B):
             demo = None
 
         return demo
-
-    def insert_demo(self, actor, demo, row, column_start):
-        """Insert a demonstration to rollouts"""
-
-        demo_len = demo["obs"].shape[0]
-        size = self.data["act"].shape[0]
-
-        # If entire demo does not fit, insert beginning
-        slice_len = min(demo_len, size - column_start)
-
-        # shift and introduce
-        for tensor in self.on_policy_data_fields:
-
-            if tensor == "obs2": continue
-
-            # Shift right
-            # self.data[tensor][column_start + slice_len:size, row].copy_(self.data[tensor][column_start:size - slice_len, row])
-            self.data[tensor][column_start + slice_len:size, row] = self.data[tensor][column_start:size - slice_len, row]
-
-
-            # and insert demo
-            if tensor in self.demos_data_fields:
-                self.data[tensor][column_start:column_start + slice_len, row].copy_(demo[tensor][0:slice_len])
-            elif tensor in ["logp", "rhs", "done"]:
-                self.data[tensor][column_start:column_start + slice_len, row].fill_(0.0)
-
-        # Make sure "done" flags are indicate start and end of the demo
-        self.data["done"][column_start, row].fill_(1.0)
-        self.data["done"][column_start + slice_len, row].fill_(1.0)
-
-        # Make sure demo slice ending reward is correct
-        # self.data["rew"][column_end - 1, row] = demo["ret"][column_start + slice_len - 1]
-
-        # Re - estimate demo value
-        with torch.no_grad():
-            _ = actor.get_action(
-                self.data["obs"][column_start:column_start + slice_len, row],
-                self.data["rhs"][column_start:column_start + 1, row],
-                self.data["done"][column_start:column_start + slice_len, row])
-            self.data["val"][column_start:column_start + slice_len, row].copy_(
-                actor.get_value(self.data["obs"][column_start:column_start + slice_len, row]))
-            demo["max_value"] = self.data["val"][column_start:column_start + slice_len, row].max().item()
-
-        # Sanity check
-        try:
-            assert self.data["done"][column_start:column_start + slice_len, row].sum() == 1.0
-            assert self.data["done"][column_start - 1, row].sum() == 0.0
-            assert self.data["done"][column_start + 1, row].sum() == 0.0
-            assert self.data["done"][column_start + slice_len, row] == 1.0
-            assert self.data["done"][column_start + slice_len - 1, row].sum() == 0.0
-            assert self.data["done"][column_start + slice_len + 1, row].sum() == 0.0
-            assert self.data["rew"][column_start:column_start + slice_len, row].sum() > 1.0
-            assert self.data["rew"][column_start + slice_len - 1, row].sum() > 1.0
-        except Exception:
-            import ipdb; ipdb.set_trace()
-
-        print("INSERTED DEMO")
 
     def anneal_parameters(self):
         """Update demo probabilities as explained in PPO+D paper."""

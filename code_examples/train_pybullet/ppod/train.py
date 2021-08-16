@@ -63,7 +63,8 @@ def main():
         obs_space, action_space, algo_name, restart_model=args.restart_model)
 
     # 5. Define rollouts storage
-    storage_factory = PPODBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+    storage_factory = PPODBuffer.create_factory(
+        size=args.num_steps, demos_dir=os.path.dirname(__file__), gae_lambda=args.gae_lambda)
 
     # 6. Define scheme
     params = {}
