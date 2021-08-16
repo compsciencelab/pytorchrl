@@ -6,11 +6,6 @@ from collections import defaultdict, deque
 import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
-# TODO: solve problem of clashing environment id's.
-# TODO: Nappo - no need to reset tensor every time for on policy storages - what about off policy storages ?
-# TODO: Nappo GPU gradient worker specs ignored, and collections specs used instead?
-# TODO: Nappo recurrent policy batch generation error with 14 processes, 1000 steps, 4 mini batches
-
 
 class PPODBuffer(B):
     """
@@ -58,6 +53,8 @@ class PPODBuffer(B):
             gae_lambda=gae_lambda,
         )
 
+        import ipdb; ipdb.set_trace()
+
         # PPO + D parameters
         self.rho = rho
         self.phi = phi
@@ -79,7 +76,13 @@ class PPODBuffer(B):
             self.load_original_demos()
 
         # Track demos in progress
-        self.inserted_demos = {"env{}".format(i + 1) for i in range(self.num_envs)}
+        self.demos_in_progress = {"env{}".format(i + 1): {
+            "Demo": None,
+            "InProgress": False,
+            "Step": 0,
+            prl.RHS: None,
+            "DemoLength": -1,
+        } for i in range(self.num_envs)}
 
     @classmethod
     def create_factory(cls, size, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
@@ -179,13 +182,48 @@ class PPODBuffer(B):
             else:
                 self.data[k][pos].copy_(sample[sample_k])
 
+        # Track episodes
         self.track_potential_demos(sample)
 
+        # Insert demos step if in the middle of a demo
+        for i in range(self.num_envs):
+            if self.demos_in_progress["env{}".format(i + 1)]["Active"]:
+
+                demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
+                rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
+                obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step]  # get last obs
+                done = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][demo_step]
+
+                _, _, rhs2, algo_data = self.algorithm.acting_step(obs, rhs, done)
+
+                # TODO. will need to adapt to
+                self.data[prl.OBS][self.step].copy_(obs)
+                self.data[prl.DONE][self.step].copy_(done)
+                self.data[prl.ACT][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.ACT][demo_step])
+                self.data[prl.REW][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.REW][demo_step])
+                self.data[prl.OBS2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1])
+                self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][demo_step + 1])
+
+                # TODO. this is a dict
+                self.data[prl.RHS][self.step].copy_(rhs)
+                self.data[prl.RHS2][self.step].copy_(rhs2)
+
+                # Here reset demo environment if end of demo reached
+                self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
+                if self.demos_in_progress["env{}".format(i + 1)]["Step"] == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"]:
+                    self.demos_in_progress["env{}".format(i + 1)]["Active"] = False
+                    new_episode_obs = self.envs.reset_single_env(env_id=i)
+
         # Here start demo if done last episode and prob says a demo goes now
-
-        # Here insert demos step if in the middle of a demo
-
-        # Here reset demo environment if end of demo reached
+        for i in range(self.num_envs):
+            if sample[prl.DONE][i] == 1.0:
+                self.demos_in_progress["env{}".format(i + 1)]["Demo"] = self.sample_demo()
+                if self.demos_in_progress["env{}".format(i + 1)]["Demo"] is None:
+                    self.demos_in_progress["env{}".format(i + 1)]["Active"] = False
+                else:
+                    self.demos_in_progress["env{}".format(i + 1)]["Step"] = 0
+                    self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] = \
+                        self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS].shape[0]
 
         self.step = (self.step + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -194,21 +232,20 @@ class PPODBuffer(B):
         """ Tracks current episodes looking for potential demos """
 
         for i in range(self.num_envs):
+
             for tensor in self.demos_data_fields:
                 self.potential_demos["env{}".format(i + 1)][tensor].append(sample[tensor][i].cpu().numpy())
             # TODO. is this correct ?
-            self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(i + 1)], sample["val"][i].item()])
+            self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(i + 1)], sample[prl.VAL][i].item()])
 
-            import ipdb; ipdb.set_trace()
-
-            if sample["done"][i] == 1.0:
+            if sample[prl.DONE][i] == 1.0:
                 potential_demo = {}
                 potential_demo["max_value"] = 0.0
                 for tensor in self.demos_data_fields:
                     potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(i + 1)][tensor]))
 
                 # Compute accumulated reward
-                episode_reward = potential_demo["rew"].sum().item()
+                episode_reward = potential_demo[prl.REW].sum().item()
 
                 if episode_reward > self.reward_threshold:
 
@@ -228,7 +265,7 @@ class PPODBuffer(B):
                     value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
                         else min([p["max_value"] for p in self.value_demos])
 
-                    if self.potential_demos_val[i] > value_thresh or total_demos < self.max_demos:
+                    if self.potential_demos_val["env{}".format(i + 1)] > value_thresh or total_demos < self.max_demos:
 
                         # Add demo to buffer
                         self.value_demos.append(potential_demo)
@@ -275,130 +312,6 @@ class PPODBuffer(B):
 
         # Threshold to identify successful episodes
         self.reward_threshold = 1.0  # demo_rew.max().item()
-
-    def apply_ppod_logic_old(self, actor, algo):
-        """
-        Modified PPO + D method:
-
-        step 1. Check current rollouts for possible demos to add to the buffers.
-
-            ## end ep1 ### | #### ep2 #### | ####  ep3 ### | ### start ep4
-
-        step 2. Randomly insert demos.
-
-            2.1) In each episode transition, insert reward demo with prob rho, value demo with prob phi.
-
-            ## end ep1 ### | #### demo ##### | #### ep2 #### | ####  ep3 ### | #### demo ##### | ### start ep4
-
-            2.2) Cut ending to match buffer size
-
-            ## end ep1 ### | #### demo ##### | #### ep2 #### | ####  ep3 ### |
-
-        """
-
-        # Find done flags
-        shape = self.data["act"].shape
-        done_flags = self.data["done"].nonzero()[:, 0:2]
-        done_flags = torch.stack([done_flags[:, 1], done_flags[:, 0]], dim=1).tolist()
-        done_flags = sorted(done_flags)
-
-        # For each episode
-        last_row, epi_end = done_flags[-1]
-        for row, epi_start in reversed(done_flags[:-1]):
-            if row == last_row:
-                if self.data["done"][epi_end, row] == 1.0:
-
-                    print("Row {}, epi_start {}, epi_end {}".format(row, epi_start, epi_end))
-
-                    # Compute reward and max value
-                    episode_reward = self.data["rew"][epi_start:epi_end, row].sum().item()
-                    episode_max_value = self.data["val"][epi_start:epi_end, row].max().item()
-
-                    # If successful trajectory
-                    if episode_reward > self.reward_threshold:
-
-                        # Extract demo
-                        new_demo = self.extract_new_demo(row, epi_start, epi_end, episode_max_value, algo)
-
-                        # Add demo to buffer
-                        self.reward_demos.append(new_demo)
-
-                        # Check if buffers are full
-                        self.check_demo_buffer_capacity()
-
-                        # Anneal rho and phi
-                        self.anneal_parameters()
-
-                    else: # Evaluate as possible value demo
-
-                        # Find current minimum max value
-                        value_thresh = - np.float("Inf") if len(self.value_demos) == 0 else min([p["max_value"] for p in self.value_demos])
-
-                        # Find current number of demos
-                        total_demos = len(self.reward_demos) + len(self.value_demos)
-
-                        # If this episodes has a higher max value or not max_demos reached, add episode
-                        if episode_max_value > value_thresh or total_demos < self.max_demos:
-
-                            # Extract demo
-                            new_demo = self.extract_new_demo(row, epi_start, epi_end, episode_max_value, algo)
-
-                            # Add demo to buffer
-                            self.value_demos.append(new_demo)
-
-                            # Check if buffers are full
-                            self.check_demo_buffer_capacity()
-
-                # Insert demos
-                demo = self.sample_demo()
-                while demo is not None:
-                    self.insert_demo(actor, demo, row, epi_start, epi_end)
-                    demo = self.sample_demo()
-
-            last_row = row
-            epi_end = epi_start
-
-    def apply_ppod_logic(self, actor, algo):
-        """
-        Modified PPO + D method:
-
-        step 1. Check current rollouts for possible demos to add to the buffers.
-
-            ## end ep1 ### | #### ep2 #### | ####  ep3 ### | ### start ep4
-
-        step 2. Randomly insert demos.
-
-            2.1) In each episode transition, insert reward demo with prob rho, value demo with prob phi.
-
-            ## end ep1 ### | #### demo ##### | #### ep2 #### | ####  ep3 ### | #### demo ##### | ### start ep4
-
-            2.2) Cut ending to match buffer size
-
-            ## end ep1 ### | #### demo ##### | #### ep2 #### | ####  ep3 ### |
-
-        """
-
-        # Find done flags
-        done_flags = self.data["done"].nonzero()[:, 0:2]
-        done_flags = sorted(torch.stack([done_flags[:, 1], done_flags[:, 0]], dim=1).tolist())
-
-        for row, epi_start in reversed(done_flags):
-
-            # Insert demos
-            demo = self.sample_demo()
-            while demo is not None:
-                self.insert_demo(actor, demo, row, epi_start)
-                demo = self.sample_demo()
-
-    def extract_new_demo(self, row, column_start,  column_end, episode_max_value, algo):
-        """Extract a new demonstration from rollouts"""
-
-        new_demo = {}
-        new_demo["max_value"] = episode_max_value
-        for tensor in self.demos_data_fields:
-            new_demo[tensor] = self.data[tensor][column_start:column_end, row].detach().cpu().clone()
-
-        return new_demo
 
     def sample_demo(self):
         """With probability rho insert reward demo, with probability phi insert value demo."""
@@ -518,6 +431,6 @@ class PPODBuffer(B):
         if len(self.reward_demos) > self.max_demos:
             # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
-                probs = np.array([p["obs"].shape[0] for p in self.reward_demos])
+                probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
                 probs = probs / probs.sum()
                 del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
