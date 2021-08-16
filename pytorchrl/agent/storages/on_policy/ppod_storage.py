@@ -47,7 +47,7 @@ class PPODBuffer(B):
     # Data tensors to collect for each demo
     demos_data_fields = ("obs", "act", "rew")
 
-    def __init__(self, size, device, actor, envs, algorithm, demos_dir, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def __init__(self, size, device, actor, algorithm, envs, demos_dir, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -95,9 +95,9 @@ class PPODBuffer(B):
             creates a new PPODBuffer class instance.
         """
 
-        def create_buffer_instance(device, actor, algorithm):
+        def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
-            return cls(size, device, actor, algorithm, demos_dir, rho, phi, gae_lambda, alpha, max_demos)
+            return cls(size, device, actor, algorithm, envs, demos_dir, rho, phi, gae_lambda, alpha, max_demos)
 
         return create_buffer_instance
 
