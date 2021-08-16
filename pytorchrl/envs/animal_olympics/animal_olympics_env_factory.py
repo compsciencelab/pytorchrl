@@ -1,5 +1,4 @@
 import os
-from baselines import bench
 import animalai
 from animalai.envs.gym.environment import AnimalAIEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
