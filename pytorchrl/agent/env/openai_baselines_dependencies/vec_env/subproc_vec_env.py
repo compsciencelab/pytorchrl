@@ -95,6 +95,12 @@ class SubprocVecEnv(VecEnv):
         obs = _flatten_list(obs)
         return _flatten_obs(obs)
 
+    def reset_single_env(self, num_env):
+        self._assert_not_closed()
+        self.remotes[num_env].send(('reset', None))
+        obs = self.remotes[num_env].recv()
+        return _flatten_obs(obs)
+
     def close_extras(self):
         self.closed = True
         if self.waiting:

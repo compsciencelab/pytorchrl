@@ -103,6 +103,12 @@ class CWorker(W):
         self.device = torch.device(dev)
         self.compress_data_to_send = compress_data_to_send
 
+        # Create train environments
+        self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
+
+        # Create test environments (if creation function available)
+        self.envs_test = test_envs_factory(self.device, index_worker, index_parent, "test")
+
         # Create Actor Critic instance
         self.actor = actor_factory(self.device)
 
@@ -110,18 +116,12 @@ class CWorker(W):
         self.algo = algo_factory(self.device, self.actor)
 
         # Create Storage instance and set world initial state
-        self.storage = storage_factory(self.device, self.actor, self.algo)
+        self.storage = storage_factory(self.device, self.actor, self.algo, self.envs_train)
 
         # Define counters and other attributes
         self.iter, self.actor_version, self.samples_collected = 0, 0, 0
         self.update_every = self.algo.update_every or self.storage.max_size
         self.updates_per_iter = self.algo.num_mini_batch * self.algo.num_epochs
-
-        # Create train environments
-        self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
-
-        # Create test environments (if creation function available)
-        self.envs_test = test_envs_factory(self.device, index_worker, index_parent, "test")
 
         if initial_weights:  # if remote worker
 

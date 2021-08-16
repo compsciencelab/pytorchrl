@@ -87,6 +87,13 @@ class VecPyTorch(VecEnvWrapper):
             obs = torch.from_numpy(obs).float().to(self.device)
         return obs
 
+    def reset_individual_env(self, env_id):
+        """Reset only one environment of the vector."""
+        obs = self.venv.reset_individual_env(env_id)
+        import ipdb; ipdb.set_trace()
+        obs = torch.from_numpy(obs).float().to(self.device)
+        return obs
+
     def step_async(self, actions):
         """New vec env step_async function"""
         if isinstance(actions, dict):
