@@ -29,6 +29,7 @@ class VanillaOnPolicyBuffer(S):
     def __init__(self, size, device, actor, algorithm, envs):
 
         self.envs = envs
+        self.num_envs = envs.num_envs
         self.actor = actor
         self.device = device
         self.algo = algorithm

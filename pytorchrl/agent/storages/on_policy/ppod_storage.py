@@ -72,13 +72,14 @@ class PPODBuffer(B):
         self.value_demos = []
 
         # Track potential demos
-        self.potential_demos = None  # {"env{}".format(i + 1) for i in range(num_envs)}
+        self.potential_demos_val = defaultdict(float)
+        self.potential_demos = {"env{}".format(i + 1): defaultdict(list) for i in range(self.num_envs)}
 
         if demos_dir:
             self.load_original_demos()
 
         # Track demos in progress
-        self.inserted_demos = None  # {"env{}".format(i + 1) for i in range(num_envs)}, 2 fields: name_demo and current step
+        self.inserted_demos = {"env{}".format(i + 1) for i in range(self.num_envs)}
 
     @classmethod
     def create_factory(cls, size, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
@@ -114,7 +115,8 @@ class PPODBuffer(B):
             An algorithm class instance.
         """
 
-        self.apply_ppod_logic(actor, algo)
+        # self.apply_ppod_logic(actor, algo)
+
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi))
 
@@ -152,8 +154,6 @@ class PPODBuffer(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        import ipdb; ipdb.set_trace()
-
         if self.size == 0 and self.data[prl.OBS] is None:  # data tensors lazy initialization
             self.init_tensors(sample)
 
@@ -181,34 +181,39 @@ class PPODBuffer(B):
 
         self.track_potential_demos(sample)
 
+        # Here start demo if done last episode and prob says a demo goes now
+
+        # Here insert demos step if in the middle of a demo
+
+        # Here reset demo environment if end of demo reached
+
         self.step = (self.step + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
     def track_potential_demos(self, sample):
         """ Tracks current episodes looking for potential demos """
 
-        if self.potential_demos is None:
-            self.potential_demos = {i: defaultdict(list) for i in range(sample["done"].shape[0])}
-            self.potential_demos_val = defaultdict(float)
-
-        for i in range(sample["obs"].shape[0]):
+        for i in range(self.num_envs):
             for tensor in self.demos_data_fields:
-                self.potential_demos[i][tensor].append(sample[tensor][i].cpu().numpy())
-            self.potential_demos_val[i] = max([self.potential_demos_val[i], sample["val"][i].item()])
+                self.potential_demos["env{}".format(i + 1)][tensor].append(sample[tensor][i].cpu().numpy())
+            # TODO. is this correct ?
+            self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(i + 1)], sample["val"][i].item()])
+
+            import ipdb; ipdb.set_trace()
 
             if sample["done"][i] == 1.0:
                 potential_demo = {}
                 potential_demo["max_value"] = 0.0
                 for tensor in self.demos_data_fields:
-                    potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos[i][tensor]))
+                    potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(i + 1)][tensor]))
 
-                # Compute reward, max value
+                # Compute accumulated reward
                 episode_reward = potential_demo["rew"].sum().item()
 
                 if episode_reward > self.reward_threshold:
 
-                    # Add demo tp reward buffer
-                    self.reawrd_demos.append(potential_demo)
+                    # Add demo to reward buffer
+                    self.reward_demos.append(potential_demo)
 
                     # Check if buffers are full
                     self.check_demo_buffer_capacity()
@@ -219,8 +224,8 @@ class PPODBuffer(B):
                 else:
 
                     # Find current number of demos, and current minimum max value
-                    total_demos = len(self.reward_demos) + len( self.value_demos)
-                    value_thresh = - np.float("Inf") if len( self.value_demos) == 0 \
+                    total_demos = len(self.reward_demos) + len(self.value_demos)
+                    value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
                         else min([p["max_value"] for p in self.value_demos])
 
                     if self.potential_demos_val[i] > value_thresh or total_demos < self.max_demos:
@@ -232,8 +237,8 @@ class PPODBuffer(B):
                         self.check_demo_buffer_capacity()
 
                 for tensor in self.demos_data_fields:
-                    self.potential_demos[i][tensor] = []
-                    self.potential_demos_val[i] = 0.0
+                    self.potential_demos["env{}".format(i + 1)][tensor] = []
+                    self.potential_demos_val["env{}".format(i + 1)] = 0.0
 
     def load_original_demos(self):
         """Load initial demonstrations."""
