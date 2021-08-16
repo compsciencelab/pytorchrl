@@ -12,7 +12,7 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
+from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # Testing
@@ -36,37 +36,34 @@ def main():
     print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
+    arena_file = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_train_env_factory, env_kwargs={
-            "env_id": args.env_id,
+        env_fn=animal_train_env_factory,
+        env_kwargs={
+            "realtime": False,
+            "arenas_dir": arena_file,
             "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
-
-    # 2. Define Test Vector of Envs (Optional)
-    test_envs_factory, _, _ = VecEnv.create_factory(
+            "frame_stack": args.frame_stack,
+        },
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_test_env_factory, env_kwargs={
-            "env_id": args.env_id,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
+        info_keywords=('ereward', 'max_reward', 'max_time', 'arena'))
 
-    # 3. Define RL training algorithm
+    # 2. Define RL training algorithm
     algo_factory, algo_name = PPO.create_factory(
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
         gamma=args.gamma)
 
-    # 4. Define RL Policy
+    # 3. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
         obs_space, action_space, algo_name, restart_model=args.restart_model)
 
-    # 5. Define rollouts storage
+    # 4. Define rollouts storage
     storage_factory = PPODBuffer.create_factory(
         size=args.num_steps, demos_dir=os.path.dirname(__file__), gae_lambda=args.gae_lambda)
 
-    # 6. Define scheme
+    # 5. Define scheme
     params = {}
 
     # add core modules
@@ -75,7 +72,6 @@ def main():
         "actor_factory": actor_factory,
         "storage_factory": storage_factory,
         "train_envs_factory": train_envs_factory,
-        "test_envs_factory": test_envs_factory,
     })
 
     # add collection specs
@@ -94,10 +90,10 @@ def main():
 
     scheme = Scheme(**params)
 
-    # 7. Define learner
+    # 6. Define learner
     learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-    # 8. Define train loop
+    # 7. Define train loop
     iterations = 0
     start_time = time.time()
     while not learner.done():

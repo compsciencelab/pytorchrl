@@ -104,16 +104,9 @@ class PPODBuffer(B):
 
         return create_buffer_instance
 
-    def before_gradients(self, actor, algo):
+    def before_gradients(self):
         """
         Before updating actor policy model, compute returns and advantages.
-
-        Parameters
-        ----------
-        actor : ActorCritic
-            An actor class instance.
-        algo : an algorithm class
-            An algorithm class instance.
         """
 
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}".format(
@@ -183,7 +176,7 @@ class PPODBuffer(B):
 
         # Insert demos step if in the middle of a demo
         for i in range(self.num_envs):
-            if self.demos_in_progress["env{}".format(i + 1)]["Active"]:
+            if self.demos_in_progress["env{}".format(i + 1)]["InProgress"]:
 
                 demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
                 rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
@@ -207,7 +200,7 @@ class PPODBuffer(B):
 
                 if self.demos_in_progress["env{}".format(i + 1)]["Step"] == \
                         self.demos_in_progress["env{}".format(i + 1)]["DemoLength"]:
-                    self.demos_in_progress["env{}".format(i + 1)]["Active"] = False
+                    self.demos_in_progress["env{}".format(i + 1)]["InProgress"] = False
                     self.data[prl.OBS2][self.step].copy_(self.envs.reset_single_env(env_id=i))  # TODO. make sure it is obs in next transition
                     self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][1.0])  # TODO. make sure it is done in next transition
                 else:
@@ -219,7 +212,7 @@ class PPODBuffer(B):
             if sample[prl.DONE][i] == 1.0:
                 self.demos_in_progress["env{}".format(i + 1)]["Demo"] = self.sample_demo()
                 if self.demos_in_progress["env{}".format(i + 1)]["Demo"] is None:
-                    self.demos_in_progress["env{}".format(i + 1)]["Active"] = False
+                    self.demos_in_progress["env{}".format(i + 1)]["InProgress"] = False
                 else:
                     self.demos_in_progress["env{}".format(i + 1)]["Step"] = 0
                     self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] = \
@@ -291,15 +284,15 @@ class PPODBuffer(B):
 
             # Add action
             demo_act = torch.FloatTensor(demo["actions"])
-            new_demo["act"] = demo_act
+            new_demo[prl.ACT] = demo_act
 
             # Add obs
             demo_obs = torch.FloatTensor(demo["observations"])
-            new_demo["obs"] = demo_obs
+            new_demo[prl.OBS] = demo_obs
 
             # Add rew, define success reward threshold
             demo_rew = torch.FloatTensor(demo["rewards"])
-            new_demo["rew"] = demo_rew
+            new_demo[prl.REW] = demo_rew
 
             # Pre-compute and add ret, to allow inserting demo chunks
             # demo_ret = torch.zeros_like(demo_rew)
