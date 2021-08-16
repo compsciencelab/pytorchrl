@@ -65,6 +65,7 @@ DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
+DemosDataKeys = (OBS, ACT, REW)
 
 # ALGORITHMS
 A2C = "A2C"

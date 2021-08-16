@@ -42,10 +42,10 @@ class PPODBuffer(B):
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
-    on_policy_data_fields = ("obs", "obs2", "rhs", "act", "rew", "val", "logp", "done")
+    on_policy_data_fields = prl.OnPolicyDataKeys
 
     # Data tensors to collect for each demo
-    demos_data_fields = ("obs", "act", "rew")
+    demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
