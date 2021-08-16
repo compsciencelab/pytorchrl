@@ -59,6 +59,7 @@ class VecEnv:
                 envs = DummyVecEnv(envs)
 
             envs = VecPyTorch(envs, device)
+            import ipdb; ipdb.set_trace()
 
             return envs
 
