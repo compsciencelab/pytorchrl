@@ -109,6 +109,8 @@ class CWorker(W):
         # Create Algorithm instance
         self.algo = algo_factory(self.device, self.actor)
 
+        import ipdb; ipdb.set_trace()
+
         # Create train environments
         self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
 
