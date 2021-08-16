@@ -25,10 +25,11 @@ class VTraceBuffer(B):
     # Data fields to store in buffer and contained in generated batches
     storage_tensors = prl.OnPolicyDataKeys
 
-    def __init__(self, size, device, actor, algorithm):
+    def __init__(self, size, device, actor, algorithm, envs):
 
         super(VTraceBuffer, self).__init__(
             size=size,
+            envs=envs,
             device=device,
             actor=actor,
             algorithm=algorithm)

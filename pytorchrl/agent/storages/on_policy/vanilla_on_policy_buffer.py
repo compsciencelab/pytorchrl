@@ -26,8 +26,9 @@ class VanillaOnPolicyBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.OnPolicyDataKeys
 
-    def __init__(self, size, device, actor, algorithm):
+    def __init__(self, size, device, actor, algorithm, envs):
 
+        self.envs = envs
         self.actor = actor
         self.device = device
         self.algo = algorithm
@@ -52,9 +53,9 @@ class VanillaOnPolicyBuffer(S):
         create_buffer_instance : func
             creates a new VanillaOnPolicyBuffer class instance.
         """
-        def create_buffer_instance(device, actor, algorithm):
+        def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a VanillaOnPolicyBuffer instance."""
-            return cls(size, device, actor, algorithm)
+            return cls(size, device, actor, algorithm, envs)
         return create_buffer_instance
 
     def init_tensors(self, sample):

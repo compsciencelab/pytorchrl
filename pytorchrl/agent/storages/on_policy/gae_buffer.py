@@ -27,10 +27,11 @@ class GAEBuffer(B):
     # Data fields to store in buffer and contained in generated batches
     storage_tensors = prl.OnPolicyDataKeys
 
-    def __init__(self, size, device, actor, algorithm, gae_lambda=0.95):
+    def __init__(self, size, device, actor, algorithm, envs, gae_lambda=0.95):
 
         super(GAEBuffer, self).__init__(
             size=size,
+            envs=envs,
             device=device,
             actor=actor,
             algorithm=algorithm)
@@ -54,9 +55,9 @@ class GAEBuffer(B):
         create_buffer_instance : func
             creates a new OnPolicyBuffer class instance.
         """
-        def create_buffer_instance(device, actor, algorithm):
+        def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a OnPolicyGAEBuffer instance."""
-            return cls(size, device, actor, algorithm, gae_lambda)
+            return cls(size, device, actor, algorithm, envs, gae_lambda)
         return create_buffer_instance
 
     def compute_returns(self):

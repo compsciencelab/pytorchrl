@@ -47,17 +47,16 @@ class PPODBuffer(B):
     # Data tensors to collect for each demo
     demos_data_fields = ("obs", "act", "rew")
 
-    def __init__(self, size, device, actor, algorithm, envs, demos_dir, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def __init__(self, size, device, actor, algorithm, envs, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
+            envs=envs,
             actor=actor,
             device=device,
             algorithm=algorithm,
             gae_lambda=gae_lambda,
         )
-
-        import ipdb; ipdb.set_trace()
 
         # PPO + D parameters
         self.rho = rho
@@ -74,7 +73,9 @@ class PPODBuffer(B):
 
         # Track potential demos
         self.potential_demos = None  # {"env{}".format(i + 1) for i in range(num_envs)}
-        self.load_original_demos()
+
+        if demos_dir:
+            self.load_original_demos()
 
         # Track demos in progress
         self.inserted_demos = None  # {"env{}".format(i + 1) for i in range(num_envs)}, 2 fields: name_demo and current step
@@ -150,6 +151,9 @@ class PPODBuffer(B):
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
+
+        import ipdb; ipdb.set_trace()
+
         if self.size == 0 and self.data[prl.OBS] is None:  # data tensors lazy initialization
             self.init_tensors(sample)
 
