@@ -3,5 +3,6 @@ gym[atari]
 ray[debug]
 pandas
 pybullet
+scipy
 TensorBoard
 lz4

@@ -7,7 +7,7 @@ from PIL import Image
 
 from animalai.envs.arena_config import ArenaConfig
 from animalai.envs.gym.environment import ActionFlattener
-from envs.animal_olympics.utils import set_reward_arena
+from pytorchrl.envs.animal_olympics.utils import set_reward_arena
 
 
 class RetroEnv(gym.Wrapper):
