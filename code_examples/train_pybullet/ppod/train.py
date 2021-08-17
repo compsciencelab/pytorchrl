@@ -12,7 +12,7 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
+from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # Testing
@@ -36,16 +36,12 @@ def main():
     print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
-    arena_file = os.path.join(os.path.dirname(os.path.abspath(__file__))) + "/arenas/"
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        env_fn=animal_train_env_factory,
-        env_kwargs={
-            "arenas_dir": arena_file,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack,
-        },
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        info_keywords=('ereward', 'max_reward', 'max_time', 'arena'))
+        env_fn=pybullet_train_env_factory, env_kwargs={
+            "env_id": args.env_id,
+            "frame_skip": args.frame_skip,
+            "frame_stack": args.frame_stack})
 
     # 2. Define RL training algorithm
     algo_factory, algo_name = PPO.create_factory(
