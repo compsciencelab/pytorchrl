@@ -36,11 +36,10 @@ def main():
     print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
-    arena_file = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+    arena_file = os.path.join(os.path.dirname(os.path.abspath(__file__))) + "/arenas/"
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
         env_fn=animal_train_env_factory,
         env_kwargs={
-            "realtime": False,
             "arenas_dir": arena_file,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack,
