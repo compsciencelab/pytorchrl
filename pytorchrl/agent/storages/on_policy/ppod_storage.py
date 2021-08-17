@@ -76,7 +76,6 @@ class PPODBuffer(B):
         # Track demos in progress
         self.demos_in_progress = {"env{}".format(i + 1): {
             "Demo": None,
-            "InProgress": False,
             "Step": 0,
             prl.RHS: None,
             "DemoLength": -1,
@@ -176,7 +175,9 @@ class PPODBuffer(B):
 
         # Insert demos step if in the middle of a demo
         for i in range(self.num_envs):
-            if self.demos_in_progress["env{}".format(i + 1)]["InProgress"]:
+            if self.demos_in_progress["env{}".format(i + 1)]["Demo"]:
+
+                import ipdb; ipdb.set_trace()
 
                 demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
                 rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
@@ -200,7 +201,6 @@ class PPODBuffer(B):
 
                 if self.demos_in_progress["env{}".format(i + 1)]["Step"] == \
                         self.demos_in_progress["env{}".format(i + 1)]["DemoLength"]:
-                    self.demos_in_progress["env{}".format(i + 1)]["InProgress"] = False
                     self.data[prl.OBS2][self.step].copy_(self.envs.reset_single_env(env_id=i))  # TODO. make sure it is obs in next transition
                     self.data[prl.DONE2][self.step].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.DONE][1.0])  # TODO. make sure it is done in next transition
                 else:
@@ -210,11 +210,9 @@ class PPODBuffer(B):
         # Here start demo if done last episode and prob says a demo goes now
         for i in range(self.num_envs):
             if sample[prl.DONE][i] == 1.0:
+                self.demos_in_progress["env{}".format(i + 1)]["Step"] = 0
                 self.demos_in_progress["env{}".format(i + 1)]["Demo"] = self.sample_demo()
-                if self.demos_in_progress["env{}".format(i + 1)]["Demo"] is None:
-                    self.demos_in_progress["env{}".format(i + 1)]["InProgress"] = False
-                else:
-                    self.demos_in_progress["env{}".format(i + 1)]["Step"] = 0
+                if self.demos_in_progress["env{}".format(i + 1)]["Demo"]:
                     self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] = \
                         self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS].shape[0]
 
