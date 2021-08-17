@@ -22,7 +22,7 @@ from pytorchrl.agent.storages.on_policy.ppod_storage import PPODBuffer
 
 gym.envs.register(
     id='SparseReacher-v1',
-    entry_point='pytorchrl.code_examples.train_sparse_reacher.sparse_reacher:SparseReacherBulletEnv',
+    entry_point='pytorchrl.envs.pybullet.sparse_reacher:SparseReacherBulletEnv',
 	max_episode_steps=150,
 	reward_threshold=18.0,
 )
@@ -61,7 +61,7 @@ def main():
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
         env_fn=sparse_reacher_env_factory, env_kwargs={
-            "seed": args.seed,
+            # "seed": args.seed,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack})
 
