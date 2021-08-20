@@ -234,11 +234,13 @@ class PPODBuffer(B):
 
                     # Set done to True
                     self.data[prl.DONE][self.step][i:i + 1, :].copy_(torch.ones(1, 1).to(self.device))
-                    # TODO. Ideally assign the obs to the c_worker.done
+                    # TODO. Ideally assign the obs to c_worker.done, otherwise first step of next episode
+                    # TODO. will be computed with a wrong done flag.
 
                     # Reset `i-th` environment as set next buffer obs to be the starting episode obs
                     self.data[prl.OBS][self.step][i:i + 1, :].copy_(self.envs.reset_single_env(env_id=i))
-                    # TODO. Ideally assign the obs to the c_worker.obs
+                    # TODO. Ideally assign the obs to c_worker.obs, otherwise first step of next episode
+                    # TODO. will be computed with a wrong obs.
 
                     # Randomly sample new demo if last demo has finished
                     self.sample_demo(i)
@@ -373,11 +375,13 @@ class PPODBuffer(B):
 
         # Set demo to demos_in_progress
         self.demos_in_progress["env{}".format(env_id + 1)]["Demo"] = demo
-        self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["length"]
 
-        # Set next buffer obs to be the starting demo obs
-        self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
-            env_id + 1)]["Demo"][prl.OBS][0:1].to(self.device))
+        if demo:
+            # Set demo length
+            self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["length"]
+            # Set next buffer obs to be the starting demo obs
+            self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
+                env_id + 1)]["Demo"][prl.OBS][0:1].to(self.device))
 
     def anneal_parameters(self):
         """Update demo probabilities as explained in PPO+D paper."""
