@@ -13,12 +13,14 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.envs.common import FrameStack, FrameSkip
+from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # Testing
-from pytorchrl.agent.storages.on_policy.ppod_storage import PPODBuffer
+from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../..')
 
 gym.envs.register(
     id='SparseReacher-v1',
@@ -57,11 +59,19 @@ def main():
         resources += "{} {}, ".format(k, v)
     print(resources[:-2], flush=True)
 
+    # # 1. Define Train Vector of Envs
+    # train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+    #     vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+    #     env_fn=sparse_reacher_env_factory, env_kwargs={
+    #         # "seed": args.seed,
+    #         "frame_skip": args.frame_skip,
+    #         "frame_stack": args.frame_stack})
+
     # 1. Define Train Vector of Envs
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=sparse_reacher_env_factory, env_kwargs={
-            # "seed": args.seed,
+        env_fn=pybullet_train_env_factory, env_kwargs={
+            "env_id": args.env_id,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack})
 

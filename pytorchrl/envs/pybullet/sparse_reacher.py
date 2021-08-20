@@ -1,3 +1,5 @@
+import gym
+import pybulletgym
 from pybulletgym.envs.roboschool.envs.env_bases import BaseBulletEnv
 from pybulletgym.envs.roboschool.scenes.scene_bases import SingleRobotEmptyScene
 from pybulletgym.envs.roboschool.robots.robot_bases import MJCFBasedRobot

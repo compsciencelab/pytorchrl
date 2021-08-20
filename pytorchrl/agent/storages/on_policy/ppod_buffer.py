@@ -43,7 +43,7 @@ class PPODBuffer(B):
     # Data tensors to collect for each demo
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def __init__(self, size, device, actor, algorithm, envs, demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -73,6 +73,9 @@ class PPODBuffer(B):
 
         if demos_dir:
             self.load_original_demos()
+            self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+        else:
+            self.reward_threshold = - np.inf
 
         # Track demos in progress
         self.demos_in_progress = {"env{}".format(i + 1): {
@@ -83,7 +86,7 @@ class PPODBuffer(B):
         } for i in range(self.num_envs)}
 
     @classmethod
-    def create_factory(cls, size, demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def create_factory(cls, size, demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
         """
         Returns a function that creates PPODBuffer instances.
         Parameters
@@ -146,9 +149,11 @@ class PPODBuffer(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        if self.size == 0 and self.data[prl.OBS] is None:  # data tensors lazy initialization
+        # Data tensors lazy initialization
+        if self.size == 0 and self.data[prl.OBS] is None:
             self.init_tensors(sample)
 
+        # Insert sample data
         for k in sample:
 
             if k not in self.storage_tensors:
@@ -171,10 +176,10 @@ class PPODBuffer(B):
             else:
                 self.data[k][pos].copy_(sample[sample_k])
 
-        # Track episodes
+        # Track episodes for potential demos
         self.track_potential_demos(sample)
 
-        # For each environment
+        # For each environment, replace sample data with demo data if demo in progress
         for i in range(self.num_envs):
 
             # Insert demo step if in the middle of a demo
@@ -231,7 +236,7 @@ class PPODBuffer(B):
 
         for i in range(self.num_envs):
 
-            for tensor in self.demos_data_fields:
+            for tensor in self.demos_data_fields + (prl.VAL):
                 self.potential_demos["env{}".format(i + 1)][tensor].append(sample[tensor][i].cpu().numpy())
 
             # TODO. is this correct ?
@@ -239,12 +244,13 @@ class PPODBuffer(B):
 
             if sample[prl.DONE][i] == 1.0:
                 potential_demo = {}
-                potential_demo["max_value"] = 0.0
                 for tensor in self.demos_data_fields:
                     potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(i + 1)][tensor]))
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
+                potential_demo["total_reward"] = episode_reward
+                potential_demo["length"] = potential_demo[prl.ACT].shape[0]
 
                 if episode_reward > self.reward_threshold:
 
@@ -257,16 +263,20 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
+                    # Update reward_threshold. TODO. review, this is not in the original paper.
+                    self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+
                 else:
 
                     # Find current number of demos, and current minimum max value
+                    potential_demo["max_value"] = potential_demo[prl.VAL].max().item
                     total_demos = len(self.reward_demos) + len(self.value_demos)
                     value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
                         else min([p["max_value"] for p in self.value_demos])
 
                     if self.potential_demos_val["env{}".format(i + 1)] > value_thresh or total_demos < self.max_demos:
 
-                        # Add demo to buffer
+                        # Add demo to value buffer
                         self.value_demos.append(potential_demo)
 
                         # Check if buffers are full
@@ -285,32 +295,21 @@ class PPODBuffer(B):
 
             # Load demo tensors
             demo = np.load(demo_file)
-            demo_len = demo["actions"].shape[0]
             new_demo = {k: {} for k in self.demos_data_fields}
 
             # Add action
-            demo_act = torch.FloatTensor(demo["actions"])
+            demo_act = torch.FloatTensor(demo[prl.ACT])
             new_demo[prl.ACT] = demo_act
 
             # Add obs
-            demo_obs = torch.FloatTensor(demo["observations"])
+            demo_obs = torch.FloatTensor(demo[prl.OBS])
             new_demo[prl.OBS] = demo_obs
 
             # Add rew, define success reward threshold
-            demo_rew = torch.FloatTensor(demo["rewards"])
+            demo_rew = torch.FloatTensor(demo[prl.OBS])
             new_demo[prl.REW] = demo_rew
 
-            # Pre-compute and add ret, to allow inserting demo chunks
-            # demo_ret = torch.zeros_like(demo_rew)
-            # demo_ret[-1] = new_demo["rew"][-1]
-            # for step in reversed(range(demo_len - 1)):
-            #     demo_ret[step] = demo_rew[step] + demo_ret[step + 1] * algo.gamma
-            # new_demo["ret"] = demo_ret
-
-            self.reward_demos.append(new_demo)
-
-        # Threshold to identify successful episodes
-        self.reward_threshold = 1.0  # demo_rew.max().item()
+            new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
 
     def sample_demo(self):
         """With probability rho insert reward demo, with probability phi insert value demo."""
