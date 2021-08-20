@@ -88,7 +88,10 @@ def main():
 
     # 4. Define rollouts storage
     storage_factory = PPODBuffer.create_factory(
-        size=args.num_steps, demos_dir=os.path.dirname(__file__), gae_lambda=args.gae_lambda)
+        size=args.num_steps,
+#        demos_dir=os.path.dirname(__file__),
+        gae_lambda=args.gae_lambda,
+    )
 
     # 5. Define scheme
     params = {}
