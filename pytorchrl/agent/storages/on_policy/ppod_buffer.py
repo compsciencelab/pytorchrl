@@ -1,3 +1,4 @@
+import os
 import glob
 import copy
 import torch
@@ -93,6 +94,10 @@ class PPODBuffer(B):
             prl.RHS: None,
         } for i in range(self.num_envs)}
 
+        # Save demos
+        self.iter = 0
+        self.save_demos_every = 1
+
     @classmethod
     def create_factory(cls,
                        size,
@@ -173,6 +178,10 @@ class PPODBuffer(B):
 
         self.compute_returns()
         self.compute_advantages()
+
+        self.iter += 1
+        if self.iter % self.save_demos_every == 0:
+            self.save_demos()
 
     def insert_transition(self, sample):
         """
@@ -456,11 +465,16 @@ class PPODBuffer(B):
         the top `num_value_demos` demos from the value demo buffer.
         """
 
-        import ipdb; ipdb.set_trace()
+        reward_ranking = np.array([d["total_reward"] for d in self.reward_demos]).argsort()[:num_rewards_demos]
 
-        # np.savez(
-        #     filename,
-        #     observations=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
-        #     rewards=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-        #     actions=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
-        # )
+        for num, demo_pos in enumerate(reward_ranking):
+            filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
+
+            import ipdb; ipdb.set_trace()
+
+            # np.savez(
+            #     filename,
+            #     observations=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
+            #     rewards=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
+            #     actions=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
+            # )
