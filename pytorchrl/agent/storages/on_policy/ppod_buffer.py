@@ -2,7 +2,7 @@ import glob
 import copy
 import torch
 import numpy as np
-from collections import defaultdict, deque
+from collections import defaultdict
 
 import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
@@ -114,6 +114,8 @@ class PPODBuffer(B):
 
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi))
+
+        print("\nREWARD THRESHOLD {}".format(self.reward_threshold))
 
         last_tensors = {}
         for k in (prl.OBS, prl.RHS, prl.DONE):
@@ -236,7 +238,7 @@ class PPODBuffer(B):
 
         for i in range(self.num_envs):
 
-            for tensor in self.demos_data_fields + (prl.VAL):
+            for tensor in self.demos_data_fields + (prl.VAL, ):
                 self.potential_demos["env{}".format(i + 1)][tensor].append(sample[tensor][i].cpu().numpy())
 
             # TODO. is this correct ?
@@ -269,7 +271,7 @@ class PPODBuffer(B):
                 else:
 
                     # Find current number of demos, and current minimum max value
-                    potential_demo["max_value"] = potential_demo[prl.VAL].max().item
+                    potential_demo["max_value"] = torch.Tensor(np.stack(self.potential_demos["env{}".format(i + 1)][prl.VAL])).max().item()
                     total_demos = len(self.reward_demos) + len(self.value_demos)
                     value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
                         else min([p["max_value"] for p in self.value_demos])

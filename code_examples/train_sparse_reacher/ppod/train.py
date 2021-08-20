@@ -72,6 +72,7 @@ def main():
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
         env_fn=pybullet_train_env_factory, env_kwargs={
             "env_id": args.env_id,
+            "reward_delay": 20,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack})
 
