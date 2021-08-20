@@ -87,6 +87,9 @@ class PPODBuffer(B):
         else:
             self.reward_threshold = - np.inf
 
+        # TODO. remove
+        self.reward_threshold = 1.0
+
         # Track demos in progress
         self.demos_in_progress = {"env{}".format(i + 1): {
             "Demo": None,
@@ -336,6 +339,9 @@ class PPODBuffer(B):
 
                     # Update reward_threshold. TODO. review, this is not in the original paper.
                     self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+
+                    # TODO.remove
+                    self.reward_threshold = 1.0
 
                 else:   # Consider candidate demo for value reward
 
