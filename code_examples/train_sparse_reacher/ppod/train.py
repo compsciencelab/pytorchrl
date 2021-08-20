@@ -18,9 +18,8 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # Testing
+import ipdb; ipdb.set_trace()
 from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../..')
 
 gym.envs.register(
     id='SparseReacher-v1',
