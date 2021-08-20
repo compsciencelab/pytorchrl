@@ -360,6 +360,9 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """Load initial demonstrations."""
 
+        # TODO. what happens if there are reward and value demos in the demos dir?
+        # TODO. What happens if there are more than max_demos in demo dir?
+
         # Add original demonstrations
         initial_demos = glob.glob(self.initial_demos_dir + '/*.npz')
         for demo_file in initial_demos:
@@ -465,16 +468,25 @@ class PPODBuffer(B):
         the top `num_value_demos` demos from the value demo buffer.
         """
 
-        reward_ranking = np.array([d["total_reward"] for d in self.reward_demos]).argsort()[:num_rewards_demos]
+        if not os.path.exists(self.target_demos_dir):
+            os.makedirs(self.target_demos_dir, exist_ok=True)
 
+        reward_ranking = np.flip(np.array([d["total_reward"] for d in self.reward_demos]).argsort())[:num_rewards_demos]
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
+            np.savez(
+                filename,
+                observations=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
+                rewards=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
+                actions=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32)
+            )
 
-            import ipdb; ipdb.set_trace()
-
-            # np.savez(
-            #     filename,
-            #     observations=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
-            #     rewards=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-            #     actions=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
-            # )
+        value_ranking = np.flip(np.array([d["max_value"] for d in self.value_demos]).argsort())[:num_value_demos]
+        for num, demo_pos in enumerate(value_ranking):
+            filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
+            np.savez(
+                filename,
+                observations=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
+                rewards=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
+                actions=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32)
+            )
