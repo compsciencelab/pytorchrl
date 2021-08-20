@@ -3,7 +3,7 @@ log_dir: /tmp/pybullet_ppo
 gamma: 0.99
 save_interval: 100000
 max_time: 86400
-num_env_processes: 2
+num_env_processes: 12
 num_steps: 2048
 num_mini_batch: 32
 clip_param: 0.2
