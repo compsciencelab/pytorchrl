@@ -109,16 +109,14 @@ class CWorker(W):
         # Create Algorithm instance
         self.algo = algo_factory(self.device, self.actor)
 
-        import ipdb; ipdb.set_trace()
-
         # Create train environments
         self.envs_train = train_envs_factory(self.device, index_worker, index_parent)
 
-        # Create test environments (if creation function available)
-        self.envs_test = test_envs_factory(self.device, index_worker, index_parent, "test")
-
         # Create Storage instance and set world initial state
         self.storage = storage_factory(self.device, self.actor, self.algo, self.envs_train)
+
+        # Create test environments (if creation function available)
+        self.envs_test = test_envs_factory(self.device, index_worker, index_parent, "test")
 
         # Define counters and other attributes
         self.iter, self.actor_version, self.samples_collected = 0, 0, 0

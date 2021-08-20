@@ -25,6 +25,12 @@ class PPODBuffer(B):
         Actor class instance.
     algorithm : Algorithm
         Algorithm class instance
+    envs: VecEnv
+        Train environments vector.
+    initial_demos_dir : str
+        Path to directory containing initial demonstrations.
+    target_demos_dir : str
+        Path to directory where best demonstrations should be saved.
     rho : float
         PPO+D rho parameter
     phi : float
@@ -43,7 +49,8 @@ class PPODBuffer(B):
     # Data tensors to collect for each demo
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
+                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -61,7 +68,8 @@ class PPODBuffer(B):
         self.initial_rho = rho
         self.initial_phi = phi
         self.max_demos = max_demos
-        self.original_demos_dir = demos_dir
+        self.initial_demos_dir = initial_demos_dir
+        self.target_demos_dir = target_demos_dir
 
         # Reward and Value buffers
         self.reward_demos = []
@@ -71,8 +79,8 @@ class PPODBuffer(B):
         self.potential_demos_val = defaultdict(float)
         self.potential_demos = {"env{}".format(i + 1): defaultdict(list) for i in range(self.num_envs)}
 
-        if demos_dir:
-            self.load_original_demos()
+        if initial_demos_dir:
+            self.load_initial_demos()
             self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
         else:
             self.reward_threshold = - np.inf
@@ -86,15 +94,37 @@ class PPODBuffer(B):
         } for i in range(self.num_envs)}
 
     @classmethod
-    def create_factory(cls, size, demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+    def create_factory(cls,
+                       size,
+                       initial_demos_dir=None,
+                       target_demos_dir=None,
+                       rho=0.1,
+                       phi=0.0,
+                       gae_lambda=0.95,
+                       alpha=10,
+                       max_demos=51):
         """
         Returns a function that creates PPODBuffer instances.
+
         Parameters
         ----------
         size : int
             Storage capacity along time axis.
+        initial_demos_dir : str
+
+        target_demos_dir : str
+
+        rho : float
+            PPO+D rho parameter
+        phi : float
+            PPO+D phi parameter.
+        alpha : float
+            PPO+D alpha parameter
         gae_lambda : float
             GAE lambda parameter.
+        max_demos : int
+            Maximum number of demos to keep between reward and value demos.
+
         Returns
         -------
         create_buffer_instance : func
@@ -103,7 +133,9 @@ class PPODBuffer(B):
 
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
-            return cls(size, device, actor, algorithm, envs, demos_dir, rho, phi, gae_lambda, alpha, max_demos)
+            return cls(size, device, actor, algorithm, envs,
+                       initial_demos_dir, target_demos_dir, rho,
+                       phi, gae_lambda, alpha, max_demos)
 
         return create_buffer_instance
 
@@ -263,7 +295,8 @@ class PPODBuffer(B):
                 self.potential_demos["env{}".format(i + 1)][tensor].append(sample[tensor][i].cpu().numpy())
             
             # Track highest value prediction
-            self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(i + 1)], sample[prl.VAL][i].item()])
+            self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
+                i + 1)], sample[prl.VAL][i].item()])
             
             # Handle end of episode
             if sample[prl.DONE][i] == 1.0:
@@ -271,7 +304,8 @@ class PPODBuffer(B):
                 # Get candidate demo
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
-                    potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(i + 1)][tensor]))
+                    potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(
+                        i + 1)][tensor]))
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
@@ -314,12 +348,12 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_val["env{}".format(i + 1)] = 0.0
 
-    def load_original_demos(self):
+    def load_initial_demos(self):
         """Load initial demonstrations."""
 
         # Add original demonstrations
-        original_demos = glob.glob(self.original_demos_dir + '/*.npz')
-        for demo_file in original_demos:
+        initial_demos = glob.glob(self.initial_demos_dir + '/*.npz')
+        for demo_file in initial_demos:
 
             # Load demo tensors
             demo = np.load(demo_file)
@@ -415,3 +449,18 @@ class PPODBuffer(B):
                 probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
                 probs = probs / probs.sum()
                 del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
+
+    def save_demos(self, num_rewards_demos=10, num_value_demos=0):
+        """
+        Saves the top `num_rewards_demos` demos from the reward demo buffer and
+        the top `num_value_demos` demos from the value demo buffer.
+        """
+
+        import ipdb; ipdb.set_trace()
+
+        # np.savez(
+        #     filename,
+        #     observations=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
+        #     rewards=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
+        #     actions=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
+        # )
