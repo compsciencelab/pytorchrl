@@ -1,0 +1,24 @@
+num_env_steps : 10000000000
+log_dir: /tmp/animal_ppod
+gamma: 0.998
+save_interval: 100000
+max_time: 86400
+num_env_processes: 14
+num_steps: 1000
+num_mini_batch: 6
+clip_param: 0.15
+ppo_epoch: 4
+gae_lambda: 0.95
+value_loss_coef: 0.1
+max_grad_norm: 0.5
+entropy_coef: 0.02
+lr: 1e-4
+nn: MLP
+frame_skip: 2
+frame_stack: 4
+env_id: HalfCheetahBulletEnv-v0
+num_grad_workers: 1 
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous
+

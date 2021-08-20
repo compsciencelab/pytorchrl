@@ -82,7 +82,8 @@ class PPODBuffer(B):
 
         if initial_demos_dir:
             self.load_initial_demos()
-            self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+            self.reward_threshold = min([d["total_reward"] for d in self.reward_demos]) if len(
+                self.reward_demos) > 0 else - np.inf
         else:
             self.reward_threshold = - np.inf
 
@@ -360,30 +361,40 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """Load initial demonstrations."""
 
-        # TODO. what happens if there are reward and value demos in the demos dir?
-        # TODO. What happens if there are more than max_demos in demo dir?
+        # TODO. what happens if there are reward and value demos in the demos dir? for now there are not value demos saved
+        # TODO. What happens if there are more than max_demos in demo dir? should choose top `max_demos` demos.
+        # TODO. I Should check frame skip and frame stack?
 
         # Add original demonstrations
+        num_loaded_demos = 0
         initial_demos = glob.glob(self.initial_demos_dir + '/*.npz')
         for demo_file in initial_demos:
 
-            # Load demo tensors
-            demo = np.load(demo_file)
-            new_demo = {k: {} for k in self.demos_data_fields}
+            try:
 
-            # Add action
-            demo_act = torch.FloatTensor(demo[prl.ACT])
-            new_demo[prl.ACT] = demo_act
+                # Load demo tensors
+                demo = np.load(demo_file)
+                new_demo = {k: {} for k in self.demos_data_fields}
 
-            # Add obs
-            demo_obs = torch.FloatTensor(demo[prl.OBS])
-            new_demo[prl.OBS] = demo_obs
+                # Add action
+                demo_act = torch.FloatTensor(demo[prl.ACT])
+                new_demo[prl.ACT] = demo_act
 
-            # Add rew, define success reward threshold
-            demo_rew = torch.FloatTensor(demo[prl.OBS])
-            new_demo[prl.REW] = demo_rew
+                # Add obs
+                demo_obs = torch.FloatTensor(demo[prl.OBS])
+                new_demo[prl.OBS] = demo_obs
 
-            new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
+                # Add rew, define success reward threshold
+                demo_rew = torch.FloatTensor(demo[prl.OBS])
+                new_demo[prl.REW] = demo_rew
+
+                new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
+                num_loaded_demos += 1
+
+            except Exception:
+                print("Failed to load demo!")
+
+        print("\nLOADED {} DEMOS".format(num_loaded_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demo, with probability phi insert value demo."""
@@ -476,9 +487,9 @@ class PPODBuffer(B):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
             np.savez(
                 filename,
-                observations=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-                rewards=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-                actions=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32)
+                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
+                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
+                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
             )
 
         value_ranking = np.flip(np.array([d["max_value"] for d in self.value_demos]).argsort())[:num_value_demos]
@@ -486,7 +497,7 @@ class PPODBuffer(B):
             filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
             np.savez(
                 filename,
-                observations=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-                rewards=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-                actions=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32)
+                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
+                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
+                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
             )
