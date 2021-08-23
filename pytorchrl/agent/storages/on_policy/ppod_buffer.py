@@ -392,7 +392,7 @@ class PPODBuffer(B):
                 new_demo[prl.OBS] = demo_obs
 
                 # Add rew, define success reward threshold
-                demo_rew = torch.FloatTensor(demo[prl.OBS])
+                demo_rew = torch.FloatTensor(demo[prl.REW])
                 new_demo[prl.REW] = demo_rew
 
                 new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
