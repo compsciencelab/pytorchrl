@@ -47,9 +47,9 @@ def animal_train_env_factory(
     else:
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
 
-    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
+    id = 1 + index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
-                      seed=0, n_arenas=1, arenas_configurations=None,
+                      seed=id, n_arenas=1, arenas_configurations=None,
                       greyscale=False, inference=False, resolution=None)
 
     env = RetroEnv(env)

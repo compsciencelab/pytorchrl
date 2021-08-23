@@ -79,8 +79,6 @@ def main():
             gae_lambda=args.gae_lambda,
         )
 
-        #        demos_dir=os.path.dirname(__file__),
-
         # 5. Define scheme
         params = {}
 
