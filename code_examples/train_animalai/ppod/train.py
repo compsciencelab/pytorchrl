@@ -53,7 +53,6 @@ def main():
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=animal_train_env_factory,
             env_kwargs={
-                "realtime": False,
                 "arenas_dir": arena_file,
                 "frame_skip": args.frame_skip,
                 "frame_stack": args.frame_stack,
