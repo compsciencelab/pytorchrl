@@ -396,6 +396,7 @@ class PPODBuffer(B):
                 new_demo[prl.REW] = demo_rew
 
                 new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
+                self.reward_demos.append(new_demo)
                 num_loaded_demos += 1
 
             except Exception:
