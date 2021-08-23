@@ -48,10 +48,6 @@ def animal_train_env_factory(
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
 
     id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
-
-    print("\n index_col_worker is {}, index_grad_worker is {}, index_env is {}, ID IS {} \n".format(
-        index_col_worker, index_grad_worker, index_env, id))
-
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
                       seed=id, n_arenas=1, arenas_configurations=None,
                       greyscale=False, inference=False, resolution=None)
@@ -120,7 +116,7 @@ def animal_test_env_factory(
     else:
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
 
-    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
+    id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
                       seed=id, n_arenas=1, arenas_configurations=None,
                       greyscale=False, inference=False, resolution=None)

@@ -183,9 +183,10 @@ class PPODBuffer(B):
         self.compute_returns()
         self.compute_advantages()
 
-        self.iter += 1
-        if self.iter % self.save_demos_every == 0:
-            self.save_demos()
+        # TODO. is problematic - solve
+        # self.iter += 1
+        # if self.iter % self.save_demos_every == 0:
+        #     self.save_demos()
 
     def insert_transition(self, sample):
         """
