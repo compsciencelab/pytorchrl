@@ -4,6 +4,7 @@ import os
 import ray
 import sys
 import time
+import wandb
 import argparse
 
 from pytorchrl.learner import Learner
@@ -35,89 +36,102 @@ def main():
         resources += "{} {}, ".format(k, v)
     print(resources[:-2], flush=True)
 
-    arena_file = os.path.dirname(__file__) + "/demos/",
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        env_fn=animal_train_env_factory,
-        env_kwargs={
-            "realtime": False,
-            "arenas_dir": arena_file,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack,
-        },
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        info_keywords=('ereward', 'max_reward', 'max_time', 'arena'))
+    # Handle wandb init
+    if args.wandb_key:
+        mode = "online"
+        wandb.login(key=str(args.wandb_key))
+    else:
+        mode = "disabled"
 
-    # 2. Define RL training algorithm
-    algo_factory, algo_name = PPO.create_factory(
-        lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
-        entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
-        max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-        gamma=args.gamma)
+    with wandb.init(project=args.experiment_name, name=args.agent_name, config=args, mode=mode):
 
-    # 3. Define RL Policy
-    actor_factory = OnPolicyActor.create_factory(
-        obs_space, action_space, algo_name, restart_model=args.restart_model)
+        # Sanity check, make sure that logging matches execution
+        args = wandb.config
 
-    # 4. Define rollouts storage
-    storage_factory = PPODBuffer.create_factory(
-        size=args.num_steps,
-        initial_demos_dir=os.path.dirname(__file__) + "/demos/",
-        target_demos_dir=None,
-        gae_lambda=args.gae_lambda,
-    )
+        # 1. Define Train Vector of Envs
+        arena_file = os.path.dirname(__file__) + "/demos/",
+        train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+            env_fn=animal_train_env_factory,
+            env_kwargs={
+                "realtime": False,
+                "arenas_dir": arena_file,
+                "frame_skip": args.frame_skip,
+                "frame_stack": args.frame_stack,
+            },
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+            info_keywords=('ereward', 'max_reward', 'max_time', 'arena'))
 
-    #        demos_dir=os.path.dirname(__file__),
+        # 2. Define RL training algorithm
+        algo_factory, algo_name = PPO.create_factory(
+            lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
+            entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
+            max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
+            gamma=args.gamma)
 
-    # 5. Define scheme
-    params = {}
+        # 3. Define RL Policy
+        actor_factory = OnPolicyActor.create_factory(
+            obs_space, action_space, algo_name, restart_model=args.restart_model)
 
-    # add core modules
-    params.update({
-        "algo_factory": algo_factory,
-        "actor_factory": actor_factory,
-        "storage_factory": storage_factory,
-        "train_envs_factory": train_envs_factory,
-    })
+        # 4. Define rollouts storage
+        storage_factory = PPODBuffer.create_factory(
+            size=args.num_steps,
+            initial_demos_dir=os.path.dirname(__file__) + "/demos/",
+            target_demos_dir=None,
+            gae_lambda=args.gae_lambda,
+        )
 
-    # add collection specs
-    params.update({
-        "num_col_workers": args.num_col_workers,
-        "col_workers_communication": args.com_col_workers,
-        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
-    })
+        #        demos_dir=os.path.dirname(__file__),
 
-    # add gradient specs
-    params.update({
-        "num_grad_workers": args.num_grad_workers,
-        "grad_workers_communication": args.com_grad_workers,
-        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
-    })
+        # 5. Define scheme
+        params = {}
 
-    scheme = Scheme(**params)
+        # add core modules
+        params.update({
+            "algo_factory": algo_factory,
+            "actor_factory": actor_factory,
+            "storage_factory": storage_factory,
+            "train_envs_factory": train_envs_factory,
+        })
 
-    # 6. Define learner
-    learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
+        # add collection specs
+        params.update({
+            "num_col_workers": args.num_col_workers,
+            "col_workers_communication": args.com_col_workers,
+            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+        })
 
-    # 7. Define train loop
-    iterations = 0
-    start_time = time.time()
-    while not learner.done():
+        # add gradient specs
+        params.update({
+            "num_grad_workers": args.num_grad_workers,
+            "grad_workers_communication": args.com_grad_workers,
+            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+        })
 
-        learner.step()
+        scheme = Scheme(**params)
 
-        if iterations % args.log_interval == 0:
-            learner.print_info()
+        # 6. Define learner
+        learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        if iterations % args.save_interval == 0:
-            save_name = learner.save_model()
+        # 7. Define train loop
+        iterations = 0
+        start_time = time.time()
+        while not learner.done():
 
-        if args.max_time != -1 and (time.time() - start_time) > args.max_time:
-            break
+            learner.step()
 
-        iterations += 1
+            if iterations % args.log_interval == 0:
+                learner.print_info()
 
-    print("Finished!")
-    sys.exit()
+            if iterations % args.save_interval == 0:
+                save_name = learner.save_model()
+
+            if args.max_time != -1 and (time.time() - start_time) > args.max_time:
+                break
+
+            iterations += 1
+
+        print("Finished!")
+        sys.exit()
 
 
 def get_args():
@@ -127,9 +141,6 @@ def get_args():
     parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
     # Environment specs
-    parser.add_argument(
-        '--env-id', type=str, default=None,
-        help='Gym environment id (default None)')
     parser.add_argument(
         '--frame-skip', type=int, default=0,
         help='Number of frame to skip for each action (default no skip)')
