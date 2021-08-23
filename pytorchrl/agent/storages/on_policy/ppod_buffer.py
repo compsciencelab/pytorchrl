@@ -398,7 +398,7 @@ class PPODBuffer(B):
                 num_loaded_demos += 1
 
             except Exception:
-                print("Failed to load demos!")
+                print("Failed to load demo!")
 
         print("\nLOADED {} DEMOS".format(num_loaded_demos))
 
