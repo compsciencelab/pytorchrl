@@ -117,6 +117,9 @@ def main():
             learner.step()
 
             if iterations % args.log_interval == 0:
+                log_data = learner.get_metrics(add_episodes_metrics=True)
+                log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
+                wandb.log(log_data, step=learner.num_samples_collected + args.start_env_steps)
                 learner.print_info()
 
             if iterations % args.save_interval == 0:
