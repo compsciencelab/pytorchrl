@@ -140,6 +140,14 @@ def get_args():
     # Configuration file, keep first
     parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
+    # Wandb
+    parser.add_argument(
+        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+    parser.add_argument(
+        '--agent_name', default=None, help='Name of the wandb run')
+    parser.add_argument(
+        '--wandb_key', default=None, help='Init key from wandb account')
+
     # Environment specs
     parser.add_argument(
         '--frame-skip', type=int, default=0,
