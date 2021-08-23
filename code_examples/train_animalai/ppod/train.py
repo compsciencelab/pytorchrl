@@ -49,7 +49,7 @@ def main():
         args = wandb.config
 
         # 1. Define Train Vector of Envs
-        arena_file = os.path.dirname(__file__) + "/demos/",
+        arena_file = os.path.dirname(__file__) + "/demos/"
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=animal_train_env_factory,
             env_kwargs={
