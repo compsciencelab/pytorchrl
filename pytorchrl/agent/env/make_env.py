@@ -1,4 +1,5 @@
 import os
+import copy
 import inspect
 from pytorchrl.agent.env.openai_baselines_dependencies.Monitor import Monitor
 
@@ -44,6 +45,7 @@ def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env,
         os.makedirs(path, exist_ok=True)
 
     # index_worker and index_env added as paramaters
+    env_kwargs = copy.deepcopy(env_kwargs)
     if "index_col_worker" in inspect.getfullargspec(env_fn).args:
         env_kwargs["index_col_worker"] = index_col_worker
     if "index_grad_worker" in inspect.getfullargspec(env_fn).args:
