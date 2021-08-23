@@ -49,7 +49,7 @@ def main():
         args = wandb.config
 
         # 1. Define Train Vector of Envs
-        arena_file = os.path.dirname(__file__) + "/demos/"
+        arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=animal_train_env_factory,
             env_kwargs={
@@ -58,7 +58,7 @@ def main():
                 "frame_stack": args.frame_stack,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=('ereward', 'max_reward', 'max_time', 'arena'))
+            info_keywords=('ereward', 'max_reward', 'max_time', 'arenas'))
 
         # 2. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
@@ -74,7 +74,7 @@ def main():
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps,
-            initial_demos_dir=os.path.dirname(__file__) + "/demos/",
+            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_demos_dir=None,
             gae_lambda=args.gae_lambda,
         )

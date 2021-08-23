@@ -47,7 +47,7 @@ class PPODBuffer(B):
     # Accepted data fields. Inserting other fields will raise AssertionError
     on_policy_data_fields = prl.OnPolicyDataKeys
 
-    # Data tensors to collect for each demo
+    # Data tensors to collect for each demos
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
@@ -229,7 +229,7 @@ class PPODBuffer(B):
         # Handle demos in progress
         for i in range(self.num_envs):
 
-            # For each environment, insert demo transition if in the middle of a demo
+            # For each environment, insert demos transition if in the middle of a demos
             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]:
 
                 demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
@@ -273,7 +273,7 @@ class PPODBuffer(B):
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
 
-                # Handle end of demo
+                # Handle end of demos
                 if self.demos_in_progress["env{}".format(
                         i + 1)]["Step"] == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
@@ -287,10 +287,10 @@ class PPODBuffer(B):
                     # TODO. Ideally assign the obs to c_worker.obs, otherwise first step of next episode
                     # TODO. will be computed with a wrong obs.
 
-                    # Randomly sample new demo if last demo has finished
+                    # Randomly sample new demos if last demos has finished
                     self.sample_demo(i)
 
-            # Otherwise check if end of episode reach and randomly start demo
+            # Otherwise check if end of episode reach and randomly start demos
             elif sample[prl.DONE][i] == 1.0:
 
                 self.sample_demo(i)
@@ -314,7 +314,7 @@ class PPODBuffer(B):
             # Handle end of episode
             if sample[prl.DONE][i] == 1.0:
                 
-                # Get candidate demo
+                # Get candidate demos
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
                     potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(
@@ -325,10 +325,10 @@ class PPODBuffer(B):
                 potential_demo["total_reward"] = episode_reward
                 potential_demo["length"] = potential_demo[prl.ACT].shape[0]
 
-                # Consider candidate demo for demo reward
+                # Consider candidate demos for demos reward
                 if episode_reward > self.reward_threshold:
 
-                    # Add demo to reward buffer
+                    # Add demos to reward buffer
                     self.reward_demos.append(potential_demo)
 
                     # Check if buffers are full
@@ -343,7 +343,7 @@ class PPODBuffer(B):
                     # TODO.remove
                     self.reward_threshold = 1.0
 
-                else:   # Consider candidate demo for value reward
+                else:   # Consider candidate demos for value reward
 
                     # Find current number of demos, and current value threshold
                     potential_demo["max_value"] = self.potential_demos_val[i]
@@ -353,13 +353,13 @@ class PPODBuffer(B):
 
                     if self.potential_demos_val["env{}".format(i + 1)] > value_thresh or total_demos < self.max_demos:
 
-                        # Add demo to value buffer
+                        # Add demos to value buffer
                         self.value_demos.append(potential_demo)
 
                         # Check if buffers are full
                         self.check_demo_buffer_capacity()
 
-                # Reset potential demo dict
+                # Reset potential demos dict
                 for tensor in self.demos_data_fields:
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_val["env{}".format(i + 1)] = 0.0
@@ -368,7 +368,7 @@ class PPODBuffer(B):
         """Load initial demonstrations."""
 
         # TODO. what happens if there are reward and value demos in the demos dir? for now there are not value demos saved
-        # TODO. What happens if there are more than max_demos in demo dir? should choose top `max_demos` demos.
+        # TODO. What happens if there are more than max_demos in demos dir? should choose top `max_demos` demos.
         # TODO. I Should check frame skip and frame stack?
 
         # Add original demonstrations
@@ -378,7 +378,7 @@ class PPODBuffer(B):
 
             try:
 
-                # Load demo tensors
+                # Load demos tensors
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
@@ -398,14 +398,14 @@ class PPODBuffer(B):
                 num_loaded_demos += 1
 
             except Exception:
-                print("Failed to load demo!")
+                print("Failed to load demos!")
 
         print("\nLOADED {} DEMOS".format(num_loaded_demos))
 
     def sample_demo(self, env_id):
-        """With probability rho insert reward demo, with probability phi insert value demo."""
+        """With probability rho insert reward demos, with probability phi insert value demos."""
 
-        # Reset demo tracking variables
+        # Reset demos tracking variables
         self.demos_in_progress["env{}".format(env_id + 1)]["Step"] = 0
         self.demos_in_progress["env{}".format(env_id + 1)][prl.RHS] = None
 
@@ -415,7 +415,7 @@ class PPODBuffer(B):
 
         if episode_source == "reward_demo" and len(self.reward_demos) > 0:
 
-            # Randomly select reward demo
+            # Randomly select reward demos
             selected = np.random.choice(range(len(self.reward_demos)))
 
             # give priority to shorter demos
@@ -427,7 +427,7 @@ class PPODBuffer(B):
 
         elif episode_source == "value_demo" and len(self.value_demos) > 0:
 
-            # randomly select value demo
+            # randomly select value demos
             probs = np.array([p["max_value"] for p in self.value_demos]) ** self.alpha
             probs = probs / probs.sum()
             selected = np.random.choice(range(len(self.value_demos)), p=probs)
@@ -436,18 +436,18 @@ class PPODBuffer(B):
         else:
             demo = None
 
-        # Set demo to demos_in_progress
+        # Set demos to demos_in_progress
         self.demos_in_progress["env{}".format(env_id + 1)]["Demo"] = demo
 
         if demo:
-            # Set demo length
+            # Set demos length
             self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["length"]
-            # Set next buffer obs to be the starting demo obs
+            # Set next buffer obs to be the starting demos obs
             self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
                 env_id + 1)]["Demo"][prl.OBS][0:1].to(self.device))
 
     def anneal_parameters(self):
-        """Update demo probabilities as explained in PPO+D paper."""
+        """Update demos probabilities as explained in PPO+D paper."""
 
         if 0.0 < self.rho < 1.0 and len(self.value_demos) > 0:
             self.rho += self.initial_phi / len(self.value_demos)
@@ -467,7 +467,7 @@ class PPODBuffer(B):
         total_demos = len(self.reward_demos) + len(self.value_demos)
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
-                # pop value demo with lowest max_value
+                # pop value demos with lowest max_value
                 del self.value_demos[np.array(
                     [p["max_value"] for p in self.value_demos]).argmin()]
 
@@ -481,8 +481,8 @@ class PPODBuffer(B):
 
     def save_demos(self, num_rewards_demos=10, num_value_demos=0):
         """
-        Saves the top `num_rewards_demos` demos from the reward demo buffer and
-        the top `num_value_demos` demos from the value demo buffer.
+        Saves the top `num_rewards_demos` demos from the reward demos buffer and
+        the top `num_value_demos` demos from the value demos buffer.
         """
 
         if not os.path.exists(self.target_demos_dir):

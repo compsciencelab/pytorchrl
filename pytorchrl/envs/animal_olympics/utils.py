@@ -9,12 +9,12 @@ def analyze_arena(arena):
     goodmultis = []
     for i in arena.arenas[0].items:
         if i.name in ['GoodGoal', 'GoodGoalBounce']:
-            if len(i.sizes) == 0:  # arena max cannot be computed
+            if len(i.sizes) == 0:  # arenas max cannot be computed
                 return -1
             max_good = max(i.sizes[0].x, max_good)
             goods.append(i.sizes[0].x)
         if i.name in ['GoodGoalMulti', 'GoodGoalMultiBounce']:
-            if len(i.sizes) == 0:  # arena max cannot be computed
+            if len(i.sizes) == 0:  # arenas max cannot be computed
                 return -1
             tot_reward += i.sizes[0].x
             goodmultis.append(i.sizes[0].x)
