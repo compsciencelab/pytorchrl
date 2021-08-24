@@ -8,82 +8,25 @@ import torch.optim as optim
 
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
-from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 
 
-class DDPG(Algorithm):
-    """
-    Deep Deterministic Policy Gradient algorithm class.
+class MB_MPC(Algorithm):
 
-    Algorithm class to execute DDPG, from Timothy P. Lillicrap et al.
-    CONTINUOUS CONTROL WITH DEEP REINFORCEMENT LEARNING
-    (https://arxiv.org/pdf/1509.02971.pdf). Algorithms are modules generally
-    required by multiple workers, so DDPG.algo_factory(...) returns a function
-    that can be passed on to workers to instantiate their own DDPG module.
-
-    Parameters
-    ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
-    actor : Actor
-        Actor class instance.
-    lr_pi : float
-        Policy optimizer learning rate.
-    lr_q : float
-        Q-nets optimizer learning rate.
-    gamma : float
-        Discount factor parameter.
-    polyak : float
-        DDPG polyak averaging parameter.
-    num_updates : int
-        Num consecutive actor_critic updates before data collection continues.
-    update_every : int
-        Regularity of actor_critic updates in number environment steps.
-    start_steps : int
-        Num of initial random environment steps before learning starts.
-    mini_batch_size : int
-        Size of actor_critic update batches.
-    target_update_interval : float
-        regularity of target nets updates with respect to actor_critic Adam updates.
-    num_test_episodes : int
-        Number of episodes to complete in each test phase.
-    test_every : int
-        Regularity of test evaluations in actor_critic updates.
-    max_grad_norm : float
-        Gradient clipping parameter.
-    policy_loss_addons : list
-        List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
-
-    Examples
-    --------
-    >>> create_algo = DDPG.create_factory(
-            lr_q=1e-4, lr_pi=1e-4, gamma=0.99, polyak=0.995,
-            num_updates=50, update_every=50, test_every=5000, start_steps=20000,
-            mini_batch_size=64, num_test_episodes=0, target_update_interval=1)
-    """
 
     def __init__(self,
                  device,
                  actor,
-                 lr_q=1e-4,
-                 lr_pi=1e-4,
-                 gamma=0.99,
-                 polyak=0.995,
-                 num_updates=1,
+                 lr,
                  update_every=50,
                  test_every=1000,
                  max_grad_norm=0.5,
                  start_steps=20000,
-                 mini_batch_size=64,
-                 num_test_episodes=5,
-                 target_update_interval=1,
-                 policy_loss_addons=[]):
+                 mini_batch_size=256,
+                 num_test_episodes=5
+                 ):
 
         # ---- General algo attributes ----------------------------------------
-
-        # Discount factor
-        self._gamma = gamma
 
         # Number of steps collected with initial random policy
         self._start_steps = int(start_steps)
@@ -91,11 +34,6 @@ class DDPG(Algorithm):
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
 
-        # Number of data samples collected between network update stages
-        self._update_every = int(update_every)
-
-        # Number mini batches per epoch
-        self._num_mini_batch = int(num_updates)
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -109,129 +47,47 @@ class DDPG(Algorithm):
         # ---- DDPG-specific attributes ----------------------------------------
 
         self.iter = 0
-        self.polyak = polyak
         self.device = device
         self.actor = actor
         self.max_grad_norm = max_grad_norm
-        self.target_update_interval = target_update_interval
-
-        assert hasattr(self.actor, "q1"), "DDPG requires q critic (num_critics=1)"
-
-        # Create target networks
-        self.actor_targ = deepcopy(actor)
+        self.update_every = update_every
 
         # Freeze target networks with respect to optimizers (only update via polyak averaging)
         for p in self.actor_targ.parameters():
             p.requires_grad = False
 
-        # List of parameters for both Q-networks
-        q_params = itertools.chain(self.actor.q1.parameters())
 
         # List of parameters for both Q-networks
-        p_params = itertools.chain(self.actor.policy_net.parameters())
+        dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
 
         # ----- Optimizers ----------------------------------------------------
 
-        self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
-        self.q_optimizer = optim.Adam(q_params, lr=lr_q)
-
-        # ----- Policy Loss Addons --------------------------------------------
-
-        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
-        # or a list of PolicyLossAddOn instances
-        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
-            "DDPG policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
-            "or a list of PolicyLossAddOn instances"
-        if isinstance(policy_loss_addons, list):
-            for addon in policy_loss_addons:
-                assert isinstance(addon, PolicyLossAddOn), \
-                    "DDPG policy_loss_addons parameter should be a  PolicyLossAddOn " \
-                    "instance or a list of PolicyLossAddOn instances"
-        else:
-            policy_loss_addons = [policy_loss_addons]
-
-        self.policy_loss_addons = policy_loss_addons
-        for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+        self.dynamics_optimizer = optim.Adam(dynamics_params, lr=lr)
 
     @classmethod
     def create_factory(cls,
-                       lr_q=1e-3,
-                       lr_pi=1e-4,
-                       gamma=0.99,
-                       polyak=0.995,
-                       num_updates=50,
+                       lr,
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
                        max_grad_norm=0.5,
                        mini_batch_size=64,
-                       num_test_episodes=5,
-                       target_update_interval=1.0,
-                       policy_loss_addons=[]):
-        """
-        Returns a function to create new DDPG instances.
+                       num_test_episodes=5
+                       ):
 
-        Parameters
-        ----------
-        lr_pi : float
-            Policy optimizer learning rate.
-        lr_q : float
-            Q-nets optimizer learning rate.
-        gamma : float
-            Discount factor parameter.
-        polyak: float
-            DDPG polyak averaging parameter.
-        num_updates: int
-            Num consecutive actor_critic updates before data collection continues.
-        update_every: int
-            Regularity of actor_critic updates in number environment steps.
-        start_steps: int
-            Num of initial random environment steps before learning starts.
-        mini_batch_size: int
-            Size of actor_critic update batches.
-        target_update_interval: float
-            regularity of target nets updates with respect to actor_critic Adam updates.
-        num_test_episodes : int
-            Number of episodes to complete in each test phase.
-        test_every : int
-            Regularity of test evaluations in actor_critic updates.
-        max_grad_norm : float
-            Gradient clipping parameter.
-        policy_loss_addons : list
-            List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
-
-        Returns
-        -------
-        create_algo_instance : func
-            Function that creates a new DDPG class instance.
-        algo_name : str
-            Name of the algorithm.
-        """
 
         def create_algo_instance(device, actor):
-            return cls(lr_q=lr_q,
-                       lr_pi=lr_pi,
-                       actor=actor,
-                       gamma=gamma,
+            return cls(actor=actor,
+                       lr=lr,
                        device=device,
-                       polyak=polyak,
                        test_every=test_every,
                        start_steps=start_steps,
-                       num_updates=num_updates,
                        update_every=update_every,
                        max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
-                       num_test_episodes=num_test_episodes,
-                       target_update_interval=target_update_interval,
-                       policy_loss_addons=policy_loss_addons)
+                       num_test_episodes=num_test_episodes)
 
-        return create_algo_instance, prl.DDPG
-
-    @property
-    def gamma(self):
-        """Returns discount factor gamma."""
-        return self._gamma
+        return create_algo_instance
 
     @property
     def start_steps(self):
@@ -282,40 +138,14 @@ class DDPG(Algorithm):
         return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        """
-        DDPG acting function.
 
-        Parameters
-        ----------
-        obs : torch.tensor
-            Current world observation
-        rhs : torch.tensor
-            RNN recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        done : torch.tensor
-            1.0 if current obs is the last one in the episode, else 0.0.
-        deterministic : bool
-            Whether to randomly sample action from predicted distribution or taking the mode.
-
-        Returns
-        -------
-        action : torch.tensor
-            Predicted next action.
-        clipped_action : torch.tensor
-            Predicted next action (clipped to be within action space).
-        rhs : torch.tensor
-            Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
-        other : dict
-            Additional DDPG predictions, which are not used in other algorithms.
-        """
 
         with torch.no_grad():
-            (action, clipped_action, logp_action, rhs,
-             entropy_dist, dist) = self.actor.get_action(
-                obs, rhs, done, deterministic=deterministic)
+            action = self.actor.get_action(obs, deterministic=deterministic)
 
-        return action, clipped_action, rhs, {}
+        return action, None, None, {}
 
-    def compute_loss_q(self, data, n_step=1, per_weights=1):
+    def compute_dynamics_loss(self, data, n_step=1, per_weights=1):
         """
          Calculate DDPG Q-nets loss
 
@@ -369,33 +199,7 @@ class DDPG(Algorithm):
 
         return loss_q, errors
 
-    def compute_loss_pi(self, data, per_weights=1):
-        """
-        Calculate DDPG policy loss.
 
-        Parameters
-        ----------
-        data: dict
-            Data batch dict containing all required tensors to compute DDPG losses.
-
-        Returns
-        -------
-        loss_pi : torch.tensor
-            DDPG policy loss.
-        """
-
-        o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
-
-        pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-        q_pi = self.actor.get_q_scores(o, rhs, d, pi).get("q1")
-
-        loss_pi = - (q_pi * per_weights).mean()
-
-        # Extend policy loss with addons
-        for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, data)
-
-        return loss_pi
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
