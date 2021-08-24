@@ -276,16 +276,6 @@ class PPODBuffer(B):
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
-                    # Set done to True
-                    self.data[prl.DONE][self.step + 1][i:i + 1, :].copy_(torch.ones(1, 1).to(self.device))
-                    # TODO. Ideally assign the obs to c_worker.done, otherwise first step of next episode
-                    # TODO. will be computed with a wrong done flag.
-
-                    # Reset `i-th` environment as set next buffer obs to be the starting episode obs
-                    self.data[prl.OBS][self.step + 1][i:i + 1, :].copy_(self.envs.reset_single_env(env_id=i))
-                    # TODO. Ideally assign the obs to c_worker.obs, otherwise first step of next episode
-                    # TODO. will be computed with a wrong obs.
-
                     # Randomly sample new demos if last demos has finished
                     self.sample_demo(env_id=i)
 
@@ -452,12 +442,31 @@ class PPODBuffer(B):
         # Set demos to demos_in_progress
         self.demos_in_progress["env{}".format(env_id + 1)]["Demo"] = demo
 
+        # Set done to True
+        self.data[prl.DONE][self.step + 1][env_id:env_id + 1, :].copy_(torch.ones(1, 1).to(self.device))
+        # TODO. Ideally assign the obs to c_worker.done, otherwise first step of next episode
+        # TODO. will be computed with a wrong done flag.
+
         if demo:
+
             # Set demos length
             self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["length"]
+
             # Set next buffer obs to be the starting demos obs
             self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
                 env_id + 1)]["Demo"][prl.OBS][0:1].to(self.device))
+
+        else:
+            # Reset `i-th` environment as set next buffer obs to be the starting episode obs
+            self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.envs.reset_single_env(env_id=env_id))
+            # TODO. Ideally assign the obs to c_worker.obs, otherwise first step of next episode
+            # TODO. will be computed with a wrong obs.
+
+            # Reset potential demos dict
+            for tensor in self.demos_data_fields:
+                self.potential_demos["env{}".format(env_id + 1)][tensor] = []
+                self.potential_demos_val["env{}".format(env_id + 1)] = - np.inf
+
 
     def anneal_parameters(self):
         """Update demos probabilities as explained in PPO+D paper."""
