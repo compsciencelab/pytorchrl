@@ -110,14 +110,6 @@ class RewardShaping(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
         if reward > -0.005 and reward < 0:  # remove time negative reward
             reward = 0
-        if done:  # give time penalty at the end
-            reward -= self.steps / self.max_time
-        if reward > 0 and done and self.steps < 60:  # explore first
-            reward = 0
-        if reward > 0 and not done:  # brown ball, go for it first
-            reward += 3
-        if reward > 0 and self.env_reward > self.max_reward - 1 and done:  # prize for finishing well
-            reward += 10
         return obs, reward, done, info
 
     def reset(self, **kwargs):
