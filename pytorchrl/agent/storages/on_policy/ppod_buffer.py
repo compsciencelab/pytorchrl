@@ -9,6 +9,12 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
+# TODO. Fix problems to record demos -> use lab laptop
+# TODO. Check successful demos -> record demos to wandb
+# TODO. Reward demos (not including the original one) -> FIFO
+# TODO. Value demos -> always keep those with the maximum value + UPDATE their values!
+
+
 class PPODBuffer(B):
     """
     Storage class for PPO+D algorithm.
@@ -50,7 +56,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.3, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -72,7 +78,7 @@ class PPODBuffer(B):
         self.target_demos_dir = target_demos_dir
 
         # Reward and Value buffers
-        self.reward_demos = []
+        self.reward_demos = []  # TODO. make sure the original demo is NEVER ejected
         self.value_demos = []
 
         # Load initial demos
@@ -107,7 +113,7 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       rho=0.1,
+                       rho=0.3,
                        phi=0.0,
                        gae_lambda=0.95,
                        alpha=10,
@@ -153,11 +159,10 @@ class PPODBuffer(B):
         Before updating actor policy model, compute returns and advantages.
         """
 
-        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}".format(
-            len(self.reward_demos), len(self.value_demos), self.rho, self.phi))
+        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}\n".format(
+            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold))
 
-        print("\nREWARD THRESHOLD {}".format(self.reward_threshold))
-
+        # Retrieve most recent obs, rhs and done tensors
         last_tensors = {}
         for k in (prl.OBS, prl.RHS, prl.DONE):
             if isinstance(self.data[k], dict):
@@ -165,12 +170,14 @@ class PPODBuffer(B):
             else:
                 last_tensors[k] = self.data[k][self.step - 1]
 
+        # Compute next value prediction
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
+        # Assign predictions to self.data
         self.data[prl.RET][self.step].copy_(next_value)
         self.data[prl.VAL][self.step].copy_(next_value)
         if isinstance(next_rhs, dict):
@@ -196,7 +203,7 @@ class PPODBuffer(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        # Data tensors lazy initialization
+        # Data tensors lazy initialization, only executed the first time
         if self.size == 0 and self.data[prl.OBS] is None:
             self.init_tensors(sample)
 
@@ -310,8 +317,7 @@ class PPODBuffer(B):
             # Copy transition
             for tensor in self.demos_data_fields:
                 self.potential_demos["env{}".format(i + 1)][tensor].append(
-                    sample[tensor][i].cpu().numpy() # TODO. maybe should be a deepcopy?
-                )
+                    copy.deepcopy(sample[tensor][i]).cpu().numpy())  # TODO. in theory should not be necessary deepcopy
             
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
@@ -323,8 +329,8 @@ class PPODBuffer(B):
                 # Get candidate demos
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
-                    potential_demo[tensor] = torch.Tensor(np.stack(self.potential_demos["env{}".format(
-                        i + 1)][tensor]))
+                    potential_demo[tensor] = torch.Tensor(np.stack(
+                        self.potential_demos["env{}".format(i + 1)][tensor]))
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
@@ -373,9 +379,9 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """Load initial demonstrations."""
 
-        # TODO. what happens if there are reward and value demos in the demos dir? for now there are not value demos saved
+        # TODO. what happens if there are reward and value demos in the demos dir? for now only reward demos
         # TODO. What happens if there are more than max_demos in demos dir? should choose top `max_demos` demos.
-        # TODO. I Should check frame skip and frame stack?
+        # TODO. I Should check frame skip and frame stack? for now demo and training params should match
 
         # Add original demonstrations
         num_loaded_demos = 0
@@ -475,14 +481,14 @@ class PPODBuffer(B):
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
                 # pop value demos with lowest max_value
-                del self.value_demos[np.array(
-                    [p["max_value"] for p in self.value_demos]).argmin()]
+                del self.value_demos[np.array([p["max_value"] for p in self.value_demos]).argmin()]
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
                 probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
+                probs[0] = 0.0  # Original demo is never ejected
                 probs = probs / probs.sum()
                 del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
 

@@ -1,7 +1,7 @@
 !ArenaConfig
 arenas:
   0: !Arena
-    t: 2000
+    t: 1000
     items:
     - !Item
       name: WallTransparent
