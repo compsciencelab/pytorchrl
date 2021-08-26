@@ -257,7 +257,7 @@ class OnPolicyActor(nn.Module):
         features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
+            features, rhs["rhs_act"] = self.policy_net.memory_net(
                 features, rhs["rhs_act"], done)
 
         logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
@@ -394,7 +394,6 @@ class OnPolicyActor(nn.Module):
 
         if self.recurrent_nets:
             policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
-            feature_size = policy_memory_net.num_outputs
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()
