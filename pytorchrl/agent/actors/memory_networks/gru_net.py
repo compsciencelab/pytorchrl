@@ -19,7 +19,7 @@ class GruNet(nn.Module):
     recurrent : bool
         Whether to use recurrency or not.
     """
-    def __init__(self, input_size, activation=nn.ReLU):
+    def __init__(self, input_size, output_size=256, activation=nn.ReLU):
 
         super(GruNet, self).__init__()
 
@@ -30,7 +30,7 @@ class GruNet(nn.Module):
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
 
-        self._num_outputs = input_size
+        self._num_outputs = output_size
 
         # Apply recurrency to extracted features
         self.gru = nn.GRU(input_size, input_size)

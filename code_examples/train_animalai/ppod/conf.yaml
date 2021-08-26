@@ -16,7 +16,7 @@ value_loss_coef: 0.1
 max_grad_norm: 0.5
 entropy_coef: 0.02
 lr: 0.00001
-nn: MLP
+nn: CNN
 frame_skip: 2
 frame_stack: 4
 num_grad_workers: 1
