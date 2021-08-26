@@ -44,18 +44,13 @@ class MB_MPC(Algorithm):
         # Number of episodes to complete when testing
         self._num_test_episodes = int(num_test_episodes)
 
-        # ---- DDPG-specific attributes ----------------------------------------
+        # ---- MB MPC-specific attributes ----------------------------------------
 
         self.iter = 0
         self.device = device
         self.actor = actor
         self.max_grad_norm = max_grad_norm
         self.update_every = update_every
-
-        # Freeze target networks with respect to optimizers (only update via polyak averaging)
-        for p in self.actor_targ.parameters():
-            p.requires_grad = False
-
 
         # List of parameters for both Q-networks
         dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
@@ -145,59 +140,17 @@ class MB_MPC(Algorithm):
 
         return action, None, None, {}
 
-    def compute_dynamics_loss(self, data, n_step=1, per_weights=1):
-        """
-         Calculate DDPG Q-nets loss
+    def compute_dynamics_loss(self, data):
 
-        Parameters
-        ----------
-        data: dict
-            Data batch dict containing all required tensors to compute TD3 losses.
-        n_step : int or float
-            Number of future steps used to computed the truncated n-step return value.
-        per_weights :
-            Prioritized Experience Replay (PER) important sampling weights or 1.0.
+        obs, actions, next_obs = data
 
-        Returns
-        -------
-        loss_q1 : torch.tensor
-            Q1-net loss.
-        loss_q2 : torch.tensor
-            Q2-net loss.
-        loss_q : torch.tensor
-            Weighted average of loss_q1 and loss_q2.
-        errors : torch.tensor
-            TD errors.
-         """
+        predicted_ds = self.actor.dynamics_model(obs, actions)
 
-        o, rhs, d = data[prl.OBS], data[prl.RHS], data[prl.DONE]
-        a, r = data[prl.ACT], data[prl.REW]
-        o2, rhs2, d2 = data[prl.OBS2], data[prl.RHS2], data[prl.DONE2]
-
-        # Q-values for all actions
-        q = self.actor.get_q_scores(o, rhs, d, a).get("q1")
-
-        # Bellman backup for Q functions
-        with torch.no_grad():
-
-            # Target actions come from *current* policy
-            a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
-
-            # Target Q-values
-            q_targ = self.actor_targ.get_q_scores(o2, rhs2, d2, a2).get("q1")
-
-            backup = r + (self.gamma ** n_step) * (1 - d2) * q_targ
-
-        # MSE loss against Bellman backup
-        loss_q = 0.5 * (((q - backup) ** 2) * per_weights).mean()
-
-        # errors = (torch.min(q1, q2) - backup).abs()
-        errors = (q - backup).abs()
-
-        # reset Noise
-        self.actor.policy_net.dist.noise.reset()
-
-        return loss_q, errors
+        target_ds = next_obs - obs
+        
+        loss = nn.functional.mse_loss(predicted_ds, target_ds)
+        
+        return loss
 
 
 
@@ -221,57 +174,20 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-        # Recurrent burn-in
-        if self.actor.is_recurrent:
-            batch = self.actor.burn_in_recurrent_states(batch)
 
-        # PER
-        per_weights = batch.pop("per_weights") if "per_weights" in batch else 1.0
-
-        # N-step returns
-        n_step = batch.pop("n_step") if "n_step" in batch else 1.0
-
-        # First run one gradient descent step for Q1 and Q2
-        loss_q, errors = self.compute_loss_q(batch, n_step, per_weights)
+        loss = self.compute_dynamics_loss(batch)
         self.q_optimizer.zero_grad()
-        loss_q.backward(retain_graph=True)
-        nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
-        q_grads = get_gradients(self.actor.q1, grads_to_cpu=grads_to_cpu)
-
-        # Freeze Q-network so you don't waste computational effort
-        # computing gradients for them during the policy learning step.
-        for p in itertools.chain(self.actor.q1.parameters()):
-            p.requires_grad = False
-
-        # Next run one gradient descent step for pi.
-        loss_pi = self.compute_loss_pi(batch, per_weights)
-        self.pi_optimizer.zero_grad()
-        loss_pi.backward()
-        nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
-        pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
-
-        for p in itertools.chain(self.actor.q1.parameters()):
-            p.requires_grad = True
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
+        dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
         info = {
-            "loss_pi": loss_pi.detach().item(),
-            "loss_q1": loss_q.detach().item(),
+            "loss_dynamics": loss.detach().item()
         }
 
-        if "per_weights" in batch:
-            info.update({"errors": errors})
-
-        grads = {"q_grads": q_grads, "pi_grads": pi_grads}
+        grads = {"dyna_grads": dyna_grads}
 
         return grads, info
-
-    def update_target_networks(self):
-        """Update actor critic target networks with polyak averaging"""
-        if self.iter % self.target_update_interval == 0:
-            with torch.no_grad():
-                for p, p_targ in zip(self.actor.parameters(), self.actor_targ.parameters()):
-                    p_targ.data.mul_(self.polyak)
-                    p_targ.data.add_((1 - self.polyak) * p.data)
 
     def apply_gradients(self, gradients=None):
         """
@@ -285,18 +201,11 @@ class MB_MPC(Algorithm):
         """
         if gradients is not None:
             set_gradients(
-                self.actor.policy_net,
-                gradients=gradients["pi_grads"], device=self.device)
-            set_gradients(
-                self.actor.q1,
-                gradients=gradients["q_grads"], device=self.device)
+                self.actor.dynamics_model,
+                gradients=gradients["dyna_grads"], device=self.device)
 
-        self.q_optimizer.step()
-        self.pi_optimizer.step()
-
-        # Update target networks by polyak averaging.
+        self.dynamics_optimizer.step()
         self.iter += 1
-        self.update_target_networks()
 
     def set_weights(self, actor_weights):
         """
@@ -308,10 +217,7 @@ class MB_MPC(Algorithm):
             Dict containing actor weights to be set.
         """
         self.actor.load_state_dict(actor_weights)
-
-        # Update target networks by polyak averaging.
         self.iter += 1
-        self.update_target_networks()
 
     def update_algorithm_parameter(self, parameter_name, new_parameter_value):
         """
@@ -328,7 +234,5 @@ class MB_MPC(Algorithm):
         if hasattr(self, parameter_name):
             setattr(self, parameter_name, new_parameter_value)
         if parameter_name == "lr":
-            for param_group in self.pi_optimizer.param_groups:
-                param_group['lr'] = new_parameter_value
-            for param_group in self.q_optimizer.param_groups:
+            for param_group in self.dynamics_optimizer.param_groups:
                 param_group['lr'] = new_parameter_value
