@@ -389,12 +389,13 @@ class OnPolicyActor(nn.Module):
         feature_size = int(np.prod(policy_feature_extractor(
             torch.randn(1, *self.input_space.shape)).shape))
 
-        self.recurrent_size = feature_size
         if self.recurrent_nets:
             policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
             feature_size = policy_memory_net.num_outputs
+            self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()
+            self.recurrent_size = 1
 
         # ---- 3. Define action distribution ----------------------------------
 
