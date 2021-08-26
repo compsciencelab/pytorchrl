@@ -33,7 +33,7 @@ class GruNet(nn.Module):
         self._num_outputs = output_size
 
         # Apply recurrency to extracted features
-        self.gru = nn.GRU(input_size, input_size)
+        self.gru = nn.GRU(input_size, self._num_outputs)
         self.final_layer = init_(nn.Linear(self._num_outputs, self._num_outputs))
         self.final_activation = activation()
 
