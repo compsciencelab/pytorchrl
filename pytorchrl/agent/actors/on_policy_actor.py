@@ -343,8 +343,11 @@ class OnPolicyActor(nn.Module):
 
             # ---- 2. Define memory network  ----------------------------------
 
+            feature_size = int(np.prod(value_feature_extractor(
+                torch.randn(1, *self.input_space.shape)).shape))
+
             if self.recurrent_nets:
-                value_memory_net = GruNet(self.recurrent_size, **self.recurrent_nets_kwargs)
+                value_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
             else:
                 value_memory_net = nn.Identity()
 
@@ -395,17 +398,17 @@ class OnPolicyActor(nn.Module):
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()
-            self.recurrent_size = 1
+            self.recurrent_size = feature_size
 
         # ---- 3. Define action distribution ----------------------------------
 
         if isinstance(self.action_space, gym.spaces.Discrete):
-            dist = get_dist("Categorical")(feature_size, self.action_space.n)
+            dist = get_dist("Categorical")(self.recurrent_size, self.action_space.n)
             self.scale = None
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.Box):  # Continuous action space
-            dist = get_dist("Gaussian")(feature_size, self.action_space.shape[0])
+            dist = get_dist("Gaussian")(self.recurrent_size, self.action_space.shape[0])
             self.scale = Scale(self.action_space)
             self.unscale = Unscale(self.action_space)
 
