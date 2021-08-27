@@ -7,7 +7,8 @@ from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, L
 
 def animal_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
-        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1):
+        arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None,
+        inference=True, reward_delay=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -55,7 +56,7 @@ def animal_train_env_factory(
         seed=id,
         n_arenas=1,
         arenas_configurations=None,
-        inference=False)
+        inference=inference)
 
     env = RetroEnv(env)
 

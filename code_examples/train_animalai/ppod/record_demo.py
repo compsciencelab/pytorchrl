@@ -18,14 +18,18 @@ reduce = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 0): 3, (1, 1): 4, (1, 2): 5, (2, 
 
 
 def create_action():
-    action = [1, 0]
+    action = [0, 0]
     if "w" in pressed_keys:
+        print("PRESSED W")
         action[0] = 1
     elif "s" in pressed_keys:
+        print("PRESSED S")
         action[0] = 2
     if "d" in pressed_keys:
+        print("PRESSED D")
         action[1] = 1
     elif "a" in pressed_keys:
+        print("PRESSED A")
         action[1] = 2
     return action
 
@@ -79,7 +83,7 @@ def record():
             step += 1
             episode_reward += reward
 
-            time.sleep(1.0)
+            time.sleep(0.01)
 
             if done:
 
