@@ -24,6 +24,7 @@ def enjoy():
             "arenas_dir": arena_file,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack,
+            "inference": True,
         }, vec_env_size=1)
 
     # Define agent device and agent
