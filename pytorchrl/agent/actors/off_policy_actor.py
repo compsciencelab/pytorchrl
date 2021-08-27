@@ -379,12 +379,12 @@ class OffPolicyActor(nn.Module):
         if self.scale:
             action = self.scale(action)
 
-        x = self.policy_net.common_feature_extractor(self.policy_obs_feature_extractor(obs))
+        features = self.policy_net.common_feature_extractor(self.policy_obs_feature_extractor(obs))
 
         if self.recurrent_nets:
-            x, rhs["rhs_act"] = self.policy_net.memory_net(x, rhs["rhs_act"], done)
+            features, rhs["rhs_act"] = self.policy_net.memory_net(features, rhs["rhs_act"], done)
 
-        logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(x, action)
+        logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
 
         return logp_action, entropy_dist, dist
 
@@ -484,7 +484,7 @@ class OffPolicyActor(nn.Module):
             torch.randn(1, feature_size)).shape))
         q_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs) if\
             self.recurrent_nets else nn.Identity()
-        feature_size = q_memory_net.num_outputs if self.recurrent_nets\
+        feature_size = q_memory_net.recurrent_hidden_state_size if self.recurrent_nets\
             else feature_size
 
         # ---- 5. Define prediction layer -------------------------------------

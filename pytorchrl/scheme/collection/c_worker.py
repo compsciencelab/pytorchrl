@@ -133,9 +133,6 @@ class CWorker(W):
             self.obs, self.rhs, self.done = self.actor.actor_initial_states(
                 self.envs_train.reset())
 
-            # Define reward tracking variable
-            self.acc_reward = torch.zeros_like(self.done)
-
             # Collect initial samples
             print("Collecting initial samples...")
             self.collect_train_data(self.algo.start_steps)

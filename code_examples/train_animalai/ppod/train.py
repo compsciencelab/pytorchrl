@@ -11,9 +11,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
+
 
 # Testing
 import ipdb; ipdb.set_trace()
@@ -76,7 +77,7 @@ def main():
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_demos_dir=None,
+            target_demos_dir="/tmp/animalai_demos/",
             gae_lambda=args.gae_lambda,
         )
 
@@ -206,14 +207,14 @@ def get_args():
         '--num-grad-workers', type=int, default=1,
         help='how many agent workers to use (default: 1)')
     parser.add_argument(
-        '--com-grad-workers', default='synchronised',
-        help='communication patters grad workers (default: synchronised)')
+        '--com-grad-workers', default='synchronous',
+        help='communication patters grad workers (default: synchronous)')
     parser.add_argument(
         '--num-col-workers', type=int, default=1,
         help='how many agent workers to use (default: 1)')
     parser.add_argument(
-        '--com-col-workers', default='synchronised',
-        help='communication patters col workers (default: synchronised)')
+        '--com-col-workers', default='synchronous',
+        help='communication patters col workers (default: synchronous)')
 
     parser.add_argument(
         '--cluster', action='store_true', default=False,

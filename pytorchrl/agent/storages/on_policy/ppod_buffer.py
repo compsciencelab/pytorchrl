@@ -9,6 +9,8 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
+# TODO. review logged episode rewards in c_worker
+# TODO. review new reward demos found
 # TODO. Fix problems to record demos -> use lab laptop
 # TODO. Check successful demos -> record demos to wandb
 # TODO. Reward demos (not including the original one) -> FIFO
@@ -106,7 +108,7 @@ class PPODBuffer(B):
 
         # Save demos
         self.iter = 0
-        self.save_demos_every = 1
+        self.save_demos_every = 10
 
     @classmethod
     def create_factory(cls,
@@ -189,10 +191,9 @@ class PPODBuffer(B):
         self.compute_returns()
         self.compute_advantages()
 
-        # TODO. demo saving - is problematic
-        # self.iter += 1
-        # if self.iter % self.save_demos_every == 0:
-        #     self.save_demos()
+        self.iter += 1
+        if self.iter % self.save_demos_every == 0:
+            self.save_demos()
 
     def insert_transition(self, sample):
         """
@@ -467,7 +468,6 @@ class PPODBuffer(B):
                 self.potential_demos["env{}".format(env_id + 1)][tensor] = []
                 self.potential_demos_val["env{}".format(env_id + 1)] = - np.inf
 
-
     def anneal_parameters(self):
         """Update demos probabilities as explained in PPO+D paper."""
 
@@ -507,7 +507,7 @@ class PPODBuffer(B):
         the top `num_value_demos` demos from the value demos buffer.
         """
 
-        if not os.path.exists(self.target_demos_dir):
+        if self.target_demos_dir and not os.path.exists(self.target_demos_dir):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
         reward_ranking = np.flip(np.array([d["total_reward"] for d in self.reward_demos]).argsort())[:num_rewards_demos]
@@ -520,12 +520,14 @@ class PPODBuffer(B):
                 Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
             )
 
-        value_ranking = np.flip(np.array([d["max_value"] for d in self.value_demos]).argsort())[:num_value_demos]
-        for num, demo_pos in enumerate(value_ranking):
-            filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
-            np.savez(
-                filename,
-                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
-            )
+        # TODO: Dont save the value demos for now
+
+        # value_ranking = np.flip(np.array([d["max_value"] for d in self.value_demos]).argsort())[:num_value_demos]
+        # for num, demo_pos in enumerate(value_ranking):
+        #     filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
+        #     np.savez(
+        #         filename,
+        #         Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
+        #         Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
+        #         Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
+        #     )

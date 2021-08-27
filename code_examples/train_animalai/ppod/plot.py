@@ -9,28 +9,28 @@ from pytorchrl.agent.env import load_baselines_results
 from pytorchrl.utils import LoadFromFile
 
 
-def plot(experiment_path, roll=5, save_name="results"):
+def plot(experiment_path, roll=100, save_name="results"):
 
     fig = plt.figure(figsize=(20, 10))
 
-    if len(glob(os.path.join(experiment_path, "train/*monitor*"))) != 0:
+    if len(glob(os.path.join(experiment_path, "monitor_logs/train/*monitor*"))) != 0:
 
         exps = glob(experiment_path)
         print(exps)
 
-        df_train = load_baselines_results(os.path.join(experiment_path, "train"))
+        df_train = load_baselines_results(os.path.join(experiment_path, "monitor_logs/train"))
         df_train['steps'] = df_train['l'].cumsum() / 1000000
         df_train['time'] = df_train['t'] / 3600
 
         ax = plt.subplot(1, 1, 1)
         df_train.rolling(roll).mean().plot('steps', 'r',  style='-',  ax=ax,  legend=False)
 
-    if len(glob(os.path.join(experiment_path, "test/*monitor*"))) != 0:
+    if len(glob(os.path.join(experiment_path, "monitor_logs/test/*monitor*"))) != 0:
 
         exps = glob(experiment_path)
         print(exps)
 
-        df_test = load_baselines_results(os.path.join(experiment_path, "test"))
+        df_test = load_baselines_results(os.path.join(experiment_path, "monitor_logs/test"))
         df_test['steps'] = df_test['l'].cumsum() / 1000000
         df_test['time'] = df_test['t'] / 3600
 
@@ -66,6 +66,14 @@ def get_args():
     parser.add_argument(
         '--save-name', default='results',
         help='plot save name (default: results)')
+
+    # Wandb
+    parser.add_argument(
+        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+    parser.add_argument(
+        '--agent_name', default=None, help='Name of the wandb run')
+    parser.add_argument(
+        '--wandb_key', default=None, help='Init key from wandb account')
 
     # Environment specs
     parser.add_argument(
@@ -161,6 +169,7 @@ def get_args():
     args.log_dir = os.path.expanduser(args.log_dir)
 
     return args
+
 
 if __name__ == "__main__":
 

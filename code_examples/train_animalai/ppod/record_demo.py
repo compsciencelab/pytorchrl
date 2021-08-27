@@ -2,60 +2,31 @@ import os
 import sys
 import time
 
-import gym
 import torch
 import argparse
 import threading
-import pybulletgym
 import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../../..')
-
-gym.envs.register(
-    id='SparseReacher-v1',
-    entry_point='pytorchrl.envs.pybullet.sparse_reacher:SparseReacherBulletEnv',
-    max_episode_steps=150,
-    reward_threshold=18.0,
-)
-
-def sparse_reacher_env_factory(seed=0, index_worker=0, index_env=0, frame_skip=0, frame_stack=1):
-    """ Create sparse sparse_reacher environment instances."""
-
-    env = gym.make("SparseReacher-v1")
-    env.seed(seed + index_worker + index_env)
-
-    if frame_skip > 0:
-        env = FrameSkip(env, skip=frame_skip)
-
-    if frame_stack > 1:
-        env = FrameStack(env, k=frame_stack)
-
-    env.render()
-
-    return env
+from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 
 
 pressed_keys = set([])
-
-# #{0: [0, 0], 1: [0, 1], 2: [0, 2], 3: [1, 0], 4: [1, 1], 5: [1, 2], 6: [2, 0], 7: [2, 1], 8: [2, 2]}
 expand = {0: [0, 0], 1: [0, 1], 2: [0, 2], 3: [1, 0], 4: [1, 1], 5: [1, 2], 6: [2, 0], 7: [2, 1], 8: [2, 2]}
 reduce = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 0): 3, (1, 1): 4, (1, 2): 5, (2, 0): 6, (2, 1): 7, (2, 2): 8}
 
 
 def create_action():
-    action = -1
-    while action == -1:
-        if "w" in pressed_keys:
-            action = [0, 0]
-        elif "s" in pressed_keys:
-            action = [0, 1]
-        if "d" in pressed_keys:
-            action = [1, 0]
-        elif "a" in pressed_keys:
-            action = [1, 1]
+    action = [1, 0]
+    if "w" in pressed_keys:
+        action[0] = 1
+    elif "s" in pressed_keys:
+        action[0] = 2
+    if "d" in pressed_keys:
+        action[1] = 1
+    elif "a" in pressed_keys:
+        action[1] = 2
     return action
 
 
@@ -66,16 +37,19 @@ def record():
         os.makedirs(args.save_dir)
 
     # Define Single Env
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        vec_env_size=1, log_dir=None,
-        env_fn=sparse_reacher_env_factory, env_kwargs={
-            # "seed": args.seed,
+    # 1. Define Train Vector of Envs
+    arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
+    env, action_space, obs_space = VecEnv.create_factory(
+        env_fn=animal_train_env_factory,
+        env_kwargs={
+            "arenas_dir": arena_file,
             "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
-
-    env = train_envs_factory(args.device)
+            "frame_stack": args.frame_stack,
+        },
+        vec_env_size=1)
 
     # Start recording
+    env = env()
     obs = env.reset()
     step = 0
     done = False
@@ -95,7 +69,8 @@ def record():
         while not done:
 
             action = create_action()
-            obs, reward, done, info = env.step(torch.tensor(action).unsqueeze(1))
+            obs, reward, done, info = env.step(
+                torch.tensor([reduce[tuple(action)]]).unsqueeze(1))
 
             obs_rollouts.append(obs)
             rews_rollouts.append(reward)
@@ -108,7 +83,6 @@ def record():
 
             if done:
 
-                import ipdb; ipdb.set_trace()
                 print("EPISODE FINISHED: {} steps: ".format(step), flush=True)
 
                 obs_rollouts.pop(-1)
@@ -116,11 +90,11 @@ def record():
                 num = 0
 
                 filename = os.path.join(
-                    args.save_dir, "sparse_reacher_demo_{}".format(num))
+                    args.save_dir, "animalai_demo_{}".format(num))
                 while os.path.exists(filename):
                     num += 1
                     filename = os.path.join(
-                        args.save_dir, "sparse_reacher_demo_{}".format(num))
+                        args.save_dir, "animalai_demo_{}".format(num))
 
                 for action in actions_rollouts:
                     assert action in expand.keys()

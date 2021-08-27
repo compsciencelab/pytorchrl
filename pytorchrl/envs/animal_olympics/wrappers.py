@@ -19,20 +19,17 @@ class RetroEnv(gym.Wrapper):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)  # non-retro
-        visual_obs, vector_obs = self._preprocess_obs(obs)
-        info['vector_obs'] = vector_obs
+        visual_obs = self._preprocess_obs(obs)
         return visual_obs, reward, done, info
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        visual_obs, _ = self._preprocess_obs(obs)
+        visual_obs = self._preprocess_obs(obs)
         return visual_obs
 
     def _preprocess_obs(self, obs):
-        visual_obs, vector_obs = obs
-        visual_obs = self._preprocess_single(visual_obs)
-        visual_obs = self._resize_observation(visual_obs)
-        return visual_obs, vector_obs
+        visual_obs = self._preprocess_single(obs)
+        return visual_obs
 
     @staticmethod
     def _preprocess_single(single_visual_obs):

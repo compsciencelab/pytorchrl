@@ -1,6 +1,6 @@
 import os
 import animalai
-from animalai.envs.gym.environment import AnimalAIEnv
+from animalai.envs.gym.environment import AnimalAIGym
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, LabAnimal, RewardShaping
 
@@ -45,12 +45,17 @@ def animal_train_env_factory(
     if exe_path:
         exe = exe_path
     else:
-        exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
+        exe = os.path.join(os.path.dirname(animalai.__file__), '../../examples/env/AnimalAI')
 
     id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
-    env = AnimalAIEnv(exe, retro=False, worker_id=id,
-                      seed=id, n_arenas=1, arenas_configurations=None,
-                      greyscale=False, inference=False, resolution=None)
+
+    env = AnimalAIGym(
+        exe,
+        worker_id=id,
+        seed=id,
+        n_arenas=1,
+        arenas_configurations=None,
+        inference=False)
 
     env = RetroEnv(env)
 
@@ -76,7 +81,8 @@ def animal_train_env_factory(
 
 def animal_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
-        arenas_dir=None, reduced_actions=True, reward_shape=False, exe_path=None, reward_delay=1):
+        arenas_dir=None, reduced_actions=True, reward_shape=False, exe_path=None,
+        realtime=False, reward_delay=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -119,7 +125,7 @@ def animal_test_env_factory(
     id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
     env = AnimalAIEnv(exe, retro=False, worker_id=id,
                       seed=id, n_arenas=1, arenas_configurations=None,
-                      greyscale=False, inference=False, resolution=None)
+                      greyscale=False, inference=realtime, resolution=None)
 
     env = RetroEnv(env)
 
