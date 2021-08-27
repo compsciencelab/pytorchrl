@@ -9,6 +9,9 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
+# TODO. SAVED DEMOS CAN NOT BE REPLAYED SUCCESSFULLY!! WHY?
+
+
 # TODO. review logged episode rewards in c_worker
 # TODO. review new reward demos found
 # TODO. Fix problems to record demos -> use lab laptop

@@ -1,154 +1,63 @@
 #!/usr/bin/env python3
 
 import os
+import glob
 import torch
-import argparse
-from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_test_env_factory
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.utils import LoadFromFile
+import random
+import numpy as np
+import pytorchrl as prl
+from pytorchrl.agent.env import VecEnv
+from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
+from code_examples.train_animalai.ppod.train import get_args
 
 
 def enjoy():
 
     args = get_args()
-    args.path_to_demos_dir = "/tmp/animalai_demos"
+    args.path_to_demos_dir = "/Users/abou/PycharmProjects/pytorchrl/code_examples/train_animalai/ppod/demos"
 
     # Define single copy of the environment
-    env = animal_test_env_factory(
-        realtime=True,
-        frame_skip=args.frame_skip,
-        frame_stack=args.frame_stack,
-        arenas_dir=os.path.dirname(os.path.abspath(__file__)) + "/arenas/",
-    )
+    arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
+    env, action_space, obs_space = VecEnv.create_factory(
+        env_fn=animal_train_env_factory,
+        env_kwargs={
+            "arenas_dir": arena_file,
+            "frame_skip": args.frame_skip,
+            "frame_stack": args.frame_stack,
+        }, vec_env_size=1)
 
     # Define agent device and agent
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    policy = OnPolicyActor.create_factory(
-        env.observation_space, env.action_space,
-        restart_model=os.path.join(args.log_dir, "model.state_dict"))(device)
+    # Start recording
+    env = env()
+    obs = env.reset()
 
-    # Define initial Tensors
-    obs, done = env.reset(), False
-    _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
-    episode_reward = 0
+    demos_list = glob.glob(args.path_to_demos_dir + '/*.npz')
+    demo_name = random.choice(demos_list)
+    demo = np.load(demo_name)
+    done, episode_reward, step = False, 0, 0
+    length_demo = demo[prl.ACT].shape[0]
+    print("LOADING DEMO: {}, LENGTH {}".format(demo_name, length_demo))
 
     # Execute episodes
     while not done:
 
-        env.render()
-        obs = torch.Tensor(obs).view(1, -1).to(device)
-        done = torch.Tensor([done]).view(1, -1).to(device)
-        with torch.no_grad():
-            _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
-        obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
+        obs, reward, done, info = env.step(torch.Tensor(demo[prl.ACT][step]).view(1, -1).to(device))
         episode_reward += reward
+        step += 1
+        print(step)
+
+        if step == length_demo:
+            done = True
 
         if done:
-            print("EPISODE: reward: {}".format(episode_reward), flush=True)
-            done, episode_reward = 0, False
+            print("EPISODE: reward: {}".format(episode_reward.item()), flush=True)
+            done, episode_reward, step = False, 0, 0
             obs = env.reset()
-
-
-def get_args():
-    parser = argparse.ArgumentParser(description='RL')
-
-    # Configuration file, keep first
-    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
-
-    # Environment specs
-    parser.add_argument(
-        '--env-id', type=str, default=None,
-        help='Gym environment id (default None)')
-    parser.add_argument(
-        '--frame-skip', type=int, default=0,
-        help='Number of frame to skip for each action (default no skip)')
-    parser.add_argument(
-        '--frame-stack', type=int, default=1,
-        help='Number of frame to stack in observation (default no stack)')
-
-    # PPO specs
-    parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
-    parser.add_argument(
-        '--gamma', type=float, default=0.99,
-        help='discount factor for rewards (default: 0.99)')
-    parser.add_argument(
-        '--gae-lambda', type=float, default=0.95,
-        help='gae lambda parameter (default: 0.95)')
-    parser.add_argument(
-        '--entropy-coef', type=float, default=0.01,
-        help='entropy term coefficient (default: 0.01)')
-    parser.add_argument(
-        '--value-loss-coef', type=float, default=0.5,
-        help='value loss coefficient (default: 0.5)')
-    parser.add_argument(
-        '--max-grad-norm', type=float, default=0.5,
-        help='max norm of gradients (default: 0.5)')
-    parser.add_argument(
-        '--num-steps', type=int, default=20000,
-        help='number of forward steps in PPO (default: 20000)')
-    parser.add_argument(
-        '--ppo-epoch', type=int, default=4,
-        help='number of ppo epochs (default: 4)')
-    parser.add_argument(
-        '--num-mini-batch', type=int, default=32,
-        help='number of batches for ppo (default: 32)')
-    parser.add_argument(
-        '--clip-param', type=float, default=0.2,
-        help='ppo clip parameter (default: 0.2)')
-
-    # Feature extractor model specs
-    parser.add_argument(
-        '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
-    parser.add_argument(
-        '--restart-model', default=None,
-        help='Restart training using the model given')
-    parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
-        help='Use a recurrent policy')
-
-    # Scheme specs
-    parser.add_argument(
-        '--num-env-processes', type=int, default=16,
-        help='how many training CPU processes to use (default: 16)')
-    parser.add_argument(
-        '--num-grad-workers', type=int, default=1,
-        help='how many agent workers to use (default: 1)')
-    parser.add_argument(
-        '--com-grad-workers', default='synchronised',
-        help='communication patters grad workers (default: synchronised)')
-    parser.add_argument(
-        '--num-col-workers', type=int, default=1,
-        help='how many agent workers to use (default: 1)')
-    parser.add_argument(
-        '--com-col-workers', default='synchronised',
-        help='communication patters col workers (default: synchronised)')
-
-    parser.add_argument(
-        '--cluster', action='store_true', default=False,
-        help='script is running in a cluster')
-
-    # General training specs
-    parser.add_argument(
-        '--num-env-steps', type=int, default=10e7,
-        help='number of environment steps to train (default: 10e6)')
-    parser.add_argument(
-        '--max-time', type=int, default=-1,
-        help='stop script after this amount of time in seconds (default: no limit)')
-    parser.add_argument(
-        '--log-interval', type=int, default=1,
-        help='log interval, one log per n updates (default: 10)')
-    parser.add_argument(
-        '--save-interval', type=int, default=100,
-        help='save interval, one save per n updates (default: 100)')
-    parser.add_argument(
-        '--log-dir', default='/tmp/pybullet_ppo',
-        help='directory to save agent logs (default: /tmp/pybullet_ppo)')
-
-    args = parser.parse_args()
-    args.log_dir = os.path.expanduser(args.log_dir)
-    return args
+            demo = np.load(random.choice(demos_list))
+            length_demo = demo[prl.ACT].shape[0]
+            print("LOADING DEMO: {}, LENGTH {}".format(demo_name, length_demo))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,6 @@ import threading
 import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs.common import FrameStack, FrameSkip
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 
 
@@ -49,8 +48,7 @@ def record():
             "arenas_dir": arena_file,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack,
-        },
-        vec_env_size=1)
+        }, vec_env_size=1)
 
     # Start recording
     env = env()
@@ -105,9 +103,9 @@ def record():
 
                 np.savez(
                     filename,
-                    observations=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
-                    rewards=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-                    actions=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
+                    Observation=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
+                    Reward=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
+                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
                 )
 
                 sys.exit()
