@@ -215,7 +215,6 @@ class OnPolicyActor(nn.Module):
             features, deterministic=deterministic)
 
         self.last_action_features = features
-        self.last_action_rhs = rhs["rhs_act"]
 
         if self.unscale:
             action = self.unscale(action)
@@ -332,7 +331,6 @@ class OnPolicyActor(nn.Module):
             value_feature_extractor = nn.Identity()
             value_memory_net = nn.Identity()
             self.last_action_features = None
-            self.last_action_rhs = None
 
         else:
 

@@ -66,7 +66,7 @@ def main():
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            gamma=args.gamma, eps=1e-5)
+            gamma=args.gamma)
 
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(

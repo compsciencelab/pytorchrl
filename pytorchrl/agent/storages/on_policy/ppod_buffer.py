@@ -9,14 +9,7 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
-# TODO. SAVED DEMOS CAN NOT BE REPLAYED SUCCESSFULLY!! WHY?
-
-
 # TODO. review logged episode rewards in c_worker
-# TODO. review new reward demos found
-# TODO. Fix problems to record demos -> use lab laptop
-# TODO. Check successful demos -> record demos to wandb
-# TODO. Reward demos (not including the original one) -> FIFO
 # TODO. Value demos -> always keep those with the maximum value + UPDATE their values!
 
 
@@ -492,17 +485,22 @@ class PPODBuffer(B):
         total_demos = len(self.reward_demos) + len(self.value_demos)
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
-                # pop value demos with lowest max_value
+                # Pop value demos with lowest max_value
                 del self.value_demos[np.array([p["max_value"] for p in self.value_demos]).argmin()]
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
-                probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
-                probs[0] = 0.0  # Original demo is never ejected
-                probs = probs / probs.sum()
-                del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
+
+                # TODO. Pop giving more prob to longer episodes
+                # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
+                # probs[0] = 0.0  # Original demo is never ejected
+                # probs = probs / probs.sum()
+                # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
+
+                # FIFO
+                del self.reward_demos[1]
 
     def save_demos(self, num_rewards_demos=10, num_value_demos=0):
         """
