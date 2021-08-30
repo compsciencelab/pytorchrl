@@ -14,7 +14,7 @@ from code_examples.train_animalai.ppod.train import get_args
 def enjoy():
 
     args = get_args()
-    args.path_to_demos_dir = "/Users/abou/PycharmProjects/pytorchrl/code_examples/train_animalai/ppod/demos"
+    args.path_to_demos_dir = "/tmp/demos/"
 
     # Define single copy of the environment
     arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
@@ -56,7 +56,8 @@ def enjoy():
             print("EPISODE: reward: {}".format(episode_reward.item()), flush=True)
             done, episode_reward, step = False, 0, 0
             obs = env.reset()
-            demo = np.load(random.choice(demos_list))
+            demo_name = random.choice(demos_list)
+            demo = np.load(demo_name)
             length_demo = demo[prl.ACT].shape[0]
             print("LOADING DEMO: {}, LENGTH {}".format(demo_name, length_demo))
 

@@ -207,14 +207,14 @@ class OnPolicyActor(nn.Module):
             Predicted probability distribution over next action.
         """
 
-        action_features = self.policy_net.feature_extractor(obs)
+        features = self.policy_net.feature_extractor(obs)
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
-                action_features, rhs["rhs_act"], done)
+            features, rhs["rhs_act"] = self.policy_net.memory_net(
+                features, rhs["rhs_act"], done)
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
-            action_features, deterministic=deterministic)
+            features, deterministic=deterministic)
 
-        self.last_action_features = action_features
+        self.last_action_features = features
         self.last_action_rhs = rhs["rhs_act"]
 
         if self.unscale:
@@ -380,7 +380,8 @@ class OnPolicyActor(nn.Module):
         """
 
         # If feature_extractor_network not defined, take default one based on input_space
-        feature_extractor = self.feature_extractor_network or default_feature_extractor(self.input_space)
+        feature_extractor = self.feature_extractor_network or default_feature_extractor(
+            self.input_space)
 
         # ---- 1. Define obs feature extractor --------------------------------
 

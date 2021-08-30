@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from pytorchrl.agent.actors.utils import init
@@ -10,16 +9,14 @@ class GruNet(nn.Module):
 
     Parameters
     ----------
-    input_space : gym.Space
-        Environment observation space.
-    feature_extractor : nn.Module
-        PyTorch nn.Module used as the features extraction block.
-    feature_extractor_kwargs : dict
-        Keyword arguments for the feature extractor network.
-    recurrent : bool
-        Whether to use recurrency or not.
+    input_size : int
+        Input feature map size.
+    output_size : int
+        Recurrent hidden state and output size.
+    activation : func
+        Non-linear activation function.
     """
-    def __init__(self, input_size, output_size=256, activation=nn.ReLU):
+    def __init__(self, input_size, output_size=512, activation=nn.ReLU):
 
         super(GruNet, self).__init__()
 
@@ -28,14 +25,24 @@ class GruNet(nn.Module):
         except Exception:
             gain = 1.0
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
-
+        # init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
         self._num_outputs = output_size
 
         # Apply recurrency to extracted features
-        self.gru = nn.GRU(input_size, self._num_outputs)
-        self.final_layer = init_(nn.Linear(self._num_outputs, self._num_outputs))
-        self.final_activation = activation()
+        # self.gru = nn.GRU(input_size, self._num_outputs)
+        # self.final_layer = init_(nn.Linear(self._num_outputs, self._num_outputs))
+        # self.final_activation = activation()
+
+        self.input_layer = init_(nn.Linear(input_size, self._num_outputs))
+        self.gru = nn.GRU(self._num_outputs, self._num_outputs)
+        self.activation = activation()
+
+        for name, param in self.gru.named_parameters():
+            if 'bias' in name:
+                nn.init.constant_(param, 0)
+            elif 'weight' in name:
+                nn.init.orthogonal_(param)
 
         self.train()
 
@@ -145,9 +152,15 @@ class GruNet(nn.Module):
         """
 
         x = inputs.view(inputs.size(0), -1)
+
+        # x, rhs = self._forward_gru(x, rhs, done)
+        # x = self.final_layer(x)
+        # x = self.final_activation(x)
+
+        x = self.input_layer(x)
+        x = self.activation(x)
         x, rhs = self._forward_gru(x, rhs, done)
-        x = self.final_layer(x)
-        x = self.final_activation(x)
+        x = self.activation(x)
 
         assert len(x.shape) == 2 and x.shape[1] == self.num_outputs
 

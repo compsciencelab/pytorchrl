@@ -71,7 +71,8 @@ def main():
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model, recurrent_nets=True)
+            restart_model=args.restart_model,
+            recurrent_nets=True)
 
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(

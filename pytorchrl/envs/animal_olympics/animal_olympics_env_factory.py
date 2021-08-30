@@ -8,7 +8,7 @@ from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, L
 def animal_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
         arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None,
-        inference=False, reward_delay=1):
+        inference=False, reward_delay=1, seed=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -48,7 +48,7 @@ def animal_train_env_factory(
     else:
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../examples/env/AnimalAI')
 
-    id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
+    id = seed + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
 
     env = AnimalAIGym(
         exe,
@@ -83,7 +83,7 @@ def animal_train_env_factory(
 def animal_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
         arenas_dir=None, reduced_actions=True, reward_shape=False, exe_path=None,
-        inference=False, reward_delay=1):
+        inference=False, reward_delay=1, seed=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -123,7 +123,7 @@ def animal_test_env_factory(
     else:
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
 
-    id = 1 + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
+    id = seed + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
     env = AnimalAIGym(
         exe,
         worker_id=id,
