@@ -6,14 +6,14 @@ arenas:
     - !Item
       name: WallTransparent
       positions:
-      - !Vector3 {x: 13.5, y: 0, z: 15}
+      - !Vector3 {x: 13.5, y: 0, z: 20}
       sizes:
       - !Vector3 {x: 4, y: 2, z: 4}
       rotations: [90]
     - !Item
       name: WallTransparent
       positions:
-      - !Vector3 {x: 22, y: 0, z: 15}
+      - !Vector3 {x: 22, y: 0, z: 20}
       sizes:
       - !Vector3 {x: 4, y: 2, z: 4}
       rotations: [90]
@@ -27,7 +27,7 @@ arenas:
     - !Item
       name: Ramp
       positions:
-      - !Vector3 {x: 28, y: 0, z: 15}
+      - !Vector3 {x: 28, y: 0, z: 20}
       sizes:
       - !Vector3 {x: 8, y: 2, z: 8}
       colors:
@@ -36,11 +36,12 @@ arenas:
     - !Item
       name: GoodGoal
       positions:
-      - !Vector3 {x: 13.5, y: 2.25, z: 15}
+      - !Vector3 {x: 13.5, y: 2.25, z: 20}
       sizes:
       - !Vector3 {x: 3, y: 3, z: 3}
+      rotations: [0]
     - !Item
       name: Agent
       positions:
-      - !Vector3 {x: 20, y: 0, z: 3}
-      rotations: [0]
+      - !Vector3 {x: 19.8, y: 0.0, z: 32.8}
+      rotations: [36]

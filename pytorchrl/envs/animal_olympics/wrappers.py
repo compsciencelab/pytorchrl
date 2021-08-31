@@ -27,8 +27,10 @@ class RetroEnv(gym.Wrapper):
         visual_obs = self._preprocess_obs(obs)
         return visual_obs
 
-    def _preprocess_obs(self, obs):
-        visual_obs = self._preprocess_single(obs)
+    def _preprocess_obs(self,obs):
+        visual_obs = obs
+        visual_obs = self._preprocess_single(visual_obs)
+        visual_obs = self._resize_observation(visual_obs)
         return visual_obs
 
     @staticmethod
@@ -50,7 +52,8 @@ class FilterActionEnv(gym.ActionWrapper):
     """
     An environment wrapper that limits the action space.
     """
-    _ACTIONS = (0, 1, 2, 3, 4, 5, 6)
+    _ACTIONS = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+    # _ACTIONS = (0, 1, 2, 3, 4, 5, 6)
 
     def __init__(self, env):
         super().__init__(env)
