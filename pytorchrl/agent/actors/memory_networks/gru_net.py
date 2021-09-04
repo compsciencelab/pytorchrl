@@ -38,11 +38,11 @@ class GruNet(nn.Module):
         # self.gru = nn.GRU(self._num_outputs, self._num_outputs)
         # self.activation = activation()
 
-        for name, param in self.gru.named_parameters():
-            if 'bias' in name:
-                nn.init.constant_(param, 0)
-            elif 'weight' in name:
-                nn.init.orthogonal_(param)
+        # for name, param in self.gru.named_parameters():
+        #     if 'bias' in name:
+        #         nn.init.constant_(param, 0)
+        #     elif 'weight' in name:
+        #         nn.init.orthogonal_(param)
 
         self.train()
 
