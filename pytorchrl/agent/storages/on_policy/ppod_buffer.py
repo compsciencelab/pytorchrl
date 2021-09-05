@@ -1,6 +1,7 @@
 import os
 import glob
 import copy
+import uuid
 import torch
 import numpy as np
 from collections import defaultdict
@@ -10,7 +11,7 @@ from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
 # TODO. review logged episode rewards in c_worker
-# TODO. Value demos -> always keep those with the maximum value + UPDATE their values!
+# TODO. Value demos -> always keep those with the maximum value + UPDATE their values! to be tested
 
 
 class PPODBuffer(B):
@@ -82,7 +83,7 @@ class PPODBuffer(B):
         # Load initial demos
         if initial_demos_dir:
             self.load_initial_demos()
-            self.reward_threshold = min([d["total_reward"] for d in self.reward_demos]) if len(
+            self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
                 self.reward_demos) > 0 else - np.inf
         else:
             self.reward_threshold = - np.inf
@@ -98,6 +99,7 @@ class PPODBuffer(B):
         # Define variable to track demos in progress
         self.demos_in_progress = {
             "env{}".format(i + 1): {
+                "ID": None,
                 "Demo": None,
                 "Step": 0,
                 "DemoLength": -1,
@@ -273,11 +275,20 @@ class PPODBuffer(B):
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
 
                 import ipdb; ipdb.set_trace()
-                self.demos_in_progress["env{}".format(i + 1)]["DemoValue"] = max(
-                    [algo_data[prl.VAL], self.demos_in_progress["env{}".format(i + 1)]["DemoValue"]])
+                self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
+                    [algo_data[prl.VAL], self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
+
+                    # If value demo, update MaxValue
+                    import ipdb; ipdb.set_trace()
+                    if "MaxValue" in self.demos_in_progress["env{}".format(i + 1)]["Demo"].keys():
+                        import ipdb; ipdb.set_trace()
+                        for value_demo in self.value_demos:
+                            if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == value_demo["ID"]:
+                                import ipdb; ipdb.set_trace()
+                                value_demo["MaxValue"] = self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]
 
                     # Randomly sample new demos if last demos has finished
                     self.sample_demo(env_id=i)
@@ -327,8 +338,8 @@ class PPODBuffer(B):
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
-                potential_demo["total_reward"] = episode_reward
-                potential_demo["length"] = potential_demo[prl.ACT].shape[0]
+                potential_demo["TotalReward"] = episode_reward
+                potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
                 # Consider candidate demos for demos reward
                 if episode_reward >= self.reward_threshold:
@@ -343,7 +354,7 @@ class PPODBuffer(B):
                     self.anneal_parameters()
 
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
-                    self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
                     # TODO. solve: now is set manually
                     # self.reward_threshold = 1.0
@@ -399,7 +410,10 @@ class PPODBuffer(B):
                 demo_rew = torch.FloatTensor(demo[prl.REW])
                 new_demo[prl.REW] = demo_rew
 
-                new_demo.update({"length": demo[prl.ACT].shape[0], "total_reward": demo_rew.sum().item()})
+                new_demo.update({
+                    "ID": str(uuid.uuid4()),
+                    "DemoLength": demo[prl.ACT].shape[0],
+                    "TotalReward": demo_rew.sum().item()})
                 self.reward_demos.append(new_demo)
                 num_loaded_demos += 1
 
@@ -453,7 +467,7 @@ class PPODBuffer(B):
         if demo:
 
             # Set demos length
-            self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["length"]
+            self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["DemoLength"]
 
             # Set next buffer obs to be the starting demos obs
             self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
@@ -517,7 +531,7 @@ class PPODBuffer(B):
         if self.target_demos_dir and not os.path.exists(self.target_demos_dir):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
-        reward_ranking = np.flip(np.array([d["total_reward"] for d in self.reward_demos]).argsort())[:num_rewards_demos]
+        reward_ranking = np.flip(np.array([d["TotalReward"] for d in self.reward_demos]).argsort())[:num_rewards_demos]
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
             np.savez(
