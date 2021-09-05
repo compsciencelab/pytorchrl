@@ -77,7 +77,7 @@ class PPODBuffer(B):
         self.target_demos_dir = target_demos_dir
 
         # Reward and Value buffers
-        self.reward_demos = []  # TODO. make sure the original demo is NEVER ejected
+        self.reward_demos = []
         self.value_demos = []
 
         # Load initial demos
@@ -353,6 +353,7 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
+                    import ipdb; ipdb.set_trace()
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
@@ -381,15 +382,20 @@ class PPODBuffer(B):
                     self.potential_demos_val["env{}".format(i + 1)] = - np.inf
 
     def load_initial_demos(self):
-        """Load initial demonstrations."""
+        """
+        Load initial demonstrations.
 
-        # TODO. what happens if there are reward and value demos in the demos dir? for now only reward demos
-        # TODO. What happens if there are more than max_demos in demos dir? should choose top `max_demos` demos.
-        # TODO. I Should check frame skip and frame stack? for now demo and training params should match
+        Warning: make sure the frame_skip and frame_stack hyperparameters are
+        the same as those used to record the demonstrations!
+        """
 
         # Add original demonstrations
         num_loaded_demos = 0
         initial_demos = glob.glob(self.initial_demos_dir + '/*.npz')
+
+        if len(initial_demos) > self.max_demos:
+            raise ValueError("demo dir contains more than self.max_demos demonstrations")
+
         for demo_file in initial_demos:
 
             try:
@@ -540,15 +546,3 @@ class PPODBuffer(B):
                 Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
                 Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
             )
-
-        # TODO: Dont save the value demos for now
-
-        # value_ranking = np.flip(np.array([d["MaxValue"] for d in self.value_demos]).argsort())[:num_value_demos]
-        # for num, demo_pos in enumerate(value_ranking):
-        #     filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
-        #     np.savez(
-        #         filename,
-        #         Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-        #         Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-        #         Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
-        #     )

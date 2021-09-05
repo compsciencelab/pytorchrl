@@ -90,10 +90,9 @@ def record():
                 obs_rollouts.pop(-1)
 
                 num = 0
-
                 filename = os.path.join(
                     args.demos_dir, "animalai_demo_{}".format(num))
-                while os.path.exists(filename):
+                while os.path.exists(filename + ".npz"):
                     num += 1
                     filename = os.path.join(
                         args.demos_dir, "animalai_demo_{}".format(num))

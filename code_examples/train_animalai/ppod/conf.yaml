@@ -24,4 +24,4 @@ num_col_workers: 1
 com_grad_workers: synchronous
 com_col_workers: synchronous
 arenas_dir: code_examples/train_animalai/ppod/arenas/
-demos_dir: code_examples/train_animalai/ppod/demos
+demos_dir: code_examples/train_animalai/ppod/demos/
