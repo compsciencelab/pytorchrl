@@ -3,12 +3,12 @@ import sys
 import time
 
 import torch
-import argparse
 import threading
 import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
+from code_examples.train_animalai.ppod.train import get_args
 
 
 pressed_keys = set([])
@@ -36,16 +36,15 @@ def create_action():
 def record():
     args = get_args()
 
-    if not os.path.isdir(args.save_dir):
-        os.makedirs(args.save_dir)
+    if not os.path.isdir(args.demos_dir):
+        os.makedirs(args.demos_dir)
 
     # Define Single Env
     # 1. Define Train Vector of Envs
-    arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=animal_train_env_factory,
         env_kwargs={
-            "arenas_dir": arena_file,
+            "arenas_dir": args.arenas_dir,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack,
             "inference": True,
@@ -93,11 +92,11 @@ def record():
                 num = 0
 
                 filename = os.path.join(
-                    args.save_dir, "animalai_demo_{}".format(num))
+                    args.demos_dir, "animalai_demo_{}".format(num))
                 while os.path.exists(filename):
                     num += 1
                     filename = os.path.join(
-                        args.save_dir, "animalai_demo_{}".format(num))
+                        args.demos_dir, "animalai_demo_{}".format(num))
 
                 for action in actions_rollouts:
                     assert action in expand.keys()
@@ -110,17 +109,6 @@ def record():
                 )
 
                 sys.exit()
-
-
-def get_args():
-    dirname = os.path.dirname(os.path.abspath(__file__))
-    parser = argparse.ArgumentParser(description='demos')
-    parser.add_argument('--device', default="cpu", help='compute device')
-    parser.add_argument('--frame-skip', type=int, default=0, help='Number of frame to skip for each action (default no skip)')
-    parser.add_argument('--frame-stack', type=int, default=0, help='Number of frame to stack in observation (default no stack)')
-    parser.add_argument('--save-dir', default=os.path.join(dirname, 'demos'), help='path to target dir')
-    args = parser.parse_args()
-    return args
 
 
 if __name__ == "__main__":

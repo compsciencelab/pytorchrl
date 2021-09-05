@@ -54,7 +54,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.3, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -86,7 +86,9 @@ class PPODBuffer(B):
                 self.reward_demos) > 0 else - np.inf
         else:
             self.reward_threshold = - np.inf
+
         # TODO. solve: is set manually!
+        import ipdb; ipdb.set_trace()
         self.reward_threshold = 1.0
 
         # Define variables to track potential demos
@@ -99,6 +101,7 @@ class PPODBuffer(B):
                 "Demo": None,
                 "Step": 0,
                 "DemoLength": -1,
+                "MaxValue": - np.inf,
                 prl.RHS: None,
             } for i in range(self.num_envs)}
 
@@ -111,7 +114,7 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       rho=0.3,
+                       rho=0.1,
                        phi=0.0,
                        gae_lambda=0.95,
                        alpha=10,
@@ -247,7 +250,6 @@ class PPODBuffer(B):
                     done = torch.zeros(1, 1).to(self.device)
                 else:
                     obs, rhs, done = self.actor.actor_initial_states(obs)
-                    # TODO. should done be 1.0 here ?
 
                 # Run forward pass
                 _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
@@ -269,6 +271,10 @@ class PPODBuffer(B):
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
+
+                import ipdb; ipdb.set_trace()
+                self.demos_in_progress["env{}".format(i + 1)]["DemoValue"] = max(
+                    [algo_data[prl.VAL], self.demos_in_progress["env{}".format(i + 1)]["DemoValue"]])
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
@@ -325,7 +331,7 @@ class PPODBuffer(B):
                 potential_demo["length"] = potential_demo[prl.ACT].shape[0]
 
                 # Consider candidate demos for demos reward
-                if episode_reward > self.reward_threshold:
+                if episode_reward >= self.reward_threshold:
 
                     # Add demos to reward buffer
                     self.reward_demos.append(potential_demo)
@@ -337,20 +343,20 @@ class PPODBuffer(B):
                     self.anneal_parameters()
 
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
-                    # self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
+                    self.reward_threshold = min([d["total_reward"] for d in self.reward_demos])
 
                     # TODO. solve: now is set manually
-                    self.reward_threshold = 1.0
+                    # self.reward_threshold = 1.0
 
                 else:   # Consider candidate demos for value reward
 
                     # Find current number of demos, and current value threshold
-                    potential_demo["max_value"] = self.potential_demos_val[i]
+                    potential_demo["MaxValue"] = self.potential_demos_val[i]
                     total_demos = len(self.reward_demos) + len(self.value_demos)
                     value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
-                        else min([p["max_value"] for p in self.value_demos])
+                        else min([p["MaxValue"] for p in self.value_demos])
 
-                    if self.potential_demos_val["env{}".format(i + 1)] > value_thresh or total_demos < self.max_demos:
+                    if self.potential_demos_val["env{}".format(i + 1)] >= value_thresh or total_demos < self.max_demos:
 
                         # Add demos to value buffer
                         self.value_demos.append(potential_demo)
@@ -428,7 +434,7 @@ class PPODBuffer(B):
         elif episode_source == "value_demo" and len(self.value_demos) > 0:
 
             # randomly select value demos
-            probs = np.array([p["max_value"] for p in self.value_demos]) ** self.alpha
+            probs = np.array([p["MaxValue"] for p in self.value_demos]) ** self.alpha
             probs = probs / probs.sum()
             selected = np.random.choice(range(len(self.value_demos)), p=probs)
             demo = copy.deepcopy(self.value_demos[selected])
@@ -485,22 +491,22 @@ class PPODBuffer(B):
         total_demos = len(self.reward_demos) + len(self.value_demos)
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
-                # Pop value demos with lowest max_value
-                del self.value_demos[np.array([p["max_value"] for p in self.value_demos]).argmin()]
+                # Pop value demos with lowest MaxValue
+                del self.value_demos[np.array([p["MaxValue"] for p in self.value_demos]).argmin()]
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
 
-                # TODO. Pop giving more prob to longer episodes
+                # Option 1: FIFO (original paper)
+                del self.reward_demos[1]
+
+                # Option 2
                 # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
                 # probs[0] = 0.0  # Original demo is never ejected
                 # probs = probs / probs.sum()
                 # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
-
-                # FIFO
-                del self.reward_demos[1]
 
     def save_demos(self, num_rewards_demos=10, num_value_demos=0):
         """
@@ -523,7 +529,7 @@ class PPODBuffer(B):
 
         # TODO: Dont save the value demos for now
 
-        # value_ranking = np.flip(np.array([d["max_value"] for d in self.value_demos]).argsort())[:num_value_demos]
+        # value_ranking = np.flip(np.array([d["MaxValue"] for d in self.value_demos]).argsort())[:num_value_demos]
         # for num, demo_pos in enumerate(value_ranking):
         #     filename = os.path.join(self.target_demos_dir, "value_demo_{}".format(num + 1))
         #     np.savez(

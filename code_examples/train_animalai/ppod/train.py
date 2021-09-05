@@ -159,7 +159,7 @@ def get_args():
         '--frame-stack', type=int, default=1,
         help='Number of frame to stack in observation (default no stack)')
 
-    # PPO specs
+    # PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
@@ -189,6 +189,13 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        '--arenas-dir', default='',
+        help='directory containing arenas configuration .yaml files')
+    parser.add_argument(
+        '--demos-dir', default='/tmp/pybullet_ppo',
+        help='target directory to store and retrieve demos.')
+
 
     # Feature extractor model specs
     parser.add_argument(
@@ -216,7 +223,6 @@ def get_args():
     parser.add_argument(
         '--com-col-workers', default='synchronous',
         help='communication patters col workers (default: synchronous)')
-
     parser.add_argument(
         '--cluster', action='store_true', default=False,
         help='script is running in a cluster')

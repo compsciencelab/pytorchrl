@@ -27,22 +27,11 @@ class GruNet(nn.Module):
 
         # init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+
+        self.input_layer = init_(nn.Linear(input_size, output_size))
+        self.gru = nn.GRU(output_size, output_size)
         self._num_outputs = output_size
-
-        # Apply recurrency to extracted features
-        self.gru = nn.GRU(input_size, self._num_outputs)
-        self.final_layer = init_(nn.Linear(self._num_outputs, self._num_outputs))
-        self.final_activation = activation()
-
-        # self.input_layer = init_(nn.Linear(input_size, self._num_outputs))
-        # self.gru = nn.GRU(self._num_outputs, self._num_outputs)
-        # self.activation = activation()
-
-        # for name, param in self.gru.named_parameters():
-        #     if 'bias' in name:
-        #         nn.init.constant_(param, 0)
-        #     elif 'weight' in name:
-        #         nn.init.orthogonal_(param)
+        self.activation = activation()
 
         self.train()
 
@@ -152,14 +141,9 @@ class GruNet(nn.Module):
         """
 
         x = inputs.view(inputs.size(0), -1)
-
+        x = self.input_layer(x)
+        x = self.activation(x)
         x, rhs = self._forward_gru(x, rhs, done)
-        x = self.final_layer(x)
-        x = self.final_activation(x)
-
-        # x = self.input_layer(x)
-        # x = self.activation(x)
-        # x, rhs = self._forward_gru(x, rhs, done)
         # x = self.activation(x)
 
         assert len(x.shape) == 2 and x.shape[1] == self.num_outputs

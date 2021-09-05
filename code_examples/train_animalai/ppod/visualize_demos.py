@@ -14,7 +14,6 @@ from code_examples.train_animalai.ppod.train import get_args
 def enjoy():
 
     args = get_args()
-    args.path_to_demos_dir = "/tmp/demos/"
 
     # Define single copy of the environment
     arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
@@ -34,7 +33,7 @@ def enjoy():
     env = env()
     obs = env.reset()
 
-    demos_list = glob.glob(args.path_to_demos_dir + '/*.npz')
+    demos_list = glob.glob(args.demos_dir + '/*.npz')
     demo_name = random.choice(demos_list)
     demo = np.load(demo_name)
     done, episode_reward, step = False, 0, 0
