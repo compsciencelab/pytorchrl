@@ -63,7 +63,7 @@ class GAEBuffer(B):
     def compute_returns(self):
         """Compute return values."""
         gamma = self.algo.gamma
-        len = self.step if self.step != 0 else self.max_size
+        len = self.step - 1 if self.step != 0 else self.max_size
         gae = 0
         for step in reversed(range(len)):
             delta = (self.data[prl.REW][step] + gamma * self.data[prl.VAL][step + 1] * (

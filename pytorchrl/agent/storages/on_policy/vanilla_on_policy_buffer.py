@@ -177,11 +177,12 @@ class VanillaOnPolicyBuffer(S):
         """
 
         last_tensors = {}
+        step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
             if isinstance(self.data[k], dict):
-                last_tensors[k] = {x: self.data[k][x][self.step - 1] for x in self.data[k]}
+                last_tensors[k] = {x: self.data[k][x][step] for x in self.data[k]}
             else:
-                last_tensors[k] = self.data[k][self.step - 1]
+                last_tensors[k] = self.data[k][step]
 
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
@@ -189,14 +190,14 @@ class VanillaOnPolicyBuffer(S):
             next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        self.data[prl.RET][self.step].copy_(next_value)
-        self.data[prl.VAL][self.step].copy_(next_value)
+        self.data[prl.RET][step].copy_(next_value)
+        self.data[prl.VAL][step].copy_(next_value)
 
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
-                self.data[prl.RHS][x][self.step].copy_(next_rhs[x])
+                self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
-            self.data[prl.RHS][self.step] = next_rhs
+            self.data[prl.RHS][step] = next_rhs
 
         self.compute_returns()
         self.compute_advantages()
@@ -218,12 +219,13 @@ class VanillaOnPolicyBuffer(S):
             info dict updated with relevant info from Storage.
         """
 
+        step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
             if isinstance(self.data[k], dict):
                 for x in self.data[k]:
-                    self.data[k][x][0].copy_(self.data[k][x][self.step - 1])
+                    self.data[k][x][0].copy_(self.data[k][x][step])
             else:
-                self.data[k][0].copy_(self.data[k][self.step - 1])
+                self.data[k][0].copy_(self.data[k][step])
 
         if self.step != 0:
             self.step = 0
@@ -233,7 +235,7 @@ class VanillaOnPolicyBuffer(S):
     def compute_returns(self):
         """Compute return values."""
         gamma = self.algo.gamma
-        len = self.step if self.step != 0 else self.max_size
+        len = self.step - 1 if self.step != 0 else self.max_size
         for step in reversed(range(len)):
             self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
                 1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
@@ -241,7 +243,7 @@ class VanillaOnPolicyBuffer(S):
     def compute_advantages(self):
         """Compute transition advantage values."""
         adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
-        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-8)
+        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """

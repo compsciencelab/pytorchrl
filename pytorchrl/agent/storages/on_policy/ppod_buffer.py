@@ -55,7 +55,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.3, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -89,7 +89,7 @@ class PPODBuffer(B):
             self.reward_threshold = - np.inf
 
         # TODO. solve: is set manually!
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         self.reward_threshold = 1.0
 
         # Define variables to track potential demos
@@ -116,7 +116,7 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       rho=0.1,
+                       rho=0.3,
                        phi=0.0,
                        gae_lambda=0.95,
                        alpha=10,
@@ -167,11 +167,12 @@ class PPODBuffer(B):
 
         # Retrieve most recent obs, rhs and done tensors
         last_tensors = {}
+        step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
             if isinstance(self.data[k], dict):
-                last_tensors[k] = {x: self.data[k][x][self.step - 1] for x in self.data[k]}
+                last_tensors[k] = {x: self.data[k][x][step] for x in self.data[k]}
             else:
-                last_tensors[k] = self.data[k][self.step - 1]
+                last_tensors[k] = self.data[k][step]
 
         # Compute next value prediction
         with torch.no_grad():
@@ -181,13 +182,13 @@ class PPODBuffer(B):
             next_rhs = value_dict.get("rhs")
 
         # Assign predictions to self.data
-        self.data[prl.RET][self.step].copy_(next_value)
-        self.data[prl.VAL][self.step].copy_(next_value)
+        self.data[prl.RET][step].copy_(next_value)
+        self.data[prl.VAL][step].copy_(next_value)
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
-                self.data[prl.RHS][x][self.step].copy_(next_rhs[x])
+                self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
-            self.data[prl.RHS][self.step].copy_(next_rhs)
+            self.data[prl.RHS][step].copy_(next_rhs)
 
         self.compute_returns()
         self.compute_advantages()
@@ -245,8 +246,9 @@ class PPODBuffer(B):
                 demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
 
                 # Get demo obs, rhs and done tensors to run forward pass
+
                 obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][
-                      demo_step:demo_step + 1].to(self.device)
+                      demo_step].to(self.device)
                 if self.demos_in_progress["env{}".format(i + 1)][prl.RHS]:
                     rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
                     done = torch.zeros(1, 1).to(self.device)
@@ -257,24 +259,23 @@ class PPODBuffer(B):
                 _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
 
                 # Insert demo act tensor to self.step
-                self.data[prl.ACT][self.step][i:i + 1, :].copy_(self.demos_in_progress["env{}".format(
+                self.data[prl.ACT][self.step][i].copy_(self.demos_in_progress["env{}".format(
                     i + 1)]["Demo"][prl.ACT][demo_step])
 
                 # Insert demo rew tensor to self.step
-                self.data[prl.REW][self.step][i:i + 1, :].copy_(self.demos_in_progress["env{}".format(
+                self.data[prl.REW][self.step][i].copy_(self.demos_in_progress["env{}".format(
                     i + 1)]["Demo"][prl.REW][demo_step])
 
                 # Insert demo logprob to self.step. Demo action prob is 1.0, so logprob is 0.0
-                self.data[prl.LOGP][self.step][i:i + 1, :].copy_(torch.zeros(1, 1))
+                self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
 
                 # Insert demo values predicted by the forward pass
-                self.data[prl.VAL][self.step][i:i + 1, :].copy_(algo_data[prl.VAL])
+                self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
 
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
 
-                import ipdb; ipdb.set_trace()
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
                     [algo_data[prl.VAL], self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
@@ -282,32 +283,33 @@ class PPODBuffer(B):
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
                     # If value demo, update MaxValue
-                    import ipdb; ipdb.set_trace()
+                    # import ipdb; ipdb.set_trace()
                     if "MaxValue" in self.demos_in_progress["env{}".format(i + 1)]["Demo"].keys():
-                        import ipdb; ipdb.set_trace()
                         for value_demo in self.value_demos:
                             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == value_demo["ID"]:
-                                import ipdb; ipdb.set_trace()
+                                # import ipdb; ipdb.set_trace()
                                 value_demo["MaxValue"] = self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]
 
                     # Randomly sample new demos if last demos has finished
                     self.sample_demo(env_id=i)
 
                 else:
+
                     # Insert demo done2 tensor to self.step + 1
-                    self.data[prl.DONE][self.step + 1][i:i + 1, :].copy_(done)
+                    self.data[prl.DONE][self.step + 1][i].copy_(torch.zeros(1))
 
                     # Insert demo obs2 tensor to self.step + 1
-                    self.data[prl.OBS][self.step + 1][i:i + 1, :].copy_(self.demos_in_progress["env{}".format(
+                    self.data[prl.OBS][self.step + 1][i].copy_(self.demos_in_progress["env{}".format(
                         i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
 
                     # Insert demo rhs2 tensor to self.step + 1
                     for k in self.data[prl.RHS]:
-                        self.data[prl.RHS][k][self.step + 1][i:i + 1, :].copy_(rhs2[k])
+                        self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
 
-            # Otherwise check if end of episode reach and randomly start demos
+            # Otherwise check if end of episode reached and randomly start new demo
             elif sample[prl.DONE2][i] == 1.0:
 
+                import ipdb; ipdb.set_trace()
                 self.sample_demo(env_id=i)
 
         self.step = (self.step + 1) % self.max_size
@@ -319,9 +321,10 @@ class PPODBuffer(B):
         for i in range(self.num_envs):
             
             # Copy transition
+            # TODO. in theory deepcopy should not be necessary - try without deepcopy!
             for tensor in self.demos_data_fields:
                 self.potential_demos["env{}".format(i + 1)][tensor].append(
-                    copy.deepcopy(sample[tensor][i]).cpu().numpy())  # TODO. in theory should not be necessary deepcopy
+                    copy.deepcopy(sample[tensor][i]).cpu().numpy())
             
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
@@ -338,6 +341,7 @@ class PPODBuffer(B):
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
+                potential_demo["ID"] = str(uuid.uuid4())
                 potential_demo["TotalReward"] = episode_reward
                 potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
@@ -353,12 +357,12 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
-                    import ipdb; ipdb.set_trace()
+                    # import ipdb; ipdb.set_trace()
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
-                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+                    # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
                     # TODO. solve: now is set manually
-                    # self.reward_threshold = 1.0
+                    self.reward_threshold = 1.0
 
                 else:   # Consider candidate demos for value reward
 
@@ -466,22 +470,23 @@ class PPODBuffer(B):
         self.demos_in_progress["env{}".format(env_id + 1)]["Demo"] = demo
 
         # Set done to True
-        self.data[prl.DONE][self.step + 1][env_id:env_id + 1, :].copy_(torch.ones(1, 1).to(self.device))
-        # TODO. Ideally assign the obs to c_worker.done, otherwise first step of next episode
-        # TODO. will be computed with a wrong done flag.
+        self.data[prl.DONE][self.step + 1][env_id].copy_(torch.ones(1).to(self.device))
 
         if demo:
 
             # Set demos length
             self.demos_in_progress["env{}".format(env_id + 1)]["DemoLength"] = demo["DemoLength"]
 
+            # Set demos MaxValue
+            self.demos_in_progress["env{}".format(env_id + 1)]["MaxValue"] = - np.Inf
+
             # Set next buffer obs to be the starting demos obs
-            self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.demos_in_progress["env{}".format(
-                env_id + 1)]["Demo"][prl.OBS][0:1].to(self.device))
+            self.data[prl.OBS][self.step + 1][env_id].copy_(self.demos_in_progress["env{}".format(
+                env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
 
         else:
             # Reset `i-th` environment as set next buffer obs to be the starting episode obs
-            self.data[prl.OBS][self.step + 1][env_id:env_id + 1, :].copy_(self.envs.reset_single_env(env_id=env_id))
+            self.data[prl.OBS][self.step + 1][env_id].copy_(self.envs.reset_single_env(env_id=env_id).squeeze())
             # TODO. Ideally assign the obs to c_worker.obs, otherwise first step of next episode
             # TODO. will be computed with a wrong obs.
 
