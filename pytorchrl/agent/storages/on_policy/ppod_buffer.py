@@ -248,7 +248,7 @@ class PPODBuffer(B):
                 # Get demo obs, rhs and done tensors to run forward pass
 
                 obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][
-                      demo_step].to(self.device)
+                      demo_step: demo_step + 1].to(self.device)
                 if self.demos_in_progress["env{}".format(i + 1)][prl.RHS]:
                     rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
                     done = torch.zeros(1, 1).to(self.device)
