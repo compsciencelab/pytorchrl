@@ -55,7 +55,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.3, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -116,7 +116,7 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       rho=0.3,
+                       rho=0.5,
                        phi=0.0,
                        gae_lambda=0.95,
                        alpha=10,
@@ -309,7 +309,7 @@ class PPODBuffer(B):
             # Otherwise check if end of episode reached and randomly start new demo
             elif sample[prl.DONE2][i] == 1.0:
 
-                import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 self.sample_demo(env_id=i)
 
         self.step = (self.step + 1) % self.max_size

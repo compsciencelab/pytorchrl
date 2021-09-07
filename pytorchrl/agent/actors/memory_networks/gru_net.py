@@ -140,7 +140,7 @@ class GruNet(nn.Module):
         """
 
         x = inputs.view(inputs.size(0), -1)
-        x = self.input_layer(inputs)
+        x = self.input_layer(x)
         x = self.activation(x)
         x, rhs = self._forward_gru(x, rhs, done)
         # x = self.activation(x)
