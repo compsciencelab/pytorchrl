@@ -55,7 +55,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.5, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -116,7 +116,7 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       rho=0.5,
+                       rho=0.1,
                        phi=0.0,
                        gae_lambda=0.95,
                        alpha=10,
@@ -182,7 +182,6 @@ class PPODBuffer(B):
             next_rhs = value_dict.get("rhs")
 
         # Assign predictions to self.data
-        self.data[prl.RET][step].copy_(next_value)
         self.data[prl.VAL][step].copy_(next_value)
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
@@ -271,6 +270,24 @@ class PPODBuffer(B):
 
                 # Insert demo values predicted by the forward pass
                 self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
+
+                ################################################################################################
+
+                # Sanity check
+                if demo_step == 0:
+
+                    # Insert demo done2 tensor to self.step
+                    self.data[prl.DONE][self.step][i].copy_(torch.ones(1))
+
+                    # Insert demo obs2 tensor to self.step + 1
+                    self.data[prl.OBS][self.step][i].copy_(self.demos_in_progress["env{}".format(
+                        i + 1)]["Demo"][prl.OBS][0].to(self.device))
+
+                    # Insert demo rhs2 tensor to self.step + 1
+                    for k in self.data[prl.RHS]:
+                        self.data[prl.RHS][k][self.step][i].copy_(rhs[k].squeeze())
+
+                ################################################################################################
 
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
@@ -445,7 +462,7 @@ class PPODBuffer(B):
 
         if episode_source == "reward_demo" and len(self.reward_demos) > 0:
 
-            # Randomly select reward demos
+            # Randomly select a reward demo
             selected = np.random.choice(range(len(self.reward_demos)))
 
             # give priority to shorter demos
@@ -457,7 +474,7 @@ class PPODBuffer(B):
 
         elif episode_source == "value_demo" and len(self.value_demos) > 0:
 
-            # randomly select value demos
+            # randomly select a value demo
             probs = np.array([p["MaxValue"] for p in self.value_demos]) ** self.alpha
             probs = probs / probs.sum()
             selected = np.random.choice(range(len(self.value_demos)), p=probs)
@@ -480,7 +497,7 @@ class PPODBuffer(B):
             # Set demos MaxValue
             self.demos_in_progress["env{}".format(env_id + 1)]["MaxValue"] = - np.Inf
 
-            # Set next buffer obs to be the starting demos obs
+            # Set next buffer obs to be the starting demo obs
             self.data[prl.OBS][self.step + 1][env_id].copy_(self.demos_in_progress["env{}".format(
                 env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
 

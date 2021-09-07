@@ -108,7 +108,7 @@ class RewardShaping(gym.Wrapper):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        if reward > -0.005 and reward < 0:  # remove time negative reward
+        if reward < 0:  # remove time negative reward
             reward = 0
         return obs, reward, done, info
 
