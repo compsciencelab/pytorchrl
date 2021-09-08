@@ -55,7 +55,7 @@ class PPODBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.1, phi=0.0, gae_lambda=0.95, alpha=10, max_demos=51):
+                 target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, max_demos=51):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -117,7 +117,7 @@ class PPODBuffer(B):
                        initial_demos_dir=None,
                        target_demos_dir=None,
                        rho=0.1,
-                       phi=0.0,
+                       phi=0.3,
                        gae_lambda=0.95,
                        alpha=10,
                        max_demos=51):
@@ -300,11 +300,10 @@ class PPODBuffer(B):
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
                     # If value demo, update MaxValue
-                    # import ipdb; ipdb.set_trace()
                     if "MaxValue" in self.demos_in_progress["env{}".format(i + 1)]["Demo"].keys():
                         for value_demo in self.value_demos:
+                            # import ipdb; ipdb.set_trace()
                             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == value_demo["ID"]:
-                                # import ipdb; ipdb.set_trace()
                                 value_demo["MaxValue"] = self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]
 
                     # Randomly sample new demos if last demos has finished
@@ -326,7 +325,6 @@ class PPODBuffer(B):
             # Otherwise check if end of episode reached and randomly start new demo
             elif sample[prl.DONE2][i] == 1.0:
 
-                # import ipdb; ipdb.set_trace()
                 self.sample_demo(env_id=i)
 
         self.step = (self.step + 1) % self.max_size
@@ -374,7 +372,6 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
-                    # import ipdb; ipdb.set_trace()
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
                     # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
