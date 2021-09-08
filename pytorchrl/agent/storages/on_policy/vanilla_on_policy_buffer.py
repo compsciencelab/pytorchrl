@@ -273,9 +273,9 @@ class VanillaOnPolicyBuffer(S):
 
             num_envs_per_batch = num_proc // num_mini_batch
             assert num_proc >= num_mini_batch, "number processes greater than  mini batches"
-            perm = torch.randperm(num_proc) if shuffle else list(range(num_proc))
 
             for _ in range(num_epochs):
+                perm = torch.randperm(num_proc) if shuffle else list(range(num_proc))
                 for start_ind in range(0, num_proc, num_envs_per_batch):
 
                     # Define batch structure
