@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import obstacle_tower_env
 from obstacle_tower_env import ObstacleTowerEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward

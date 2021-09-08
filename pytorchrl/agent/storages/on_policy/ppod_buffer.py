@@ -294,7 +294,7 @@ class PPODBuffer(B):
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
 
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
-                    [algo_data[prl.VAL], self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
+                    [algo_data[prl.VAL].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
