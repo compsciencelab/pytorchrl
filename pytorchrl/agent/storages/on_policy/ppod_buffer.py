@@ -388,6 +388,8 @@ class PPODBuffer(B):
 
                     if self.potential_demos_val["env{}".format(i + 1)] >= value_thresh or total_demos < self.max_demos:
 
+                        # Place value prediction as reward
+
                         # Add demos to value buffer
                         self.value_demos.append(potential_demo)
 
