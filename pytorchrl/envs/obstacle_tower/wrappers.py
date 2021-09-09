@@ -51,8 +51,7 @@ class BasicObstacleEnv(gym.Wrapper):
         self.start_floor = np.random.randint(
             self._min_floor, self.reached_floor if self.reached_floor != 0 else 1)
 
-        # self.env.unwrapped.floor(self.start_floor)
-        self.env.unwrapped.floor(17.0)
+        self.env.unwrapped.floor(self.start_floor)
 
         self.reached_floor = 0
 
