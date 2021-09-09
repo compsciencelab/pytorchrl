@@ -3,7 +3,7 @@ import gym
 from gym import spaces
 from pytorchrl.envs.obstacle_tower.utils import (
     box_is_placed, box_location, place_location, reduced_action_lookup_6,
-    reduced_action_lookup_7)
+    reduced_action_lookup_7, reduced_action_lookup_8)
 
 
 class BasicObstacleEnv(gym.Wrapper):
@@ -50,7 +50,10 @@ class BasicObstacleEnv(gym.Wrapper):
 
         self.start_floor = np.random.randint(
             self._min_floor, self.reached_floor if self.reached_floor != 0 else 1)
-        self.env.unwrapped.floor(self.start_floor)
+
+        # self.env.unwrapped.floor(self.start_floor)
+        self.env.unwrapped.floor(17.0)
+
         self.reached_floor = 0
 
         config = {"total-floors": self._max_floor + 2}
@@ -153,12 +156,14 @@ class RewardShapeObstacleEnv(gym.Wrapper):
 
 
 class ReducedActionEnv(gym.Wrapper):
-    def __init__(self, env, num_actions=6):
+    def __init__(self, env, num_actions=8):
 
         if num_actions == 6:
             _action_lookup = reduced_action_lookup_6
         elif num_actions == 7:
             _action_lookup = reduced_action_lookup_7
+        elif num_actions == 8:
+            _action_lookup = reduced_action_lookup_8
         else:
             ValueError("No lookup table for num reduced actions {}".format(
                 num_actions))

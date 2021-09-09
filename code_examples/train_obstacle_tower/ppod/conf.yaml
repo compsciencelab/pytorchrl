@@ -1,6 +1,6 @@
 experiment_name: PPOD_AnimalAI_Hard_Arena
 agent_name: AnimalAgent
-wandb_key: b5ef9811ad92fac918facca483c7b6caa73df290
+wandb_key: null
 num_env_steps : 10000000000
 log_dir: /tmp/animal_ppod
 gamma: 0.998
@@ -23,5 +23,4 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
-arenas_dir: code_examples/train_animalai/ppod/arenas/
-demos_dir: code_examples/train_animalai/ppod/demos/
+demos_dir: code_examples/train_obstacle_tower/ppod/demos/

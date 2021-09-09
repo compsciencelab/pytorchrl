@@ -11,10 +11,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
-
+from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
 
 # Testing
 import ipdb; ipdb.set_trace()
@@ -25,12 +25,12 @@ def main():
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
-    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
 
     if args.cluster:
         ray.init(address="auto")
     else:
-        ray.init(num_cpus=0)
+        ray.init()
 
     resources = ""
     for k, v in ray.cluster_resources().items():
@@ -50,39 +50,33 @@ def main():
         args = wandb.config
 
         # 1. Define Train Vector of Envs
-        arena_file = os.path.dirname(os.path.abspath(__file__)) + "/arenas/"
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-            env_fn=animal_train_env_factory,
-            env_kwargs={
-                "arenas_dir": arena_file,
-                "frame_skip": args.frame_skip,
-                "frame_stack": args.frame_stack,
-            },
+            env_fn=obstacle_train_env_factory,
+            env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack, "reward_shape": True},
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=('ereward', 'max_reward', 'max_time', 'arenas'))
+            info_keywords=('floor', 'start', 'seed'))
 
-        # 2. Define RL training algorithm
+        # 3. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
-            lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
+            lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            gamma=args.gamma)
+            use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
-        # 3. Define RL Policy
+        # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model,
-            recurrent_nets=True)
+            restart_model=args.restart_model)
 
-        # 4. Define rollouts storage
+        # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_demos_dir="/tmp/animalai_demos/",
+            target_demos_dir="/tmp/obstacle_demos/",
             gae_lambda=args.gae_lambda,
         )
 
-        # 5. Define scheme
+        # 6. Define scheme
         params = {}
 
         # add core modules
@@ -109,10 +103,10 @@ def main():
 
         scheme = Scheme(**params)
 
-        # 6. Define learner
+        # 7. Define learner
         learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        # 7. Define train loop
+        # 8. Define train loop
         iterations = 0
         start_time = time.time()
         while not learner.done():
@@ -156,15 +150,21 @@ def get_args():
         '--frame-skip', type=int, default=0,
         help='Number of frame to skip for each action (default no skip)')
     parser.add_argument(
-        '--frame-stack', type=int, default=1,
+        '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
 
     # PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
+        '--eps', type=float, default=1e-5,
+        help='Adam optimizer epsilon (default: 1e-5)')
+    parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
+    parser.add_argument(
+        '--use-gae', action='store_true', default=False,
+        help='use generalized advantage estimation')
     parser.add_argument(
         '--gae-lambda', type=float, default=0.95,
         help='gae lambda parameter (default: 0.95)')
@@ -178,6 +178,9 @@ def get_args():
         '--max-grad-norm', type=float, default=0.5,
         help='max norm of gradients (default: 0.5)')
     parser.add_argument(
+        '--use_clipped_value_loss', action='store_true', default=False,
+        help='clip value loss update')
+    parser.add_argument(
         '--num-steps', type=int, default=20000,
         help='number of forward steps in PPO (default: 20000)')
     parser.add_argument(
@@ -190,16 +193,12 @@ def get_args():
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
     parser.add_argument(
-        '--arenas-dir', default='',
-        help='directory containing arenas configuration .yaml files')
-    parser.add_argument(
         '--demos-dir', default='/tmp/pybullet_ppo',
         help='target directory to store and retrieve demos.')
 
-
     # Feature extractor model specs
     parser.add_argument(
-        '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
+        '--nn', default='CNN', help='Type of nn. Options are MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')
@@ -241,8 +240,8 @@ def get_args():
         '--save-interval', type=int, default=100,
         help='save interval, one save per n updates (default: 100)')
     parser.add_argument(
-        '--log-dir', default='/tmp/pybullet_ppo',
-        help='directory to save agent logs (default: /tmp/pybullet_ppo)')
+        '--log-dir', default='/tmp/obstacle_tower_ppo',
+        help='directory to save agent logs (default: /tmp/obstacle_tower_ppo)')
 
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
