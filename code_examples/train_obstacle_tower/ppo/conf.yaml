@@ -1,5 +1,5 @@
-experiment_name: PPOD_AnimalAI_Hard_Arena
-agent_name: AnimalAgent
+experiment_name: Obstacle_Tower
+agent_name: PPO
 wandb_key: null
 num_env_steps : 1000000000
 log_dir: /tmp/obstacle_tower_ppo
