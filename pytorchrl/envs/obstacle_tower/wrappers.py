@@ -30,8 +30,8 @@ class BasicObstacleEnv(gym.Wrapper):
             done = True
 
         info['seed'] = self.seed
-        info['start'] = self.start_floor
-        info['floor'] = self.reached_floor
+        info['start'] = float(self.start_floor)
+        info['floor'] = float(self.reached_floor)
 
         num_keys = info["total_keys"]
         self.picked_key = num_keys > self._previous_keys
@@ -82,8 +82,8 @@ class BasicObstacleEnvTest(gym.Wrapper):
             self.reached_floor = info['current_floor']
 
         info['seed'] = self.seed
-        info['start'] = self.start_floor
-        info['floor'] = self.reached_floor
+        info['start'] = float(self.start_floor)
+        info['floor'] = float(self.reached_floor)
 
         num_keys = info["total_keys"]
         self.picked_key = num_keys > self._previous_keys

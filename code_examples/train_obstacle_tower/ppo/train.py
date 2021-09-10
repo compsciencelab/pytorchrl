@@ -62,7 +62,7 @@ def main():
         # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model)
+            restart_model=args.restart_model, recurrent_nets=args.recurrent_nets)
 
         # 5. Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
@@ -191,7 +191,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
+        '--recurrent-nets', action='store_true', default=False,
         help='Use a recurrent policy')
 
     # Scheme specs
