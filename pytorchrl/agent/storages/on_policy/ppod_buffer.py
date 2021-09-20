@@ -37,7 +37,7 @@ class PPODBuffer(B):
     target_demos_dir : str
         Path to directory where best demonstrations should be saved.
     rho : float
-        PPO+D rho parameter
+        PPO+D rho parameter.
     phi : float
         PPO+D phi parameter.
     alpha : float

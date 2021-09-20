@@ -4,6 +4,8 @@ wandb_key: null
 num_env_steps : 10000000000
 log_dir: /tmp/animal_ppod
 gamma: 0.998
+rho: 0.3
+phi: 0.0
 save_interval: 100000
 max_time: 86400
 num_env_processes: 14

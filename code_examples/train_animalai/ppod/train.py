@@ -76,7 +76,7 @@ def main():
 
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps,
+            size=args.num_steps, rho=args.rho, phi=args.phi,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_demos_dir="/tmp/animalai_demos/",
             gae_lambda=args.gae_lambda,
@@ -165,6 +165,12 @@ def get_args():
     parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
+    parser.add_argument(
+        '--rho', type=float, default=0.3,
+        help='PPO+D rho parameter (default: 0.3)')
+    parser.add_argument(
+        '--phi', type=float, default=0.0,
+        help='PPO+D phi parameter (default: 0.0)')
     parser.add_argument(
         '--gae-lambda', type=float, default=0.95,
         help='gae lambda parameter (default: 0.95)')
