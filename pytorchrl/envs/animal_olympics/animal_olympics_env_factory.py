@@ -1,7 +1,6 @@
 import os
 import animalai
 from animalai.envs.gym.environment import AnimalAIGym
-# from animalai.envs.gym.environment import AnimalAIEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, LabAnimal, RewardShaping
 
@@ -48,7 +47,6 @@ def animal_train_env_factory(
         exe = exe_path
     else:
         exe = os.path.join(os.path.dirname(animalai.__file__), '../../examples/env/AnimalAI')
-        # exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
 
     id = seed + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
 
@@ -59,14 +57,6 @@ def animal_train_env_factory(
         n_arenas=1,
         arenas_configurations=None,
         inference=inference)
-
-    # env = AnimalAIEnv(
-    #     exe,
-    #     worker_id=id,
-    #     seed=id,
-    #     n_arenas=1,
-    #     arenas_configurations=None,
-    #     inference=inference)
 
     env = RetroEnv(env)
 

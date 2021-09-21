@@ -8,7 +8,7 @@ rho: 0.3
 phi: 0.0
 save_interval: 100000
 max_time: 86400
-num_env_processes: 14
+num_env_processes: 10
 num_steps: 1000
 num_mini_batch: 6
 clip_param: 0.15
@@ -19,7 +19,7 @@ max_grad_norm: 0.5
 entropy_coef: 0.02
 lr: 0.00001
 nn: CNN
-recurrent-nets: True
+recurrent_nets: True
 frame_skip: 2
 frame_stack: 4
 num_grad_workers: 1

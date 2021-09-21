@@ -11,17 +11,32 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 
 
 # Testing
-import ipdb; ipdb.set_trace()
 from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
 def main():
+
+    ####################################################################################################################
+
+    import torch
+    import numpy as np
+    import random
+
+    seed = 0
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.set_num_threads(1)
+
+    ####################################################################################################################
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
@@ -75,10 +90,15 @@ def main():
             recurrent_nets=args.recurrent_nets)
 
         # 4. Define rollouts storage
-        storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps, rho=args.rho, phi=args.phi,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_demos_dir="/tmp/animalai_demos/",
+        # storage_factory = PPODBuffer.create_factory(
+        #     size=args.num_steps, rho=args.rho, phi=args.phi,
+        #     initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+        #     target_demos_dir="/tmp/animalai_demos/",
+        #     gae_lambda=args.gae_lambda,
+        # )
+
+        storage_factory = GAEBuffer.create_factory(
+            size=args.num_steps,
             gae_lambda=args.gae_lambda,
         )
 

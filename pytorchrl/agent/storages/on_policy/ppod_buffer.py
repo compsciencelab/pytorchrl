@@ -89,7 +89,6 @@ class PPODBuffer(B):
             self.reward_threshold = - np.inf
 
         # TODO. solve: is set manually!
-        # import ipdb; ipdb.set_trace()
         self.reward_threshold = 1.0
 
         # Define variables to track potential demos
