@@ -1,15 +1,17 @@
+# habitat2021
 
-
-### Install Animal Olympics Unity3D environment
+## Installation
 
 ```
-cd
-git clone https://github.com/compsciencelab/AnimalAI-Olympics.git
-cd AnimalAI-Olympics/animalai
-pip install -e .
-cd ..
-cd env
-
-wget https://www.doc.ic.ac.uk/~bb1010/animalAI/env_linux_v1.0.0.zip
-unzip env_linux_v1.0.0.zip
+conda create -n habitat2021 python=3.7
+source activate habitat2021
+conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
+pip install git+https://github.com/PyTorchRL/baselines.git
+pip install pytorchrl
+conda install habitat-sim headless -c conda-forge -c aihabitat -y
+git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
+cd habitat-lab
+pip install -r requirements.txt
+python setup.py develop --all
+conda install ipython
 ```
