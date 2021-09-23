@@ -28,4 +28,4 @@ com_grad_workers: synchronous
 com_col_workers: synchronous
 arenas_dir: code_examples/train_animalai/ppod/arenas/
 demos_dir: code_examples/train_animalai/ppod/demos/
-restart_model: /tmp/animal_ppod/model.state_dict
+restart_model: null
