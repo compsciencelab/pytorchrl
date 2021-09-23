@@ -70,3 +70,4 @@ class GAEBuffer(B):
                 1.0 - self.data[prl.DONE][step + 1]) - self.data[prl.VAL][step])
             gae = delta + gamma * self.gae_lambda * (1.0 - self.data[prl.DONE][step + 1]) * gae
             self.data[prl.RET][step] = gae + self.data[prl.VAL][step]
+

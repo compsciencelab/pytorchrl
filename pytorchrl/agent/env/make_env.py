@@ -2,7 +2,6 @@ import os
 import copy
 import inspect
 from pytorchrl.agent.env.openai_baselines_dependencies.Monitor import Monitor
-
 from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
 
 
