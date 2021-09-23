@@ -10,7 +10,6 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
-# TODO. review logged episode rewards in c_worker
 # TODO. Value demos -> always keep those with the maximum value + UPDATE their values! to be tested
 
 
@@ -87,9 +86,6 @@ class PPODBuffer(B):
                 self.reward_demos) > 0 else - np.inf
         else:
             self.reward_threshold = - np.inf
-
-        # TODO. solve: is set manually!
-        self.reward_threshold = 1.0
 
         # Define variables to track potential demos
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
@@ -373,9 +369,6 @@ class PPODBuffer(B):
 
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
                     # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
-
-                    # TODO. solve: now is set manually
-                    self.reward_threshold = 1.0
 
                 else:   # Consider candidate demos for value reward
 
