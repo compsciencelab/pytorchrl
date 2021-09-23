@@ -68,3 +68,5 @@ __pycache__
 
 # demos
 *obstacletower_demo*
+
+*.DS_Store*
