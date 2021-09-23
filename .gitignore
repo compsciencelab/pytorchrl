@@ -66,6 +66,5 @@ target/
 .idea*
 __pycache__
 
-# Demos
-animalai_demo_*
-*demos*
+# demos
+*obstacletower_demo*
