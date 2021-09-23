@@ -207,15 +207,14 @@ class OnPolicyActor(nn.Module):
             Predicted probability distribution over next action.
         """
 
-        action_features = self.policy_net.feature_extractor(obs)
+        features = self.policy_net.feature_extractor(obs)
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
-                action_features, rhs["rhs_act"], done)
+            features, rhs["rhs_act"] = self.policy_net.memory_net(
+                features, rhs["rhs_act"], done)
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
-            action_features, deterministic=deterministic)
+            features, deterministic=deterministic)
 
-        self.last_action_features = action_features
-        self.last_action_rhs = rhs["rhs_act"]
+        self.last_action_features = features
 
         if self.unscale:
             action = self.unscale(action)
@@ -257,7 +256,7 @@ class OnPolicyActor(nn.Module):
         features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_nets:
-            action_features, rhs["rhs_act"] = self.policy_net.memory_net(
+            features, rhs["rhs_act"] = self.policy_net.memory_net(
                 features, rhs["rhs_act"], done)
 
         logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
@@ -332,7 +331,6 @@ class OnPolicyActor(nn.Module):
             value_feature_extractor = nn.Identity()
             value_memory_net = nn.Identity()
             self.last_action_features = None
-            self.last_action_rhs = None
 
         else:
 
@@ -343,8 +341,11 @@ class OnPolicyActor(nn.Module):
 
             # ---- 2. Define memory network  ----------------------------------
 
+            feature_size = int(np.prod(value_feature_extractor(
+                torch.randn(1, *self.input_space.shape)).shape))
+
             if self.recurrent_nets:
-                value_memory_net = GruNet(self.recurrent_size, **self.recurrent_nets_kwargs)
+                value_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
             else:
                 value_memory_net = nn.Identity()
 
@@ -377,7 +378,8 @@ class OnPolicyActor(nn.Module):
         """
 
         # If feature_extractor_network not defined, take default one based on input_space
-        feature_extractor = self.feature_extractor_network or default_feature_extractor(self.input_space)
+        feature_extractor = self.feature_extractor_network or default_feature_extractor(
+            self.input_space)
 
         # ---- 1. Define obs feature extractor --------------------------------
 
@@ -389,22 +391,22 @@ class OnPolicyActor(nn.Module):
         feature_size = int(np.prod(policy_feature_extractor(
             torch.randn(1, *self.input_space.shape)).shape))
 
-        self.recurrent_size = feature_size
         if self.recurrent_nets:
             policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
-            feature_size = policy_memory_net.num_outputs
+            self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()
+            self.recurrent_size = feature_size
 
         # ---- 3. Define action distribution ----------------------------------
 
         if isinstance(self.action_space, gym.spaces.Discrete):
-            dist = get_dist("Categorical")(feature_size, self.action_space.n)
+            dist = get_dist("Categorical")(self.recurrent_size, self.action_space.n)
             self.scale = None
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.Box):  # Continuous action space
-            dist = get_dist("Gaussian")(feature_size, self.action_space.shape[0])
+            dist = get_dist("Gaussian")(self.recurrent_size, self.action_space.shape[0])
             self.scale = Scale(self.action_space)
             self.unscale = Unscale(self.action_space)
 

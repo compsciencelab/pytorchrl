@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import obstacle_tower_env
 from obstacle_tower_env import ObstacleTowerEnv
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
@@ -9,7 +8,7 @@ from pytorchrl.envs.obstacle_tower.wrappers import (
 
 def obstacle_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, min_floor=0,
-        max_floor=50, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1):
+        max_floor=50, reduced_actions=True, reward_shape=True, exe_path=None, reward_delay=1, realtime=False):
     """
     Create train Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
@@ -56,7 +55,7 @@ def obstacle_train_env_factory(
     id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
         environment_filename=exe, retro=True, worker_id=id,
-        greyscale=False, timeout_wait=60, realtime_mode=False)
+        greyscale=False, timeout_wait=60, realtime_mode=realtime)
 
     if reduced_actions:
         env = ReducedActionEnv(env)

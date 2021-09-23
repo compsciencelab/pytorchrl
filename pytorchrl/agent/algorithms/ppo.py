@@ -371,9 +371,8 @@ class PPO(Algorithm):
             Dict containing current PPO iteration information.
         """
 
-        self.optimizer.zero_grad()
         value_loss, action_loss, dist_entropy, loss = self.compute_loss(batch)
-
+        self.optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 

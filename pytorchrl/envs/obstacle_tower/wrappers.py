@@ -3,7 +3,7 @@ import gym
 from gym import spaces
 from pytorchrl.envs.obstacle_tower.utils import (
     box_is_placed, box_location, place_location, reduced_action_lookup_6,
-    reduced_action_lookup_7)
+    reduced_action_lookup_7, reduced_action_lookup_8)
 
 
 class BasicObstacleEnv(gym.Wrapper):
@@ -30,8 +30,8 @@ class BasicObstacleEnv(gym.Wrapper):
             done = True
 
         info['seed'] = self.seed
-        info['start'] = self.start_floor
-        info['floor'] = self.reached_floor
+        info['start'] = float(self.start_floor)
+        info['floor'] = float(self.reached_floor)
 
         num_keys = info["total_keys"]
         self.picked_key = num_keys > self._previous_keys
@@ -50,7 +50,9 @@ class BasicObstacleEnv(gym.Wrapper):
 
         self.start_floor = np.random.randint(
             self._min_floor, self.reached_floor if self.reached_floor != 0 else 1)
+
         self.env.unwrapped.floor(self.start_floor)
+
         self.reached_floor = 0
 
         config = {"total-floors": self._max_floor + 2}
@@ -80,8 +82,8 @@ class BasicObstacleEnvTest(gym.Wrapper):
             self.reached_floor = info['current_floor']
 
         info['seed'] = self.seed
-        info['start'] = self.start_floor
-        info['floor'] = self.reached_floor
+        info['start'] = float(self.start_floor)
+        info['floor'] = float(self.reached_floor)
 
         num_keys = info["total_keys"]
         self.picked_key = num_keys > self._previous_keys
@@ -153,12 +155,14 @@ class RewardShapeObstacleEnv(gym.Wrapper):
 
 
 class ReducedActionEnv(gym.Wrapper):
-    def __init__(self, env, num_actions=6):
+    def __init__(self, env, num_actions=8):
 
         if num_actions == 6:
             _action_lookup = reduced_action_lookup_6
         elif num_actions == 7:
             _action_lookup = reduced_action_lookup_7
+        elif num_actions == 8:
+            _action_lookup = reduced_action_lookup_8
         else:
             ValueError("No lookup table for num reduced actions {}".format(
                 num_actions))

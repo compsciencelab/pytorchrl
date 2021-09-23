@@ -25,10 +25,11 @@ class VTraceBuffer(B):
     # Data fields to store in buffer and contained in generated batches
     storage_tensors = prl.OnPolicyDataKeys
 
-    def __init__(self, size, device, actor, algorithm):
+    def __init__(self, size, device, actor, algorithm, envs):
 
         super(VTraceBuffer, self).__init__(
             size=size,
+            envs=envs,
             device=device,
             actor=actor,
             algorithm=algorithm)
@@ -39,11 +40,12 @@ class VTraceBuffer(B):
         """
 
         last_tensors = {}
+        step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
             if isinstance(self.data[k], dict):
-                last_tensors[k] = {x: self.data[k][x][self.step - 1] for x in self.data[k]}
+                last_tensors[k] = {x: self.data[k][x][step] for x in self.data[k]}
             else:
-                last_tensors[k] = self.data[k][self.step - 1]
+                last_tensors[k] = self.data[k][step - 1]
 
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
@@ -51,14 +53,14 @@ class VTraceBuffer(B):
             next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        self.data[prl.RET][self.step].copy_(next_value)
-        self.data[prl.VAL][self.step].copy_(next_value)
+        self.data[prl.RET][step].copy_(next_value)
+        self.data[prl.VAL][step].copy_(next_value)
 
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
-                self.data[prl.RHS][x][self.step].copy_(next_rhs[x])
+                self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
-            self.data[prl.RHS][self.step] = next_rhs
+            self.data[prl.RHS][step] = next_rhs
         self.compute_returns()
 
         self.compute_vtrace()

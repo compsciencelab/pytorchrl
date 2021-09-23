@@ -7,7 +7,7 @@ from PIL import Image
 
 from animalai.envs.arena_config import ArenaConfig
 from animalai.envs.gym.environment import ActionFlattener
-from envs.animal_olympics.utils import set_reward_arena
+from pytorchrl.envs.animal_olympics.utils import set_reward_arena
 
 
 class RetroEnv(gym.Wrapper):
@@ -19,20 +19,19 @@ class RetroEnv(gym.Wrapper):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)  # non-retro
-        visual_obs, vector_obs = self._preprocess_obs(obs)
-        info['vector_obs'] = vector_obs
+        visual_obs = self._preprocess_obs(obs)
         return visual_obs, reward, done, info
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        visual_obs, _ = self._preprocess_obs(obs)
+        visual_obs = self._preprocess_obs(obs)
         return visual_obs
 
-    def _preprocess_obs(self, obs):
-        visual_obs, vector_obs = obs
+    def _preprocess_obs(self,obs):
+        visual_obs = obs
         visual_obs = self._preprocess_single(visual_obs)
         visual_obs = self._resize_observation(visual_obs)
-        return visual_obs, vector_obs
+        return visual_obs
 
     @staticmethod
     def _preprocess_single(single_visual_obs):
@@ -53,7 +52,8 @@ class FilterActionEnv(gym.ActionWrapper):
     """
     An environment wrapper that limits the action space.
     """
-    _ACTIONS = (0, 1, 2, 3, 4, 5, 6)
+    _ACTIONS = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+    # _ACTIONS = (0, 1, 2, 3, 4, 5, 6)
 
     def __init__(self, env):
         super().__init__(env)
@@ -86,7 +86,7 @@ class LabAnimal(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
         self.steps += 1
         self.env_reward += reward
-        info['arena'] = self._arena_file  # for monitor
+        info['arenas'] = self._arena_file  # for monitor
         info['max_reward'] = self.max_reward
         info['max_time'] = self.max_time
         info['ereward'] = self.env_reward
@@ -96,7 +96,7 @@ class LabAnimal(gym.Wrapper):
         self.steps = 0
         self.env_reward = 0
         self._arena_file, arena = random.choice(self.env_list)
-        #        self.max_reward = analyze_arena(arena)
+        #        self.max_reward = analyze_arena(arenas)
         self.max_reward = set_reward_arena(arena, force_new_size=False)
         self.max_time = arena.arenas[0].t
         return self.env.reset(arenas_configurations=arena, **kwargs)
@@ -108,16 +108,8 @@ class RewardShaping(gym.Wrapper):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        if reward > -0.005 and reward < 0:  # remove time negative reward
+        if (reward > -0.01) and (reward < 0):  # remove time negative reward
             reward = 0
-        if done:  # give time penalty at the end
-            reward -= self.steps / self.max_time
-        if reward > 0 and done and self.steps < 60:  # explore first
-            reward = 0
-        if reward > 0 and not done:  # brown ball, go for it first
-            reward += 3
-        if reward > 0 and self.env_reward > self.max_reward - 1 and done:  # prize for finishing well
-            reward += 10
         return obs, reward, done, info
 
     def reset(self, **kwargs):

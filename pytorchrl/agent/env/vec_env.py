@@ -41,9 +41,9 @@ class VecEnv:
             """Create and return a vector environment"""
 
             if mode == "train":
-                env_indexes = range(0, vec_env_size)
+                env_indexes = range(1, vec_env_size + 1)
             else:
-                env_indexes = range(vec_env_size, 2 * vec_env_size)
+                env_indexes = range(1 + vec_env_size, 2 * vec_env_size + 1)
 
             envs = [make_env(
                 env_fn=env_fn, env_kwargs=env_kwargs,
@@ -69,6 +69,7 @@ class VecEnv:
 
         cls.action_space = dummy_env.action_space
         cls.observation_space = dummy_env.observation_space
+        dummy_env.envs[0].close()
 
         return make_vec_env, dummy_env.action_space, dummy_env.observation_space
 

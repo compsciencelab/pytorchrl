@@ -181,14 +181,14 @@ def get_args():
         '--num-grad-workers', type=int, default=1,
         help='how many agent workers to use (default: 1)')
     parser.add_argument(
-        '--com-grad-workers', default='synchronised',
-        help='communication patters grad workers (default: synchronised)')
+        '--com-grad-workers', default='synchronous',
+        help='communication patters grad workers (default: synchronous)')
     parser.add_argument(
         '--num-col-workers', type=int, default=1,
         help='how many agent workers to use (default: 1)')
     parser.add_argument(
-        '--com-col-workers', default='synchronised',
-        help='communication patters col workers (default: synchronised)')
+        '--com-col-workers', default='synchronous',
+        help='communication patters col workers (default: synchronous)')
     parser.add_argument(
         '--cluster', action='store_true', default=False,
         help='script is running in a cluster')

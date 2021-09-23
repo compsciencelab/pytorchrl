@@ -52,11 +52,35 @@ def place_location(state):
 
 
 # all actions
-branched_action_space = [3, 3, 2, 3]
-possible_vals = [range(_num) for _num in branched_action_space]
-all_actions = [list(_action) for _action in itertools.product(*possible_vals)]
-action_lookup = {tuple(_action): _scalar for (_scalar, _action) in enumerate(all_actions)}
+action_lookup_6 = {
+    (0, 1, 0, 0): 0,  # k
+    (0, 2, 0, 0): 1,  # l
+    (1, 0, 0, 0): 2,  # w
+    (1, 0, 1, 0): 3,  # w + space
+    (1, 1, 0, 0): 4,  # w + k
+    (1, 2, 0, 0): 5,  # w + l
+}
 
+action_lookup_7 = {
+    (0, 0, 0, 0): 0,  # nothing
+    (0, 1, 0, 0): 1,  # k
+    (0, 2, 0, 0): 2,  # l
+    (1, 0, 0, 0): 3,  # w
+    (1, 0, 1, 0): 4,  # w + space
+    (1, 1, 0, 0): 5,  # w + k
+    (1, 2, 0, 0): 6,  # w + l
+}
+
+action_lookup_8 = {
+    (0, 0, 0, 0): 0,  # nothing
+    (0, 1, 0, 0): 1,  # k
+    (0, 2, 0, 0): 2,  # l
+    (1, 0, 0, 0): 3,  # w
+    (0, 0, 1, 0): 4,  # space
+    (1, 0, 1, 0): 5,  # w + space
+    (1, 1, 0, 0): 6,  # w + k
+    (1, 2, 0, 0): 7,  # w + l
+}
 
 # reduced actions
 reduced_action_lookup_6 = {
@@ -70,11 +94,22 @@ reduced_action_lookup_6 = {
 
 # reduced actions
 reduced_action_lookup_7 = {
-    0: [0, 0, 0, 0],
+    0: [0, 0, 0, 0],  # nothing
     1: [0, 1, 0, 0],  # k
     2: [0, 2, 0, 0],  # l
     3: [1, 0, 0, 0],  # w
     4: [1, 0, 1, 0],  # w + space
     5: [1, 1, 0, 0],  # w + k
     6: [1, 2, 0, 0],  # w + l
+}
+
+reduced_action_lookup_8 = {
+    0: [0, 0, 0, 0],  # nothing
+    1: [0, 1, 0, 0],  # k
+    2: [0, 2, 0, 0],  # l
+    3: [1, 0, 0, 0],  # w
+    4: [0, 0, 1, 0],  # space
+    5: [1, 0, 1, 0],  # w + space
+    6: [1, 1, 0, 0],  # w + k
+    7: [1, 2, 0, 0],  # w + l
 }
