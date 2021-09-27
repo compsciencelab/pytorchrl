@@ -1,3 +1,6 @@
+experiment_name: MsPacmanNoFrameskip-v4
+agent_name: SAC
+wandb_key: null
 num_env_steps : 1000000
 log_dir: /tmp/atari_sac
 gamma: 0.99
