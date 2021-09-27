@@ -155,7 +155,7 @@ class RewardShapeObstacleEnv(gym.Wrapper):
 
 
 class ReducedActionEnv(gym.Wrapper):
-    def __init__(self, env, num_actions=8):
+    def __init__(self, env, num_actions=6):
 
         if num_actions == 6:
             _action_lookup = reduced_action_lookup_6
