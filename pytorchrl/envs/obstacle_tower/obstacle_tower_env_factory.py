@@ -106,6 +106,8 @@ def obstacle_test_env_factory(
         Path to obstacle environment executable.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
+    realtime : bool
+        Whether or not to render the environment in real time.
 
     Returns
     -------

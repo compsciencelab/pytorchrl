@@ -107,6 +107,8 @@ def animal_test_env_factory(
         Whether or not to use the reward shape wrapper.
     exe_path : str
         Path to obstacle environment executable.
+    reward_shape : bool
+        Whether or not to render the environment in real time.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
 
