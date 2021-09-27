@@ -38,7 +38,7 @@ class ReplayBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm):
+    def __init__(self, size, device, actor, algorithm, envs):
 
         self.actor = actor
         self.device = device
@@ -73,9 +73,9 @@ class ReplayBuffer(S):
             creates a new ReplayBuffer class instance.
         """
 
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a ReplayBuffer instance."""
-            return cls(size, device, actor, algorithm)
+            return cls(size, device, actor, algorithm, envs)
 
         return create_buffer
 

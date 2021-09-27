@@ -51,7 +51,7 @@ class PERBuffer(B):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm, n_step=1, epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000):
+    def __init__(self, size, device, actor, algorithm, envs, n_step=1, epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000):
 
         super(PERBuffer, self).__init__(
             size=size, device=device, actor=actor,
@@ -89,9 +89,9 @@ class PERBuffer(B):
             creates a new PERBuffer class instance.
         """
 
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a PERBuffer instance."""
-            return cls(size, device, actor, algorithm, n_step, epsilon, alpha, beta, default_error)
+            return cls(size, device, actor, algorithm, envs, n_step, epsilon, alpha, beta, default_error)
 
         return create_buffer
 

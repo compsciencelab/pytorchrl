@@ -60,7 +60,7 @@ class EREBuffer(B):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm, n_step=1, epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
+    def __init__(self, size, device, actor, algorithm, envs, n_step=1, epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
 
         super(EREBuffer, self).__init__(
             size=size, device=device, actor=actor, algorithm=algorithm,
@@ -103,7 +103,7 @@ class EREBuffer(B):
             creates a new EREBuffer class instance.
         """
 
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a EREBuffer instance."""
             return cls(size, device, actor, algorithm, n_step, epsilon, alpha, beta, default_error, eta, cmin)
 

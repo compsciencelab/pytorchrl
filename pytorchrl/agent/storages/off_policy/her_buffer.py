@@ -44,7 +44,7 @@ class HERBuffer(B):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm, her_function, n_step=1,
+    def __init__(self, size, device, actor, algorithm, envs, her_function, n_step=1,
                  epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
 
         super(HERBuffer, self).__init__(
@@ -71,7 +71,7 @@ class HERBuffer(B):
             creates a new HERBuffer class instance.
         """
 
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a HERBuffer instance."""
             return cls(size, device, actor, algorithm, her_function, n_step,
                        epsilon, alpha, beta, default_error, eta, cmin)

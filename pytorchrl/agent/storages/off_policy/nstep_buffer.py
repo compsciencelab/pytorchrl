@@ -40,7 +40,7 @@ class NStepReplayBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm, n_step=1):
+    def __init__(self, size, device, actor, algorithm, envs, n_step=1):
 
         algorithm._update_every += n_step - 1
 
@@ -68,9 +68,9 @@ class NStepReplayBuffer(S):
         create_buffer_instance : func
             creates a new NStepReplayBuffer class instance.
         """
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a NStepReplayBuffer instance."""
-            return cls(size, device, actor, algorithm, n_step)
+            return cls(size, device, actor, algorithm, envs, n_step)
         return create_buffer
 
     def insert_transition(self, sample):
