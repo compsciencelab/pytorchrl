@@ -6,3 +6,4 @@ pybullet
 scipy
 TensorBoard
 lz4
+opencv-python

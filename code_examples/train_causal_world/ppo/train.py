@@ -14,6 +14,7 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from causal_world.task_generators import generate_task
 from pytorchrl.envs.causal_world.causal_world_env_factory import causal_world_train_env_factory
 
 
@@ -48,25 +49,27 @@ def main():
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=causal_world_train_env_factory,
-            env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack},
+            env_kwargs={
+                "task": generate_task(task_generator_id='general'),
+                "frame_skip": args.frame_skip, "frame_stack": args.frame_stack},
             vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
-        # 3. Define RL training algorithm
+        # 2. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
-        # 4. Define RL Policy
+        # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model=args.restart_model, recurrent_nets=args.recurrent_nets)
 
-        # 5. Define rollouts storage
+        # 4. Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
 
-        # 6. Define scheme
+        # 5. Define scheme
         params = {}
 
         # add core modules
@@ -93,10 +96,10 @@ def main():
 
         scheme = Scheme(**params)
 
-        # 7. Define learner
+        # 6. Define learner
         learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        # 8. Define train loop
+        # 7. Define train loop
         iterations = 0
         start_time = time.time()
         while not learner.done():
