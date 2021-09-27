@@ -14,14 +14,15 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
+from causal_world.task_generators import generate_task
+from pytorchrl.envs.causal_world.causal_world_env_factory import causal_world_train_env_factory
 
 
 def main():
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
-    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     if args.cluster:
         ray.init(address="auto")
@@ -47,10 +48,11 @@ def main():
 
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-            env_fn=obstacle_train_env_factory,
-            env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack, "reward_shape": True},
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=('floor', 'start', 'seed'))
+            env_fn=causal_world_train_env_factory,
+            env_kwargs={
+                "task": generate_task(task_generator_id='general'),
+                "frame_skip": args.frame_skip, "frame_stack": args.frame_stack},
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
         # 2. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
