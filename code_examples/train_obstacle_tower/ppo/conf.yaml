@@ -8,9 +8,9 @@ save_interval: 10000
 max_time: 86400
 num_env_processes: 16
 num_steps: 800
-num_mini_batch: 6
+num_mini_batch: 8
 clip_param: 0.15
-ppo_epoch: 4
+ppo_epoch: 2
 use_gae: True
 gae_lambda: 0.95
 value_loss_coef: 0.2
