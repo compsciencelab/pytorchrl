@@ -461,10 +461,15 @@ class SAC(Algorithm):
         if self.discrete_version:
 
             pi, _, _, _, _, dist = self.actor.get_action(o, rhs, d)
-            p_pi = dist.probs
+
+            # Get action log probs
+            bs, n = o.shape[0], dist.probs.shape[-1]
+            actions = torch.arange(n)[..., None].expand(-1, bs).to(self.device)
+            p_pi = dist.expand((n, bs)).log_prob(actions).exp().transpose(0, 1)
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)
+
             q_scores = self.actor.get_q_scores(o, rhs, d)
             q1 = q_scores.get("q1")
             q2 = q_scores.get("q2")
