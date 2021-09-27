@@ -25,7 +25,7 @@ def main():
     if args.cluster:
         ray.init(address="auto")
     else:
-        ray.init()
+        ray.init(num_cpus=0)
 
     resources = ""
     for k, v in ray.cluster_resources().items():
