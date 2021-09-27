@@ -50,7 +50,7 @@ def main():
             env_fn=atari_train_env_factory,
             env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=('rr', 'rrr', 'lives'))
+            info_keywords=('clipped_reward', 'episodic_reward', 'lives'))
 
         # 2. Define Test Vector of Envs (Optional)
         test_envs_factory, _, _ = VecEnv.create_factory(

@@ -107,7 +107,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['rrr'] = self.total_reward
+        info['episodic_reward'] = self.total_reward
 
         self.was_real_done = done
         # check current lives, make loss of life terminal,
@@ -146,7 +146,7 @@ class ClipRewardEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['rr'] = self.total_reward
+        info['clipped_reward'] = self.total_reward
 
         reward = np.sign(reward)
         return obs, reward, done, info
