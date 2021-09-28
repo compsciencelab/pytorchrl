@@ -2,7 +2,8 @@ from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari
 from pytorchrl.envs.common import DelayedReward
 
 
-def atari_train_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1):
+def atari_train_env_factory(
+        env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1):
     """
     Create train Atari environment.
 
@@ -32,7 +33,7 @@ def atari_train_env_factory(env_id, index_col_worker, index_grad_worker, index_e
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
         env, episode_life=True,
-        clip_rewards=True,
+        clip_rewards=False,
         scale=False,
         frame_stack=frame_stack)
 
