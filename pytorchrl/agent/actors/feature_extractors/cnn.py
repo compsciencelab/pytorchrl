@@ -53,6 +53,11 @@ class CNN(nn.Module):
                 filters[j], filters[j + 1], stride=strides[j],
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
+
+        self.head = nn.Sequential(
+            nn.Linear(7 * 7 * 64, 512),
+            nn.ReLU(inplace=True))
+
         self.train()
 
         self.rgb_norm = rgb_norm
@@ -74,4 +79,5 @@ class CNN(nn.Module):
             inputs = inputs / 255.0
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
+        out = self.head(out)
         return out
