@@ -423,10 +423,10 @@ class PPODBuffer(B):
             try:
 
                 # TODO. finish
-                last_frame = np.arange(150)[0::self.frame_skip]
-                demo_act_end = torch.FloatTensor(demo[prl.ACT])[-1]
-                demo_obs_end = torch.FloatTensor(demo[prl.OBS])[-1]
-                demo_rew_end = torch.FloatTensor(demo[prl.REW][last_frame:].sum())
+                # last_frame = np.arange(150)[0::self.frame_skip]
+                # demo_act_end = torch.FloatTensor(demo[prl.ACT])[-1]
+                # demo_obs_end = torch.FloatTensor(demo[prl.OBS])[-1]
+                # demo_rew_end = torch.FloatTensor(demo[prl.REW][last_frame:].sum())
 
                 # Load demos tensors
                 demo = np.load(demo_file)
