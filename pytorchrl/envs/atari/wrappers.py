@@ -31,17 +31,6 @@ class TimeLimit(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
-class ClipActionsWrapper(gym.Wrapper):
-    def step(self, action):
-        import numpy as np
-        action = np.nan_to_num(action)
-        action = np.clip(action, self.action_space.low, self.action_space.high)
-        return self.env.step(action)
-
-    def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
-
-
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
@@ -107,7 +96,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['episodic_reward'] = self.total_reward
+        info['EpisodicReward'] = self.total_reward
 
         self.was_real_done = done
         # check current lives, make loss of life terminal,
@@ -118,7 +107,7 @@ class EpisodicLifeEnv(gym.Wrapper):
             # so it's important to keep lives > 0, so that we only reset once
             # the environment advertises done.
             done = True
-        info['lives'] = lives
+        info['Lives'] = lives
         self.lives = lives
         return obs, reward, done, info
 
@@ -146,7 +135,7 @@ class ClipRewardEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['clipped_reward'] = self.total_reward
+        info['ClippedReward'] = self.total_reward
 
         reward = np.sign(reward)
         return obs, reward, done, info

@@ -388,10 +388,11 @@ class SAC(Algorithm):
                 # Target actions come from *current* policy
                 a2, _, _, _, _, dist = self.actor.get_action(o2, rhs2, d2)
 
-                # Get action log probs
                 bs, n = o.shape[0], dist.probs.shape[-1]
                 actions = torch.arange(n)[..., None].expand(-1, bs).to(self.device)
                 p_a2 = dist.expand((n, bs)).log_prob(actions).exp().transpose(0, 1)
+                # p_a2 = dist.probs
+
                 z = (p_a2 == 0.0).float() * 1e-8
                 logp_a2 = torch.log(p_a2 + z)
 
@@ -466,6 +467,8 @@ class SAC(Algorithm):
             bs, n = o.shape[0], dist.probs.shape[-1]
             actions = torch.arange(n)[..., None].expand(-1, bs).to(self.device)
             p_pi = dist.expand((n, bs)).log_prob(actions).exp().transpose(0, 1)
+            # p_pi = dist.probs
+
             z = (p_pi == 0.0).float() * 1e-8
             logp_pi = torch.log(p_pi + z)
             logp_pi = torch.sum(p_pi * logp_pi, dim=1, keepdim=True)

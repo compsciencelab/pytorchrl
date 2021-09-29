@@ -9,13 +9,15 @@ save_interval: 50000
 max_time: 86400
 num_env_processes: 1
 mini_batch_size: 64
-update_every: 4
+update_every: 1
 num_updates: 1
 start_steps: 20000 
 buffer_size: 300000
 target_update_interval: 8000
 lr: 0.0003
 nn: CNN
+clip_rewards: False
+episode_life: True
 frame_skip: 4
 frame_stack: 4
 env_id: MsPacmanNoFrameskip-v4
