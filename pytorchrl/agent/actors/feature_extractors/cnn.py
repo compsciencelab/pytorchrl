@@ -65,7 +65,6 @@ class CNN(nn.Module):
             activation())
 
         self.train()
-
         self.rgb_norm = rgb_norm
 
     def forward(self, inputs):
