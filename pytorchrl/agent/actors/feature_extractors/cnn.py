@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 import torch.nn as nn
 from pytorchrl.agent.actors.utils import init
 
@@ -24,6 +26,7 @@ class CNN(nn.Module):
     def __init__(self,
                  input_space,
                  rgb_norm=True,
+                 output_size=512,
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
                  filters=[32, 64, 32],
@@ -54,9 +57,13 @@ class CNN(nn.Module):
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
+        # Define final layer
+        import ipdb; ipdb.set_trace()
+        feature_size = int(np.prod(self.feature_extractor(
+            torch.randn(1, *self.input_space.shape)).shape)).view(1, -1)
         self.head = nn.Sequential(
-            nn.Linear(7 * 7 * 64, 512),
-            nn.ReLU(inplace=True))
+            nn.Linear(feature_size.size(1), output_size),
+            activation())
 
         self.train()
 

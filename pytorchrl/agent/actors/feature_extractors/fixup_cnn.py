@@ -1,5 +1,6 @@
 
 import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +17,7 @@ class FixupCNN(nn.Module):
     rgb_norm : bool
         Whether or not to divide input by 255.
     """
-    def __init__(self, input_space, rgb_norm=True):
+    def __init__(self, input_space, output_size=512, rgb_norm=True):
         super(FixupCNN, self).__init__()
 
         self.rgb_norm = rgb_norm
@@ -36,6 +37,14 @@ class FixupCNN(nn.Module):
             ])
             depth_in = depth_out
         self.feature_extractor = nn.Sequential(*layers)
+
+        # Define final layer
+        feature_size = int(np.prod(self.feature_extractor(
+            torch.randn(1, *self.input_space.shape)).shape)).view(1, -1)
+        self.head = nn.Sequential(
+            nn.Linear(feature_size.size(1), output_size),
+            nn.ReLU(inplace=True))
+
         self.train()
 
     def forward(self, inputs):

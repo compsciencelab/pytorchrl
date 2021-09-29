@@ -27,8 +27,8 @@ class GruNet(nn.Module):
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
 
-        self.input_layer = init_(nn.Linear(input_size, output_size))
-        self.gru = nn.GRU(output_size, output_size)
+        # self.input_layer = init_(nn.Linear(input_size, output_size))
+        self.gru = nn.GRU(input_size, output_size)
         self._num_outputs = output_size
         self.activation = activation()
 
@@ -140,8 +140,8 @@ class GruNet(nn.Module):
         """
 
         x = inputs.view(inputs.size(0), -1)
-        x = self.input_layer(x)
-        x = self.activation(x)
+        # x = self.input_layer(x)
+        # x = self.activation(x)
         x, rhs = self._forward_gru(x, rhs, done)
         # x = self.activation(x)
 
