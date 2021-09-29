@@ -70,7 +70,7 @@ def main():
 
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps,
+            size=args.num_steps, frame_stack=args.frame_stack, frame_skip=args.frame_skip,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_demos_dir="/tmp/obstacle_demos/",
             gae_lambda=args.gae_lambda,

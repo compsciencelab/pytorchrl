@@ -54,8 +54,10 @@ def record():
     # Define Single Env
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
-        env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack,
-                    "reward_shape": True, "realtime": True},
+        env_kwargs={
+            # "frame_skip": args.frame_skip,
+            # "frame_stack": args.frame_stack,
+            "reward_shape": True, "realtime": True},
         vec_env_size=1)
 
     # Start recording
