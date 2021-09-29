@@ -245,8 +245,11 @@ class PPODBuffer(B):
 
                 # Get demo obs, rhs and done tensors to run forward pass
 
-                obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][
-                      demo_step: demo_step + 1].to(self.device)
+                # import ipdb; ipdb.set_trace()
+                # obs = self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][
+                #       demo_step: demo_step + 1].to(self.device)
+                obs = self.data[prl.OBS][self.step][i].unsqueeze(0)
+
                 if self.demos_in_progress["env{}".format(i + 1)][prl.RHS]:
                     rhs = self.demos_in_progress["env{}".format(i + 1)][prl.RHS]
                     done = torch.zeros(1, 1).to(self.device)
@@ -254,7 +257,11 @@ class PPODBuffer(B):
                     obs, rhs, done = self.actor.actor_initial_states(obs)
 
                 # Run forward pass
-                _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
+                try:
+                    _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
+                except Exception:
+                    import ipdb;
+                    ipdb.set_trace()
 
                 # TODO. apply frame stack here!
 
@@ -274,19 +281,19 @@ class PPODBuffer(B):
 
                 ################################################################################################
 
-                # Sanity check
-                if demo_step == 0:
-
-                    # Insert demo done2 tensor to self.step
-                    self.data[prl.DONE][self.step][i].copy_(torch.ones(1))
-
-                    # Insert demo obs2 tensor to self.step + 1
-                    self.data[prl.OBS][self.step][i].copy_(self.demos_in_progress["env{}".format(
-                        i + 1)]["Demo"][prl.OBS][0].to(self.device))
-
-                    # Insert demo rhs2 tensor to self.step + 1
-                    for k in self.data[prl.RHS]:
-                        self.data[prl.RHS][k][self.step][i].copy_(rhs[k].squeeze())
+                # # Sanity check
+                # if demo_step == 0:
+                #
+                #     # Insert demo done2 tensor to self.step
+                #     self.data[prl.DONE][self.step][i].copy_(torch.ones(1))
+                #
+                #     # Insert demo obs2 tensor to self.step + 1
+                #     self.data[prl.OBS][self.step][i].copy_(self.demos_in_progress["env{}".format(
+                #         i + 1)]["Demo"][prl.OBS][0].to(self.device))
+                #
+                #     # Insert demo rhs2 tensor to self.step + 1
+                #     for k in self.data[prl.RHS]:
+                #         self.data[prl.RHS][k][self.step][i].copy_(rhs[k].squeeze())
 
                 ################################################################################################
 
@@ -315,9 +322,12 @@ class PPODBuffer(B):
                     self.data[prl.DONE][self.step + 1][i].copy_(torch.zeros(1))
 
                     # Insert demo obs2 tensor to self.step + 1
-                    import ipdb; ipdb.set_trace()
-                    self.data[prl.OBS][self.step + 1][i].copy_(self.demos_in_progress["env{}".format(
-                        i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
+                    # TODO. new!
+                    # self.data[prl.OBS][self.step + 1][i].copy_(self.demos_in_progress["env{}".format(
+                    #     i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
+                    obs2 = torch.roll(obs.squeeze(0), -3, dims=1)
+                    obs2[-3:].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
+                    self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
                     for k in self.data[prl.RHS]:
@@ -491,6 +501,11 @@ class PPODBuffer(B):
 
         # Set done to True
         self.data[prl.DONE][self.step + 1][env_id].copy_(torch.ones(1).to(self.device))
+
+        # TODO. new!
+        # Set initial rhs to zeros
+        for k in self.data[prl.RHS]:
+            self.data[prl.RHS][k][self.step][env_id].fill_(0.0)
 
         if demo:
 
