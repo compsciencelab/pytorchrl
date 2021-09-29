@@ -1,3 +1,4 @@
+env_id: MsPacmanNoFrameskip-v4
 experiment_name: MsPacmanNoFrameskip-v4
 agent_name: SAC
 wandb_key: null
@@ -18,8 +19,7 @@ lr: 0.0003
 nn: CNN
 frame_skip: 4
 frame_stack: 4
-env_id: MsPacmanNoFrameskip-v4
-num_grad_workers: 1 
+num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
