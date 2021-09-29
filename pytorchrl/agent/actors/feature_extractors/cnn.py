@@ -58,11 +58,10 @@ class CNN(nn.Module):
         self.feature_extractor = nn.Sequential(*layers)
 
         # Define final layer
-        import ipdb; ipdb.set_trace()
         feature_size = int(np.prod(self.feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape)).view(1, -1)
+            torch.randn(1, *self.input_space.shape)).shape))
         self.head = nn.Sequential(
-            nn.Linear(feature_size.size(1), output_size),
+            nn.Linear(feature_size, output_size),
             activation())
 
         self.train()

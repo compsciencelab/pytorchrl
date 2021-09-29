@@ -40,9 +40,9 @@ class FixupCNN(nn.Module):
 
         # Define final layer
         feature_size = int(np.prod(self.feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape)).view(1, -1)
+            torch.randn(1, *self.input_space.shape)).shape))
         self.head = nn.Sequential(
-            nn.Linear(feature_size.size(1), output_size),
+            nn.Linear(feature_size, output_size),
             nn.ReLU(inplace=True))
 
         self.train()
