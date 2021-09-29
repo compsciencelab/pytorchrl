@@ -11,7 +11,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import ReplayBuffer
+from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -45,12 +45,18 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
+        info_keywords = []
+        if args.episodic_life:
+            info_keywords += ['EpisodicReward', 'Lives']
+        if args.clip_rewards:
+            info_keywords += ['ClippedReward']
+
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=atari_train_env_factory,
             env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=('clipped_reward', 'episodic_reward', 'lives'))
+            info_keywords=tuple(info_keywords))
 
         # 2. Define Test Vector of Envs (Optional)
         test_envs_factory, _, _ = VecEnv.create_factory(
@@ -67,10 +73,15 @@ def main():
 
         # 4. Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
-            obs_space, action_space, algo_name, restart_model=args.restart_model)
+            obs_space, action_space, algo_name,
+            obs_feature_extractor_kwargs={"filters": [32, 64, 64]},
+            restart_model=args.restart_model)
 
         # 5. Define rollouts storage
         storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
+        # storage_factory = NStepReplayBuffer.create_factory(size=args.buffer_size, n_step=2)
+        # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
+        # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000, n_step=2)
 
         # 6. Define scheme
         params = {}
@@ -151,6 +162,12 @@ def get_args():
     parser.add_argument(
         '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
+    parser.add_argument(
+        '--clip_rewards', action='store_true', default=False,
+        help='Use a recurrent policy')
+    parser.add_argument(
+        '--episodic_life', action='store_true', default=False,
+        help='Use a recurrent policy')
 
     # SAC specs
     parser.add_argument(

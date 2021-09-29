@@ -18,7 +18,7 @@ class MLP(nn.Module):
     activation : func
         Non-linear activation function.
     """
-    def __init__(self, input_space, hidden_sizes=[256, 256], activation=nn.ReLU):
+    def __init__(self, input_space, hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU):
         super(MLP, self).__init__()
 
         if isinstance(input_space, gym.Space):
@@ -35,7 +35,7 @@ class MLP(nn.Module):
 
         # Define feature extractor
         layers = []
-        sizes = [np.prod(input_shape)] + hidden_sizes
+        sizes = [np.prod(input_shape)] + hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
             layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
         self.feature_extractor = nn.Sequential(*layers)

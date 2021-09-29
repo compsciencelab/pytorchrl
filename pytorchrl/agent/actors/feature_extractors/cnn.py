@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 import torch.nn as nn
 from pytorchrl.agent.actors.utils import init
 
@@ -24,6 +26,7 @@ class CNN(nn.Module):
     def __init__(self,
                  input_space,
                  rgb_norm=True,
+                 output_size=512,
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
                  filters=[32, 64, 32],
@@ -53,8 +56,15 @@ class CNN(nn.Module):
                 filters[j], filters[j + 1], stride=strides[j],
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
-        self.train()
 
+        # Define final layer
+        feature_size = int(np.prod(self.feature_extractor(
+            torch.randn(1, *input_space.shape)).shape))
+        self.head = nn.Sequential(
+            nn.Linear(feature_size, output_size),
+            activation())
+
+        self.train()
         self.rgb_norm = rgb_norm
 
     def forward(self, inputs):
@@ -74,4 +84,5 @@ class CNN(nn.Module):
             inputs = inputs / 255.0
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
+        out = self.head(out)
         return out

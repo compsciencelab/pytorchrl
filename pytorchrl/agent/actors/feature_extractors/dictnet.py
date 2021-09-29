@@ -24,7 +24,7 @@ class DictNet(nn.Module):
     activation : func
         Non-linear activation function.
     """
-    def __init__(self, input_space, shared_hidden_sizes=[256, 256], activation=nn.ReLU):
+    def __init__(self, input_space, shared_hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU):
         super(DictNet, self).__init__()
 
         assert isinstance(input_space, gym.spaces.Dict)
@@ -54,7 +54,7 @@ class DictNet(nn.Module):
 
         # Define shared layers
         layers = []
-        sizes = [map_size] + shared_hidden_sizes
+        sizes = [map_size] + shared_hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
             layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
         self.shared_net = nn.Sequential(*layers)

@@ -22,7 +22,7 @@ def main():
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
-    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     if args.cluster:
         ray.init(address="auto")
@@ -34,12 +34,18 @@ def main():
         resources += "{} {}, ".format(k, v)
     print(resources[:-2], flush=True)
 
+    info_keywords = []
+    if args.episodic_life:
+        info_keywords += ['EpisodicReward', 'Lives']
+    if args.clip_rewards:
+        info_keywords += ['ClippedReward']
+
     # 1. Define Train Vector of Envs
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
         env_fn=atari_train_env_factory,
         env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
         vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        info_keywords=('clipped_reward', 'episodic_reward', 'lives'))
+        info_keywords=tuple(info_keywords))
 
     # 2. Define Test Vector of Envs (Optional)
     test_envs_factory, _, _ = VecEnv.create_factory(
@@ -137,6 +143,12 @@ def get_args():
     parser.add_argument(
         '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
+    parser.add_argument(
+        '--clip_rewards', action='store_true', default=False,
+        help='Use a recurrent policy')
+    parser.add_argument(
+        '--episodic_life', action='store_true', default=False,
+        help='Use a recurrent policy')
 
     # PPO specs
     parser.add_argument(
