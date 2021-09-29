@@ -59,7 +59,7 @@ class CNN(nn.Module):
 
         # Define final layer
         feature_size = int(np.prod(self.feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape))
+            torch.randn(1, *input_space.shape)).shape))
         self.head = nn.Sequential(
             nn.Linear(feature_size, output_size),
             activation())
