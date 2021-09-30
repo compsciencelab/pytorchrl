@@ -390,8 +390,6 @@ class PPODBuffer(B):
 
                     if self.potential_demos_val["env{}".format(i + 1)] >= value_thresh or total_demos < self.max_demos:
 
-                        # Place value prediction as reward
-
                         # Add demos to value buffer
                         self.value_demos.append(potential_demo)
 
@@ -422,37 +420,34 @@ class PPODBuffer(B):
 
             try:
 
-                # TODO. finish
-                # last_frame = np.arange(150)[0::self.frame_skip]
-                # demo_act_end = torch.FloatTensor(demo[prl.ACT])[-1]
-                # demo_obs_end = torch.FloatTensor(demo[prl.OBS])[-1]
-                # demo_rew_end = torch.FloatTensor(demo[prl.REW][last_frame:].sum())
-
                 # Load demos tensors
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                # Apply frame skip and add action
                 import ipdb; ipdb.set_trace()
-                demo_act = torch.FloatTensor(demo[prl.ACT])
+                demo_act = torch.FloatTensor(demo[prl.ACT][0::self.frame_skip])
+                demo_obs = torch.FloatTensor(demo[prl.OBS][0::self.frame_skip])
+                demo_rew = torch.FloatTensor(demo[prl.REW][0::self.frame_skip])
+                # demo_rew = torch.FloatTensor(np.sum(demo[prl.REW][0:last_frame + 1].reshape(-1, self.frame_skip), axis=1))
+
+                import ipdb; ipdb.set_trace()
+                len_demo = demo[prl.REW].shape[0]
+                last_frame = np.arange(len_demo)[0::self.frame_skip][-1]
+                if last_frame != len_demo - 1:
+                    demo_act_end = torch.FloatTensor(demo[prl.ACT][-1:])
+                    demo_obs_end = torch.FloatTensor(demo[prl.OBS])[-1:]
+                    demo_rew_end = torch.FloatTensor([demo[prl.REW][last_frame:].sum()])
+                    demo_act = torch.cat([demo_act, demo_act_end])
+                    demo_obs = torch.cat([demo_obs, demo_obs_end])
+                    demo_rew = torch.cat([demo_rew, demo_rew_end])
+
                 new_demo[prl.ACT] = demo_act
-
-                # Apply frame skip and add obs
-                import ipdb; ipdb.set_trace()
-                demo_obs = torch.FloatTensor(demo[prl.OBS])
                 new_demo[prl.OBS] = demo_obs
-
-                # Apply frame skip and add rew
-                import ipdb; ipdb.set_trace()
-                demo_rew = torch.FloatTensor(demo[prl.REW])
                 new_demo[prl.REW] = demo_rew
-                #  np.sum(arr.reshape(-1, self.frame_skip), axis=1)
-
-                # TODO. make sure last transition does not get lost
 
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
-                    "DemoLength": demo[prl.ACT].shape[0],
+                    "DemoLength": demo_act.shape[0],
                     "TotalReward": demo_rew.sum().item()})
                 self.reward_demos.append(new_demo)
                 num_loaded_demos += 1
@@ -516,7 +511,8 @@ class PPODBuffer(B):
 
             # Set next buffer obs to be the starting demo obs
             for k in range(self.frame_stack):
-                self.data[prl.OBS][self.step + 1][env_id][k * self.obs_num_channels:(k + 1) * self.obs_num_channels].copy_(
+                self.data[prl.OBS][self.step + 1][
+                    env_id][k * self.obs_num_channels:(k + 1) * self.obs_num_channels].copy_(
                     self.demos_in_progress["env{}".format(env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
 
         else:
