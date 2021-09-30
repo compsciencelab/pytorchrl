@@ -315,7 +315,8 @@ class PPODBuffer(B):
 
                     # Insert demo obs2 tensor to self.step + 1
                     obs2 = torch.roll(obs, -self.obs_num_channels, dims=1).squeeze(0)
-                    obs2[-self.obs_num_channels:].copy_(self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
+                    obs2[-self.obs_num_channels:].copy_(
+                        self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
@@ -334,7 +335,7 @@ class PPODBuffer(B):
         """ Tracks current episodes looking for potential demos """
 
         for i in range(self.num_envs):
-            
+
             # Copy transition
             # TODO. in theory deepcopy should not be necessary - try without deepcopy!
             for tensor in self.demos_data_fields:
@@ -345,21 +346,13 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
                         copy.deepcopy(sample[tensor][i]).cpu().numpy())
 
-            # for tensor in self.demos_data_fields:
-            #     if tensor in (prl.OBS):
-            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
-            #             sample[tensor][i, -self.obs_num_channels:].cpu().numpy())
-            #     else:
-            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
-            #             sample[tensor][i].cpu().numpy())
-
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
                 i + 1)], sample[prl.VAL][i].item()])
-            
+
             # Handle end of episode
             if sample[prl.DONE2][i] == 1.0:
-                
+
                 # Get candidate demos
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
@@ -387,7 +380,7 @@ class PPODBuffer(B):
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
                     # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
-                else:   # Consider candidate demos for value reward
+                else:  # Consider candidate demos for value reward
 
                     # Find current number of demos, and current value threshold
                     potential_demo["MaxValue"] = self.potential_demos_val[i]
@@ -430,9 +423,9 @@ class PPODBuffer(B):
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                if demo["FrameSkip"] != self.frame_skip:
-                    raise ValueError(
-                        "Env and demo with different frame skip!")
+                # if demo["FrameSkip"] != self.frame_skip:
+                #     raise ValueError(
+                #         "Env and demo with different frame skip!")
 
                 # Add action
                 demo_act = torch.FloatTensor(demo[prl.ACT])
@@ -442,7 +435,7 @@ class PPODBuffer(B):
                 demo_obs = torch.FloatTensor(demo[prl.OBS])
                 new_demo[prl.OBS] = demo_obs
 
-                # Add rew, define success reward threshold
+                # Add rew
                 demo_rew = torch.FloatTensor(demo[prl.REW])
                 new_demo[prl.REW] = demo_rew
 
@@ -512,8 +505,8 @@ class PPODBuffer(B):
 
             # Set next buffer obs to be the starting demo obs
             for k in range(self.frame_stack):
-                self.data[prl.OBS][self.step + 1][
-                    env_id][k * self.obs_num_channels:(k + 1) * self.obs_num_channels].copy_(
+                self.data[prl.OBS][self.step + 1][env_id][
+                k * self.obs_num_channels:(k + 1) * self.obs_num_channels].copy_(
                     self.demos_in_progress["env{}".format(env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
 
         else:
