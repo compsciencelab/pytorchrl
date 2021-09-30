@@ -348,10 +348,10 @@ class PPODBuffer(B):
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        sample[tensor][i, -self.obs_num_channels:]).cpu().numpy()
+                        sample[tensor][i, -self.obs_num_channels:].cpu().numpy())
                 else:
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        sample[tensor][i]).cpu().numpy()
+                        sample[tensor][i].cpu().numpy())
 
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
