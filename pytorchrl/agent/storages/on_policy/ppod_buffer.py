@@ -337,21 +337,21 @@ class PPODBuffer(B):
             
             # Copy transition
             # TODO. in theory deepcopy should not be necessary - try without deepcopy!
-            # for tensor in self.demos_data_fields:
-            #     if tensor in (prl.OBS):
-            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
-            #             copy.deepcopy(sample[tensor][i, -self.obs_num_channels:]).cpu().numpy())
-            #     else:
-            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
-            #             copy.deepcopy(sample[tensor][i]).cpu().numpy())
-
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        sample[tensor][i, -self.obs_num_channels:].cpu().numpy())
+                        copy.deepcopy(sample[tensor][i, -self.obs_num_channels:]).cpu().numpy())
                 else:
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        sample[tensor][i].cpu().numpy())
+                        copy.deepcopy(sample[tensor][i]).cpu().numpy())
+
+            # for tensor in self.demos_data_fields:
+            #     if tensor in (prl.OBS):
+            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
+            #             sample[tensor][i, -self.obs_num_channels:].cpu().numpy())
+            #     else:
+            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
+            #             sample[tensor][i].cpu().numpy())
 
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
