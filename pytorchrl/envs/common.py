@@ -5,7 +5,7 @@ import numpy as np
 
 
 class FrameSkip(gym.Wrapper):
-    def __init__(self, env, skip):
+    def __init__(self, env, skip=1):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
         self._skip = skip
@@ -20,7 +20,6 @@ class FrameSkip(gym.Wrapper):
             if done:
                 break
         last_frame = obs
-
         return last_frame, total_reward, done, info
 
     def reset(self, **kwargs):
