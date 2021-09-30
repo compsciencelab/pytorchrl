@@ -5,7 +5,7 @@ import numpy as np
 
 
 class FrameSkip(gym.Wrapper):
-    def __init__(self, env, skip=4):
+    def __init__(self, env, skip):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
         self._skip = skip

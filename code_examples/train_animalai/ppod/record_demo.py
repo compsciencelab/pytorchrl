@@ -45,8 +45,7 @@ def record():
         env_fn=animal_train_env_factory,
         env_kwargs={
             "arenas_dir": args.arenas_dir,
-#            "frame_skip": args.frame_skip,
-#            "frame_stack": args.frame_stack,
+            "frame_skip": args.frame_skip,
             "inference": True,
         }, vec_env_size=1)
 
@@ -104,7 +103,8 @@ def record():
                     filename,
                     Observation=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
                     Reward=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1)
+                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1),
+                    FrameSkip=args.frame_skip,
                 )
 
                 sys.exit()

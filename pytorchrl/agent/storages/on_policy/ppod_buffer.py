@@ -10,9 +10,6 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
-# TODO. Value demos -> always keep those with the maximum value + UPDATE their values! to be tested
-
-
 class PPODBuffer(B):
     """
     Storage class for PPO+D algorithm.
@@ -57,8 +54,9 @@ class PPODBuffer(B):
     # Data tensors to collect for each demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0, initial_demos_dir=None,
-                 target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, max_demos=51):
+    def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0,
+                 initial_demos_dir=None, target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95,
+                 alpha=10, max_demos=51, save_demo_frequency=10, num_saved_demos=10):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -110,7 +108,8 @@ class PPODBuffer(B):
 
         # Save demos
         self.iter = 0
-        self.save_demos_every = 10
+        self.save_demos_every = save_demo_frequency
+        self.num_saved_demos = num_saved_demos
 
     @classmethod
     def create_factory(cls,
@@ -338,13 +337,21 @@ class PPODBuffer(B):
             
             # Copy transition
             # TODO. in theory deepcopy should not be necessary - try without deepcopy!
+            # for tensor in self.demos_data_fields:
+            #     if tensor in (prl.OBS):
+            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
+            #             copy.deepcopy(sample[tensor][i, -self.obs_num_channels:]).cpu().numpy())
+            #     else:
+            #         self.potential_demos["env{}".format(i + 1)][tensor].append(
+            #             copy.deepcopy(sample[tensor][i]).cpu().numpy())
+
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        copy.deepcopy(sample[tensor][i, -self.obs_num_channels:]).cpu().numpy())
+                        sample[tensor][i, -self.obs_num_channels:]).cpu().numpy()
                 else:
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        copy.deepcopy(sample[tensor][i]).cpu().numpy())
+                        sample[tensor][i]).cpu().numpy()
 
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
@@ -404,7 +411,6 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """
         Load initial demonstrations.
-
         Warning: make sure the frame_skip and frame_stack hyperparameters are
         the same as those used to record the demonstrations!
         """
@@ -420,34 +426,29 @@ class PPODBuffer(B):
 
             try:
 
+                if demo["FrameSkip"] != self.frame_skip:
+                    raise ValueError(
+                        "Env and demo with different frame skip!")
+
                 # Load demos tensors
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                import ipdb; ipdb.set_trace()
-                demo_act = torch.FloatTensor(demo[prl.ACT][0::self.frame_skip])
-                demo_obs = torch.FloatTensor(demo[prl.OBS][0::self.frame_skip])
-                demo_rew = torch.FloatTensor(demo[prl.REW][0::self.frame_skip])
-                # demo_rew = torch.FloatTensor(np.sum(demo[prl.REW][0:last_frame + 1].reshape(-1, self.frame_skip), axis=1))
-
-                import ipdb; ipdb.set_trace()
-                len_demo = demo[prl.REW].shape[0]
-                last_frame = np.arange(len_demo)[0::self.frame_skip][-1]
-                if last_frame != len_demo - 1:
-                    demo_act_end = torch.FloatTensor(demo[prl.ACT][-1:])
-                    demo_obs_end = torch.FloatTensor(demo[prl.OBS])[-1:]
-                    demo_rew_end = torch.FloatTensor([demo[prl.REW][last_frame:].sum()])
-                    demo_act = torch.cat([demo_act, demo_act_end])
-                    demo_obs = torch.cat([demo_obs, demo_obs_end])
-                    demo_rew = torch.cat([demo_rew, demo_rew_end])
-
+                # Add action
+                demo_act = torch.FloatTensor(demo[prl.ACT])
                 new_demo[prl.ACT] = demo_act
+
+                # Add obs
+                demo_obs = torch.FloatTensor(demo[prl.OBS])
                 new_demo[prl.OBS] = demo_obs
+
+                # Add rew, define success reward threshold
+                demo_rew = torch.FloatTensor(demo[prl.REW])
                 new_demo[prl.REW] = demo_rew
 
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
-                    "DemoLength": demo_act.shape[0],
+                    "DemoLength": demo[prl.ACT].shape[0],
                     "TotalReward": demo_rew.sum().item()})
                 self.reward_demos.append(new_demo)
                 num_loaded_demos += 1
@@ -562,7 +563,7 @@ class PPODBuffer(B):
                 # probs = probs / probs.sum()
                 # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
 
-    def save_demos(self, num_rewards_demos=10):
+    def save_demos(self):
         """
         Saves the top `num_rewards_demos` demos from the reward demos buffer and
         the top `num_value_demos` demos from the value demos buffer.
@@ -571,7 +572,8 @@ class PPODBuffer(B):
         if self.target_demos_dir and not os.path.exists(self.target_demos_dir):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
-        reward_ranking = np.flip(np.array([d["TotalReward"] for d in self.reward_demos]).argsort())[:num_rewards_demos]
+        reward_ranking = np.flip(np.array(
+            [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
             np.savez(

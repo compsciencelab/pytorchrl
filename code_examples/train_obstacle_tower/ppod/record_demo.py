@@ -55,8 +55,7 @@ def record():
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
         env_kwargs={
-            # "frame_skip": args.frame_skip,
-            # "frame_stack": args.frame_stack,
+            "frame_skip": args.frame_skip,
             "reward_shape": True, "realtime": True},
         vec_env_size=1)
 
@@ -116,13 +115,12 @@ def record():
                     filename = os.path.join(
                         args.demos_dir, "obstacletower_demo_{}".format(num))
 
-                import ipdb; ipdb.set_trace()  # TODO. how to use less memory?
-
                 np.savez(
                     filename,
                     Observation=np.array(np.stack(obs_rollouts).astype(np.uint8)).squeeze(1),
                     Reward=np.array(np.stack(rews_rollouts).astype(np.float16)).squeeze(1),
-                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.int8)), axis=1)
+                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.int8)), axis=1),
+                    FrameSkip=args.frame_skip,
                 )
 
                 sys.exit()
