@@ -459,6 +459,7 @@ class PPODBuffer(B):
             except Exception:
                 print("Failed to load demo!")
 
+        self.num_loaded_demos = num_loaded_demos
         print("\nLOADED {} DEMOS".format(num_loaded_demos))
 
     def sample_demo(self, env_id):
@@ -558,7 +559,7 @@ class PPODBuffer(B):
             for _ in range(len(self.reward_demos) - self.max_demos):
 
                 # Option 1: FIFO (original paper)
-                del self.reward_demos[1]
+                del self.reward_demos[self.num_loaded_demos]
 
                 # Option 2
                 # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])

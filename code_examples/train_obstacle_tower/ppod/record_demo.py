@@ -35,18 +35,18 @@ def create_action():
         print("PRESSED SPACE")
         action[2] = 1
 
-    # if "d" in pressed_keys:
-    #     print("PRESSED D")
-    #     action[3] = 1
-    # elif "a" in pressed_keys:
-    #     print("PRESSED A")
-    #     action[3] = 2
-
     return tuple(action)
 
 
 def record():
     args = get_args()
+
+    if args.num_actions == 6:
+        action_lookup = action_lookup_6
+    elif args.num_actions == 7:
+        action_lookup = action_lookup_7
+    elif args.num_actions == 8:
+        action_lookup = action_lookup_8
 
     if not os.path.isdir(args.demos_dir):
         os.makedirs(args.demos_dir)
@@ -81,29 +81,28 @@ def record():
 
             action = create_action()
 
-
-            if tuple(action) not in action_lookup_6.keys():
+            if args.num_actions == 6 and tuple(action) not in action_lookup_6.keys():
                 action = (1, 0, 0, 0)
-            # if tuple(action) not in action_lookup_7.keys():
-            #     action = (0, 0, 0, 0)
-            # if tuple(action) not in action_lookup_8.keys():
-            #     action = (0, 0, 0, 0)
+            elif args.num_actions == 7 and tuple(action) not in action_lookup_7.keys():
+                 action = (0, 0, 0, 0)
+            elif args.num_actions == 8 and tuple(action) not in action_lookup_8.keys():
+                 action = (0, 0, 0, 0)
 
             print("tuple action:", action)
             print("int action:", action)
             print()
 
             obs, reward, done, info = env.step(torch.tensor(
-                [action_lookup_6[action]]).unsqueeze(0))
+                [action_lookup[action]]).unsqueeze(0))
 
             obs_rollouts.append(obs)
             rews_rollouts.append(reward)
-            actions_rollouts.append(action_lookup_6[action])
+            actions_rollouts.append(action_lookup[action])
 
             step += 1
             episode_reward += reward
 
-            # time.sleep(0.01)
+            time.sleep(0.05)
 
             if done:
 
