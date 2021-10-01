@@ -7,7 +7,7 @@ import threading
 import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs.obstacle_tower.utils import action_lookup_8
+from pytorchrl.envs.obstacle_tower.utils import action_lookup_6, action_lookup_7, action_lookup_8
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
 from code_examples.train_obstacle_tower.ppod.train import get_args
 
@@ -56,7 +56,7 @@ def record():
         env_fn=obstacle_train_env_factory,
         env_kwargs={
             "frame_skip": args.frame_skip,
-            "reward_shape": True, "realtime": True},
+            "reward_shape": False, "realtime": True},
         vec_env_size=1)
 
     # Start recording
@@ -81,20 +81,24 @@ def record():
 
             action = create_action()
 
-            print(action)
 
-            if tuple(action) not in action_lookup_8.keys():
-                action = (0, 0, 0, 0)
+            if tuple(action) not in action_lookup_6.keys():
+                action = (1, 0, 0, 0)
+            # if tuple(action) not in action_lookup_7.keys():
+            #     action = (0, 0, 0, 0)
+            # if tuple(action) not in action_lookup_8.keys():
+            #     action = (0, 0, 0, 0)
 
-            print(action)
+            print("tuple action:", action)
+            print("int action:", action)
             print()
 
             obs, reward, done, info = env.step(torch.tensor(
-                [action_lookup_8[action]]).unsqueeze(0))
+                [action_lookup_6[action]]).unsqueeze(0))
 
             obs_rollouts.append(obs)
             rews_rollouts.append(reward)
-            actions_rollouts.append(action_lookup_8[action])
+            actions_rollouts.append(action_lookup_6[action])
 
             step += 1
             episode_reward += reward

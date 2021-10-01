@@ -42,7 +42,6 @@ class MLP(nn.Module):
 
         self.train()
 
-
     def forward(self, inputs):
         """
         Forward pass Neural Network

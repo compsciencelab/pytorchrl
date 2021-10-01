@@ -217,7 +217,6 @@ def get_args():
         '--demos-dir', default='/tmp/pybullet_ppo',
         help='target directory to store and retrieve demos.')
 
-
     # Feature extractor model specs
     parser.add_argument(
         '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
