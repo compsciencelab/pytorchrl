@@ -433,9 +433,9 @@ class PPODBuffer(B):
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                # if demo["FrameSkip"] != self.frame_skip:
-                #     raise ValueError(
-                #         "Env and demo with different frame skip!")
+                if demo["FrameSkip"] != self.frame_skip:
+                    raise ValueError(
+                        "Env and demo with different frame skip!")
 
                 # Add action
                 demo_act = torch.FloatTensor(demo[prl.ACT])
