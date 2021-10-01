@@ -46,6 +46,10 @@ class PPODBuffer(B):
         GAE lambda parameter.
     max_demos : int
         Maximum number of demos to keep between reward and value demos.
+    save_demo_frequency : int
+        Save top demos every  `save_demo_frequency`th data collection.
+    num_saved_demos : int
+        Number of top reward demos to save.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -122,7 +126,9 @@ class PPODBuffer(B):
                        phi=0.3,
                        gae_lambda=0.95,
                        alpha=10,
-                       max_demos=51):
+                       max_demos=51,
+                       save_demo_frequency=10,
+                       num_saved_demos=10):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -148,6 +154,10 @@ class PPODBuffer(B):
             GAE lambda parameter.
         max_demos : int
             Maximum number of demos to keep between reward and value demos.
+        save_demo_frequency : int
+            Save top demos every  `save_demo_frequency`th data collection.
+        num_saved_demos : int
+            Number of top reward demos to save.
 
         Returns
         -------
@@ -159,7 +169,7 @@ class PPODBuffer(B):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, frame_stack,
                        frame_skip, initial_demos_dir, target_demos_dir, rho,
-                       phi, gae_lambda, alpha, max_demos)
+                       phi, gae_lambda, alpha, max_demos, save_demo_frequency, num_saved_demos)
 
         return create_buffer_instance
 
@@ -202,16 +212,16 @@ class PPODBuffer(B):
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
 
-    def get_obs_num_channels(self, sample):
+    def get_num_channels_obs(self, sample):
         """
-        Obtain obs_num_channels and set it as class attribute.
+        Obtain num_channels_obs and set it as class attribute.
 
         Parameters
         ----------
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
-        self.obs_num_channels = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
+        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
 
     def insert_transition(self, sample):
         """
@@ -226,7 +236,7 @@ class PPODBuffer(B):
         # Data tensors lazy initialization, only executed the first time
         if self.size == 0 and self.data[prl.OBS] is None:
             self.init_tensors(sample)
-            self.get_obs_num_channels(sample)
+            self.get_num_channels_obs(sample)
 
         # Insert sample data
         for k in sample:
@@ -314,8 +324,8 @@ class PPODBuffer(B):
                     self.data[prl.DONE][self.step + 1][i].copy_(torch.zeros(1))
 
                     # Insert demo obs2 tensor to self.step + 1
-                    obs2 = torch.roll(obs, -self.obs_num_channels, dims=1).squeeze(0)
-                    obs2[-self.obs_num_channels:].copy_(
+                    obs2 = torch.roll(obs, -self.num_channels_obs, dims=1).squeeze(0)
+                    obs2[-self.num_channels_obs:].copy_(
                         self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
@@ -341,7 +351,7 @@ class PPODBuffer(B):
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        copy.deepcopy(sample[tensor][i, -self.obs_num_channels:]).cpu().numpy())
+                        copy.deepcopy(sample[tensor][i, -self.num_channels_obs:]).cpu().numpy())
                 else:
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
                         copy.deepcopy(sample[tensor][i]).cpu().numpy())
@@ -506,7 +516,7 @@ class PPODBuffer(B):
             # Set next buffer obs to be the starting demo obs
             for k in range(self.frame_stack):
                 self.data[prl.OBS][self.step + 1][env_id][
-                k * self.obs_num_channels:(k + 1) * self.obs_num_channels].copy_(
+                k * self.num_channels_obs:(k + 1) * self.num_channels_obs].copy_(
                     self.demos_in_progress["env{}".format(env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
 
         else:
