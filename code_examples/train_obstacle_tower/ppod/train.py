@@ -208,7 +208,7 @@ def get_args():
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
     parser.add_argument(
-        '--demos_6_actions-dir', default='/tmp/pybullet_ppo',
+        '--demos-dir', default='/tmp/pybullet_ppo',
         help='target directory to store and retrieve demos_6_actions.')
 
     # Feature extractor model specs
