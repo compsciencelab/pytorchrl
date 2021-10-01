@@ -18,6 +18,7 @@ class FixupCNN(nn.Module):
         Whether or not to divide input by 255.
     """
     def __init__(self, input_space, output_size=256, rgb_norm=True):
+
         super(FixupCNN, self).__init__()
 
         self.rgb_norm = rgb_norm
