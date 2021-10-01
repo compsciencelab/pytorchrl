@@ -8,7 +8,7 @@ from pytorchrl.envs.animal_olympics.wrappers import RetroEnv, FilterActionEnv, L
 def animal_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
         arenas_dir=None, reduced_actions=True, reward_shape=True, exe_path=None,
-        inference=False, reward_delay=1, seed=1):
+        realtime=False, reward_delay=1, seed=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -34,6 +34,8 @@ def animal_train_env_factory(
         Path to obstacle environment executable.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
+    realtime : bool
+        Whether or not to render the environment frames in real time.
 
     Returns
     -------
@@ -56,7 +58,7 @@ def animal_train_env_factory(
         seed=id,
         n_arenas=1,
         arenas_configurations=None,
-        inference=inference)
+        inference=realtime)
 
     env = RetroEnv(env)
 
@@ -83,7 +85,7 @@ def animal_train_env_factory(
 def animal_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1,
         arenas_dir=None, reduced_actions=True, reward_shape=False, exe_path=None,
-        inference=False, reward_delay=1, seed=1):
+        realtime=False, reward_delay=1, seed=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -111,6 +113,8 @@ def animal_test_env_factory(
         Whether or not to render the environment in real time.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
+    realtime : bool
+        Whether or not to render the environment frames in real time.
 
     Returns
     -------
@@ -132,7 +136,7 @@ def animal_test_env_factory(
         seed=id,
         n_arenas=1,
         arenas_configurations=None,
-        inference=inference)
+        inference=realtime)
 
     env = RetroEnv(env)
 

@@ -29,7 +29,7 @@ class CNN(nn.Module):
                  output_size=512,
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
-                 filters=[32, 64, 32],
+                 filters=[32, 64, 64],
                  kernel_sizes=[8, 4, 3]):
 
         super(CNN, self).__init__()

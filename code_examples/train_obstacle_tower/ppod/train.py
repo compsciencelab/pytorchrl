@@ -17,7 +17,6 @@ from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
 
 # Testing
-import ipdb; ipdb.set_trace()
 from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
@@ -52,7 +51,13 @@ def main():
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=obstacle_train_env_factory,
-            env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack, "reward_shape": True},
+            env_kwargs={
+                "frame_skip": args.frame_skip,
+                "frame_stack": args.frame_stack,
+                "reward_shape": args.reward_shape,
+                "reduced_actions": args.reduced_action_space,
+                "num_actions": args.num_actions,
+            },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=('floor', 'start', 'seed'))
 
@@ -70,7 +75,7 @@ def main():
 
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps,
+            size=args.num_steps, frame_stack=args.frame_stack, frame_skip=args.frame_skip,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_demos_dir="/tmp/obstacle_demos/",
             gae_lambda=args.gae_lambda,
@@ -152,6 +157,15 @@ def get_args():
     parser.add_argument(
         '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
+    parser.add_argument(
+        '--reward-shape', action='store_true', default=False,
+        help='Whether or not to use reward shaping')
+    parser.add_argument(
+        '--reduced-action-space', action='store_true', default=False,
+        help='Whether or not to use a reduced action space.')
+    parser.add_argument(
+        '--num-actions', type=int, default=6,
+        help='Size of the reduced action space (6, 7 or 8) (default: 6)')
 
     # PPOD specs
     parser.add_argument(

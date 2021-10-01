@@ -48,7 +48,13 @@ def main():
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=obstacle_train_env_factory,
-            env_kwargs={"frame_skip": args.frame_skip, "frame_stack": args.frame_stack, "reward_shape": True},
+            env_kwargs={
+                "frame_skip": args.frame_skip,
+                "frame_stack": args.frame_stack,
+                "reward_shape": args.reward_shape,
+                "reduced_actions": args.reduced_action_space,
+                "num_actions": args.num_actions,
+            },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=('floor', 'start', 'seed'))
 
@@ -62,10 +68,12 @@ def main():
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model, recurrent_nets=args.recurrent_nets)
+            restart_model=args.restart_model,
+            recurrent_nets=args.recurrent_nets)
 
         # 4. Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        storage_factory = GAEBuffer.create_factory(
+            size=args.num_steps, gae_lambda=args.gae_lambda)
 
         # 5. Define scheme
         params = {}
@@ -143,6 +151,15 @@ def get_args():
     parser.add_argument(
         '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
+    parser.add_argument(
+        '--reward-shape', action='store_true', default=False,
+        help='Whether or not to use reward shaping')
+    parser.add_argument(
+        '--reduced-action-space', action='store_true', default=False,
+        help='Whether or not to use a reduced action space.')
+    parser.add_argument(
+        '--num-actions', type=int, default=6,
+        help='Size of the reduced action space (6, 7 or 8) (default: 6)')
 
     # PPO specs
     parser.add_argument(

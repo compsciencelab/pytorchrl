@@ -91,6 +91,7 @@ def main():
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
+            frame_stack=args.frame_stack, frame_skip=args.frame_skip,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_demos_dir="/tmp/animalai_demos/",
             gae_lambda=args.gae_lambda,
@@ -215,7 +216,6 @@ def get_args():
     parser.add_argument(
         '--demos-dir', default='/tmp/pybullet_ppo',
         help='target directory to store and retrieve demos.')
-
 
     # Feature extractor model specs
     parser.add_argument(
