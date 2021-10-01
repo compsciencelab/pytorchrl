@@ -69,6 +69,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model=args.restart_model,
+            feature_extractor_network=get_feature_extractor(args.nn),
             recurrent_nets=args.recurrent_nets)
 
         # 4. Define rollouts storage
