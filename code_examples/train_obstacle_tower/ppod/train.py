@@ -77,7 +77,7 @@ def main():
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, frame_stack=args.frame_stack, frame_skip=args.frame_skip,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos_6_actions/",
             target_demos_dir="/tmp/obstacle_demos/",
             gae_lambda=args.gae_lambda,
         )
@@ -208,8 +208,8 @@ def get_args():
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
     parser.add_argument(
-        '--demos-dir', default='/tmp/pybullet_ppo',
-        help='target directory to store and retrieve demos.')
+        '--demos_6_actions-dir', default='/tmp/pybullet_ppo',
+        help='target directory to store and retrieve demos_6_actions.')
 
     # Feature extractor model specs
     parser.add_argument(
