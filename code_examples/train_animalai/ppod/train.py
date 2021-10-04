@@ -14,9 +14,6 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
-
-
-# Testing
 from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
