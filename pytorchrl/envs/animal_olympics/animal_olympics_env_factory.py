@@ -127,7 +127,7 @@ def animal_test_env_factory(
     if exe_path:
         exe = exe_path
     else:
-        exe = os.path.join(os.path.dirname(animalai.__file__), '../../env/AnimalAI')
+        exe = os.path.join(os.path.dirname(animalai.__file__), '../../examples/env/AnimalAI')
 
     id = seed + index_grad_worker * 10000 + 1000 * index_col_worker + index_env * 100
     env = AnimalAIGym(
