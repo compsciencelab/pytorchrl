@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from pytorchrl.agent.actors.utils import init
 
 
 class GruNet(nn.Module):
@@ -16,7 +15,7 @@ class GruNet(nn.Module):
     activation : func
         Non-linear activation function.
     """
-    def __init__(self, input_size, output_size=512, activation=nn.ReLU):
+    def __init__(self, input_size, output_size=256, activation=nn.ReLU):
 
         super(GruNet, self).__init__()
 
