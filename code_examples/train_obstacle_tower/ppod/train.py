@@ -74,12 +74,14 @@ def main():
             feature_extractor_network=get_feature_extractor(args.nn),
             restart_model=args.restart_model, recurrent_nets=args.recurrent_nets)
 
+        size = args.num_steps, rho = args.rho, phi = args.phi,
+        frame_stack = args.frame_stack, frame_skip = args.frame_skip,
+
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps, frame_stack=args.frame_stack, frame_skip=args.frame_skip,
+            size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
+            frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos_6_actions/",
-            target_demos_dir="/tmp/obstacle_demos/",
-            gae_lambda=args.gae_lambda,
         )
 
         # 6. Define scheme
@@ -174,6 +176,12 @@ def get_args():
     parser.add_argument(
         '--eps', type=float, default=1e-5,
         help='Adam optimizer epsilon (default: 1e-5)')
+    parser.add_argument(
+        '--rho', type=float, default=0.3,
+        help='PPO+D rho parameter (default: 0.3)')
+    parser.add_argument(
+        '--phi', type=float, default=0.0,
+        help='PPO+D phi parameter (default: 0.0)')
     parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')

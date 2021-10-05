@@ -11,6 +11,8 @@ num_steps: 1000
 num_mini_batch: 8
 clip_param: 0.15
 ppo_epoch: 2
+rho: 0.3
+phi: 0.0
 gae_lambda: 0.95
 value_loss_coef: 0.1
 max_grad_norm: 0.5
