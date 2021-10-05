@@ -112,11 +112,11 @@ def record():
 
                 num = 0
                 filename = os.path.join(
-                    args.demos_dir, "obstacletower_demo_{}".format(num))
+                    args.demos_dir, "reward_demo_{}".format(num + 1))
                 while os.path.exists(filename + ".npz"):
                     num += 1
                     filename = os.path.join(
-                        args.demos_dir, "obstacletower_demo_{}".format(num))
+                        args.demos_dir, "reward_demo_{}".format(num + 1))
 
                 np.savez(
                     filename,
