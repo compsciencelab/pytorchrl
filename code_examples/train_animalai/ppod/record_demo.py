@@ -90,11 +90,11 @@ def record():
 
                 num = 0
                 filename = os.path.join(
-                    args.demos_dir, "reward_demo_{}".format(num + 1))
+                    args.demos_dir, "human_demo_{}".format(num + 1))
                 while os.path.exists(filename + ".npz"):
                     num += 1
                     filename = os.path.join(
-                        args.demos_dir, "reward_demo_{}".format(num + 1))
+                        args.demos_dir, "human_demo_{}".format(num + 1))
 
                 for action in actions_rollouts:
                     assert action in expand.keys()
