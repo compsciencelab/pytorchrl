@@ -1,26 +1,27 @@
-experiment_name: PPOD_AnimalAI_Hard_Arena
-agent_name: AnimalAgent
+experiment_name: Obstacle_Tower
+agent_name: PPO
 wandb_key: null
-num_env_steps : 10000000000
+num_env_steps : 100_000_000
 log_dir: /tmp/animal_ppod
 gamma: 0.998
 save_interval: 100000
 max_time: 86400
-num_env_processes: 14
+num_env_processes: 16
 num_steps: 1000
-num_mini_batch: 6
+num_mini_batch: 8
 clip_param: 0.15
-ppo_epoch: 4
+ppo_epoch: 2
 gae_lambda: 0.95
 value_loss_coef: 0.1
 max_grad_norm: 0.5
 entropy_coef: 0.02
 recurrent_nets: True
-reward_shape: True
+reward_shape: False
 reduced_action_space: True
 num_actions: 6
-lr: 0.00001
-nn: CNN
+eps: 0.00001
+lr: 0.0004
+nn: Fixup
 frame_skip: 2
 frame_stack: 4
 num_grad_workers: 1
