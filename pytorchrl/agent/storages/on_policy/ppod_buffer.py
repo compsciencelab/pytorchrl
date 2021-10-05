@@ -48,8 +48,10 @@ class PPODBuffer(B):
         PPO+D alpha parameter
     gae_lambda : float
         GAE lambda parameter.
-    buffer_total_demo_capacity : int
+    total_buffer_demo_capacity : int
         Maximum number of demos to keep between reward and value demos.
+    save_demos_prefix : str
+        Prefix string to add to the filename of saved demos.
     save_demos_every : int
         Save top demos every  `save_demo_frequency`th data collection.
     num_reward_demos_to_save : int
@@ -66,9 +68,9 @@ class PPODBuffer(B):
 
     def __init__(self, size, device, actor, algorithm, envs,
                  frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
-                 alpha=10, buffer_total_demo_capacity=51,  initial_reward_demos_dir=None,
+                 alpha=10, total_buffer_demo_capacity=51,  initial_reward_demos_dir=None,
                  initial_value_demos_dir=None,  target_reward_demos_dir=None, target_value_demos_dir=None,
-                 save_demos_every=10, num_reward_demos_to_save=10, num_value_demos_to_save=0):
+                 save_demos_prefix=None, save_demos_every=10, num_reward_demos_to_save=10, num_value_demos_to_save=0):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -88,14 +90,21 @@ class PPODBuffer(B):
         self.initial_phi = phi
         self.frame_skip = frame_skip
         self.frame_stack = frame_stack
-        self.max_demos = buffer_total_demo_capacity
+        self.max_demos = total_buffer_demo_capacity
         self.save_demos_every = save_demos_every
+        self.save_demos_prefix = save_demos_prefix
         self.num_reward_demos_to_save = num_reward_demos_to_save
         self.num_value_demos_to_save = num_value_demos_to_save
         self.initial_reward_demos_dir = initial_reward_demos_dir
         self.target_reward_demos_dir = target_reward_demos_dir
         self.initial_value_demos_dir = initial_value_demos_dir
         self.target_value_demos_dir = target_value_demos_dir
+
+        # Data parameters
+        self.demo_obs_dtype = np.float32
+        self.demo_obs_dtype = np.float32
+        self.demo_obs_dtype = np.float32
+        self.num_channels_obs = None  # Lazy initialization
 
         # Reward and Value buffers
         self.reward_demos = []
@@ -123,9 +132,10 @@ class PPODBuffer(B):
 
     @classmethod
     def create_factory(cls, size, frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
-                 alpha=10, buffer_total_demo_capacity=51,  initial_reward_demos_dir=None,
-                 initial_value_demos_dir=None,  target_reward_demos_dir=None, target_value_demos_dir=None,
-                 save_demos_every=10, num_reward_demos_to_save=10, num_value_demos_to_save=0):
+                       alpha=10, total_buffer_demo_capacity=51, initial_reward_demos_dir=None,
+                       initial_value_demos_dir=None, target_reward_demos_dir=None, target_value_demos_dir=None,
+                       save_demos_prefix=None, save_demos_every=10, num_reward_demos_to_save=10,
+                       num_value_demos_to_save=0):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -153,8 +163,10 @@ class PPODBuffer(B):
             PPO+D alpha parameter
         gae_lambda : float
             GAE lambda parameter.
-        buffer_total_demo_capacity : int
+        total_buffer_demo_capacity : int
             Maximum number of demos to keep between reward and value demos.
+        save_demos_prefix : str
+            Prefix string to add to the filename of saved demos.
         save_demos_every : int
             Save top demos every  `save_demo_frequency`th data collection.
         num_reward_demos_to_save : int
@@ -172,9 +184,9 @@ class PPODBuffer(B):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs,
                        frame_stack, frame_skip, rho, phi, gae_lambda,
-                       alpha, buffer_total_demo_capacity, initial_reward_demos_dir,
+                       alpha, total_buffer_demo_capacity, initial_reward_demos_dir,
                        initial_value_demos_dir, target_reward_demos_dir, target_value_demos_dir,
-                       save_demos_every, num_reward_demos_to_save, num_value_demos_to_save)
+                       save_demos_prefix, save_demos_every, num_reward_demos_to_save, num_value_demos_to_save)
 
         return create_buffer_instance
 
@@ -425,11 +437,12 @@ class PPODBuffer(B):
 
         # Add original demonstrations
         num_loaded_reward_demos = 0
+        num_loaded_value_demos = 0
         initial_reward_demos = glob.glob(initial_reward_demos_dir + '/*.npz')
         initial_value_demos = glob.glob(initial_value_demos_dir + '/*.npz')
 
         if len(initial_reward_demos) + len(initial_value_demos) > self.max_demos:
-            raise ValueError("demo dir contains more than self.max_demos demonstrations")
+            raise ValueError("demo dir contains more than ´total_buffer_demo_capacity´")
 
         for demo_file in initial_reward_demos:
 
@@ -444,16 +457,19 @@ class PPODBuffer(B):
                         "Env and demo with different frame skip!")
 
                 # Add action
-                demo_act = torch.FloatTensor(demo[prl.ACT])
-                new_demo[prl.ACT] = demo_act
+                demo_act = demo[prl.ACT]
+                self.demo_act_dtype = demo_act.dtype
+                new_demo[prl.ACT] = torch.FloatTensor(demo_act)
 
                 # Add obs
-                demo_obs = torch.FloatTensor(demo[prl.OBS])
-                new_demo[prl.OBS] = demo_obs
+                demo_obs = demo[prl.OBS]
+                self.demo_obs_dtype = demo_obs.dtype
+                new_demo[prl.OBS] = torch.FloatTensor(demo_obs)
 
                 # Add rew
-                demo_rew = torch.FloatTensor(demo[prl.REW])
-                new_demo[prl.REW] = demo_rew
+                demo_rew = demo[prl.REW]
+                self.demo_rew_dtype = demo_obs.dtype
+                new_demo[prl.REW] = torch.FloatTensor(demo_rew)
 
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
@@ -473,17 +489,24 @@ class PPODBuffer(B):
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
+                if demo["FrameSkip"] != self.frame_skip:
+                    raise ValueError(
+                        "Env and demo with different frame skip!")
+
                 # Add action
-                demo_act = torch.FloatTensor(demo[prl.ACT])
-                new_demo[prl.ACT] = demo_act
+                demo_act = demo[prl.ACT]
+                self.demo_act_dtype = demo_act.dtype
+                new_demo[prl.ACT] = torch.FloatTensor(demo_act)
 
                 # Add obs
-                demo_obs = torch.FloatTensor(demo[prl.OBS])
-                new_demo[prl.OBS] = demo_obs
+                demo_obs = demo[prl.OBS]
+                self.demo_obs_dtype = demo_obs.dtype
+                new_demo[prl.OBS] = torch.FloatTensor(demo_obs)
 
                 # Add rew
-                demo_rew = torch.FloatTensor(demo[prl.REW])
-                new_demo[prl.REW] = demo_rew
+                demo_rew = demo[prl.REW]
+                self.demo_rew_dtype = demo_obs.dtype
+                new_demo[prl.REW] = torch.FloatTensor(demo_rew)
 
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
@@ -492,13 +515,15 @@ class PPODBuffer(B):
                     "MaxValue": demo["MaxValue"],  # Will be updated after first replay
                 })
                 self.value_demos.append(new_demo)
-                num_loaded_reward_demos += 1
+                num_loaded_value_demos += 1
 
             except Exception:
                 print("Failed to load value demo!")
 
         self.num_loaded_reward_demos = num_loaded_reward_demos
-        print("\nLOADED {} REWARD DEMOS".format(num_loaded_reward_demos))
+        self.num_loaded_value_demos = num_loaded_value_demos
+        print("\nLOADED {} REWARD DEMOS AND {} VALUE DEMOS".format(
+            num_loaded_reward_demos, num_loaded_value_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demos, with probability phi insert value demos."""
@@ -597,9 +622,10 @@ class PPODBuffer(B):
             for _ in range(len(self.reward_demos) - self.max_demos):
 
                 # Option 1: FIFO (original paper)
+                # del self.reward_demos[1]
                 del self.reward_demos[self.num_loaded_reward_demos]
 
-                # Option 2
+                # Option 2: pop longer demos
                 # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
                 # probs[0] = 0.0  # Original demo is never ejected
                 # probs = probs / probs.sum()
@@ -618,11 +644,13 @@ class PPODBuffer(B):
             [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_reward_demos_to_save]
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_reward_demos_dir, "reward_demo_{}".format(num + 1))
+            if self.save_demos_prefix:
+                filename = "{}_{}".format(self.save_demos_prefix, filename)
             np.savez(
                 filename,
-                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
+                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
+                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
+                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
                 FrameSkip=self.frame_skip,
             )
 
@@ -633,11 +661,13 @@ class PPODBuffer(B):
             [d["MaxValue"] for d in self.value_demos]).argsort())[:self.num_value_demos_to_save]
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_value_demos_dir, "value_demo_{}".format(num + 1))
+            if self.save_demos_prefix:
+                filename = "{}_{}".format(self.save_demos_prefix, filename)
             np.savez(
                 filename,
-                Observation=np.array(self.value_demos[demo_pos][prl.OBS]).astype(np.float32),
-                Reward=np.array(self.value_demos[demo_pos][prl.REW]).astype(np.float32),
-                Action=np.array(self.value_demos[demo_pos][prl.ACT]).astype(np.float32),
+                Observation=np.array(self.value_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
+                Reward=np.array(self.value_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
+                Action=np.array(self.value_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
                 MaxValue=self.value_demos[demo_pos]["MaxValue"],
                 FrameSkip=self.frame_skip,
             )
