@@ -329,6 +329,7 @@ class PPODBuffer(B):
                     if "MaxValue" in self.demos_in_progress["env{}".format(i + 1)]["Demo"].keys():
                         for value_demo in self.value_demos:
                             # If demo still in buffer, update MaxValue
+                            # TODO. consider soft update of "MaxValue", specially if it comes from another agent!
                             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == value_demo["ID"]:
                                 value_demo["MaxValue"] = self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]
 
@@ -435,11 +436,10 @@ class PPODBuffer(B):
         the same as those used to record the demonstrations!
         """
 
-        # Add original demonstrations
         num_loaded_reward_demos = 0
         num_loaded_value_demos = 0
-        initial_reward_demos = glob.glob(initial_reward_demos_dir + '/*.npz')
-        initial_value_demos = glob.glob(initial_value_demos_dir + '/*.npz')
+        initial_reward_demos = glob.glob(initial_reward_demos_dir + '/*.npz') if initial_reward_demos_dir else []
+        initial_value_demos = glob.glob(initial_value_demos_dir + '/*.npz') if initial_value_demos_dir else []
 
         if len(initial_reward_demos) + len(initial_value_demos) > self.max_demos:
             raise ValueError("demo dir contains more than ´total_buffer_demo_capacity´")
@@ -643,11 +643,11 @@ class PPODBuffer(B):
         reward_ranking = np.flip(np.array(
             [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_reward_demos_to_save]
         for num, demo_pos in enumerate(reward_ranking):
-            filename = os.path.join(self.target_reward_demos_dir, "reward_demo_{}".format(num + 1))
+            filename = "reward_demo_{}".format(num + 1)
             if self.save_demos_prefix:
                 filename = "{}_{}".format(self.save_demos_prefix, filename)
             np.savez(
-                filename,
+                os.path.join(self.target_reward_demos_dir, filename),
                 Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
                 Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
                 Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
@@ -660,11 +660,11 @@ class PPODBuffer(B):
         reward_ranking = np.flip(np.array(
             [d["MaxValue"] for d in self.value_demos]).argsort())[:self.num_value_demos_to_save]
         for num, demo_pos in enumerate(reward_ranking):
-            filename = os.path.join(self.target_value_demos_dir, "value_demo_{}".format(num + 1))
+            filename = "value_demo_{}".format(num + 1)
             if self.save_demos_prefix:
                 filename = "{}_{}".format(self.save_demos_prefix, filename)
             np.savez(
-                filename,
+                os.path.join(self.target_value_demos_dir, filename),
                 Observation=np.array(self.value_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
                 Reward=np.array(self.value_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
                 Action=np.array(self.value_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),

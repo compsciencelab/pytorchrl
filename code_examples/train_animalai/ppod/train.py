@@ -90,13 +90,13 @@ def main():
             size=args.num_steps, rho=args.rho, phi=args.phi,
             frame_stack=args.frame_stack, frame_skip=args.frame_skip,
             gae_lambda=args.gae_lambda,
-            initial_value_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+            initial_reward_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_reward_demos_dir="/tmp/animalai_demos/reward_demos/",
             target_value_demos_dir="/tmp/animalai_demos/value_demos/",
             save_demos_prefix="test",
             save_demos_every=10,
-            num_reward_demos_to_save=10,
-            num_value_demos_to_save=10
+            num_reward_demos_to_save=3,
+            num_value_demos_to_save=3
         )
 
         # 5. Define scheme
