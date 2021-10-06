@@ -38,7 +38,7 @@ class PPODBuffer(B):
         Path to directory containing other agent initial demonstrations.
     initial_value_demos_dir : str
         Path to directory containing value initial demonstrations.
-    target_reward_demos_dir : str
+    target_agent_demos_dir : str
         Path to directory where best reward demonstrations should be saved.
     target_value_demos_dir : str
         Path to directory where best value demonstrations should be saved.
@@ -71,7 +71,7 @@ class PPODBuffer(B):
     def __init__(self, size, device, actor, algorithm, envs,
                  frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
                  alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,  initial_agent_demos_dir=None,
-                 initial_value_demos_dir=None,  target_reward_demos_dir=None, target_value_demos_dir=None,
+                 initial_value_demos_dir=None,  target_agent_demos_dir=None, target_value_demos_dir=None,
                  save_demos_prefix=None, save_demos_every=10, num_reward_demos_to_save=10, num_value_demos_to_save=0):
 
         super(PPODBuffer, self).__init__(
@@ -99,7 +99,7 @@ class PPODBuffer(B):
         self.num_value_demos_to_save = num_value_demos_to_save
         self.initial_human_demos_dir = initial_human_demos_dir
         self.initial_agent_demos_dir = initial_agent_demos_dir
-        self.target_reward_demos_dir = target_reward_demos_dir
+        self.target_agent_demos_dir = target_agent_demos_dir
         self.initial_value_demos_dir = initial_value_demos_dir
         self.target_value_demos_dir = target_value_demos_dir
 
@@ -136,7 +136,7 @@ class PPODBuffer(B):
     @classmethod
     def create_factory(cls, size, frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
                        alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,
-                       initial_agent_demos_dir=None, initial_value_demos_dir=None, target_reward_demos_dir=None,
+                       initial_agent_demos_dir=None, initial_value_demos_dir=None, target_agent_demos_dir=None,
                        target_value_demos_dir=None, save_demos_prefix=None, save_demos_every=10,
                        num_reward_demos_to_save=10, num_value_demos_to_save=0):
         """
@@ -156,7 +156,7 @@ class PPODBuffer(B):
             Path to directory containing other agent initial demonstrations.
         initial_value_demos_dir : str
             Path to directory containing value initial demonstrations.
-        target_reward_demos_dir : str
+        target_agent_demos_dir : str
             Path to directory where best reward demonstrations should be saved.
         target_value_demos_dir : str
             Path to directory where best value demonstrations should be saved.
@@ -190,7 +190,7 @@ class PPODBuffer(B):
             return cls(size, device, actor, algorithm, envs,
                        frame_stack, frame_skip, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
                        initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir,
-                       target_reward_demos_dir, target_value_demos_dir, save_demos_prefix,
+                       target_agent_demos_dir, target_value_demos_dir, save_demos_prefix,
                        save_demos_every, num_reward_demos_to_save, num_value_demos_to_save)
 
         return create_buffer_instance
@@ -684,8 +684,8 @@ class PPODBuffer(B):
         """
 
         # Create target dir for reward demos
-        if self.target_reward_demos_dir and not os.path.exists(self.target_reward_demos_dir):
-            os.makedirs(self.target_reward_demos_dir, exist_ok=True)
+        if self.target_agent_demos_dir and not os.path.exists(self.target_agent_demos_dir):
+            os.makedirs(self.target_agent_demos_dir, exist_ok=True)
 
         # Rank agent demos according to episode reward
         reward_ranking = np.flip(np.array(
@@ -698,7 +698,7 @@ class PPODBuffer(B):
             if self.save_demos_prefix:
                 filename = "{}_{}".format(self.save_demos_prefix, filename)
             np.savez(
-                os.path.join(self.target_reward_demos_dir, filename),
+                os.path.join(self.target_agent_demos_dir, filename),
                 Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
                 Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
                 Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
