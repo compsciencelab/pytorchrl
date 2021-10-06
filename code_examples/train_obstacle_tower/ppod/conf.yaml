@@ -3,20 +3,20 @@ agent_name: PPO
 wandb_key: null
 num_env_steps : 100_000_000
 log_dir: /tmp/animal_ppod
-gamma: 0.998
+gamma: 0.99
 save_interval: 100000
 max_time: 86400
 num_env_processes: 16
-num_steps: 1000
+num_steps: 800
 num_mini_batch: 8
 clip_param: 0.15
 ppo_epoch: 2
 rho: 0.3
 phi: 0.0
 gae_lambda: 0.95
-value_loss_coef: 0.1
+value_loss_coef: 0.2
 max_grad_norm: 0.5
-entropy_coef: 0.02
+entropy_coef: 0.01
 recurrent_nets: True
 reward_shape: False
 reduced_action_space: True
