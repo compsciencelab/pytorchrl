@@ -56,7 +56,7 @@ class PPODBuffer(B):
         Prefix string to add to the filename of saved demos.
     save_demos_every : int
         Save top demos every  `save_demo_frequency`th data collection.
-    num_reward_demos_to_save : int
+    num_agent_demos_to_save : int
         Number of top reward demos to save.
     num_value_demos_to_save : int
         Number of top value demos to save.
@@ -72,7 +72,7 @@ class PPODBuffer(B):
                  frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
                  alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,  initial_agent_demos_dir=None,
                  initial_value_demos_dir=None,  target_agent_demos_dir=None, target_value_demos_dir=None,
-                 save_demos_prefix=None, save_demos_every=10, num_reward_demos_to_save=10, num_value_demos_to_save=0):
+                 save_demos_prefix=None, save_demos_every=10, num_agent_demos_to_save=10, num_value_demos_to_save=0):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -95,7 +95,7 @@ class PPODBuffer(B):
         self.max_demos = total_buffer_demo_capacity
         self.save_demos_every = save_demos_every
         self.save_demos_prefix = save_demos_prefix
-        self.num_reward_demos_to_save = num_reward_demos_to_save
+        self.num_agent_demos_to_save = num_agent_demos_to_save
         self.num_value_demos_to_save = num_value_demos_to_save
         self.initial_human_demos_dir = initial_human_demos_dir
         self.initial_agent_demos_dir = initial_agent_demos_dir
@@ -138,7 +138,7 @@ class PPODBuffer(B):
                        alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,
                        initial_agent_demos_dir=None, initial_value_demos_dir=None, target_agent_demos_dir=None,
                        target_value_demos_dir=None, save_demos_prefix=None, save_demos_every=10,
-                       num_reward_demos_to_save=10, num_value_demos_to_save=0):
+                       num_agent_demos_to_save=10, num_value_demos_to_save=0):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -174,7 +174,7 @@ class PPODBuffer(B):
             Prefix string to add to the filename of saved demos.
         save_demos_every : int
             Save top demos every  `save_demo_frequency`th data collection.
-        num_reward_demos_to_save : int
+        num_agent_demos_to_save : int
             Number of top reward demos to save.
         num_value_demos_to_save : int
             Number of top value demos to save.
@@ -191,7 +191,7 @@ class PPODBuffer(B):
                        frame_stack, frame_skip, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
                        initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir,
                        target_agent_demos_dir, target_value_demos_dir, save_demos_prefix,
-                       save_demos_every, num_reward_demos_to_save, num_value_demos_to_save)
+                       save_demos_every, num_agent_demos_to_save, num_value_demos_to_save)
 
         return create_buffer_instance
 
@@ -690,7 +690,7 @@ class PPODBuffer(B):
         # Rank agent demos according to episode reward
         reward_ranking = np.flip(np.array(
             [d["TotalReward"] for d in self.reward_demos[self.num_loaded_human_demos:]]
-        ).argsort())[:self.num_reward_demos_to_save]
+        ).argsort())[:self.num_agent_demos_to_save]
 
         # Save agent reward demos
         for num, demo_pos in enumerate(reward_ranking):

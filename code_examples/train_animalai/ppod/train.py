@@ -91,11 +91,11 @@ def main():
             frame_stack=args.frame_stack, frame_skip=args.frame_skip,
             gae_lambda=args.gae_lambda,
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_reward_demos_dir="/tmp/animalai_demos/reward_demos/",
+            target_agent_demos_dir="/tmp/animalai_demos/reward_demos/",
             target_value_demos_dir="/tmp/animalai_demos/value_demos/",
             save_demos_prefix="test",
             save_demos_every=10,
-            num_reward_demos_to_save=3,
+            num_agent_demos_to_save=3,
             num_value_demos_to_save=3
         )
 
