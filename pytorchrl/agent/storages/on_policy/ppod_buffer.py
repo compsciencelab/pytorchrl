@@ -114,7 +114,6 @@ class PPODBuffer(B):
         self.value_demos = []
 
         # Load initial demos
-        import ipdb; ipdb.set_trace()
         self.load_initial_demos(initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir)
         self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
             self.reward_demos) > 0 else - np.inf
