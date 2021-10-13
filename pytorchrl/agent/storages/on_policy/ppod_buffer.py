@@ -114,7 +114,8 @@ class PPODBuffer(B):
         self.value_demos = []
 
         # Load initial demos
-        self.load_initial_demos(initial_agent_demos_dir, initial_value_demos_dir)
+        import ipdb; ipdb.set_trace()
+        self.load_initial_demos(initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir)
         self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
             self.reward_demos) > 0 else - np.inf
 
@@ -411,7 +412,7 @@ class PPODBuffer(B):
                     self.anneal_parameters()
 
                     # # Update reward_threshold. TODO. review, this is not in the original paper.
-                    # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
                 else:  # Consider candidate demos for value reward
 
@@ -683,47 +684,50 @@ class PPODBuffer(B):
         the top `num_value_demos` demos from the value demos buffer.
         """
 
-        # Create target dir for reward demos
-        if self.target_agent_demos_dir and not os.path.exists(self.target_agent_demos_dir):
-            os.makedirs(self.target_agent_demos_dir, exist_ok=True)
+        if self.target_agent_demos_dir:
 
-        # Rank agent demos according to episode reward
-        reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos[self.num_loaded_human_demos:]]
-        ).argsort())[:self.num_agent_demos_to_save]
+            # Create target dir for reward demos if necessary
+            if not os.path.exists(self.target_agent_demos_dir):
+                os.makedirs(self.target_agent_demos_dir, exist_ok=True)
 
-        # Save agent reward demos
-        for num, demo_pos in enumerate(reward_ranking):
-            filename = "reward_demo_{}".format(num + 1)
-            if self.save_demos_prefix:
-                filename = "{}_{}".format(self.save_demos_prefix, filename)
-            np.savez(
-                os.path.join(self.target_agent_demos_dir, filename),
-                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
-                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
-                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
-                FrameSkip=self.frame_skip,
-            )
+            # Rank agent demos according to episode reward
+            reward_ranking = np.flip(np.array(
+                [d["TotalReward"] for d in self.reward_demos[self.num_loaded_human_demos:]]
+            ).argsort())[:self.num_agent_demos_to_save]
 
-        # Create target dir for value demos
-        if self.target_value_demos_dir and not os.path.exists(self.target_value_demos_dir):
-            os.makedirs(self.target_value_demos_dir, exist_ok=True)
+            # Save agent reward demos
+            for num, demo_pos in enumerate(reward_ranking):
+                filename = "reward_demo_{}".format(num + 1)
+                if self.save_demos_prefix:
+                    filename = "{}_{}".format(self.save_demos_prefix, filename)
+                np.savez(
+                    os.path.join(self.target_agent_demos_dir, filename),
+                    Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
+                    Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
+                    Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
+                    FrameSkip=self.frame_skip,
+                )
 
-        # Rank agent demos according to episode max value
-        reward_ranking = np.flip(np.array(
-            [d["MaxValue"] for d in self.value_demos]).argsort())[:self.num_value_demos_to_save]
+        if self.target_value_demos_dir:
 
-        # Save agent value demos
-        for num, demo_pos in enumerate(reward_ranking):
-            filename = "value_demo_{}".format(num + 1)
-            if self.save_demos_prefix:
-                filename = "{}_{}".format(self.save_demos_prefix, filename)
-            np.savez(
-                os.path.join(self.target_value_demos_dir, filename),
-                Observation=np.array(self.value_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
-                Reward=np.array(self.value_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
-                Action=np.array(self.value_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
-                MaxValue=self.value_demos[demo_pos]["MaxValue"],
-                FrameSkip=self.frame_skip,
-            )
+            # Create target dir for value demos if necessary
+            if not os.path.exists(self.target_value_demos_dir):
+                os.makedirs(self.target_value_demos_dir, exist_ok=True)
 
+            # Rank agent demos according to episode max value
+            reward_ranking = np.flip(np.array(
+                [d["MaxValue"] for d in self.value_demos]).argsort())[:self.num_value_demos_to_save]
+
+            # Save agent value demos
+            for num, demo_pos in enumerate(reward_ranking):
+                filename = "value_demo_{}".format(num + 1)
+                if self.save_demos_prefix:
+                    filename = "{}_{}".format(self.save_demos_prefix, filename)
+                np.savez(
+                    os.path.join(self.target_value_demos_dir, filename),
+                    Observation=np.array(self.value_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
+                    Reward=np.array(self.value_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
+                    Action=np.array(self.value_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
+                    MaxValue=self.value_demos[demo_pos]["MaxValue"],
+                    FrameSkip=self.frame_skip,
+                )
