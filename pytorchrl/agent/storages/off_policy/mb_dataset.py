@@ -17,7 +17,7 @@ def dim0_reshape(tensor, size):
     return np.moveaxis(tensor, [0, 1], [1, 0])[:, 0: size].reshape(-1, *tensor.shape[2:])
 
 
-class ReplayBuffer(S):
+class MBReplayBuffer(S):
     """
     Storage class for Model Based algorithms.
 
@@ -146,11 +146,8 @@ class ReplayBuffer(S):
         data = {k: None if not isinstance(self.data[k], dict) else
             {x: None for x in self.data[k]} for k in self.data}
 
-        # If recurrent, get only whole sequences
-        if self.recurrent_actor:
-            idx = int((self.step // self.sequence_length) * self.sequence_length)
-        else:
-            idx = self.step
+
+        idx = self.step
 
         # Fill up data
         for k, v in self.data.items():
@@ -163,11 +160,6 @@ class ReplayBuffer(S):
                     data[k][x] = y[:idx]
             else:
                 data[k] = v[:idx]
-
-        # If self.actor uses RNNs, save ending of last sequence
-        if self.recurrent_actor and data_to_cpu:
-            self.staged_overlap = self.get_data_slice(
-                self.step - self.overlap_length, self.step)
 
         return data
 

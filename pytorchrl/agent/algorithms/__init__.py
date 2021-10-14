@@ -5,3 +5,4 @@ from pytorchrl.agent.algorithms.ddqn import DDQN
 from pytorchrl.agent.algorithms.ddpg import DDPG
 from pytorchrl.agent.algorithms.td3 import TD3
 from pytorchrl.agent.algorithms.mpo import MPO
+from pytorchrl.agent.algorithms.mb_mpc import MB_MPC
