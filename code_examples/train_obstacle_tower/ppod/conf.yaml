@@ -20,6 +20,7 @@ entropy_coef: 0.01
 recurrent_nets: True
 reward_shape: False
 reduced_action_space: True
+use_clipped_value_loss: True
 num_actions: 6
 eps: 0.00001
 lr: 0.0004
