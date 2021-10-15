@@ -2,7 +2,7 @@ experiment_name: Obstacle_Tower
 agent_name: PPO
 wandb_key: null
 num_env_steps : 100_000_000
-log_dir: /tmp/animal_ppod
+log_dir: /tmp/obstacle_tower_ppod
 gamma: 0.99
 save_interval: 100000
 max_time: 86400
