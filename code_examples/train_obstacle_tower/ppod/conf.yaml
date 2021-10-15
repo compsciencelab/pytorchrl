@@ -2,7 +2,7 @@ experiment_name: PPOD_AnimalAI_Hard_Arena
 agent_name: AnimalAgent
 wandb_key: null
 num_env_steps : 10000000000
-log_dir: /tmp/animal_ppod
+log_dir: /tmp/obstacle_tower_ppod
 gamma: 0.998
 save_interval: 100000
 max_time: 86400
