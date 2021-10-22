@@ -52,11 +52,14 @@ def main():
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=obstacle_train_env_factory,
             env_kwargs={
+                "min_floor": args.min_floor,
+                "max_floor": args.max_floor,
+                "seed_list": args.seed_list,
                 "frame_skip": args.frame_skip,
                 "frame_stack": args.frame_stack,
+                "num_actions": args.num_actions,
                 "reward_shape": args.reward_shape,
                 "reduced_actions": args.reduced_action_space,
-                "num_actions": args.num_actions,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=('floor', 'start', 'seed'))
@@ -78,7 +81,7 @@ def main():
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
             frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos_6_actions/",
+            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + args.demos_dir,
         )
 
         # 6. Define scheme
@@ -166,6 +169,15 @@ def get_args():
     parser.add_argument(
         '--num-actions', type=int, default=6,
         help='Size of the reduced action space (6, 7 or 8) (default: 6)')
+    parser.add_argument(
+        '--min-floor', type=int, default=0,
+        help='Environment minimum floor (default: 0)')
+    parser.add_argument(
+        '--max-floor', type=int, default=50,
+        help='Environment macimum floor (default: 50)')
+    parser.add_argument(
+        '--seed-list', default=[],
+        help='List of environment seeds (default: None)')
 
     # PPOD specs
     parser.add_argument(

@@ -10,7 +10,7 @@ save_interval: 100000
 max_time: 86400
 num_env_processes: 14
 num_steps: 1000
-num_mini_batch: 6
+num_mini_batch: 7
 clip_param: 0.15
 ppo_epoch: 4
 gae_lambda: 0.95

@@ -645,28 +645,28 @@ class PPODBuffer(B):
                 # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
 
                 # Option 3: Eject demo with lowest reward
-                # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
-                # del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
+                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
+                del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
 
                 # Option 4
-                remove_index = len(self.reward_demos) - 1 - self.num_loaded_demos
-                min_reward = self.reward_demos[-1][prl.REW].sum()
-                max_length = self.reward_demos[-1]["DemoLength"]
-                for index, p in enumerate(self.reward_demos[self.num_loaded_demos:]):
-
-                    # If reward is lower that lowest reward found so far
-                    if p[prl.REW].sum() < min_reward:
-                        max_length = p["DemoLength"]
-                        remove_index = index
-
-                    # If reward is the same but episode is longer
-                    elif p[prl.REW].sum() == min_reward:
-                        if p["DemoLength"] > max_length:
-                            remove_index = index
-
-                    # p["LogProb"] = np.clip(p["LogProb"] + self.step_lopg, 0.0, 1.0)
-
-                del self.reward_demos[remove_index + self.num_loaded_demos]
+                # remove_index = len(self.reward_demos) - 1 - self.num_loaded_demos
+                # min_reward = self.reward_demos[-1][prl.REW].sum()
+                # max_length = self.reward_demos[-1]["DemoLength"]
+                # for index, p in enumerate(self.reward_demos[self.num_loaded_demos:]):
+                #
+                #     # If reward is lower that lowest reward found so far
+                #     if p[prl.REW].sum() < min_reward:
+                #         max_length = p["DemoLength"]
+                #         remove_index = index
+                #
+                #     # If reward is the same but episode is longer
+                #     elif p[prl.REW].sum() == min_reward:
+                #         if p["DemoLength"] > max_length:
+                #             remove_index = index
+                #
+                #     # p["LogProb"] = np.clip(p["LogProb"] + self.step_lopg, 0.0, 1.0)
+                #
+                # del self.reward_demos[remove_index + self.num_loaded_demos]
 
                 ########################################################################################################
 
