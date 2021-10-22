@@ -13,12 +13,13 @@ class BasicObstacleEnv(gym.Wrapper):
 
         self.reached_floor = 0
         self._min_floor = min_floor
-        self._max_floor = max_floor
+        self._max_floor = 20  # max_floor
+
         self.count = 0
         self.last_time = 3000
 
         self.seed = None
-        self.start_floor = None
+        self.start_floor = 0
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
@@ -45,17 +46,19 @@ class BasicObstacleEnv(gym.Wrapper):
         self._previous_keys = 0
         self.puzzle_solved = False
 
-        self.seed = np.random.randint(0, 100)
+        # self.seed = np.random.randint(0, 100)
+        self.seed = 54
+
         self.env.unwrapped.seed(self.seed)
 
-        self.start_floor = np.random.randint(
-            self._min_floor, self.reached_floor if self.reached_floor != 0 else 1)
+        # self.start_floor = np.random.randint(
+        #     self._min_floor, self.reached_floor if self.reached_floor != 0 else 1)
 
-        self.env.unwrapped.floor(self.start_floor)
+        self.env.unwrapped.floor(20)
 
         self.reached_floor = 0
 
-        config = {"total-floors": self._max_floor + 2}
+        config = {"total-floors": 20 + 1}
         self.count += 1
 
         return self.env.reset(config=config, **kwargs)
@@ -155,7 +158,7 @@ class RewardShapeObstacleEnv(gym.Wrapper):
 
 
 class ReducedActionEnv(gym.Wrapper):
-    def __init__(self, env, num_actions=6):
+    def __init__(self, env, num_actions=8):
 
         if num_actions == 6:
             _action_lookup = reduced_action_lookup_6

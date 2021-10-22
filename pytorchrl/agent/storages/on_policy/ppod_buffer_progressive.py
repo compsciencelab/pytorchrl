@@ -4,10 +4,13 @@ import copy
 import uuid
 import torch
 import numpy as np
+from collections import deque
 from collections import defaultdict
 
 import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
+
+# TODO: track also reward of best agent episode so far!
 
 
 class PPODBuffer(B):
@@ -104,8 +107,11 @@ class PPODBuffer(B):
                 "ID": None,
                 "Demo": None,
                 "Step": 0,
+                "AccumulatedReward": 0,
                 "DemoLength": -1,
                 "MaxValue": - np.inf,
+                "LogProb": None,
+                "Origin": None,
                 prl.RHS: None,
             } for i in range(self.num_envs)}
 
@@ -113,6 +119,14 @@ class PPODBuffer(B):
         self.iter = 0
         self.save_demos_every = save_demo_frequency
         self.num_saved_demos = num_saved_demos
+        self.max_reached_floor = 0
+
+        # Testing
+        self.start_logp = 0.7
+        self.step_lopg = 0.01
+
+        self.eps_reward = deque(maxlen=20)
+        self.max_grad_rew, self.min_grad_rew = - np.Inf, 0.0
 
     @classmethod
     def create_factory(cls,
@@ -292,7 +306,23 @@ class PPODBuffer(B):
                     i + 1)]["Demo"][prl.REW][demo_step])
 
                 # Insert demo logprob to self.step. Demo action prob is 1.0, so logprob is 0.0
+
+                ########################################################################################################
+
+                # Option 1
                 self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
+
+                # Option 2
+                # if self.demos_in_progress["env{}".format(i + 1)]["Origin"] == "Human":
+                #     self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
+                # else:
+                #     self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))  # TODO. try with less than 1.0?
+
+                # Option 3
+                # self.data[prl.LOGP][self.step][i].copy_(
+                #     torch.ones(1) * self.demos_in_progress["env{}".format(i + 1)]["LogProb"])
+
+                ########################################################################################################
 
                 # Insert demo values predicted by the forward pass
                 self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
@@ -300,12 +330,21 @@ class PPODBuffer(B):
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
+                self.demos_in_progress["env{}".format(i + 1)]["AccumulatedReward"] += \
+                    self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.REW][demo_step]
 
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
                     [algo_data[prl.VAL].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
+                ########################################################################################################
+
+                # if self.demos_in_progress["env{}".format(i + 1)]["AccumulatedReward"] > self.reward_threshold * 1.5:
+                #     print("DEMO CHOPPED AT {} STEPS".format(demo_step))
+
                 # Handle end of demos
-                if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
+                if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1: # or self.demos_in_progress["env{}".format(i + 1)]["AccumulatedReward"] > self.reward_threshold * 1.5:
+
+                ########################################################################################################
 
                     # If value demo
                     if "MaxValue" in self.demos_in_progress["env{}".format(i + 1)]["Demo"].keys():
@@ -370,12 +409,14 @@ class PPODBuffer(B):
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
+                potential_demo["Origin"] = "Agent"
                 potential_demo["ID"] = str(uuid.uuid4())
                 potential_demo["TotalReward"] = episode_reward
+                potential_demo["LogProb"] = self.start_logp
                 potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
                 # Consider candidate demos for demos reward
-                if episode_reward >= self.reward_threshold:
+                if episode_reward >= 0.1 and episode_reward >= self.reward_threshold:
 
                     # Add demos to reward buffer
                     self.reward_demos.append(potential_demo)
@@ -451,7 +492,10 @@ class PPODBuffer(B):
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
                     "DemoLength": demo[prl.ACT].shape[0],
-                    "TotalReward": demo_rew.sum().item()})
+                    "TotalReward": demo_rew.sum().item(),
+                    "Origin": "Human",
+                    "LogProb": 1.0,
+                })
                 self.reward_demos.append(new_demo)
                 num_loaded_demos += 1
 
@@ -467,6 +511,7 @@ class PPODBuffer(B):
         # Reset demos tracking variables
         self.demos_in_progress["env{}".format(env_id + 1)]["Step"] = 0
         self.demos_in_progress["env{}".format(env_id + 1)][prl.RHS] = None
+        self.demos_in_progress["env{}".format(env_id + 1)]["AccumulatedReward"] = 0
 
         # Sample episode type
         episode_source = np.random.choice(["reward_demo", "value_demo", "env"],
@@ -539,6 +584,36 @@ class PPODBuffer(B):
             self.phi -= self.initial_phi / len(self.value_demos)
             self.phi = np.clip(self.phi, 0.0, self.initial_rho + self.initial_phi)
 
+    def update_rho(self, info):
+        """
+        Adjust eta parameter based on how fast or slow the agent is learning
+        in recent episodes
+        """
+
+        slopes = np.linspace(-1.0, 1.0, 1000)
+        etas = np.linspace(1.0, self.initial_rho, 1000)
+        if prl.EPISODES in info.keys() and "TrainReward" in info[prl.EPISODES].keys():
+            self.eps_reward.append(info[prl.EPISODES]["TrainReward"])
+
+        if len(self.eps_reward) == self.eps_reward.maxlen:
+            reward_grad = np.gradient(self.eps_reward).mean()
+
+            if reward_grad > self.max_grad_rew: self.max_grad_rew = reward_grad
+            else: self.max_grad_rew *= 0.9999
+
+            if reward_grad < - self.min_grad_rew: self.min_grad_rew = abs(reward_grad)
+            else: self.min_grad_rew *= 0.9999
+
+            if np.sign(reward_grad) == 1: reward_grad /= self.max_grad_rew
+            else: reward_grad /= self.min_grad_rew
+
+            idx = (np.abs(slopes - reward_grad)).argmin()
+            self.eta = etas[idx]
+            info[prl.ALGORITHM].update({"RewardGradient": reward_grad})
+            info[prl.ALGORITHM].update({"eta": self.eta})
+
+        return info
+
     def check_demo_buffer_capacity(self):
         """
         Check total amount of demos. If total amount of demos exceeds
@@ -554,8 +629,11 @@ class PPODBuffer(B):
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
-            # Randomly remove reward demos, longer demos have higher probability
+
+            # Remove reward demos
             for _ in range(len(self.reward_demos) - self.max_demos):
+
+                ########################################################################################################
 
                 # Option 1: FIFO (original paper)
                 # del self.reward_demos[self.num_loaded_demos]
@@ -567,8 +645,30 @@ class PPODBuffer(B):
                 # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
 
                 # Option 3: Eject demo with lowest reward
-                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos])
-                del self.reward_demos[np.argmin(rewards)]
+                # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
+                # del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
+
+                # Option 4
+                remove_index = len(self.reward_demos) - 1 - self.num_loaded_demos
+                min_reward = self.reward_demos[-1][prl.REW].sum()
+                max_length = self.reward_demos[-1]["DemoLength"]
+                for index, p in enumerate(self.reward_demos[self.num_loaded_demos:]):
+
+                    # If reward is lower that lowest reward found so far
+                    if p[prl.REW].sum() < min_reward:
+                        max_length = p["DemoLength"]
+                        remove_index = index
+
+                    # If reward is the same but episode is longer
+                    elif p[prl.REW].sum() == min_reward:
+                        if p["DemoLength"] > max_length:
+                            remove_index = index
+
+                    # p["LogProb"] = np.clip(p["LogProb"] + self.step_lopg, 0.0, 1.0)
+
+                del self.reward_demos[remove_index + self.num_loaded_demos]
+
+                ########################################################################################################
 
     def save_demos(self):
         """

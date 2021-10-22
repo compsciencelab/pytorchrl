@@ -66,7 +66,7 @@ def obstacle_train_env_factory(
     if reduced_actions:
         env = ReducedActionEnv(env, num_actions=num_actions)
 
-    env = BasicObstacleEnv(env, max_floor=max_floor, min_floor=min_floor)
+    env = BasicObstacleEnv(env, max_floor=12, min_floor=14)
 
     if reward_shape:
         env = RewardShapeObstacleEnv(env)
