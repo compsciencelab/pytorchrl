@@ -2,7 +2,7 @@ experiment_name: Obstacle_Tower
 agent_name: PPO
 wandb_key: null
 num_env_steps : 100_000_000
-log_dir: /Users/abou/Desktop/
+log_dir: /tmp/ppod_obstacle/
 gamma: 0.99
 save_interval: 100000
 max_time: 86400
@@ -34,4 +34,4 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
-demos_dir: /Users/abou/Desktop/obstacle_demos/
+demos_dir: /obstacle_demos/
