@@ -21,7 +21,7 @@ recurrent_nets: True
 reward_shape: False
 reduced_action_space: True
 use_clipped_value_loss: True
-num_actions: 6
+num_actions: 7
 eps: 0.00001
 lr: 0.0004
 nn: Fixup
@@ -31,4 +31,4 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
-demos_dir: code_examples/train_obstacle_tower/ppod/demos_6_actions/
+demos_dir: /Users/abou/Desktop/demos_7actions_seed57_floor30

@@ -680,9 +680,12 @@ class PPODBuffer(B):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
         reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
+            [d["TotalReward"] for d in self.reward_demos[
+                self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
+            demo_pos += self.num_loaded_demos
             np.savez(
                 filename,
                 Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
