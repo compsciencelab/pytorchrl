@@ -115,8 +115,7 @@ class PPODBuffer(B):
 
         # Load initial demos
         self.load_initial_demos(initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir)
-        self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
-            self.reward_demos) > 0 else - np.inf
+        self.reward_threshold = - np.inf
 
         # Define variables to track potential demos
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
@@ -410,7 +409,7 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
-                    # # Update reward_threshold. TODO. review, this is not in the original paper.
+                    # # Update reward_threshold.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
                 else:  # Consider candidate demos for value reward
@@ -664,18 +663,11 @@ class PPODBuffer(B):
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
-            # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
-
-                # Option 1: FIFO (original paper)
-                # del self.reward_demos[1]
-                del self.reward_demos[self.num_loaded_human_demos]
-
-                # Option 2: pop longer demos
-                # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
-                # probs[0] = 0.0  # Original demo is never ejected
-                # probs = probs / probs.sum()
-                # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
+                
+                # Eject demo with lowest reward
+                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
+                del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
 
     def save_demos(self):
         """
