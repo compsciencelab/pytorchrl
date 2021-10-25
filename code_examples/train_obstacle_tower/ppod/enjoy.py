@@ -17,6 +17,9 @@ def enjoy():
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
         env_kwargs={
+            "min_floor": args.min_floor,
+            "max_floor": args.max_floor,
+            "seed_list": args.seed_list,
             "frame_skip": args.frame_skip,
             "frame_stack": args.frame_stack,
             "reward_shape": args.reward_shape,

@@ -97,6 +97,8 @@ class PPODBuffer(B):
         else:
             self.reward_threshold = - np.inf
 
+        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else 0.0
+
         # Define variables to track potential demos
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
         self.potential_demos = {"env{}".format(i + 1): defaultdict(list) for i in range(self.num_envs)}
@@ -191,8 +193,8 @@ class PPODBuffer(B):
         Before updating actor policy model, compute returns and advantages.
         """
 
-        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}\n".format(
-            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold))
+        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
+            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
         # Retrieve most recent obs, rhs and done tensors
         last_tensors = {}
@@ -430,6 +432,9 @@ class PPODBuffer(B):
                     # Update reward_threshold.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
+                    # Also keep track of best demo reward
+                    self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+
                 else:  # Consider candidate demos for value reward
 
                     # Find current number of demos, and current value threshold
@@ -648,7 +653,7 @@ class PPODBuffer(B):
                 rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
                 del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
 
-                # Option 4
+                # Option 4 TODO. review this logic! 
                 # remove_index = len(self.reward_demos) - 1 - self.num_loaded_demos
                 # min_reward = self.reward_demos[-1][prl.REW].sum()
                 # max_length = self.reward_demos[-1]["DemoLength"]
@@ -679,13 +684,22 @@ class PPODBuffer(B):
         if self.target_demos_dir and not os.path.exists(self.target_demos_dir):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
+        # Option 1: human demos not saved
+        # reward_ranking = np.flip(np.array(
+        #     [d["TotalReward"] for d in self.reward_demos[
+        #         self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+
+        # Option 2: also saved human demos
         reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos[
-                self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+            [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
+
 
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
-            demo_pos += self.num_loaded_demos
+
+            # Option 1
+            # demo_pos += self.num_loaded_demos
+
             np.savez(
                 filename,
                 Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),

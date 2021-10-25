@@ -97,10 +97,12 @@ def record():
 
             print("tuple action:", action)
             print("int action:", action)
-            print()
 
             obs, reward, done, info = env.step(torch.tensor(
                 [action_lookup[action]]).unsqueeze(0))
+
+            print("reward:", reward)
+            print()
 
             obs_rollouts.append(obs)
             rews_rollouts.append(reward)
@@ -133,6 +135,7 @@ def record():
                     FrameSkip=args.frame_skip,
                 )
 
+                print("SAVED DEMO AS {}".format(filename))
                 sys.exit()
 
 
