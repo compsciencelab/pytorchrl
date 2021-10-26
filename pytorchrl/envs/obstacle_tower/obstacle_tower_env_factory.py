@@ -9,11 +9,10 @@ from pytorchrl.envs.obstacle_tower.wrappers import (
 def obstacle_train_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, min_floor=0,
         max_floor=50, reduced_actions=True, num_actions=6, reward_shape=True, exe_path=None, reward_delay=1,
-        realtime=False, seed_list=[]):
+        realtime=False, seed_list=[], id_offset=1):
     """
     Create train Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
-
     Parameters
     ----------
      index_col_worker : int
@@ -44,6 +43,8 @@ def obstacle_train_env_factory(
         Whether or not to render the environment frames in real time.
     seed_list : list
         List of environment seeds to use.
+    id_offset : int
+        offset added to worker_id to avoid collisions with other runs in the same machine.
 
     Returns
     -------
@@ -60,7 +61,7 @@ def obstacle_train_env_factory(
         exe = os.path.join(os.path.dirname(
             obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
 
-    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
+    id = id_offset + index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
         environment_filename=exe, retro=True, worker_id=id,
         greyscale=False, timeout_wait=60, realtime_mode=realtime)
@@ -87,11 +88,11 @@ def obstacle_train_env_factory(
 
 def obstacle_test_env_factory(
         index_col_worker, index_grad_worker, index_env=0, frame_skip=0, frame_stack=1, realtime=False,
-        min_floor=0, max_floor=50, reduced_actions=True, num_actions=6, exe_path=None, reward_delay=1):
+        min_floor=0, max_floor=50, reduced_actions=True, num_actions=6, exe_path=None, reward_delay=1,
+        id_offset=1):
     """
     Create test Obstacle Tower Unity3D environment.
     Useful info_keywords 'floor', 'start', 'seed'.
-
     Parameters
     ----------
     index_col_worker : int
@@ -118,6 +119,8 @@ def obstacle_test_env_factory(
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
     realtime : bool
         Whether or not to render the environment frames in real time.
+    id_offset : int
+        offset added to worker_id to avoid collisions with other runs in the same machine.
 
     Returns
     -------
@@ -134,7 +137,7 @@ def obstacle_test_env_factory(
         exe = os.path.join(os.path.dirname(
             obstacle_tower_env.__file__), 'ObstacleTower/obstacletower')
 
-    id = index_grad_worker * 1000 + 100 * index_col_worker + index_env
+    id = id_offset + index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
         environment_filename=exe, retro=True, worker_id=id,
         greyscale=False, realtime_mode=realtime)
