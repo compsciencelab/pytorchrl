@@ -116,6 +116,8 @@ class PPODBuffer(B):
         # Load initial demos
         self.load_initial_demos(initial_human_demos_dir, initial_agent_demos_dir, initial_value_demos_dir)
         self.reward_threshold = - np.inf
+        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos]) if len(
+            self.reward_demos) > 0 else -np.inf
 
         # Define variables to track potential demos
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
@@ -199,8 +201,8 @@ class PPODBuffer(B):
         Before updating actor policy model, compute returns and advantages.
         """
 
-        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}\n".format(
-            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold))
+        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
+            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
         # Retrieve most recent obs, rhs and done tensors
         last_tensors = {}
@@ -409,8 +411,12 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
-                    # # Update reward_threshold.
+                    # Update reward_threshold.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+
+                    # Update max demo reward
+                    self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+
 
                 else:  # Consider candidate demos for value reward
 
