@@ -25,14 +25,18 @@ Run the following script and control the agent with keyboard keys "W, A, S, D".
 
     ./code_examples/train_animalai/ppod/record_demo.sh
 
-### 2. Train Agent
-    
-    ./code_examples/train_animalai/ppod/train.sh
-
-### 3. Visualize Demonstrations
+### 2. Visualize recorded demonstrations
 
     ./code_examples/train_animalai/ppod/visualize_demos.sh
 
-### 4. Enjoy Agent Performance
+### 3. Replay recorded demonstrations (the environment is not deterministic)
+
+    ./code_examples/train_animalai/ppod/replay_demos.sh
+
+### 4. Train Agent
+    
+    ./code_examples/train_animalai/ppod/train.sh
+
+### 5. Enjoy Agent Performance
 
     ./code_examples/train_animalai/ppod/enjoy.sh
