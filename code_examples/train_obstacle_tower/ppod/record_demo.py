@@ -55,8 +55,15 @@ def record():
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
         env_kwargs={
+            "min_floor": args.min_floor,
+            "max_floor": args.max_floor,
+            "seed_list": args.seed_list,
             "frame_skip": args.frame_skip,
-            "reward_shape": False, "realtime": True},
+            "reward_shape": False,
+            "realtime": True,
+            "num_actions": args.num_actions,
+            "reduced_actions": args.reduced_action_space,
+        },
         vec_env_size=1)
 
     # Start recording
@@ -90,10 +97,12 @@ def record():
 
             print("tuple action:", action)
             print("int action:", action)
-            print()
 
             obs, reward, done, info = env.step(torch.tensor(
                 [action_lookup[action]]).unsqueeze(0))
+
+            print("reward:", reward)
+            print()
 
             obs_rollouts.append(obs)
             rews_rollouts.append(reward)
@@ -106,7 +115,8 @@ def record():
 
             if done:
 
-                print("EPISODE FINISHED: {} steps: ".format(step), flush=True)
+                print("EPISODE FINISHED: {} steps, total reward was {}: ".format(
+                    step, episode_reward.item()), flush=True)
 
                 obs_rollouts.pop(-1)
 
@@ -126,6 +136,7 @@ def record():
                     FrameSkip=args.frame_skip,
                 )
 
+                print("SAVED DEMO AS {}".format(filename))
                 sys.exit()
 
 

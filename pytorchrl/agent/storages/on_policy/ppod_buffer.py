@@ -13,7 +13,6 @@ from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 class PPODBuffer(B):
     """
     Storage class for PPO+D algorithm.
-
     Parameters
     ----------
     size : int
@@ -142,7 +141,6 @@ class PPODBuffer(B):
                        num_agent_demos_to_save=10, num_value_demos_to_save=0):
         """
         Returns a function that creates PPODBuffer instances.
-
         Parameters
         ----------
         size : int
@@ -179,7 +177,6 @@ class PPODBuffer(B):
             Number of top reward demos to save.
         num_value_demos_to_save : int
             Number of top value demos to save.
-
         Returns
         -------
         create_buffer_instance : func
@@ -238,7 +235,6 @@ class PPODBuffer(B):
     def get_num_channels_obs(self, sample):
         """
         Obtain num_channels_obs and set it as class attribute.
-
         Parameters
         ----------
         sample : dict
@@ -249,7 +245,6 @@ class PPODBuffer(B):
     def insert_transition(self, sample):
         """
         Store new transition sample.
-
         Parameters
         ----------
         sample : dict

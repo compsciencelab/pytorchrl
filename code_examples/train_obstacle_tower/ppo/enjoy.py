@@ -3,7 +3,7 @@
 import os
 import torch
 import argparse
-from pytorchrl.envs.obstacle_tower import obstacle_test_env_factory
+from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 
