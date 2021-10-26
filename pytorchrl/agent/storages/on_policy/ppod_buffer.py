@@ -518,7 +518,7 @@ class PPODBuffer(B):
 
                 # Add rew
                 demo_rew = demo[prl.REW]
-                self.demo_rew_dtype = demo_obs.dtype
+                self.demo_rew_dtype = demo_rew.dtype
                 new_demo[prl.REW] = torch.FloatTensor(demo_rew)
 
                 new_demo.update({
@@ -555,7 +555,7 @@ class PPODBuffer(B):
 
                 # Add rew
                 demo_rew = demo[prl.REW]
-                self.demo_rew_dtype = demo_obs.dtype
+                self.demo_rew_dtype = demo_rew.dtype
                 new_demo[prl.REW] = torch.FloatTensor(demo_rew)
 
                 new_demo.update({
