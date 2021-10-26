@@ -13,6 +13,7 @@ from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 class PPODBuffer(B):
     """
     Storage class for PPO+D algorithm.
+
     Parameters
     ----------
     size : int
@@ -49,8 +50,9 @@ class PPODBuffer(B):
         Save top demos every  `save_demo_frequency`th data collection.
     num_saved_demos : int
         Number of top reward demos to save.
-    initial_reward_threshold : float
-        
+    use_initial_demos_as_reward_threshold : bool
+        Whether or not to use initially provided demos to define the reward threshold
+        to accept future demos found by the agent.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -137,6 +139,7 @@ class PPODBuffer(B):
                        num_saved_demos=10):
         """
         Returns a function that creates PPODBuffer instances.
+
         Parameters
         ----------
         size : int
@@ -219,6 +222,7 @@ class PPODBuffer(B):
     def get_num_channels_obs(self, sample):
         """
         Obtain num_channels_obs and set it as class attribute.
+
         Parameters
         ----------
         sample : dict
@@ -229,6 +233,7 @@ class PPODBuffer(B):
     def insert_transition(self, sample):
         """
         Store new transition sample.
+
         Parameters
         ----------
         sample : dict
@@ -419,6 +424,7 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """
         Load initial demonstrations.
+
         Warning: make sure the frame_skip and frame_stack hyperparameters are
         the same as those used to record the demonstrations!
         """
