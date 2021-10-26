@@ -104,9 +104,9 @@ class PPODBuffer(B):
         self.target_value_demos_dir = target_value_demos_dir
 
         # Data parameters
+        self.demo_act_dtype = np.float32
         self.demo_obs_dtype = np.float32
-        self.demo_obs_dtype = np.float32
-        self.demo_obs_dtype = np.float32
+        self.demo_rew_dtype = np.float32
         self.num_channels_obs = None  # Lazy initialization
 
         # Reward and Value buffers
@@ -481,7 +481,7 @@ class PPODBuffer(B):
 
                 # Add rew
                 demo_rew = demo[prl.REW]
-                self.demo_rew_dtype = demo_obs.dtype
+                self.demo_rew_dtype = demo_rew.dtype
                 new_demo[prl.REW] = torch.FloatTensor(demo_rew)
 
                 new_demo.update({
