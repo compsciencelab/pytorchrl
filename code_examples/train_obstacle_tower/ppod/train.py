@@ -78,7 +78,7 @@ def main():
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
             frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + args.demos_dir,
+            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             use_initial_demos_as_reward_threshold=False,
         )
 

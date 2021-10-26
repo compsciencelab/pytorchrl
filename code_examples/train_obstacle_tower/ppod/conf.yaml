@@ -2,7 +2,7 @@ experiment_name: Obstacle_Tower
 agent_name: PPO
 wandb_key: null
 num_env_steps : 100_000_000
-log_dir: /Users/abou/Desktop # /tmp/ppod_obstacle/
+log_dir: /tmp/ppod_obstacle/
 gamma: 0.99
 save_interval: 100000
 max_time: 86400
@@ -11,7 +11,7 @@ num_steps: 800
 num_mini_batch: 8
 clip_param: 0.15
 ppo_epoch: 2
-rho: 0.3
+rho: 0.2
 phi: 0.0
 gae_lambda: 0.95
 value_loss_coef: 0.2
@@ -21,9 +21,9 @@ recurrent_nets: True
 reward_shape: False
 reduced_action_space: True
 use_clipped_value_loss: True
-num_actions: 7
-min_floor: 20
-max_floor: 20
+num_actions: 6
+min_floor: 12
+max_floor: 12
 seed_list: [54]
 eps: 0.00001
 lr: 0.0004
@@ -34,4 +34,4 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
-demos_dir: demos_6_actions/
+demos_dir: code_examples/train_obstacle_tower/ppod/demos/
