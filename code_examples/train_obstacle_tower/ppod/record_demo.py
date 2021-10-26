@@ -115,7 +115,8 @@ def record():
 
             if done:
 
-                print("EPISODE FINISHED: {} steps: ".format(step), flush=True)
+                print("EPISODE FINISHED: {} steps, total reward was {}: ".format(
+                    step, episode_reward.item()), flush=True)
 
                 obs_rollouts.pop(-1)
 
