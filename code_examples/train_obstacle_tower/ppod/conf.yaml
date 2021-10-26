@@ -3,7 +3,7 @@ agent_name: AnimalAgent
 wandb_key: null
 num_env_steps : 10000000000
 log_dir: /tmp/obstacle_tower_ppod
-gamma: 0.998
+gamma: 0.99
 save_interval: 100000
 max_time: 86400
 num_env_processes: 14
@@ -20,8 +20,8 @@ reward_shape: True
 reduced_action_space: True
 use_clipped_value_loss: True
 num_actions: 6
-lr: 0.00001
-nn: CNN
+lr: 0.0004
+nn: Fixup
 frame_skip: 2
 frame_stack: 4
 num_grad_workers: 1

@@ -664,7 +664,7 @@ class PPODBuffer(B):
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             for _ in range(len(self.reward_demos) - self.max_demos):
-                
+
                 # Eject demo with lowest reward
                 rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
                 del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
@@ -689,6 +689,7 @@ class PPODBuffer(B):
             # Save agent reward demos
             for num, demo_pos in enumerate(reward_ranking):
                 filename = "reward_demo_{}".format(num + 1)
+                demo_pos += self.num_loaded_human_demos
                 if self.save_demos_prefix:
                     filename = "{}_{}".format(self.save_demos_prefix, filename)
                 np.savez(
