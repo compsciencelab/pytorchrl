@@ -685,13 +685,13 @@ class PPODBuffer(B):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
         # Option 1: human demos not saved
-        # reward_ranking = np.flip(np.array(
-        #     [d["TotalReward"] for d in self.reward_demos[
-        #         self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+        reward_ranking = np.flip(np.array(
+            [d["TotalReward"] for d in self.reward_demos[
+                self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
 
         # Option 2: also saved human demos
-        reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
+        # reward_ranking = np.flip(np.array(
+        #     [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
 
 
         for num, demo_pos in enumerate(reward_ranking):
