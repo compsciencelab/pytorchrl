@@ -11,7 +11,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
+from pytorchrl.agent.storages import PPODBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
@@ -79,6 +79,7 @@ def main():
             size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
             frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
             initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + args.demos_dir,
+            use_initial_demos_as_reward_threshold=False,
         )
 
         # Define scheme

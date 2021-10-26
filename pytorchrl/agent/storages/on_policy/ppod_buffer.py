@@ -136,7 +136,8 @@ class PPODBuffer(B):
                        alpha=10,
                        max_demos=51,
                        save_demo_frequency=10,
-                       num_saved_demos=10):
+                       num_saved_demos=10,
+                       use_initial_demos_as_reward_threshold=True):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -166,6 +167,10 @@ class PPODBuffer(B):
             Save top demos every  `save_demo_frequency`th data collection.
         num_saved_demos : int
             Number of top reward demos to save.
+        use_initial_demos_as_reward_threshold : bool
+            Whether or not to use initially provided demos to define the reward threshold
+            to accept future demos found by the agent.
+
         Returns
         -------
         create_buffer_instance : func
@@ -176,7 +181,8 @@ class PPODBuffer(B):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, frame_stack,
                        frame_skip, initial_demos_dir, target_demos_dir, rho,
-                       phi, gae_lambda, alpha, max_demos, save_demo_frequency, num_saved_demos)
+                       phi, gae_lambda, alpha, max_demos, save_demo_frequency,
+                       num_saved_demos, use_initial_demos_as_reward_threshold)
 
         return create_buffer_instance
 
