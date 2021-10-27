@@ -291,7 +291,7 @@ class OnPolicyActor(nn.Module):
 
             if self.shared_policy_value_network:
                 if self.last_action_features.shape[0] != done.shape[0]:
-                    _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
+                    _, _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
                 value = value_net.predictor(self.last_action_features)
 
             else:

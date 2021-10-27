@@ -24,6 +24,8 @@ INFO_KEYS = (ALGORITHM, EPISODES, SCHEME, TIME)
 COLLECTION = "DataCollection"
 GRADIENT = "GradientCompute"
 UPDATE = "ActorUpdate"
+PROCESSING = "DataProcessing"  # Includes Gradient computations + model Updates
+CPRATIO = "DataCollection_DataProcessing_Ratio"
 OP_KEYS = (COLLECTION, GRADIENT, UPDATE)
 
 # Training

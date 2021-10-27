@@ -66,7 +66,7 @@ class Scheme:
 
                  # update
                  local_device=None,
-                 decentralized_update_execution=False, # OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=8 main.py
+                 decentralized_update_execution=False,  # OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=8 main.py
                  ):
 
         assert col_workers_communication in (prl.SYNC, prl.ASYNC),\
@@ -91,6 +91,7 @@ class Scheme:
             num_workers=num_col_workers - 1 if num_col_workers == 1 else num_col_workers,
             col_worker_resources=col_workers_resources,
             col_fraction_samples=col_preemption_thresholds.get("fraction_samples"),
+            compress_data_to_send=col_compress_data,
 
             # grad specs
             total_parent_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
@@ -107,6 +108,7 @@ class Scheme:
             # grad_specs
             num_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
             grad_worker_resources=grad_workers_resources,
+            compress_grads_to_send=grad_compress_data,
         )
 
         self._update_worker = UWorker(
