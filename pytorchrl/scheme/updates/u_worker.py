@@ -101,7 +101,8 @@ class UWorker(W):
         )
 
         # Print worker information
-        if index_worker > 0: self.print_worker_info()
+        if index_worker > 0:
+            self.print_worker_info()
 
     @property
     def actor_version(self):
@@ -114,7 +115,8 @@ class UWorker(W):
         Pulls information from update operations from  `self.updater.outqueue`.
         """
 
-        if self.grad_communication == prl.SYNC: self.updater.step()
+        if self.grad_communication == prl.SYNC:
+            self.updater.step()
         new_info = self.updater.outqueue.get()
         return new_info
 
