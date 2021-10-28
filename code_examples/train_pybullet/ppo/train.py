@@ -18,6 +18,7 @@ from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 def main():
 
+    import ipdb; ipdb.set_trace()
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
@@ -78,14 +79,14 @@ def main():
     params.update({
         "num_col_workers": args.num_col_workers,
         "col_workers_communication": args.com_col_workers,
-        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.25},
     })
 
     # add gradient specs
     params.update({
         "num_grad_workers": args.num_grad_workers,
         "grad_workers_communication": args.com_grad_workers,
-        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.25},
     })
 
     scheme = Scheme(**params)
