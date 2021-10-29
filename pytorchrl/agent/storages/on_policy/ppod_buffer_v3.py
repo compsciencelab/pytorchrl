@@ -61,6 +61,7 @@ class PPODBuffer(B):
 
         # Reward buffer
         self.reward_demos = []
+        self.value_demos = []
 
         # Variable to track initial agent demos
         self.initial_agent_demo_ids = []
