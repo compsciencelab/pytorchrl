@@ -64,7 +64,7 @@ def obstacle_train_env_factory(
     id = id_offset + index_grad_worker * 1000 + 100 * index_col_worker + index_env
     env = ObstacleTowerEnv(
         environment_filename=exe, retro=True, worker_id=id,
-        greyscale=False, timeout_wait=60, realtime_mode=realtime)
+        greyscale=False, timeout_wait=180, realtime_mode=realtime)
 
     if reduced_actions:
         env = ReducedActionEnv(env, num_actions=num_actions)
