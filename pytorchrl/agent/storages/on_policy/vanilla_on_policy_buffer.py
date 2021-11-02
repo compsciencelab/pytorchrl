@@ -75,6 +75,12 @@ class VanillaOnPolicyBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
+            # TODO: if not self.recurrent_actor, self.data[RHS] is equal to sample[RHS]
+            if not self.recurrent_actor and k == prl.RHS:
+                import ipdb; ipdb.set_trace()
+                self.data[prl.RHS] = sample[prl.RHS]
+                continue
+
             # Handle dict sample value
             # init tensors for all dict entries
             if isinstance(sample[k], dict):
@@ -152,6 +158,10 @@ class VanillaOnPolicyBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
+            # TODO: if not self.recurrent_actor, also continue
+            if not self.recurrent_actor and k == prl.RHS:
+                continue
+
             # We use the same tensor to store obs and obs2
             # We also use single tensors for rhs and rhs2,
             # and done and done2
@@ -176,6 +186,8 @@ class VanillaOnPolicyBuffer(S):
         """
         Before updating actor policy model, compute returns and advantages.
         """
+
+        # TODO. maybe here nothing is needed
 
         last_tensors = {}
         step = self.step if self.step != 0 else -1
@@ -316,6 +328,11 @@ class VanillaOnPolicyBuffer(S):
                     batch = {k: None for k in self.storage_tensors}
 
                     for k in batch:
+
+                        # TODO: if k is "rhs", idxs are only idx 0
+                        if k == prl.RHS:
+                            import ipdb; ipdb.set_trace()
+
                         if isinstance(self.data[k], dict):
                             tensor = {x: self.data[k][x][0:l].reshape(
                                 -1, *self.data[k][x].shape[2:])[idxs] for x in self.data[k]}
