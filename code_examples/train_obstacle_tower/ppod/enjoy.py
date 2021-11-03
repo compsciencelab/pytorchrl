@@ -25,8 +25,8 @@ def enjoy():
             "reward_shape": args.reward_shape,
             "reduced_actions": args.reduced_action_space,
             "num_actions": args.num_actions,
-            "realtime": True,
-        }, vec_env_size=1)
+            "realtime": False,
+        }, vec_env_size=2)
 
     # Define agent device and agent
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -35,13 +35,16 @@ def enjoy():
         obs_space, action_space, prl.PPO,
         feature_extractor_network=get_feature_extractor(args.nn),
         recurrent_nets=args.recurrent_nets,
-        restart_model=os.path.join(args.log_dir, "model.state_dict")
+#        restart_model=os.path.join(args.log_dir, "model.state_dict")
     )(device)
 
     # Define initial Tensors
     env = env()
     obs = env.reset()
     done, episode_reward, step = False, 0, 0
+
+    import ipdb; ipdb.set_trace()
+
     _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
 
     # Execute episodes
