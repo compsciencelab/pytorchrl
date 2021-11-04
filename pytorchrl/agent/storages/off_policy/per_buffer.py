@@ -100,7 +100,7 @@ class PERBuffer(B):
         return np.power(error + self.epsilon, self.alpha)
 
     def get_sequence_priority(self, sequence_data, eta=0.9):
-        """ _ """
+        """ Get priority score for a given data sequence. """
         term1 = eta * np.max(sequence_data, axis=0)
         term2 = (1 - eta) * np.mean(sequence_data, axis=0)
         priority = term1 + term2

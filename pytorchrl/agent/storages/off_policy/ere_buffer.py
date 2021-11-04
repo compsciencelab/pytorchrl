@@ -105,7 +105,7 @@ class EREBuffer(B):
 
         def create_buffer(device, actor, algorithm, envs):
             """Create and return a EREBuffer instance."""
-            return cls(size, device, actor, algorithm, n_step, epsilon, alpha, beta, default_error, eta, cmin)
+            return cls(size, device, actor, algorithm, envs, n_step, epsilon, alpha, beta, default_error, eta, cmin)
 
         return create_buffer
 
@@ -327,7 +327,7 @@ class EREBuffer(B):
                 per_weigths = None
 
                 if num_proc * self.size < self.cmin:  # Standard
-                    idxs = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
+                    samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                     ck = N
 
                 elif self.alpha == 0.0:  # ERE
@@ -365,6 +365,5 @@ class EREBuffer(B):
                 if per_weigths is not None:
                     batch.update({"per_weights": per_weigths})
 
-                import ipdb; ipdb.set_trace()
                 yield batch
 
