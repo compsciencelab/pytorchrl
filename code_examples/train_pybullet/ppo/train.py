@@ -18,7 +18,6 @@ from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 def main():
 
-    import ipdb; ipdb.set_trace()
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
