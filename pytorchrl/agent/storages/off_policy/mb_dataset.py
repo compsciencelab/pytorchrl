@@ -38,9 +38,13 @@ class MBReplayBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, device, actor, algorithm):
+    def __init__(self, size, validation_percentage, device, actor, algorithm, envs):
 
         self.actor = actor
+        self.ensemble_size = actor.ensemble_size
+        self.scaler = actor.scaler
+        self.validation_percentage = validation_percentage
+        self.ensemble_size = actor.ensemble_size
         self.device = device
         self.algo = algorithm
         self.max_size, self.size, self.step = size, 0, 0
@@ -49,7 +53,7 @@ class MBReplayBuffer(S):
         self.reset()
 
     @classmethod
-    def create_factory(cls, size):
+    def create_factory(cls, size, validation_percentage):
         """
         Returns a function that creates ReplayBuffer instances.
 
@@ -64,9 +68,9 @@ class MBReplayBuffer(S):
             creates a new ReplayBuffer class instance.
         """
 
-        def create_buffer(device, actor, algorithm):
+        def create_buffer(device, actor, algorithm, envs):
             """Create and return a ReplayBuffer instance."""
-            return cls(size, device, actor, algorithm)
+            return cls(size, validation_percentage, device, actor, algorithm, envs)
 
         return create_buffer
 
@@ -181,7 +185,6 @@ class MBReplayBuffer(S):
         new_data : dict
             Dictionary of env transition samples to be added to self.data.
         """
-
         lengths = []
         for k, v in new_data.items():
 
@@ -289,7 +292,7 @@ class MBReplayBuffer(S):
         """
         return info
 
-    def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1):
+    def generate_batches(self, num_mini_batch, mini_batch_size=256, num_epochs=1):
         """
 
         """
@@ -298,19 +301,52 @@ class MBReplayBuffer(S):
        
         for k, v in self.data.items():
             if k == prl.OBS:
-                observation_tensor = torch.from_numpy(v).float()
+                observations =v
             elif k == prl.ACT:
-                action_tensor = torch.from_numpy(v).float()
+                actions = v
             elif k == prl.OBS2:
-                next_observation_tensor = torch.from_numpy(v).float()
+                next_observations = v
+            elif k == prl.REW:
+                rewards = v
             else:
                 pass
-        dataset = TensorDataset(observation_tensor, action_tensor, next_observation_tensor)
-        dataloader = DataLoader(dataset, batch_size=mini_batch_size, shuffle=True)
-        # compute and set num_mini_batches 
-        self.algo.num_mini_batches = len(dataloader) / mini_batch_size
+            
+        inputs = np.concatenate((observations, actions), axis=-1)
+        delta_state = next_observations - observations
+        labels = np.concatenate((delta_state, rewards), axis=-1)
+
+        num_validation = int(inputs.shape[0] * self.validation_percentage)
+
+        train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]
+        holdout_inputs, holdout_labels = inputs[:num_validation], labels[:num_validation]
+
+        self.actor.scaler.fit(train_inputs)
+        train_inputs = self.actor.scaler.transform(train_inputs)
+        holdout_inputs = self.actor.scaler.transform(holdout_inputs)
+
+        holdout_inputs = torch.from_numpy(holdout_inputs).float().to(self.device)
+        holdout_labels = torch.from_numpy(holdout_labels).float().to(self.device)
+        holdout_inputs = holdout_inputs.squeeze(1)
+        holdout_labels = holdout_labels.squeeze(1)
+        train_inputs = train_inputs.squeeze(1)
+        train_labels = train_labels.squeeze(1)
         
-        return dataloader
+        holdout_inputs = holdout_inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
+        holdout_labels = holdout_labels[None, :, :].repeat(self.ensemble_size, 1, 1)
+        
+        for _ in range(num_epochs):
+            train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
+            for start_pos in range(0, train_inputs.shape[0], mini_batch_size):
+                idx = train_idx[:, start_pos: start_pos + mini_batch_size]
+                train_input = train_inputs[idx]
+                train_label = train_labels[idx]
+                train_input = torch.from_numpy(train_input).float().to(self.device)
+                train_label = torch.from_numpy(train_label).float().to(self.device)
+                batch = {"train_input": train_input,
+                         "train_label": train_label,
+                         "holdout_inputs": holdout_inputs,
+                         "holdout_labels": holdout_labels}
+                yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
         """

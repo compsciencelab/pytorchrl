@@ -9,15 +9,17 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.actors.planner import MPC
 
 
 class MB_MPC(Algorithm):
 
-
     def __init__(self,
-                 device,
                  actor,
+                 device,
                  lr,
+                 n_planner=5000,
+                 planning_depth=32,
                  update_every=50,
                  test_every=1000,
                  max_grad_norm=0.5,
@@ -37,20 +39,22 @@ class MB_MPC(Algorithm):
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
-
+        self._num_mini_batch = 1
         # Number of network updates between test evaluations
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
         self._num_test_episodes = int(num_test_episodes)
-
+        self.actor = actor
         # ---- MB MPC-specific attributes ----------------------------------------
-
+        self.mpc = MPC.MPC(action_space=self.actor.action_space,
+                           n_planner=n_planner,
+                           planning_depth=planning_depth,
+                           device=device)
         self.iter = 0
         self.device = device
-        self.actor = actor
         self.max_grad_norm = max_grad_norm
-        self.update_every = update_every
+        self._update_every = update_every
 
         # List of parameters for both Q-networks
         dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
@@ -62,19 +66,22 @@ class MB_MPC(Algorithm):
     @classmethod
     def create_factory(cls,
                        lr,
+                       n_planner=5000,
+                       planning_depth=32,
                        test_every=5000,
                        update_every=50,
                        start_steps=1000,
                        max_grad_norm=0.5,
-                       mini_batch_size=64,
+                       mini_batch_size=256,
                        num_test_episodes=5
                        ):
 
-
         def create_algo_instance(device, actor):
             return cls(actor=actor,
-                       lr=lr,
                        device=device,
+                       lr=lr,
+                       n_planner=n_planner,
+                       planning_depth=planning_depth,
                        test_every=test_every,
                        start_steps=start_steps,
                        update_every=update_every,
@@ -82,7 +89,12 @@ class MB_MPC(Algorithm):
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes)
 
-        return create_algo_instance
+        return create_algo_instance, prl.MPC
+    
+    @property
+    def gamma(self):
+        """Returns discount factor gamma."""
+        return self._gamma
 
     @property
     def start_steps(self):
@@ -133,26 +145,15 @@ class MB_MPC(Algorithm):
         return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-
-
+        # do MPC planning here just pass the model in there
         with torch.no_grad():
-            action = self.actor.get_action(obs, deterministic=deterministic)
+            action = self.mpc.get_next_action(state=obs, model=self.actor, noise=True)
+            clipped_action = torch.clamp(action, -1, 1)
+        if self.actor.unscale:
+            action = self.actor.unscale(action)
+            clipped_action = self.actor.unscale(clipped_action)
 
-        return action, None, None, {}
-
-    def compute_dynamics_loss(self, data):
-
-        obs, actions, next_obs = data
-
-        predicted_ds = self.actor.dynamics_model(obs, actions)
-
-        target_ds = next_obs - obs
-        
-        loss = nn.functional.mse_loss(predicted_ds, target_ds)
-        
-        return loss
-
-
+        return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -174,9 +175,8 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-
-        loss = self.compute_dynamics_loss(batch)
-        self.q_optimizer.zero_grad()
+        loss = self.actor.training_step(batch)
+        self.dynamics_optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)

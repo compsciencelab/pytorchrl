@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from pytorchrl.agent.actors.utils import init
 from pytorchrl.agent.actors.noise import get_noise
+from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
 
 
 class Deterministic(nn.Module):
@@ -86,3 +87,15 @@ class Deterministic(nn.Module):
         pred = torch.clamp(pred, min=-1, max=1)
 
         return None, None, pred
+
+class DeterministicEnsemble(Deterministic):
+    def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int=7)-> None:
+        super(DeterministicEnsemble, self).__init__()
+
+        #init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        self.output = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
+        
+    def forward(self, x: torch.Tensor, ret_log_var: bool=False)-> torch.Tensor:
+        mean = self.output(x)
+        var = torch.zeros(mean.shape)
+        return mean, var, (None, None)

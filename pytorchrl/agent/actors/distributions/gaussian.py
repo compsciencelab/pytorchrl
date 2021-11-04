@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
+import torch.nn.functional as F
+from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
 
 from pytorchrl.agent.actors.utils import init
 
@@ -126,3 +128,30 @@ class DiagGaussian(nn.Module):
         entropy_dist = dist.entropy().sum(-1).mean()
 
         return logp, entropy_dist, dist
+
+class DiagGaussianEnsemble(nn.Module):
+    def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int)-> None:
+        super(DiagGaussianEnsemble, self).__init__()
+
+        self.num_outputs = num_outputs
+
+        #init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        self.output = EnsembleFC(in_features=num_inputs, out_features=2 * num_outputs, ensemble_size=ensemble_size)
+
+        self.max_logvar = nn.Parameter((torch.ones((1, num_outputs)).float() / 2), requires_grad=False)
+        self.min_logvar = nn.Parameter((-torch.ones((1, num_outputs)).float() * 10), requires_grad=False)
+
+    def forward(self, x: torch.Tensor, ret_log_var: bool=False):
+        
+        dist_parameter = self.output(x)
+
+        mean = dist_parameter[:, :, :self.num_outputs]
+        log_var = dist_parameter[:, :, self.num_outputs:]
+
+        logvar = self.max_logvar - F.softplus(self.max_logvar - log_var)
+        logvar = self.min_logvar + F.softplus(logvar - self.min_logvar)
+        
+        if ret_log_var:
+            return mean, logvar, (self.max_logvar, self.min_logvar)
+        else:
+            return mean, torch.exp(logvar), (self.min_logvar, self.max_logvar)

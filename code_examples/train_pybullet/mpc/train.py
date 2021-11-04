@@ -33,34 +33,41 @@ def main():
     print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_train_env_factory, env_kwargs={
-            "env_id": args.env_id,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
+    train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
+                                                                        log_dir=args.log_dir,
+                                                                        env_fn=pybullet_train_env_factory,
+                                                                        env_kwargs={"env_id": args.env_id,
+                                                                                    "frame_skip": args.frame_skip,
+                                                                                    "frame_stack": args.frame_stack})
 
     # 2. Define Test Vector of Envs (Optional)
-    test_envs_factory, _, _ = VecEnv.create_factory(
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_test_env_factory, env_kwargs={
-            "env_id": args.env_id,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
+    test_envs_factory, _, _ = VecEnv.create_factory(vec_env_size=args.num_env_processes,
+                                                    log_dir=args.log_dir,
+                                                    env_fn=pybullet_test_env_factory,
+                                                    env_kwargs={"env_id": args.env_id,
+                                                                "frame_skip": args.frame_skip,
+                                                                "frame_stack": args.frame_stack})
 
-    # 3. Define RL training algorithm
-    algo_factory, algo_name = MB_MPC.create_factory(
-        lr=args.lr, num_updates=args.num_updates,
-        update_every=args.update_every, start_steps=args.start_steps,
-        mini_batch_size=args.mini_batch_size)
+    # 3. Define RL Dynamics Model
+    dynamics_factory = MBActor.create_factory(obs_space,
+                                              action_space,
+                                              ensemble_size=args.ensemble_size,
+                                              elite_size=args.elite_size,
+                                              dynamics_type=args.dynamics_type,
+                                              restart_model=args.restart_model)
 
-    # 4. Define RL Policy
-    actor_factory = MBActor.create_factory(
-        obs_space, action_space, algo_name, args.n_planner,
-        args.depth, restart_model=args.restart_model)
+    # 4. Define RL training algorithm
+    algo_factory, algo = MB_MPC.create_factory(lr=args.lr,
+                                            n_planner=args.n_planner,
+                                            planning_depth=args.planning_depth,
+                                            update_every=args.update_every, 
+                                            start_steps=args.start_steps,
+                                            mini_batch_size=args.mini_batch_size)
+
+
 
     # 5. Define rollouts storage
-    storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size)
+    storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size, validation_percentage=args.validation_percentage)
 
     # 6. Define scheme
     params = {}
@@ -68,7 +75,7 @@ def main():
     # add core modules
     params.update({
         "algo_factory": algo_factory,
-        "actor_factory": actor_factory,
+        "actor_factory": dynamics_factory,
         "storage_factory": storage_factory,
         "train_envs_factory": train_envs_factory,
         "test_envs_factory": test_envs_factory,
@@ -139,11 +146,11 @@ def get_args():
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
     parser.add_argument(
-        "--n-planner", type=int, default=500,
+        "--n-planner", type=int, default=1000,
         help="Number of parallel planner for each actor (default: 500)"
     )
     parser.add_argument(
-        "--depth", type=int, default=12,
+        "--planning-depth", type=int, default=12,
         help="Number of planning depth for the random shooting (default: 12)"
     )
 
@@ -164,8 +171,10 @@ def get_args():
         help='Mini batch size for network updates (default: 32)')
 
     # Feature extractor model specs
-    parser.add_argument(
-        '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
+    parser.add_argument("--ensemble-size", type=int, default=7, help="")
+    parser.add_argument("--elite-size", type=int, default=5, help="")
+    parser.add_argument("--dynamics-type", type=str, default="probabilistic", help="")
+    parser.add_argument("--validation_percentage", type=float, default=0.2, help="")
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')
