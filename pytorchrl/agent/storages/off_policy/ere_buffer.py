@@ -64,7 +64,7 @@ class EREBuffer(B):
 
         super(EREBuffer, self).__init__(
             size=size, device=device, actor=actor, algorithm=algorithm,
-            n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta,
+            envs=envs, n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta,
             default_error=default_error)
 
         self.eta = eta
@@ -105,7 +105,7 @@ class EREBuffer(B):
 
         def create_buffer(device, actor, algorithm, envs):
             """Create and return a EREBuffer instance."""
-            return cls(size, device, actor, algorithm, n_step, epsilon, alpha, beta, default_error, eta, cmin)
+            return cls(size, device, actor, algorithm, envs, n_step, epsilon, alpha, beta, default_error, eta, cmin)
 
         return create_buffer
 
@@ -327,25 +327,31 @@ class EREBuffer(B):
                 per_weigths = None
 
                 if num_proc * self.size < self.cmin:  # Standard
-                    idxs = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
+                    samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                     ck = N
 
                 elif self.alpha == 0.0:  # ERE
                     ck = int(max(N * self.eta ** ((1000 * k) / num_mini_batch), self.cmin))
-                    idxs = np.random.randint(ck, size=mini_batch_size)
+                    samples = np.random.randint(ck, size=mini_batch_size)
 
                 else:  # PER + ERE
                     ck = int(max(N * self.eta ** ((1000 * k) / num_mini_batch), self.cmin))
                     priors = self.data["priority"][0:self.size].reshape(-1, 1)[N - ck: N]
                     probs = priors / priors.sum()
-                    idxs = np.random.choice(range(ck), size=mini_batch_size, p=probs.squeeze(1))
+                    samples = np.random.choice(range(ck), size=mini_batch_size, p=probs.squeeze(1))
 
                     per_weigths = np.power(ck * probs, - self.beta)
                     per_weigths /= per_weigths.max()
-                    per_weigths = per_weigths[idxs]
+                    per_weigths = per_weigths[samples]
                     per_weigths = torch.as_tensor(per_weigths, dtype=torch.float32).to(self.device)
 
                 for k, v in self.data.items():
+
+                    if k in (prl.RHS, prl.RHS2):
+                        size, idxs = 1, np.array([0])
+                    else:
+                        size, idxs = self.size, samples
+
                     if isinstance(v, dict):
                         for x, y in v.items():
                             batch[k][x] = torch.as_tensor(y[0:self.size].reshape(
