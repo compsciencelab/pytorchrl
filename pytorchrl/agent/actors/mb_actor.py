@@ -100,7 +100,6 @@ class MBActor(nn.Module):
         Parameters
         ----------
         obs : torch.tensor
-<<<<<<< HEAD
             Initial environment observation.
 
         Returns
@@ -242,7 +241,7 @@ class MBActor(nn.Module):
         self.eval()
         with torch.no_grad():
             val_mean, val_log_var, _ = self.get_prediction(inputs=holdout_inputs, ret_log_var=True)
-            validation_loss = self.calculate_loss(mean=val_mean, logvar=val_log_var, labels=holdout_labels, inc_var_loss=False)
+            validation_loss = self.calculate_loss(mean=val_mean, logvar=val_log_var, min_max_var=min_max_var, labels=holdout_labels, inc_var_loss=False)
             validation_loss = validation_loss.detach().cpu().numpy()
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
