@@ -338,8 +338,6 @@ class VanillaOnPolicyBuffer(S):
 
                         batch[k] = tensor
 
-                    import ipdb; ipdb.set_trace()
-
                     yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
