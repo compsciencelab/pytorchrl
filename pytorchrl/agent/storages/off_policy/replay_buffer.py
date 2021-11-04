@@ -94,6 +94,11 @@ class ReplayBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
+            # TODO: added
+            if not self.recurrent_actor and k == prl.RHS:
+                self.data[prl.RHS] = sample[prl.RHS]
+                continue
+
             if isinstance(v, dict):
                 self.data[k] = {}
                 for x, y in sample[k].items():
@@ -280,6 +285,13 @@ class ReplayBuffer(S):
 
         # Insert
         for k, v in sample.items():
+
+            if k not in self.storage_tensors:
+                continue
+
+            if not self.recurrent_actor and k == prl.RHS:
+                continue
+
             if isinstance(sample[k], dict):
                 for x, y in sample[k].items():
                     self.data[k][x][self.step] = y.cpu()

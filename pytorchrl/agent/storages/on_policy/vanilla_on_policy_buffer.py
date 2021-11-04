@@ -156,7 +156,6 @@ class VanillaOnPolicyBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
-            # TODO: if not self.recurrent_actor, also continue
             if not self.recurrent_actor and k == prl.RHS:
                 continue
 
@@ -184,8 +183,6 @@ class VanillaOnPolicyBuffer(S):
         """
         Before updating actor policy model, compute returns and advantages.
         """
-
-        # TODO. maybe here nothing is needed
 
         last_tensors = {}
         step = self.step if self.step != 0 else -1
