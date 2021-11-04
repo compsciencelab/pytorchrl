@@ -1,11 +1,13 @@
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from typing import Tuple
+
 import gym
 import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
 import random
+
 
 import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
@@ -39,10 +41,10 @@ class MBActor(nn.Module):
                  dynamics_type,
                  device,
                  noise=None)-> None:
-
         super(MBActor, self).__init__()
 
         self.noise = noise
+
         self.device = device
         self.input_space = input_space.shape[0]
         self.action_space = action_space
@@ -77,6 +79,7 @@ class MBActor(nn.Module):
                          dynamics_type=dynamics_type,
                          device=device)
 
+
             if isinstance(restart_model, str):
                 model.load_state_dict(torch.load(restart_model, map_location=device))
             elif isinstance(restart_model, dict):
@@ -85,6 +88,7 @@ class MBActor(nn.Module):
             model.to(device)
 
             return model
+
 
         return create_dynamics_instance
 
@@ -96,6 +100,7 @@ class MBActor(nn.Module):
         Parameters
         ----------
         obs : torch.tensor
+<<<<<<< HEAD
             Initial environment observation.
 
         Returns

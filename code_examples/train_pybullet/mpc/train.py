@@ -15,9 +15,7 @@ from pytorchrl.agent.actors import MBActor
 from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
-
 def main():
-
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
@@ -33,6 +31,7 @@ def main():
     print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
+
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
                                                                         log_dir=args.log_dir,
                                                                         env_fn=pybullet_train_env_factory,
@@ -151,9 +150,9 @@ def get_args():
     )
     parser.add_argument(
         "--planning-depth", type=int, default=12,
+
         help="Number of planning depth for the random shooting (default: 12)"
     )
-
     parser.add_argument(
         '--start-steps', type=int, default=1000,
         help='SAC num initial random steps (default: 1000)')
@@ -171,6 +170,7 @@ def get_args():
         help='Mini batch size for network updates (default: 32)')
 
     # Feature extractor model specs
+
     parser.add_argument("--ensemble-size", type=int, default=7, help="")
     parser.add_argument("--elite-size", type=int, default=5, help="")
     parser.add_argument("--dynamics-type", type=str, default="probabilistic", help="")

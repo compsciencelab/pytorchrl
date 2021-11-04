@@ -73,5 +73,4 @@ class MPC():
             returns += rewards
             if i == 0:
                 first_actions = actions
-
         return first_actions, returns
