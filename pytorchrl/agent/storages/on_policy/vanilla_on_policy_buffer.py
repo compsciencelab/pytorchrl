@@ -75,9 +75,7 @@ class VanillaOnPolicyBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
-            # TODO: if not self.recurrent_actor, self.data[RHS] is equal to sample[RHS]
             if not self.recurrent_actor and k == prl.RHS:
-                import ipdb; ipdb.set_trace()
                 self.data[prl.RHS] = sample[prl.RHS]
                 continue
 
@@ -329,15 +327,12 @@ class VanillaOnPolicyBuffer(S):
 
                     for k in batch:
 
-                        # TODO: if k is "rhs", idxs are only idx 0
-                        if k == prl.RHS:
-                            import ipdb; ipdb.set_trace()
-
                         if isinstance(self.data[k], dict):
                             tensor = {x: self.data[k][x][0:l].reshape(
                                 -1, *self.data[k][x].shape[2:])[idxs] for x in self.data[k]}
                         else:
                             tensor = self.data[k][0:l].reshape(-1, *self.data[k].shape[2:])[idxs]
+
                         batch[k] = tensor
 
                     yield batch
