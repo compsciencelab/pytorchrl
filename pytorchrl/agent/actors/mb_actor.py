@@ -222,10 +222,11 @@ class MBActor(nn.Module):
             var_loss = torch.mean(torch.mean(logvar, dim=-1), dim=-1)
             total_loss = torch.sum(mse_loss) + torch.sum(var_loss)
             total_loss += 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+            return total_loss, mse_loss
         else:
             mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
             total_loss = torch.sum(mse_loss)
-        return total_loss, mse_loss
+            return total_loss
 
     def training_step(self, batch)-> torch.Tensor:
         train_inputs = batch["train_input"]
