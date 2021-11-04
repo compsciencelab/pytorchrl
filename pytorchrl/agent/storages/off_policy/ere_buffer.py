@@ -332,20 +332,26 @@ class EREBuffer(B):
 
                 elif self.alpha == 0.0:  # ERE
                     ck = int(max(N * self.eta ** ((1000 * k) / num_mini_batch), self.cmin))
-                    idxs = np.random.randint(ck, size=mini_batch_size)
+                    samples = np.random.randint(ck, size=mini_batch_size)
 
                 else:  # PER + ERE
                     ck = int(max(N * self.eta ** ((1000 * k) / num_mini_batch), self.cmin))
                     priors = self.data["priority"][0:self.size].reshape(-1, 1)[N - ck: N]
                     probs = priors / priors.sum()
-                    idxs = np.random.choice(range(ck), size=mini_batch_size, p=probs.squeeze(1))
+                    samples = np.random.choice(range(ck), size=mini_batch_size, p=probs.squeeze(1))
 
                     per_weigths = np.power(ck * probs, - self.beta)
                     per_weigths /= per_weigths.max()
-                    per_weigths = per_weigths[idxs]
+                    per_weigths = per_weigths[samples]
                     per_weigths = torch.as_tensor(per_weigths, dtype=torch.float32).to(self.device)
 
                 for k, v in self.data.items():
+
+                    if k in (prl.RHS, prl.RHS2):
+                        size, idxs = 1, np.array([0])
+                    else:
+                        size, idxs = self.size, samples
+
                     if isinstance(v, dict):
                         for x, y in v.items():
                             batch[k][x] = torch.as_tensor(y[0:self.size].reshape(
@@ -359,5 +365,6 @@ class EREBuffer(B):
                 if per_weigths is not None:
                     batch.update({"per_weights": per_weigths})
 
+                import ipdb; ipdb.set_trace()
                 yield batch
 

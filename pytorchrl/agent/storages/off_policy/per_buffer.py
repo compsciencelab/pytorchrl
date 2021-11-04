@@ -359,5 +359,4 @@ class PERBuffer(B):
                             -1, *v.shape[2:])[idxs], dtype=torch.float32).to(self.device)
 
                 batch.update({"per_weights": per_weigths, "n_step": self.n_step, "idxs": idxs})
-                import ipdb; ipdb.set_trace()
                 yield batch
