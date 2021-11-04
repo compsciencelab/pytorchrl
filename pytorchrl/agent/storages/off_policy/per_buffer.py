@@ -55,7 +55,7 @@ class PERBuffer(B):
 
         super(PERBuffer, self).__init__(
             size=size, device=device, actor=actor,
-            algorithm=algorithm, n_step=n_step)
+            algorithm=algorithm, envs=envs, n_step=n_step)
 
         self.beta = beta
         self.alpha = alpha
@@ -136,6 +136,10 @@ class PERBuffer(B):
 
             # Add obs2, rhs2 and done2 directly
             for k in (prl.OBS2, prl.RHS2, prl.DONE2):
+
+                if not self.recurrent_actor and k == prl.RHS2:
+                    continue
+
                 if isinstance(sample[k], dict):
                     for x, y in sample[k].items():
                         self.data[k][x][self.step] = y.cpu()
@@ -148,6 +152,10 @@ class PERBuffer(B):
 
             # Get obs, rhs and act from step buffer
             for k in (prl.OBS, prl.RHS, prl.ACT):
+
+                if not self.recurrent_actor and k == prl.RHS:
+                    continue
+
                 tensor = self.n_step_buffer[k].popleft()
                 if isinstance(tensor, dict):
                     for x, y in tensor.items():
@@ -325,17 +333,23 @@ class PERBuffer(B):
                 batch = {k: {} for k in self.storage_tensors}
 
                 if self.alpha == 0.0:
-                    idxs = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
+                    samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                     per_weigths = 1.0
                 else:
                     priors = self.data["priority"][0:self.size].reshape(-1)
                     probs = priors / priors.sum()
-                    idxs = np.random.choice(range(num_proc * self.size), size=mini_batch_size, p=probs)
+                    samples = np.random.choice(range(num_proc * self.size), size=mini_batch_size, p=probs)
                     per_weigths = np.power(num_proc * self.size * probs, -self.beta)
                     per_weigths = torch.as_tensor(per_weigths / per_weigths.max(), dtype=torch.float32).to(self.device)
-                    per_weigths = per_weigths.view(-1, 1)[idxs]
+                    per_weigths = per_weigths.view(-1, 1)[samples]
 
                 for k, v in self.data.items():
+
+                    if k in (prl.RHS, prl.RHS2):
+                        size, idxs = 1, np.array([0])
+                    else:
+                        size, idxs = self.size, samples
+
                     if isinstance(v, dict):
                         for x, y in v.items():
                             batch[k][x] = torch.as_tensor(y[0:self.size].reshape(
@@ -345,4 +359,5 @@ class PERBuffer(B):
                             -1, *v.shape[2:])[idxs], dtype=torch.float32).to(self.device)
 
                 batch.update({"per_weights": per_weigths, "n_step": self.n_step, "idxs": idxs})
+                import ipdb; ipdb.set_trace()
                 yield batch

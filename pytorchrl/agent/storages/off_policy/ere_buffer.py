@@ -64,7 +64,7 @@ class EREBuffer(B):
 
         super(EREBuffer, self).__init__(
             size=size, device=device, actor=actor, algorithm=algorithm,
-            n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta,
+            envs=envs, n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta,
             default_error=default_error)
 
         self.eta = eta

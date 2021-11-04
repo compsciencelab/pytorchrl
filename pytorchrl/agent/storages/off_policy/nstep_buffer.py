@@ -45,7 +45,7 @@ class NStepReplayBuffer(S):
         algorithm._update_every += n_step - 1
 
         super(NStepReplayBuffer, self).__init__(
-            size=size,  device=device, actor=actor, algorithm=algorithm)
+            size=size,  device=device, actor=actor, algorithm=algorithm, envs=envs)
 
         self.n_step = n_step
         self.gamma = algorithm.gamma

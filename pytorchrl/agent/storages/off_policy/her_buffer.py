@@ -48,8 +48,9 @@ class HERBuffer(B):
                  epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
 
         super(HERBuffer, self).__init__(
-            self, size, device, actor, algorithm, n_step=n_step, epsilon=epsilon,
-            alpha=alpha, beta=beta, default_error=default_error, eta=eta, cmin=cmin)
+            self, size=size, device=device, actor=actor, algorithm=algorithm, envs=envs,
+            n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta, default_error=default_error,
+            eta=eta, cmin=cmin)
 
         self.her_function = her_function
         self.last_episode_start = 0
