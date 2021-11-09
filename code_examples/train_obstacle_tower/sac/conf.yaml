@@ -10,7 +10,7 @@ lr: 3.0e-4
 gamma: 0.99
 polyak: 0.995
 max_time: 86400
-num_env_processes: 10
+num_env_processes: 3
 recurrent_nets: True
 reward_shape: True
 reduced_action_space: True
@@ -19,7 +19,7 @@ mini_batch_size: 256
 update_every: 1 
 num_updates: 1
 start_steps: 2500
-buffer_size: 1000000
+buffer_size: 9000
 save_interval: 50000
 num_grad_workers: 1
 num_col_workers: 1 
