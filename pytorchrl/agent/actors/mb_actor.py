@@ -30,6 +30,14 @@ class StandardScaler(object):
 
     def inverse_transform(self, data: np.array)-> np.array:
         return self.std * data + self.mu
+    
+class Print(nn.Module):
+    def __init__(self):
+        super(Print, self).__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        return x
 
 
 class MBActor(nn.Module):
@@ -154,12 +162,16 @@ class MBActor(nn.Module):
         dynamics_net = nn.Sequential(OrderedDict([
             ('dynamics_layer_1', dynamics_layer_1),
             ('swish1', nn.SiLU()),
+            ("Print", Print()),
             ('dynamics_layer_2', dynamics_layer_2),
             ('swish2', nn.SiLU()),
+            ("Print", Print()),
             ('dynamics_layer_3', dynamics_layer_3),
             ('swish3', nn.SiLU()),
+            ("Print", Print()),
             ('dynamics_layer_4', dynamics_layer_4),
             ('swish4', nn.SiLU()),
+            ("Print", Print()),
             ("output", output),
         ]))
 

@@ -244,7 +244,6 @@ class CWorker(W):
                 self.obs, self.rhs, self.done, act, reward,
                 obs2, rhs2, done2)._asdict()
             transition.update(algo_data)
-
             # Store transition in buffer
             self.storage.insert_transition(transition)
 

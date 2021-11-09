@@ -9,6 +9,7 @@ class EnsembleFC(nn.Module):
         self.out_features = out_features
         self.ensemble_size = ensemble_size
         self.weight = nn.Parameter(torch.Tensor(ensemble_size, in_features, out_features))
+        torch.nn.init.kaiming_uniform_(self.weight)
         self.weight_decay = weight_decay
         if bias:
             self.bias = nn.Parameter(torch.Tensor(ensemble_size, out_features))

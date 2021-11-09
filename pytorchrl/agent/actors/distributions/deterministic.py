@@ -88,7 +88,7 @@ class Deterministic(nn.Module):
 
         return None, None, pred
 
-class DeterministicEnsemble(Deterministic):
+class DeterministicEnsemble(nn.Module):
     def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int=7)-> None:
         super(DeterministicEnsemble, self).__init__()
 
