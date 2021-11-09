@@ -3,7 +3,7 @@ from typing import Tuple
 import gym
 import numpy as np
 import torch
-from copy import deepcopy
+import time
 
 class RandomPolicy():
     def __init__(self, action_space, action_type, action_high, action_low, n_planner, device=None) -> None:
@@ -67,8 +67,12 @@ class MPC():
         returns = torch.zeros((self.n_planner, 1)).to(self.device)
         for i in range(self.planning_depth):
             actions = self.policy.get_action(states)
+            print("STATE: ", states)
+            print("ACTIONS", actions)
             with torch.no_grad():
                 next_states, rewards = model.predict(states, actions)
+            print("NEXT_STATE: ", next_states)
+            time.sleep(10)
             states = next_states
             returns += rewards
             if i == 0:
