@@ -3,6 +3,7 @@ from typing import Tuple
 
 import gym
 import torch
+import time
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
@@ -162,16 +163,12 @@ class MBActor(nn.Module):
         dynamics_net = nn.Sequential(OrderedDict([
             ('dynamics_layer_1', dynamics_layer_1),
             ('swish1', nn.SiLU()),
-            ("Print", Print()),
             ('dynamics_layer_2', dynamics_layer_2),
             ('swish2', nn.SiLU()),
-            ("Print", Print()),
             ('dynamics_layer_3', dynamics_layer_3),
             ('swish3', nn.SiLU()),
-            ("Print", Print()),
             ('dynamics_layer_4', dynamics_layer_4),
             ('swish4', nn.SiLU()),
-            ("Print", Print()),
             ("output", output),
         ]))
 
@@ -194,12 +191,14 @@ class MBActor(nn.Module):
         # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 
         inputs = torch.from_numpy(self.scaler.transform(inputs.cpu().numpy())).float().to(self.device)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
+        #print("INPUTS:", inputs)
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
-
+        #print("MEANS: {} | VAR: {}".format(ensemble_means, ensemble_var))
         ensemble_means[:, :, :-1] += states.to(self.device)
         ensemble_std = torch.sqrt(ensemble_var)
-        if self.dynamics_type == "probabilisitc":
+        if self.dynamics_type == "probabilistic":
             ensemble_predictions = torch.normal(ensemble_means, ensemble_std)
+            #print("ENSEMBLE_PREDICTION:", ensemble_predictions)
         else:
             ensemble_predictions = ensemble_means
         if self.rollout_select == "random":
