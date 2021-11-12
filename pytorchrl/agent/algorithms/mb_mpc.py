@@ -34,7 +34,7 @@ class MB_MPC(Algorithm):
         self._start_steps = int(start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
+        self._num_epochs = int(10)  # Default to 1 for off-policy algorithms
 
 
         # Size of update mini batches
@@ -175,14 +175,15 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-        loss = self.actor.training_step(batch)
+        loss, validation_loss = self.actor.training_step(batch)
         self.dynamics_optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
         info = {
-            "loss_dynamics": loss.detach().item()
+            "train_loss": loss.item(),
+            "validation_loss": validation_loss.item()
         }
 
         grads = {"dyna_grads": dyna_grads}

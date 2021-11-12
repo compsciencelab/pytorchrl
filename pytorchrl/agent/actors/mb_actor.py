@@ -188,9 +188,11 @@ class MBActor(nn.Module):
 
     def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
         inputs = torch.cat((states, actions), dim=-1)
+        #print("inputs after concat with action", inputs)
         # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 
-        inputs = torch.from_numpy(self.scaler.transform(inputs.cpu().numpy())).float().to(self.device)
-        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
+        #inputs = torch.from_numpy(self.scaler.transform(inputs.cpu().numpy())).float().to(self.device)
+        #print(inputs, inputs.shape)
+        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float()
         #print("INPUTS:", inputs)
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         #print("MEANS: {} | VAR: {}".format(ensemble_means, ensemble_var))
@@ -259,4 +261,4 @@ class MBActor(nn.Module):
             self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
             # TODO: add early stopping
 
-        return loss
+        return loss, validation_loss
