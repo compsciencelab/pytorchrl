@@ -137,8 +137,6 @@ class MBActor(nn.Module):
 
         return obs, rhs, done
 
-    def get_action(self, obs, deterministic=False):
-        return 
 
     def create_dynamics(self, name="dynamics_model"):
         if type(self.action_space) == gym.spaces.discrete.Discrete:
@@ -181,6 +179,7 @@ class MBActor(nn.Module):
 
         setattr(self, name, dynamics_net)
 
+
     def get_prediction(self,
                        inputs: torch.Tensor,
                        ret_log_var: bool=False
@@ -191,6 +190,7 @@ class MBActor(nn.Module):
         else:
             mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, torch.exp(log_var), min_max_var
+
 
     def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
 
@@ -224,8 +224,10 @@ class MBActor(nn.Module):
         # TODO: add Termination function?
         return next_states, rewards
 
+
     def do_rollout(self, state, action):
         raise NotImplementedError
+
 
     def calculate_loss(self, mean: torch.Tensor,
                              logvar: torch.Tensor,
@@ -246,6 +248,7 @@ class MBActor(nn.Module):
             mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
             total_loss = torch.sum(mse_loss)
             return total_loss
+
 
     def training_step(self, batch)-> torch.Tensor:
         train_inputs = batch["train_input"]

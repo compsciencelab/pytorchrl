@@ -130,10 +130,16 @@ class DiagGaussian(nn.Module):
         return logp, entropy_dist, dist
 
 class DiagGaussianEnsemble(nn.Module):
+    """[summary]
+
+    Args:
+        nn ([type]): [description]
+    """
     def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int)-> None:
         super(DiagGaussianEnsemble, self).__init__()
 
         self.num_outputs = num_outputs
+        self.ensemble_size = ensemble_size
         self.output = EnsembleFC(in_features=num_inputs, out_features=2 * num_outputs, ensemble_size=ensemble_size)
 
         self.max_logvar = nn.Parameter((torch.ones((1, num_outputs)).float() / 2), requires_grad=False)
@@ -148,6 +154,7 @@ class DiagGaussianEnsemble(nn.Module):
 
         log_var = self.max_logvar - F.softplus(self.max_logvar - log_var)
         log_var = self.min_logvar + F.softplus(log_var - self.min_logvar)
-        
+        assert mean.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
+        assert log_var.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
         return mean, log_var, (self.max_logvar, self.min_logvar)
 

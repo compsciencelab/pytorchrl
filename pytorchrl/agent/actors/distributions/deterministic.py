@@ -92,10 +92,13 @@ class DeterministicEnsemble(nn.Module):
     def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int=7)-> None:
         super(DeterministicEnsemble, self).__init__()
 
-        #init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        self.num_outputs = num_outputs
+        self.ensemble_size = ensemble_size
         self.output = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
         
     def forward(self, x: torch.Tensor)-> torch.Tensor:
         mean = self.output(x)
         var = torch.zeros(mean.shape)
+        assert mean.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
+        assert var.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
         return mean, var, (None, None)

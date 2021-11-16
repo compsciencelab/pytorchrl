@@ -13,7 +13,11 @@ from pytorchrl.agent.actors.planner import MPC
 
 
 class MB_MPC(Algorithm):
+    """[summary]
 
+    Args:
+        Algorithm ([type]): [description]
+    """
     def __init__(self,
                  actor,
                  device,
