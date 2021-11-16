@@ -134,8 +134,6 @@ class DiagGaussianEnsemble(nn.Module):
         super(DiagGaussianEnsemble, self).__init__()
 
         self.num_outputs = num_outputs
-
-        #init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
         self.output = EnsembleFC(in_features=num_inputs, out_features=2 * num_outputs, ensemble_size=ensemble_size)
 
         self.max_logvar = nn.Parameter((torch.ones((1, num_outputs)).float() / 2), requires_grad=False)
@@ -148,9 +146,8 @@ class DiagGaussianEnsemble(nn.Module):
         mean = dist_parameter[:, :, :self.num_outputs]
         log_var = dist_parameter[:, :, self.num_outputs:]
 
-        logvar = self.max_logvar - F.softplus(self.max_logvar - log_var)
-        logvar = self.min_logvar + F.softplus(logvar - self.min_logvar)
+        log_var = self.max_logvar - F.softplus(self.max_logvar - log_var)
+        log_var = self.min_logvar + F.softplus(log_var - self.min_logvar)
         
-
-        return mean, logvar, (self.max_logvar, self.min_logvar)
+        return mean, log_var, (self.max_logvar, self.min_logvar)
 

@@ -255,8 +255,8 @@ class MBActor(nn.Module):
         holdout_labels = batch["holdout_labels"]
         
         self.train()
-        mean, log_var, min_max_var = self.get_prediction(inputs=train_inputs, ret_log_var=True)
-        loss, _ = self.calculate_loss(mean=mean, logvar=log_var, min_max_var=min_max_var, labels=train_labels, inc_var_loss=True)
+        mean, logvar, min_max_var = self.get_prediction(inputs=train_inputs, ret_log_var=True)
+        loss, _ = self.calculate_loss(mean=mean, logvar=logvar, min_max_var=min_max_var, labels=train_labels, inc_var_loss=True)
         
         self.eval()
         with torch.no_grad():
