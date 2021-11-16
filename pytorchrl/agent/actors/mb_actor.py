@@ -163,7 +163,9 @@ class MBActor(nn.Module):
         if type(self.action_space) == gym.spaces.box.Box:
             self.scale = Scale(self.action_space)
             self.unscale = Unscale(self.action_space)
-
+        else:
+            self.scale = None
+            self.unscale = None
         # ---- 6. Concatenate all dynamics net modules ------------------------------
         dynamics_net = nn.Sequential(OrderedDict([
             ('dynamics_layer_1', dynamics_layer_1),
@@ -194,7 +196,7 @@ class MBActor(nn.Module):
     def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
         # TODO one-hot action encoding
         if type(self.action_space) == gym.spaces.discrete.Discrete:
-            actions = one_hot(actions, num_classes=self.action_space.n)
+            actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
         inputs = torch.cat((states, actions), dim=-1)
 
         # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 

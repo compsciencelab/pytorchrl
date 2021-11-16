@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 import pytorchrl as prl
 from pytorchrl.agent.storages.base import Storage as S
+import gym
+from torch.nn.functional import one_hot
 
 
 def dim0_reshape(tensor, size):
@@ -276,8 +278,7 @@ class MBReplayBuffer(S):
 
     def after_gradients(self, batch, info):
         """
-        Steps required after updating actor policy model
-
+        Steps required after updating actor policy model validation_percentage
         Parameters
         ----------
         batch : dict
@@ -310,7 +311,9 @@ class MBReplayBuffer(S):
                 rewards = v[:self.size]
             else:
                 pass
-            
+        if type(self.actor.action_space) == gym.spaces.discrete.Discrete:
+            actions = one_hot(actions, num_classes=self.actor.action_space.n).squeeze(1)
+            assert actions.shape == (observations.shape[0], self.actor.action_space.n)
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
         labels = np.concatenate((delta_state, rewards), axis=-1)
@@ -320,9 +323,9 @@ class MBReplayBuffer(S):
         train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]
         holdout_inputs, holdout_labels = inputs[:num_validation], labels[:num_validation]
 
-        #self.actor.scaler.fit(train_inputs)
-        #train_inputs = self.actor.scaler.transform(train_inputs)
-        #holdout_inputs = self.actor.scaler.transform(holdout_inputs)
+        # self.actor.scaler.fit(train_inputs)
+        # train_inputs = self.actor.scaler.transform(train_inputs)
+        # holdout_inputs = self.actor.scaler.transform(holdout_inputs)
 
         holdout_inputs = torch.from_numpy(holdout_inputs).float().to(self.device)
         holdout_labels = torch.from_numpy(holdout_labels).float().to(self.device)
@@ -333,15 +336,10 @@ class MBReplayBuffer(S):
         
         holdout_inputs = holdout_inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
         holdout_labels = holdout_labels[None, :, :].repeat(self.ensemble_size, 1, 1)
-        print("*****************************************************************************************")
-        print("Start training!")
-        print("SIZE", self.size)
-        for e in range(num_epochs):
-            print("Training Epoch: ", e)
-            print("len train inputs: ", train_inputs.shape[0])
+        
+        for _ in range(num_epochs):
             train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
             for start_pos in range(0, train_inputs.shape[0], mini_batch_size):
-                print("Start position: {} of {}".format(start_pos, train_inputs.shape[0]))
                 idx = train_idx[:, start_pos: start_pos + mini_batch_size]
                 train_input = train_inputs[idx]
                 train_label = train_labels[idx]
