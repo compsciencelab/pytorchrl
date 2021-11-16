@@ -190,25 +190,23 @@ class MBActor(nn.Module):
             mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, log_var, min_max_var
         else:
-            mean, var, min_max_var = self.dynamics_model(inputs)
-            return mean, var, min_max_var
+            mean, log_var, min_max_var = self.dynamics_model(inputs)
+            return mean, torch.exp(log_var), min_max_var
 
     def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO one-hot action encoding
+
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
         inputs = torch.cat((states, actions), dim=-1)
 
         # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float()
-        #print("INPUTS:", inputs)
+
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
-        #print("MEANS: {} | VAR: {}".format(ensemble_means, ensemble_var))
         ensemble_means[:, :, :-1] += states.to(self.device)
         ensemble_std = torch.sqrt(ensemble_var)
         if self.dynamics_type == "probabilistic":
             ensemble_predictions = torch.normal(ensemble_means, ensemble_std)
-            #print("ENSEMBLE_PREDICTION:", ensemble_predictions)
         else:
             ensemble_predictions = ensemble_means
         if self.rollout_select == "random":

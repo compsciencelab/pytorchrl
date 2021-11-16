@@ -141,7 +141,7 @@ class DiagGaussianEnsemble(nn.Module):
         self.max_logvar = nn.Parameter((torch.ones((1, num_outputs)).float() / 2), requires_grad=False)
         self.min_logvar = nn.Parameter((-torch.ones((1, num_outputs)).float() * 10), requires_grad=False)
 
-    def forward(self, x: torch.Tensor, ret_log_var: bool=False):
+    def forward(self, x: torch.Tensor):
         
         dist_parameter = self.output(x)
 
@@ -151,7 +151,6 @@ class DiagGaussianEnsemble(nn.Module):
         logvar = self.max_logvar - F.softplus(self.max_logvar - log_var)
         logvar = self.min_logvar + F.softplus(logvar - self.min_logvar)
         
-        if ret_log_var:
-            return mean, logvar, (self.max_logvar, self.min_logvar)
-        else:
-            return mean, torch.exp(logvar), (self.min_logvar, self.max_logvar)
+
+        return mean, logvar, (self.max_logvar, self.min_logvar)
+
