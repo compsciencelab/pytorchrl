@@ -13,7 +13,7 @@ validation_percentage: 0.2
 max_time: 86400
 num_env_processes: 1
 mini_batch_size: 256 
-update_every: 1 
+update_every: 250
 num_updates: 1
 start_steps: 1000
 buffer_size: 1000000
