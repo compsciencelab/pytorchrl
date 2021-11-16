@@ -185,7 +185,6 @@ class MBActor(nn.Module):
                        inputs: torch.Tensor,
                        ret_log_var: bool=False
                        )-> Tuple[torch.Tensor, torch.Tensor]:
-
         if ret_log_var:
             mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, log_var, min_max_var
@@ -205,6 +204,7 @@ class MBActor(nn.Module):
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         ensemble_means[:, :, :-1] += states.to(self.device)
         ensemble_std = torch.sqrt(ensemble_var)
+
         if self.dynamics_type == "probabilistic":
             ensemble_predictions = torch.normal(ensemble_means, ensemble_std)
         else:
