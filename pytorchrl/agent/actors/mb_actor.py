@@ -8,6 +8,7 @@ import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
 import random
+from torch.nn.functional import one_hot
 
 
 import pytorchrl as prl
@@ -140,7 +141,10 @@ class MBActor(nn.Module):
         return 
 
     def create_dynamics(self, name="dynamics_model"):
-        dynamics_layer_1 = EnsembleFC(self.input_space + self.action_space.shape[0], out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+        if type(self.action_space) == gym.spaces.discrete.Discrete:
+            dynamics_layer_1 = EnsembleFC(self.input_space + self.action_space.n, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+        else:
+            dynamics_layer_1 = EnsembleFC(self.input_space + self.action_space.shape[0], out_features=self.hidden_size, ensemble_size=self.ensemble_size)
         dynamics_layer_2 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
         dynamics_layer_3 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
         dynamics_layer_4 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
@@ -156,8 +160,9 @@ class MBActor(nn.Module):
         else:
             raise ValueError
         
-        self.scale = Scale(self.action_space)
-        self.unscale = Unscale(self.action_space)
+        if type(self.action_space) == gym.spaces.box.Box:
+            self.scale = Scale(self.action_space)
+            self.unscale = Unscale(self.action_space)
 
         # ---- 6. Concatenate all dynamics net modules ------------------------------
         dynamics_net = nn.Sequential(OrderedDict([
@@ -187,11 +192,12 @@ class MBActor(nn.Module):
             return mean, var, min_max_var
 
     def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
+        # TODO one-hot action encoding
+        if type(self.action_space) == gym.spaces.discrete.Discrete:
+            actions = one_hot(actions, num_classes=self.action_space.n)
         inputs = torch.cat((states, actions), dim=-1)
-        #print("inputs after concat with action", inputs)
+
         # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 
-        #inputs = torch.from_numpy(self.scaler.transform(inputs.cpu().numpy())).float().to(self.device)
-        #print(inputs, inputs.shape)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float()
         #print("INPUTS:", inputs)
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
