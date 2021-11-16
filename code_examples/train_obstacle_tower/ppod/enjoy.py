@@ -13,6 +13,9 @@ def enjoy():
 
     args = get_args()
 
+    # Define device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # Define single copy of the environment
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
@@ -26,10 +29,7 @@ def enjoy():
             "reduced_actions": args.reduced_action_space,
             "num_actions": args.num_actions,
             "realtime": True,
-        }, vec_env_size=1)
-
-    # Define agent device and agent
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        }, vec_env_size=1)(device)
 
     policy = OnPolicyActor.create_factory(
         obs_space, action_space, prl.PPO,
