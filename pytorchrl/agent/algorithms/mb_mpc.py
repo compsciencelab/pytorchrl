@@ -175,14 +175,14 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-        loss, validation_loss = self.actor.training_step(batch)
+        logging_loss, train_loss, validation_loss = self.actor.training_step(batch)
         self.dynamics_optimizer.zero_grad()
-        loss.backward()
+        train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
         info = {
-            "train_loss": loss.item(),
+            "train_loss": logging_loss.item(),
             "validation_loss": validation_loss.item()
         }
 

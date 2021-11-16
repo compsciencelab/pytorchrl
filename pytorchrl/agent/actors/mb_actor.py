@@ -235,13 +235,13 @@ class MBActor(nn.Module):
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
         assert len(mean.shape) == len(logvar.shape) == len(labels.shape) == 3
-        inv_var = torch.exp(-logvar)
+        inv_var = (-logvar).exp()
         if inc_var_loss:
-            mse_loss = torch.mean(torch.mean(torch.pow(mean - labels, 2) * inv_var, dim=-1), dim=-1)
-            var_loss = torch.mean(torch.mean(logvar, dim=-1), dim=-1)
-            total_loss = torch.sum(mse_loss) + torch.sum(var_loss)
-            total_loss += 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
-            return total_loss, mse_loss
+            mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
+            var_loss = logvar.mean(-1).mean(-1).sum()
+            total_loss = mse_loss + var_loss
+            total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+            return total_loss, total_loss_min_max
         else:
             mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
             total_loss = torch.sum(mse_loss)
@@ -256,15 +256,23 @@ class MBActor(nn.Module):
         
         self.train()
         mean, logvar, min_max_var = self.get_prediction(inputs=train_inputs, ret_log_var=True)
-        loss, _ = self.calculate_loss(mean=mean, logvar=logvar, min_max_var=min_max_var, labels=train_labels, inc_var_loss=True)
+        loss, total_loss_min_max = self.calculate_loss(mean=mean,
+                                                       logvar=logvar,
+                                                       min_max_var=min_max_var,
+                                                       labels=train_labels,
+                                                       inc_var_loss=True)
         
         self.eval()
         with torch.no_grad():
             val_mean, val_log_var, _ = self.get_prediction(inputs=holdout_inputs, ret_log_var=True)
-            validation_loss = self.calculate_loss(mean=val_mean, logvar=val_log_var, min_max_var=min_max_var, labels=holdout_labels, inc_var_loss=False)
+            validation_loss = self.calculate_loss(mean=val_mean,
+                                                  logvar=val_log_var,
+                                                  min_max_var=min_max_var,
+                                                  labels=holdout_labels,
+                                                  inc_var_loss=False)
             validation_loss = validation_loss.detach().cpu().numpy()
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
             # TODO: add early stopping
 
-        return loss, validation_loss
+        return loss, total_loss_min_max, validation_loss
