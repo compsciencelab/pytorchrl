@@ -90,3 +90,32 @@ class DelayedReward(gym.Wrapper):
         self._step = 0
         self._reward = 0.0
         return self.env.reset(**kwargs)
+
+
+class SparseReward(gym.Wrapper):
+    def __init__(self, env, threshold=100):
+        """
+        Returns accumulated non-zero reward only every `delay`-th steps.
+        Can be used to simulate sparse-rewards environments.
+        """
+        gym.Wrapper.__init__(self, env)
+        self._threshold = threshold
+        self._reward = 0.0
+
+    def step(self, action):
+        """Repeat action, sum reward, and max over last observations."""
+
+        obs, reward, done, info = self.env.step(action)
+        self._reward += reward
+
+        if self._reward // self._threshold > 0 or done:
+            reward = (self._reward // self._threshold) * self._threshold
+            self._reward = self._reward % self._threshold
+        else:
+            reward = 0.0
+
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        self._reward = 0.0
+        return self.env.reset(**kwargs)
