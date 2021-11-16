@@ -312,7 +312,8 @@ class MBReplayBuffer(S):
             else:
                 pass
         if type(self.actor.action_space) == gym.spaces.discrete.Discrete:
-            actions = one_hot(actions, num_classes=self.actor.action_space.n).squeeze(1)
+            #actions = one_hot(actions, num_classes=self.actor.action_space.n).squeeze(1)
+            actions = np.eye(actions.max()+1)[actions].squeeze(1)
             assert actions.shape == (observations.shape[0], self.actor.action_space.n)
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
