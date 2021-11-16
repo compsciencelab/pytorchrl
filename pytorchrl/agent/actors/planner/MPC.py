@@ -19,7 +19,7 @@ class RandomPolicy():
             raise ValueError("Selected action type does not exist!")
 
     def _get_discrete_action(self, states: torch.Tensor)-> torch.Tensor:
-        return torch.randint(self.action_space, size=(self.n_planner, self.action_space.n)).to(self.device)
+        return torch.randint(self.action_space.n, size=(self.n_planner, 1)).to(self.device)
 
     def _get_continuous_action(self, states: torch.Tensor)-> torch.Tensor:
         actions = np.random.uniform(low=self.action_low,
