@@ -35,13 +35,14 @@ def enjoy():
         obs_space, action_space, prl.PPO,
         feature_extractor_network=get_feature_extractor(args.nn),
         recurrent_nets=args.recurrent_nets,
-        restart_model=os.path.join(args.log_dir, "model.state_dict")
+#        restart_model=os.path.join(args.log_dir, "model.state_dict")
     )(device)
 
     # Define initial Tensors
     env = env()
     obs = env.reset()
     done, episode_reward, step = False, 0, 0
+
     _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
 
     # Execute episodes

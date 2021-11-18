@@ -9,12 +9,12 @@ import argparse
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import PPO
+from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import GAEBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
+from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 
 def main():
@@ -45,7 +45,7 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # 1. Define Train Vector of Envs
+        # Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=obstacle_train_env_factory,
             env_kwargs={
@@ -58,25 +58,25 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=('floor', 'start', 'seed'))
 
-        # 2. Define RL training algorithm
-        algo_factory, algo_name = PPO.create_factory(
-            lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
-            entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
-            max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
+        # Define RL training algorithm
+        algo_factory, algo_name = SAC.create_factory(
+            lr_pi=args.lr, lr_q=args.lr, lr_alpha=args.lr, initial_alpha=args.alpha,
+            gamma=args.gamma, polyak=args.polyak, num_updates=args.num_updates,
+            update_every=args.update_every, start_steps=args.start_steps,
+            mini_batch_size=args.mini_batch_size)
 
-        # 3. Define RL Policy
-        actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name,
-            restart_model=args.restart_model,
-            feature_extractor_network=get_feature_extractor(args.nn),
-            recurrent_nets=args.recurrent_nets)
+        # Define RL Policy
+        actor_factory = OffPolicyActor.create_factory(
+            obs_space, action_space, algo_name, recurrent_nets=args.recurrent_nets,
+            restart_model=args.restart_model, obs_feature_extractor=args.nn)
 
-        # 4. Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(
-            size=args.num_steps, gae_lambda=args.gae_lambda)
+        # 5. Define rollouts storage
+        storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
+        # storage_factory = NStepReplayBuffer.create_factory(size=args.buffer_size, n_step=2)
+        # storage_factory = PERBuffer.create_factory(size=args.buffer_size, epsilon=0.0, alpha=0.6, beta=0.6)
+        # storage_factory = EREBuffer.create_factory(size=args.buffer_size, eta=0.996, cmin=5000)
 
-        # 5. Define scheme
+        # Define scheme
         params = {}
 
         # Add core modules
@@ -103,10 +103,10 @@ def main():
 
         scheme = Scheme(**params)
 
-        # 6. Define learner
+        # Define learner
         learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        # 7. Define train loop
+        # Define train loop
         iterations = 0
         start_time = time.time()
         while not learner.done():
@@ -135,7 +135,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
 
     # Wandb
     parser.add_argument(
@@ -162,49 +162,43 @@ def get_args():
         '--num-actions', type=int, default=6,
         help='Size of the reduced action space (6, 7 or 8) (default: 6)')
 
-    # PPO specs
+    # SAC specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
-        '--eps', type=float, default=1e-5,
-        help='Adam optimizer epsilon (default: 1e-5)')
+        '--eps', type=float, default=1e-8,
+        help='Adam optimizer epsilon (default: 1e-8)')
     parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
     parser.add_argument(
-        '--use-gae', action='store_true', default=False,
-        help='use generalized advantage estimation')
+        '--alpha', type=float, default=0.2,
+        help='SAC alpha parameter (default: 0.2)')
     parser.add_argument(
-        '--gae-lambda', type=float, default=0.95,
-        help='gae lambda parameter (default: 0.95)')
+        '--polyak', type=float, default=0.995,
+        help='SAC polyak paramater (default: 0.995)')
     parser.add_argument(
-        '--entropy-coef', type=float, default=0.01,
-        help='entropy term coefficient (default: 0.01)')
+        '--start-steps', type=int, default=1000,
+        help='SAC num initial random steps (default: 1000)')
     parser.add_argument(
-        '--value-loss-coef', type=float, default=0.5,
-        help='value loss coefficient (default: 0.5)')
+        '--buffer-size', type=int, default=10000,
+        help='Rollouts storage size (default: 10000 transitions)')
     parser.add_argument(
-        '--max-grad-norm', type=float, default=0.5,
-        help='max norm of gradients (default: 0.5)')
+        '--update-every', type=int, default=50,
+        help='Num env collected steps between SAC network update stages (default: 50)')
     parser.add_argument(
-        '--use_clipped_value_loss', action='store_true', default=False,
-        help='clip value loss update')
+        '--num-updates', type=int, default=50,
+        help='Num network updates per SAC network update stage (default 50)')
     parser.add_argument(
-        '--num-steps', type=int, default=20000,
-        help='number of forward steps in PPO (default: 20000)')
+        '--mini-batch-size', type=int, default=32,
+        help='Mini batch size for network updates (default: 32)')
     parser.add_argument(
-        '--ppo-epoch', type=int, default=4,
-        help='number of ppo epochs (default: 4)')
-    parser.add_argument(
-        '--num-mini-batch', type=int, default=32,
-        help='number of batches for ppo (default: 32)')
-    parser.add_argument(
-        '--clip-param', type=float, default=0.2,
-        help='ppo clip parameter (default: 0.2)')
+        '--target-update-interval', type=int, default=1,
+        help='Num SAC network updates per target network updates (default: 1)')
 
     # Feature extractor model specs
     parser.add_argument(
-        '--nn', default='CNN', help='Type of nn. Options are MLP, CNN, Fixup')
+        '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')
@@ -246,8 +240,8 @@ def get_args():
         '--save-interval', type=int, default=100,
         help='save interval, one save per n updates (default: 100)')
     parser.add_argument(
-        '--log-dir', default='/tmp/obstacle_tower_ppo',
-        help='directory to save agent logs (default: /tmp/obstacle_tower_ppo)')
+        '--log-dir', default='/tmp/pybullet_sac',
+        help='directory to save agent logs (default: /tmp/pybullet_sac)')
 
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)

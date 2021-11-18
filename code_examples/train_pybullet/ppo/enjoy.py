@@ -3,7 +3,7 @@
 import os
 import torch
 import argparse
-from pytorchrl.envs import pybullet_test_env_factory
+from pytorchrl.envs.pybullet import pybullet_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 

@@ -2,7 +2,6 @@
 
 import glob
 import torch
-import random
 import numpy as np
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
@@ -18,11 +17,14 @@ def enjoy():
     env, _, _ = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
         env_kwargs={
+            "min_floor": args.min_floor,
+            "max_floor": args.max_floor,
+            "seed_list": args.seed_list,
             "frame_skip": args.frame_skip,
-            "reward_shape": args.reward_shape,
-            "reduced_actions": args.reduced_action_space,
-            "num_actions": args.num_actions,
+            "reward_shape": False,
             "realtime": True,
+            "num_actions": args.num_actions,
+            "reduced_actions": args.reduced_action_space,
         },
         vec_env_size=1)
 
@@ -31,9 +33,11 @@ def enjoy():
 
     # Start recording
     env = env()
+    obs = env.reset()
 
-    demos_list = glob.glob(args.demos_dir + '/*.npz')
-    demo_name = random.choice(demos_list)
+    demo_idx = 0
+    demos_list = sorted(glob.glob(args.demos_dir + '/*.npz'))
+    demo_name = demos_list[demo_idx]
     demo = np.load(demo_name)
     done, episode_reward, step = False, 0, 0
     length_demo = demo[prl.ACT].shape[0]
@@ -42,23 +46,41 @@ def enjoy():
     # Execute episodes
     while not done:
 
-        obs, reward, done, info = env.step(torch.Tensor(demo[prl.ACT][step]).view(1, -1).to(device))
-        episode_reward += reward
+        try:
 
-        step += 1
-        print(step)
+            obs, reward, done, info = env.step(torch.Tensor(demo[prl.ACT][step]).view(1, -1).to(device))
+            episode_reward += reward
 
-        if step == length_demo:
-            done = True
+            print("Step {}, Action {}, Reward {}".format(step, demo[prl.ACT][step], reward.item()))
+            step += 1
 
-        if done:
-            print("EPISODE: reward: {}".format(episode_reward.item()), flush=True)
-            done, episode_reward, step = False, 0, 0
+            if step == length_demo:
+                done = True
+
+            if done:
+                demo_idx += 1
+                if demo_idx == len(demos_list):
+                    break
+                print("EPISODE REWARD: {}".format(episode_reward.item()), flush=True)
+                done, episode_reward, step = False, 0, 0
+                obs = env.reset()
+                demo_name = demos_list[demo_idx]
+                demo = np.load(demo_name)
+                length_demo = demo[prl.ACT].shape[0]
+                print("LOADING DEMO: {}, LENGTH {}".format(demo_name, length_demo))
+
+        except KeyboardInterrupt:
+            demo_idx += 1
+            if demo_idx == len(demos_list):
+                break
             obs = env.reset()
-            demo_name = random.choice(demos_list)
+            done, episode_reward, step = False, 0, 0
+            demo_name = demos_list[demo_idx]
             demo = np.load(demo_name)
             length_demo = demo[prl.ACT].shape[0]
             print("LOADING DEMO: {}, LENGTH {}".format(demo_name, length_demo))
+
+    print("Finished!")
 
 
 if __name__ == "__main__":

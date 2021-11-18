@@ -8,7 +8,7 @@ import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.memory_networks import GruNet
-from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor
+from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor, get_feature_extractor
 
 
 class OffPolicyActor(nn.Module):
@@ -519,8 +519,11 @@ class OffPolicyActor(nn.Module):
 
         # ---- 1. Define Obs feature extractor --------------------------------
 
-        if len(self.input_space.shape) == 3:  # If inputs are images, CNN required
+        if self.obs_feature_extractor:
+            self.obs_feature_extractor = get_feature_extractor(self.obs_feature_extractor)
+        else:
             self.obs_feature_extractor = default_feature_extractor(self.input_space)
+
         obs_extractor = self.obs_feature_extractor or nn.Identity
         policy_obs_feature_extractor = obs_extractor(
             self.input_space, **self.obs_feature_extractor_kwargs)

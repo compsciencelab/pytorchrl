@@ -3,7 +3,7 @@
 import os
 import torch
 import argparse
-from pytorchrl.envs import atari_test_env_factory
+from pytorchrl.envs.atari import atari_test_env_factory
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 

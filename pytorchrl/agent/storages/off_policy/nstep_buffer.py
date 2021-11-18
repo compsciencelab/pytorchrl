@@ -45,7 +45,7 @@ class NStepReplayBuffer(S):
         algorithm._update_every += n_step - 1
 
         super(NStepReplayBuffer, self).__init__(
-            size=size,  device=device, actor=actor, algorithm=algorithm)
+            size=size,  device=device, actor=actor, algorithm=algorithm, envs=envs)
 
         self.n_step = n_step
         self.gamma = algorithm.gamma
@@ -103,6 +103,10 @@ class NStepReplayBuffer(S):
 
             # Add obs2, rhs2 and done2 directly
             for k in (prl.OBS2, prl.RHS2, prl.DONE2):
+
+                if not self.recurrent_actor and k == prl.RHS2:
+                    continue
+
                 if isinstance(sample[k], dict):
                     for x, y in sample[k].items():
                         self.data[k][x][self.step] = y.cpu()
@@ -115,6 +119,10 @@ class NStepReplayBuffer(S):
 
             # Get obs, rhs and act from step buffer
             for k in (prl.OBS, prl.RHS, prl.ACT):
+
+                if not self.recurrent_actor and k == prl.RHS:
+                    continue
+
                 tensor = self.n_step_buffer[k].popleft()
                 if isinstance(tensor, dict):
                     for x, y in tensor.items():
@@ -210,14 +218,20 @@ class NStepReplayBuffer(S):
 
             else:
                 batch = {k: {} for k in self.storage_tensors}
-                idxs = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
+                samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                 for k, v in self.data.items():
+
+                    if k in (prl.RHS, prl.RHS2):
+                        size, idxs = 1, np.array([0])
+                    else:
+                        size, idxs = self.size, samples
+
                     if isinstance(v, dict):
                         for x, y in v.items():
-                            batch[k][x] = torch.as_tensor(y[0:self.size].reshape(
+                            batch[k][x] = torch.as_tensor(y[0:size].reshape(
                                 -1, *y.shape[2:])[idxs], dtype=torch.float32).to(self.device)
                     else:
-                        batch[k] = torch.as_tensor(v[0:self.size].reshape(
+                        batch[k] = torch.as_tensor(v[0:size].reshape(
                             -1, *v.shape[2:])[idxs], dtype=torch.float32).to(self.device)
 
                 batch.update({"n_step": self.n_step})
