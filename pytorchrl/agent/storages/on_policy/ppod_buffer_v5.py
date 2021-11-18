@@ -239,24 +239,28 @@ class PPODBuffer(B):
                 # How to calculate ValuePredictionError
                 self.demos_in_progress["env{}".format(i + 1)]["ValuePredictionError"] += (
                     self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.RET][demo_step] -
-                    algo_data[prl.VAL].squeeze().cpu()) ** 2
-
-                import ipdb; ipdb.set_trace()
+                    algo_data[prl.VAL].squeeze().cpu())
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
                     # Update value error of the replayed demo
-                    for demo in self.reward_demos:
-                        # If demo still in buffer, update MaxValue
+                    for num, demo in enumerate(self.reward_demos):
+                        # If demo still in buffer, update ValuePredictionError
                         if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == demo["ID"]:
+
+                            # if ValuePredictionError became negative, eject
+                            if float(self.demos_in_progress["env{}".format(i + 1)]["ValuePredictionError"]) < 0:
+                                del self.reward_demos[num]
+                                break
 
                             print("\n UPDATED DEMO ERROR: {} ---> {}".format(
                                 demo["ValuePredictionError"],
                                 float(self.demos_in_progress["env{}".format(i + 1)]["ValuePredictionError"])
                             ))
 
-                            demo["ValuePredictionError"] = float(self.demos_in_progress["env{}".format(i + 1)]["ValuePredictionError"])
+                            demo["ValuePredictionError"] = float(
+                                self.demos_in_progress["env{}".format(i + 1)]["ValuePredictionError"])
 
                     # Update value_error_threshold
                     self.value_error_threshold = 0.0 if len(self.reward_demos) < self.max_demos else min([d["ValuePredictionError"] for d in self.reward_demos])
@@ -327,7 +331,7 @@ class PPODBuffer(B):
                 potential_demo[prl.RET] = returns
 
                 # Compute value error+
-                error = float(((potential_demo[prl.RET] - potential_demo[prl.VAL]) ** 2).sum())
+                error = float((potential_demo[prl.RET] - potential_demo[prl.VAL]).sum())
 
                 # Add value error to demo
                 potential_demo["ValuePredictionError"] = error
@@ -522,6 +526,7 @@ class PPODBuffer(B):
             # Set value error+ to 0
             self.demos_in_progress["env{}".format(env_id + 1)]["ValuePredictionError"] = 0.0
 
+
             # Set demos MaxValue
             self.demos_in_progress["env{}".format(env_id + 1)]["MaxValue"] = - np.Inf
 
@@ -549,7 +554,6 @@ class PPODBuffer(B):
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             for _ in range(len(self.reward_demos) - self.max_demos):
-
                 # Eject demo with lowest reward
                 # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
                 # del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]

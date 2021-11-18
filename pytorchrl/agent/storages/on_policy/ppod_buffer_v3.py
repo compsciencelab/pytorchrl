@@ -52,6 +52,7 @@ class PPODBuffer(B):
         self.target_agent_demos_dir = target_agent_demos_dir
         self.initial_value_demos_dir = initial_value_demos_dir
         self.target_value_demos_dir = target_value_demos_dir
+        self.inserted_samples = 0
 
         # Data parameters
         self.demo_act_dtype = np.float32
@@ -140,6 +141,39 @@ class PPODBuffer(B):
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
 
+    def after_gradients(self, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+
+        Parameters
+        ----------
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
+        """
+
+        step = self.step if self.step != 0 else -1
+        for k in (prl.OBS, prl.RHS, prl.DONE):
+            if isinstance(self.data[k], dict):
+                for x in self.data[k]:
+                    self.data[k][x][0].copy_(self.data[k][x][step])
+            else:
+                self.data[k][0].copy_(self.data[k][step])
+
+        if self.step != 0:
+            self.step = 0
+
+        info['NumberSamples'] -= self.inserted_samples
+        self.inserted_samples = 0
+
+        return info
+
     def get_num_channels_obs(self, sample):
         """
         Obtain num_channels_obs and set it as class attribute.
@@ -168,6 +202,9 @@ class PPODBuffer(B):
         for k in sample:
 
             if k not in self.storage_tensors:
+                continue
+
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
                 continue
 
             # We use the same tensor to store obs and obs2
@@ -219,7 +256,9 @@ class PPODBuffer(B):
                     i + 1)]["Demo"][prl.REW][demo_step])
 
                 # Insert demo logprob to self.step. Demo action prob is 1.0, so logprob is 0.0
-                self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
+                # self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
+                self.data[prl.LOGP][self.step][i].copy_(torch.log(torch.tensor(0.9)))
+                # self.data[prl.LOGP][self.step][i].copy_(algo_data[prl.LOGP].squeeze())
 
                 # Insert demo values predicted by the forward pass
                 self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
@@ -230,6 +269,8 @@ class PPODBuffer(B):
 
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
                     [algo_data[prl.VAL].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
+
+                self.inserted_samples += 1
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
@@ -249,8 +290,9 @@ class PPODBuffer(B):
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
-                    for k in self.data[prl.RHS]:
-                        self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
+                    if self.recurrent_actor:
+                        for k in self.data[prl.RHS]:
+                            self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
 
             # Otherwise check if end of episode reached and randomly start new demo
             elif sample[prl.DONE2][i] == 1.0:
@@ -434,10 +476,10 @@ class PPODBuffer(B):
             # Randomly select a reward demo
             selected = np.random.choice(range(len(self.reward_demos)))
 
-            # give priority to shorter demos
-            # probs = 1 / np.array([p["obs"].shape[0] for p in self.reward_demos])
-            # probs = probs / probs.sum()
-            # selected = np.random.choice(range(len(self.reward_demos)), p=probs)
+            # give priority to higher reward demos
+            probs = np.array([p["TotalReward"] for p in self.reward_demos]) + 1e-8
+            probs = probs / probs.sum()
+            selected = np.random.choice(range(len(self.reward_demos)), p=probs)
 
             demo = copy.deepcopy(self.reward_demos[selected])
 
@@ -459,8 +501,9 @@ class PPODBuffer(B):
         self.data[prl.DONE][self.step + 1][env_id].copy_(torch.ones(1).to(self.device))
 
         # Set initial rhs to zeros
-        for k in self.data[prl.RHS]:
-            self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
+        if self.recurrent_actor:
+            for k in self.data[prl.RHS]:
+                self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
 
         if demo:
 
