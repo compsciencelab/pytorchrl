@@ -1,4 +1,5 @@
 from pytorchrl.agent.algorithms.ppo import PPO
+from pytorchrl.agent.algorithms.rnd_ppo import RND_PPO
 from pytorchrl.agent.algorithms.sac import SAC
 from pytorchrl.agent.algorithms.a2c import A2C
 from pytorchrl.agent.algorithms.ddqn import DDQN
