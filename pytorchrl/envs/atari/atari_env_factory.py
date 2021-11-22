@@ -3,7 +3,7 @@ from pytorchrl.envs.common import DelayedReward
 
 
 def atari_train_env_factory(
-        env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1):
+        env_id, index_col_worker=0, index_grad_worker=0, index_env=0, seed=0, frame_stack=1, reward_delay=1):
     """
     Create train Atari environment.
 
@@ -29,11 +29,11 @@ def atari_train_env_factory(
     env : gym.Env
         Train environment.
     """
-    env = make_atari(env_id)
+    env = make_atari(env_id, max_episode_steps=4500)
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
-        env, episode_life=True,
-        clip_rewards=False,
+        env, episode_life=False,
+        clip_rewards=True,
         scale=False,
         frame_stack=frame_stack)
 
@@ -43,7 +43,7 @@ def atari_train_env_factory(
     return env
 
 
-def atari_test_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1):
+def atari_test_env_factory(env_id, index_col_worker=0, index_grad_worker=0, index_env=0, seed=0, frame_stack=1, reward_delay=1):
     """
     Create test Atari environment.
 
@@ -73,7 +73,7 @@ def atari_test_env_factory(env_id, index_col_worker, index_grad_worker, index_en
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
         env, episode_life=False,
-        clip_rewards=False,
+        clip_rewards=True,
         scale=False,
         frame_stack=frame_stack)
 

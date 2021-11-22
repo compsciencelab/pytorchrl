@@ -7,37 +7,50 @@ import threading
 import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs import atari_train_env_factory
+from pytorchrl.envs.atari import atari_train_env_factory
 from code_examples.train_atari.ppo.train import get_args
 
 
 pressed_keys = set([])
 
-[
-    'NOOP',  # --> 0
-    'FIRE',  # Space  --> 1
-    'UP',  # W --> 2
-    'RIGHT',  # D --> 3
-    'LEFT',  # A --> 4
-    'DOWN',  # S --> 5
-    'UPRIGHT',  # W + D --> 6
-    'UPLEFT',  # W + A --> 7
-    'DOWNRIGHT',  # S + D --> 8
-    'DOWNLEFT',  # S + A --> 9
-    'UPFIRE',  # Space + W  --> 10
-    'RIGHTFIRE',  # Space + D  --> 11
-    'LEFTFIRE',  # Space + A --> 12
-    'DOWNFIRE',  # Space + S  --> 13
-    'UPRIGHTFIRE',  # Space + D  --> 14
-    'UPLEFTFIRE',  # Space + A --> 15
-    'DOWNRIGHTFIRE',
-    'DOWNLEFTFIRE',
-]
+
+# ACTIONS:
+
+# 'NOOP',  # --> 0
+# 'FIRE',  # Space  --> 1
+# 'UP',  # W --> 2
+# 'RIGHT',  # D --> 3
+# 'LEFT',  # A --> 4
+# 'DOWN',  # S --> 5
+# 'UPRIGHT',  # W + D --> 6
+# 'UPLEFT',  # W + A --> 7
+# 'DOWNRIGHT',  # S + D --> 8
+# 'DOWNLEFT',  # S + A --> 9
+# 'UPFIRE',  # Space + W  --> 10
+# 'RIGHTFIRE',  # Space + D  --> 11
+# 'LEFTFIRE',  # Space + A --> 12
+# 'DOWNFIRE',  # Space + S  --> 13
+# 'UPRIGHTFIRE',  # Space + W + D  --> 14
+# 'UPLEFTFIRE',  # Space + W + A --> 15
+# 'DOWNRIGHTFIRE',  # Space + S + D --> 16
+# 'DOWNLEFTFIRE',  # Space + S + A --> 17
 
 def create_action():
     action = 0
 
-    if "w" in pressed_keys and "d" in pressed_keys:
+    if "s" in pressed_keys and "space" in pressed_keys and "a" in pressed_keys:
+        print("PRESSED SPACE, A AND S, ACTION 17")
+        action = 17
+    elif "s" in pressed_keys and "space" in pressed_keys and "a" in pressed_keys:
+        print("PRESSED SPACE, D AND S, ACTION 16")
+        action = 16
+    elif "w" in pressed_keys and "space" in pressed_keys and "a" in pressed_keys:
+        print("PRESSED SPACE, W AND D, ACTION 15")
+        action = 15
+    elif "w" in pressed_keys and "space" in pressed_keys and "d" in pressed_keys:
+        print("PRESSED SPACE, W AND D, ACTION 14")
+        action = 14
+    elif "w" in pressed_keys and "d" in pressed_keys:
         print("PRESSED W AND D, ACTION 6")
         action = 6
     elif "w" in pressed_keys and "a" in pressed_keys:
@@ -90,7 +103,10 @@ def record():
     # Define Single Env
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=atari_train_env_factory,
-        env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
+        env_kwargs={
+            "env_id": args.env_id,
+            "frame_stack": args.frame_stack,
+        },
         vec_env_size=1)
 
     # Start recording
