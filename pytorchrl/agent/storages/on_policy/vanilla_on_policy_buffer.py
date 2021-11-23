@@ -385,11 +385,9 @@ class VanillaOnPolicyBuffer(S):
         length = self.step - 1 if self.step != 0 else self.max_size
         rewems = torch.zeros_like(self.data[prl.RET])
         for step in reversed(range(length)):
-            import ipdb; ipdb.set_trace()
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
 
         for rew in rewems:
-            import ipdb; ipdb.set_trace()
-            self.algo.int_reward_rms.update(np.ravel(rew).reshape(-1, 1))
+            self.algo.int_reward_rms.update(rew.cpu().numpy().reshape(-1, 1))
 
-        return self.data[prl.IREW] / (self.algo.int_reward_rms.var ** 0.5)
+        return self.data[prl.IREW] / (torch.tensor(self.algo.int_reward_rms.var).to(self.device) ** 0.5)

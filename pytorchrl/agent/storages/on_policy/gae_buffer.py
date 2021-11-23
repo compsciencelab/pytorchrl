@@ -75,7 +75,17 @@ class GAEBuffer(B):
             dones=self.data[prl.DONE],
             gamma=self.algo.gamma,
             gae_lambda=self.gae_lambda,
-            length=self.used_capacity(),
+            length=self.used_capacity,
+        )
+
+        self.compute_gae(
+            rewards=self.data[prl.IREW],
+            returns=self.data[prl.IRET],
+            values=self.data[prl.IVAL],
+            dones=torch.zeros_like(self.data[prl.DONE]),
+            gamma=self.algo.gamma,
+            gae_lambda=self.gae_lambda,
+            length=self.used_capacity,
         )
 
     @staticmethod

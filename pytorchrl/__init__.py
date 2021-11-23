@@ -70,7 +70,7 @@ IRET = "IntrinsicReturn"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
-OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV)
+OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
 DemosDataKeys = (OBS, ACT, REW)
 
 # ALGORITHMS
