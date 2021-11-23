@@ -325,9 +325,6 @@ class RND_PPO(Algorithm):
             int_value = value_dict.pop("ivalue_net1")
             rhs = value_dict.pop("rhs")
 
-            ext_value = {"value_net1": ext_value}
-            int_value = {"ivalue_net1": int_value}
-
             # predict intrinsic reward
             obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
             predictor_encoded_features = self.actor.predictor_model(obs)
