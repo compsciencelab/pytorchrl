@@ -144,7 +144,7 @@ class RND_PPO(Algorithm):
 
         self.int_gamma = 0.99
         self.ext_adv_coeff = 1.0
-        self.int_adv_coeff = 1.0
+        self.int_adv_coeff = 0.0
         self.predictor_proportion = 32 / 16  # 16 is the number of workers, the more workers the lower proportion, why?
 
         # Create target model
@@ -160,6 +160,9 @@ class RND_PPO(Algorithm):
         # Define running means for int reward and obs
         self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
+
+        # TODO. "pre_normalization_steps": 50?
+
 
     @classmethod
     def create_factory(cls,
@@ -394,7 +397,7 @@ class RND_PPO(Algorithm):
         else:
             ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean()
 
-        total_value_loss = value_loss + ivalue_loss
+        total_value_loss = value_loss # + ivalue_loss
 
         #  When exactly should I do that?
         self.state_rms.update(o)
@@ -408,7 +411,7 @@ class RND_PPO(Algorithm):
         mask = (mask < self.predictor_proportion).float()
         rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
 
-        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy + rnd_loss
+        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy # + rnd_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
@@ -451,7 +454,8 @@ class RND_PPO(Algorithm):
             "ivalue_loss": ivalue_loss.item(),
             "rnd_loss": rnd_loss.item(),
             "action_loss": action_loss.item(),
-            "entropy_loss": dist_entropy.item()
+            "entropy_loss": dist_entropy.item(),
+            "intrinsic_rewards": batch[prl.IREW].mean().cpu().item(),
         }
 
         return grads, info

@@ -7,6 +7,7 @@ os.environ.setdefault('PATH', '')
 import gym
 import cv2
 import numpy as np
+from copy import deepcopy
 
 cv2.ocl.setUseOpenCL(False)
 from pytorchrl.envs.common import FrameStack
@@ -172,6 +173,31 @@ class MaxAndSkipEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
+
+
+class MontezumaVisitedRoomEnv(gym.Wrapper):
+    def __init__(self, env, room_address):
+        gym.Wrapper.__init__(self, env)
+
+        # TODO. assert with env.spec.id that env is Montezuma
+
+        self.room_address = room_address
+        self.visited_rooms = set()  # Only stores unique numbers.
+
+    def step(self, action):
+        state, reward, done, info = self.env.step(action)
+        ram = self.unwrapped.ale.getRAM()
+        assert len(ram) == 128
+        self.visited_rooms.add(ram[self.room_address])
+        if done:
+            if "episode" not in info:
+                info["episode"] = {}
+            info["episode"].update(visited_room=deepcopy(self.visited_rooms))
+            self.visited_rooms.clear()
+        return state, reward, done, info
+
+    def reset(self):
+        return self.env.reset()
 
 
 class WarpFrame(gym.ObservationWrapper):
