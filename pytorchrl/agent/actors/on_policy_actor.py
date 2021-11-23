@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 
+import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.memory_networks import GruNet
@@ -35,8 +36,6 @@ class OnPolicyActor(nn.Module):
         Keyword arguments for the feature extractor network.
     shared_policy_value_network : bool
         Whether or not to share weights between policy and value networks.
-    num_critics : int
-        Number of Value networks to be instantiated.
     """
 
     def __init__(self,
@@ -47,8 +46,7 @@ class OnPolicyActor(nn.Module):
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
-                 shared_policy_value_network=True,
-                 num_critics=1):
+                 shared_policy_value_network=True):
 
         super(OnPolicyActor, self).__init__()
         self.input_space = input_space
@@ -58,7 +56,13 @@ class OnPolicyActor(nn.Module):
         self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
-        self.num_critics = num_critics
+
+        if algorithm in (prl.A2C, prl.PPO):
+            self.num_critics_ext = 1
+            self.num_critics_int = 0
+        elif algorithm in (prl.RND_PPO):
+            self.num_critics_ext = 1
+            self.num_critics_int = 1
 
         # ----- Policy Network ----------------------------------------------------
 
@@ -66,8 +70,11 @@ class OnPolicyActor(nn.Module):
 
         # ----- Value Networks ----------------------------------------------------
 
-        for i in range(num_critics):
+        for i in range(self.num_critics_ext):
             self.create_critic("value_net{}".format(i + 1))
+
+        for i in range(self.num_critics_int):
+            self.create_critic("ivalue_net{}".format(i + 1))
 
     @classmethod
     def create_factory(
@@ -79,8 +86,7 @@ class OnPolicyActor(nn.Module):
             recurrent_nets=False,
             feature_extractor_kwargs={},
             feature_extractor_network=None,
-            shared_policy_value_network=True,
-            num_critics=1):
+            shared_policy_value_network=True):
         """
         Returns a function that creates actor critic instances.
 
@@ -102,8 +108,6 @@ class OnPolicyActor(nn.Module):
             Whether to use a RNNs as feature extractors.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
-        num_critics : int
-            Number of Value networks to be instantiated.
 
         Returns
         -------
@@ -119,8 +123,7 @@ class OnPolicyActor(nn.Module):
                          recurrent_nets=recurrent_nets,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
-                         shared_policy_value_network=shared_policy_value_network,
-                         num_critics=num_critics)
+                         shared_policy_value_network=shared_policy_value_network)
 
             if isinstance(restart_model, str):
                 policy.load_state_dict(torch.load(restart_model, map_location=device))
@@ -169,10 +172,11 @@ class OnPolicyActor(nn.Module):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-        rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
+        rhs_policy = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
-        rhs = {"rhs_act": rhs_act}
-        rhs.update({"rhs_val{}".format(i + 1): rhs_act.clone() for i in range(self.num_critics)})
+        rhs = {"policy": rhs_policy}
+        rhs.update({"value_net{}".format(i + 1): rhs_policy.clone() for i in range(self.num_critics_ext)})
+        rhs.update({"ivalue_net{}".format(i + 1): rhs_policy.clone() for i in range(self.num_critics_int)})
 
         return obs, rhs, done
 
@@ -209,8 +213,8 @@ class OnPolicyActor(nn.Module):
 
         features = self.policy_net.feature_extractor(obs)
         if self.recurrent_nets:
-            features, rhs["rhs_act"] = self.policy_net.memory_net(
-                features, rhs["rhs_act"], done)
+            features, rhs["policy"] = self.policy_net.memory_net(
+                features, rhs["policy"], done)
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
             features, deterministic=deterministic)
 
@@ -256,8 +260,8 @@ class OnPolicyActor(nn.Module):
         features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_nets:
-            features, rhs["rhs_act"] = self.policy_net.memory_net(
-                features, rhs["rhs_act"], done)
+            features, rhs["policy"] = self.policy_net.memory_net(
+                features, rhs["policy"], done)
 
         logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
 
@@ -265,9 +269,46 @@ class OnPolicyActor(nn.Module):
 
         return logp_action, entropy_dist, dist
 
+    def get_value_specific_net(self, obs, rhs, done, value_net_name):
+        """
+        Return value score for a single value network.
+
+        Parameters
+        ----------
+        obs : torch.tensor
+            Environment observation.
+        rhs : dict
+            Recurrent hidden states.
+        done : torch.tensor
+            Done tensor, indicating if episode has finished.
+
+        Returns
+        -------
+        value : torch.tensor
+            Predicted value score.
+        rhs : dict
+            Updated recurrent hidden states.
+        """
+
+        value_net = getattr(self, value_net_name)
+
+        if self.shared_policy_value_network:
+            if self.last_action_features.shape[0] != done.shape[0]:
+                _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
+            value = value_net.predictor(self.last_action_features)
+
+        else:
+            value_features = value_net.feature_extractor(obs)
+            if self.recurrent_nets:
+                value_features, rhs[value_net_name] = value_net.memory_net(
+                    value_features, rhs[value_net_name], done)
+            value = value_net.predictor(value_features)
+
+        return value, rhs
+
     def get_value(self, obs, rhs, done):
         """
-        Return value scores of given observation.
+        Return all value scores of given observation.
 
         Parameters
         ----------
@@ -286,22 +327,16 @@ class OnPolicyActor(nn.Module):
         """
 
         outputs = {}
-        for i in range(self.num_critics):
-            value_net = getattr(self, "value_net{}".format(i + 1))
 
-            if self.shared_policy_value_network:
-                if self.last_action_features.shape[0] != done.shape[0]:
-                    _, _, _, _, _, _ = self.get_action(obs, rhs["rhs_act"], done)
-                value = value_net.predictor(self.last_action_features)
+        for i in range(self.num_critics_ext):
+            value_net_name = "value_net{}".format(i + 1)
+            value, rhs = self.get_value_specific_net(obs, rhs, done, value_net_name)
+            outputs[value_net_name] = value
 
-            else:
-                value_features = value_net.feature_extractor(obs)
-                if self.recurrent_nets:
-                    value_features, rhs["rhs_val{}".format(i + 1)] = value_net.memory_net(
-                        value_features, rhs["rhs_val{}".format(i + 1)], done)
-                value = value_net.predictor(value_features)
-
-            outputs["value_net{}".format(i + 1)] = value
+        for i in range(self.num_critics_int):
+            value_net_name = "ivalue_net{}".format(i + 1)
+            value, rhs = self.get_value_specific_net(obs, rhs, done, value_net_name)
+            outputs[value_net_name] = value
 
         outputs["rhs"] = rhs
         return outputs

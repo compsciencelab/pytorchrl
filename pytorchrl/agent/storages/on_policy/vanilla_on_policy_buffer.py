@@ -6,7 +6,11 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, Sequenti
 import pytorchrl as prl
 from pytorchrl.agent.storages.base import Storage as S
 
-# value is dict
+# value can be a dict, but returns will always be computed with respect to external reward
+# ivalue can also be a dict, returns will always be computed with respect to intrinsic reward
+
+# For now 1 rewards and one intrinsic reward accepted
+
 # irew
 # should actor make a distinction between value nets for int and for ext reward?
 
@@ -95,6 +99,8 @@ class VanillaOnPolicyBuffer(S):
 
             else:  # Handle non dict sample value
                 self.data[k] = torch.zeros(size + 1, *sample[k].shape).to(self.device)
+
+        import ipdb; ipdb.set_trace()
 
         self.data[prl.RET] = self.data[prl.REW].clone()
         self.data[prl.ADV] = self.data[prl.VAL].clone()
@@ -388,6 +394,9 @@ class VanillaOnPolicyBuffer(S):
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
 
         for rew in rewems:
-            self.algo.int_reward_rms.update(rew.cpu().numpy().reshape(-1, 1))
+            import ipdb; ipdb.set_trace()
+            # self.algo.int_reward_rms.update(rew.cpu().numpy().reshape(-1, 1))
+            self.algo.int_reward_rms.update(rew)
 
-        return self.data[prl.IREW] / (torch.tensor(self.algo.int_reward_rms.var).to(self.device) ** 0.5)
+        # return self.data[prl.IREW] / (torch.tensor(self.algo.int_reward_rms.var).to(self.device) ** 0.5)
+        return self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)

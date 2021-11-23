@@ -147,11 +147,6 @@ class RND_PPO(Algorithm):
         self.int_adv_coeff = 1.0
         self.predictor_proportion = 32 / 16  # 16 is the number of workers, the more workers the lower proportion, why?
 
-        # Create second value head
-        self.actor.create_critic("value_net2")  # net to predict int rewards
-        self.actor.value_net2.to(self.device)
-        self.actor.num_critics += 1
-
         # Create target model
         setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
 
@@ -327,13 +322,16 @@ class RND_PPO(Algorithm):
 
             value_dict = self.actor.get_value(obs, rhs, done)
             ext_value = value_dict.pop("value_net1")
-            int_value = value_dict.pop("value_net2")
+            int_value = value_dict.pop("ivalue_net1")
             rhs = value_dict.pop("rhs")
 
             # predict intrinsic reward
-            obs = torch.clamp(
-                (obs - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
-                (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
+            # obs = torch.clamp(
+            #     (obs - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
+            #     (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
+
+            obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
+
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
             int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)
@@ -375,7 +373,7 @@ class RND_PPO(Algorithm):
 
         new_vs = self.actor.get_value(o, rhs, d)
         new_v = new_vs.get("value_net1")
-        new_iv = new_vs.get("value_net2")
+        new_iv = new_vs.get("ivalue_net1")
 
         # Policy loss
         ratio = torch.exp(new_logp - old_logp)
@@ -404,10 +402,13 @@ class RND_PPO(Algorithm):
         total_value_loss = value_loss + ivalue_loss
 
         #  When exactly should I do that?
-        self.state_rms.update(o.cpu().numpy())
-        o = torch.clamp(
-            (o - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
-            (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
+        # self.state_rms.update(o.cpu().numpy())
+        # o = torch.clamp(
+        #     (o - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
+        #     (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
+
+        self.state_rms.update(o)
+        o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
         # Rnd loss
         encoded_target_features = self.actor.target_model(o)
@@ -609,28 +610,26 @@ class PredictorModel(nn.Module, ABC):
 def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count):
     delta = batch_mean - mean
     tot_count = count + batch_count
-
     new_mean = mean + delta * batch_count / tot_count
     m_a = var * count
     m_b = batch_var * batch_count
-    M2 = m_a + m_b + np.square(delta) * count * batch_count / tot_count
+    M2 = m_a + m_b + torch.square(delta) * count * batch_count / tot_count
     new_var = M2 / tot_count
     new_count = tot_count
 
     return new_mean, new_var, new_count
 
-
 class RunningMeanStd:
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     # -> It's indeed batch normalization. :D
-    def __init__(self, epsilon=1e-4, shape=()):
-        self.mean = np.zeros(shape, 'float64')
-        self.var = np.ones(shape, 'float64')
+    def __init__(self, epsilon=1e-4, shape=(), device=torch.device("cpu")):
+        self.mean = torch.zeros(shape, dtype=torch.float64).to(device)
+        self.var = np.ones(shape, dtype=torch.float64).to(device)
         self.count = epsilon
 
     def update(self, x):
-        batch_mean = np.mean(x, axis=0)
-        batch_var = np.var(x, axis=0)
+        batch_mean = torch.mean(x, dim=0)
+        batch_var = torch.var(x, dim=0)
         batch_count = x.shape[0]
         self.update_from_moments(batch_mean, batch_var, batch_count)
 

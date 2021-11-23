@@ -76,6 +76,7 @@ DemosDataKeys = (OBS, ACT, REW)
 # ALGORITHMS
 A2C = "A2C"
 PPO = "PPO"
+RND_PPO = "RND_PPO"
 SAC = "SAC"
 MPO = "MPO"
 TD3 = "TD3"
