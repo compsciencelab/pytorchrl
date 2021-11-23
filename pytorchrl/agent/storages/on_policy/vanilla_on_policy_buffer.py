@@ -214,20 +214,38 @@ class VanillaOnPolicyBuffer(S):
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             next_rhs = value_dict.get("rhs")
 
-        self.data[prl.RET][step].copy_(value_dict.get("value_net1"))
-        self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-
-        self.data[prl.IRET][step].copy_(value_dict.get("ivalue_net1"))
-        self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
-
+        # Store next recurrent hidden state
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
                 self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
             self.data[prl.RHS][step] = next_rhs
 
-        self.compute_returns()
-        self.compute_advantages()
+        # Compute returns and advantages
+        if isinstance(self.data[prl.VAL], dict):
+            for x in self.data[prl.VAL]:
+                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE])
+                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
+        else:
+            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+            self.compute_returns(self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE])
+            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
+
+        # Compute ireturns and iadvantages
+        if isinstance(self.data[prl.IVAL], dict):
+            for x in self.data[prl.IVAL]:
+                self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
+                    torch.zeros_like(self.data[prl.DONE]))
+                self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
+        else:
+            self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
+            self.compute_returns(
+                self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL], torch.zeros_like(self.data[prl.DONE]))
+            self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
     def after_gradients(self, batch, info):
         """
@@ -259,21 +277,32 @@ class VanillaOnPolicyBuffer(S):
 
         return info
 
-    def compute_returns(self):
+    def compute_returns(self, rewards, returns, values, dones):
         """Compute return values."""
+        # TODO: what if self.data[prl.VAL] and self.data[prl.IVAL] are dicts?
+
         gamma = self.algo.gamma
-        len = self.step - 1 if self.step != 0 else self.max_size
+        length = self.step - 1 if self.step != 0 else self.max_size
+        returns[length].copy_(values[length])
+        for step in reversed(range(length)):
+            returns[step] = (returns[step + 1] * gamma * (1.0 - dones[step + 1]) + rewards[step])
 
-        for step in reversed(range(len)):
-            self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
-                1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
+        # self.data[prl.RET][length].copy_(self.data[prl.VAL][length])
+        # for step in reversed(range(length)):
+        #     self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
+        #         1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
+        #
+        # # No episodic life of intrisic rewards
+        # for step in reversed(range(length)):
+        #     self.data[prl.IRET][step] = (self.data[prl.IRET][step + 1] * gamma + self.data[prl.IREW][step])
 
-        # No episodic life of intrisic rewards
-        for step in reversed(range(len)):
-            self.data[prl.IRET][step] = (self.data[prl.IRET][step + 1] * gamma + self.data[prl.IREW][step])
-
-    def compute_advantages(self):
+    def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
+        # TODO: what if self.data[prl.VAL] and self.data[prl.IVAL] are dicts?
+        adv = returns[:-1] - values[:-1]
+        return (adv - adv.mean()) / (adv.std() + 1e-5)
+
+
         adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
         self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
 
@@ -392,8 +421,6 @@ class VanillaOnPolicyBuffer(S):
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
 
         for rew in rewems:
-            # self.algo.int_reward_rms.update(rew.cpu().numpy().reshape(-1, 1))
             self.algo.int_reward_rms.update(rew)
 
-        # return self.data[prl.IREW] / (torch.tensor(self.algo.int_reward_rms.var).to(self.device) ** 0.5)
         return self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)

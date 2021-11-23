@@ -65,34 +65,16 @@ class GAEBuffer(B):
         """Returns the step up to which storage is full with env transitions."""
         return self.step - 1 if self.step != 0 else self.max_size
 
-    def compute_returns(self):
+    def compute_returns(self, rewards, returns, values, dones):
         """Compute return values."""
-
-        self.compute_gae(
-            rewards=self.data[prl.REW],
-            returns=self.data[prl.RET],
-            values=self.data[prl.VAL],
-            dones=self.data[prl.DONE],
-            gamma=self.algo.gamma,
-            gae_lambda=self.gae_lambda,
-            length=self.used_capacity,
-        )
-
-        self.compute_gae(
-            rewards=self.data[prl.IREW],
-            returns=self.data[prl.IRET],
-            values=self.data[prl.IVAL],
-            dones=torch.zeros_like(self.data[prl.DONE]),
-            gamma=self.algo.gamma,
-            gae_lambda=self.gae_lambda,
-            length=self.used_capacity,
-        )
-
-    @staticmethod
-    def compute_gae(rewards, returns, values, dones, gamma, gae_lambda, length):
+        gamma = self.algo.gamma
+        gae_lambda = self.gae_lambda
+        length = self.used_capacity
         gae = 0
+        returns[length].copy_(values[length])
         for step in reversed(range(length)):
             delta = (rewards[step] + gamma * values[step + 1] * (1.0 - dones[step + 1]) - values[step])
             gae = delta + gamma * gae_lambda * (1.0 - dones[step + 1]) * gae
             returns[step] = gae + values[step]
+
 
