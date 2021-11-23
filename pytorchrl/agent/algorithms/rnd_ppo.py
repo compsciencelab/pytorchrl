@@ -405,10 +405,9 @@ class RND_PPO(Algorithm):
 
         #  When exactly should I do that?
         self.state_rms.update(o.cpu().numpy())
-        o = ((o - torch.tensor(self.state_rms.mean).to(self.device)) / (torch.tensor(self.state_rms.var).to(self.device) ** 0.5)).clip(-5, 5)
-
-        import ipdb;
-        ipdb.set_trace()
+        o = torch.clamp(
+            (o - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
+            (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
 
         # Rnd loss
         encoded_target_features = self.actor.target_model(o)
