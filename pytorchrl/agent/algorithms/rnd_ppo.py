@@ -158,8 +158,8 @@ class RND_PPO(Algorithm):
         setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space.shape).to(self.device))
 
         # Define running means for int reward and obs
-        self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape)
-        self.int_reward_rms = RunningMeanStd(shape=(1,))
+        self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
+        self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
     @classmethod
     def create_factory(cls,
@@ -232,7 +232,7 @@ class RND_PPO(Algorithm):
                        use_clipped_value_loss=use_clipped_value_loss,
                        policy_loss_addons=policy_loss_addons)
 
-        return create_algo_instance, prl.PPO
+        return create_algo_instance, prl.RND_PPO
 
     @property
     def gamma(self):
@@ -325,13 +325,11 @@ class RND_PPO(Algorithm):
             int_value = value_dict.pop("ivalue_net1")
             rhs = value_dict.pop("rhs")
 
+            ext_value = {"value_net1": ext_value}
+            int_value = {"ivalue_net1": int_value}
+
             # predict intrinsic reward
-            # obs = torch.clamp(
-            #     (obs - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
-            #     (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
-
             obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
-
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
             int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)
@@ -402,11 +400,6 @@ class RND_PPO(Algorithm):
         total_value_loss = value_loss + ivalue_loss
 
         #  When exactly should I do that?
-        # self.state_rms.update(o.cpu().numpy())
-        # o = torch.clamp(
-        #     (o - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
-        #     (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
-
         self.state_rms.update(o)
         o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
@@ -624,7 +617,7 @@ class RunningMeanStd:
     # -> It's indeed batch normalization. :D
     def __init__(self, epsilon=1e-4, shape=(), device=torch.device("cpu")):
         self.mean = torch.zeros(shape, dtype=torch.float64).to(device)
-        self.var = np.ones(shape, dtype=torch.float64).to(device)
+        self.var = torch.ones(shape, dtype=torch.float64).to(device)
         self.count = epsilon
 
     def update(self, x):

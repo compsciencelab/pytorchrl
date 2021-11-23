@@ -1,5 +1,5 @@
-import numpy as np
 
+from copy import deepcopy
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
 
@@ -100,14 +100,12 @@ class VanillaOnPolicyBuffer(S):
             else:  # Handle non dict sample value
                 self.data[k] = torch.zeros(size + 1, *sample[k].shape).to(self.device)
 
-        import ipdb; ipdb.set_trace()
-
-        self.data[prl.RET] = self.data[prl.REW].clone()
-        self.data[prl.ADV] = self.data[prl.VAL].clone()
+        self.data[prl.RET] = deepcopy(self.data[prl.REW])
+        self.data[prl.ADV] = deepcopy(self.data[prl.VAL])
 
         if prl.IREW in sample.keys():
-            self.data[prl.IRET] = self.data[prl.IREW].clone()
-            self.data[prl.IADV] = self.data[prl.IVAL].clone()
+            self.data[prl.IRET] = deepcopy(self.data[prl.IREW])
+            self.data[prl.IADV] = deepcopy(self.data[prl.IVAL])
 
     def get_all_buffer_data(self, data_to_cpu=False):
         """
@@ -219,8 +217,8 @@ class VanillaOnPolicyBuffer(S):
         self.data[prl.RET][step].copy_(value_dict.get("value_net1"))
         self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
 
-        self.data[prl.IRET][step].copy_(value_dict.get("value_net2"))
-        self.data[prl.IVAL][step].copy_(value_dict.get("value_net2"))
+        self.data[prl.IRET][step].copy_(value_dict.get("ivalue_net1"))
+        self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
 
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
@@ -394,7 +392,6 @@ class VanillaOnPolicyBuffer(S):
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
 
         for rew in rewems:
-            import ipdb; ipdb.set_trace()
             # self.algo.int_reward_rms.update(rew.cpu().numpy().reshape(-1, 1))
             self.algo.int_reward_rms.update(rew)
 
