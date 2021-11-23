@@ -1,8 +1,14 @@
+import numpy as np
+
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
 
 import pytorchrl as prl
 from pytorchrl.agent.storages.base import Storage as S
+
+# value is dict
+# irew
+# should actor make a distinction between value nets for int and for ext reward?
 
 
 class VanillaOnPolicyBuffer(S):
@@ -92,6 +98,10 @@ class VanillaOnPolicyBuffer(S):
 
         self.data[prl.RET] = self.data[prl.REW].clone()
         self.data[prl.ADV] = self.data[prl.VAL].clone()
+
+        if prl.IREW in sample.keys():
+            self.data[prl.IRET] = self.data[prl.IREW].clone()
+            self.data[prl.IADV] = self.data[prl.IVAL].clone()
 
     def get_all_buffer_data(self, data_to_cpu=False):
         """
@@ -185,6 +195,8 @@ class VanillaOnPolicyBuffer(S):
         Before updating actor policy model, compute returns and advantages.
         """
 
+        self.normalize_int_rewards()
+
         last_tensors = {}
         step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
@@ -196,11 +208,13 @@ class VanillaOnPolicyBuffer(S):
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        self.data[prl.RET][step].copy_(next_value)
-        self.data[prl.VAL][step].copy_(next_value)
+        self.data[prl.RET][step].copy_(value_dict.get("value_net1"))
+        self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+
+        self.data[prl.IRET][step].copy_(value_dict.get("value_net2"))
+        self.data[prl.IVAL][step].copy_(value_dict.get("value_net2"))
 
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
@@ -245,14 +259,22 @@ class VanillaOnPolicyBuffer(S):
         """Compute return values."""
         gamma = self.algo.gamma
         len = self.step - 1 if self.step != 0 else self.max_size
+
         for step in reversed(range(len)):
             self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
                 1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
+
+        # No episodic life of intrisic rewards
+        for step in reversed(range(len)):
+            self.data[prl.IRET][step] = (self.data[prl.IRET][step + 1] * gamma + self.data[prl.IREW][step])
 
     def compute_advantages(self):
         """Compute transition advantage values."""
         adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
         self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
+
+        adv = self.data[prl.IRET][:-1] - self.data[prl.IVAL][:-1]
+        self.data[prl.IADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """
@@ -276,7 +298,7 @@ class VanillaOnPolicyBuffer(S):
         """
 
         num_proc = self.data[prl.DONE].shape[1]
-        l = self.step if self.step != 0 else self.max_size
+        l = self.step - 1 if self.step != 0 else self.max_size
 
         if self.recurrent_actor:  # Batches for a feed recurrent actor
 
@@ -354,3 +376,19 @@ class VanillaOnPolicyBuffer(S):
         """
         if hasattr(self, parameter_name):
             setattr(self, parameter_name, new_parameter_value)
+
+    def normalize_int_rewards(self):
+        # OpenAI's usage of Forward filter is definitely wrong;
+        # Because: https://github.com/openai/random-network-distillation/issues/16#issuecomment-488387659
+
+        gamma = self.algo.int_gamma
+        length = self.step - 1 if self.step != 0 else self.max_size
+        rewems = torch.zeros_like(self.data[prl.RET])
+        for step in reversed(range(length)):
+            rewems = rewems * gamma + self.data[prl.IREW][step]
+
+        for rew in rewems:
+            import ipdb; ipdb.set_trace()
+            self.algo.int_reward_rms.update(np.ravel(rew).reshape(-1, 1))
+
+        return self.data[prl.IREW] / (self.int_reward_rms.var ** 0.5)

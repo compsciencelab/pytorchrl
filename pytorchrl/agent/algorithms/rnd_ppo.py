@@ -76,7 +76,7 @@ class RND_PPO(Algorithm):
                  entropy_coef=0.01,
                  value_loss_coef=0.5,
                  num_test_episodes=5,
-                 use_clipped_value_loss=True,
+                 use_clipped_value_loss=False,
                  policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
@@ -140,19 +140,31 @@ class RND_PPO(Algorithm):
         for addon in self.policy_loss_addons:
             addon.setup(self.device)
 
-        ### NEW STUFF ##################################################################################################
+        ### RND PPO STUFF ##################################################################################################
+
+        self.int_gamma = 0.99
+        self.ext_adv_coeff = 1.0
+        self.int_adv_coeff = 1.0
+        self.predictor_proportion = 32 / 16  # 16 is the number of workers, the more workers the lower proportion, why?
 
         # Create second value head
-        import ipdb; ipdb.set_trace()
-
-        self.actor.create_critic("int_value_net")
-        self.actor.int_value_net.to(self.device)
+        self.actor.create_critic("value_net2")  # net to predict int rewards
+        self.actor.value_net2.to(self.device)
+        self.actor.num_critics += 1
 
         # Create target model
-        setattr(self.actor, "target_model", TargetModel(self.actor.input_space).to(self.device))
+        setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
+
+        # Freeze target model parameters
+        for param in self.actor.target_model.parameters():
+            param.requires_grad = False
 
         # Create predictor model
-        setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space).to(self.device))
+        setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space.shape).to(self.device))
+
+        # Define running means for int reward and obs
+        self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape)
+        self.int_reward_rms = RunningMeanStd(shape=(1,))
 
     @classmethod
     def create_factory(cls,
@@ -314,10 +326,19 @@ class RND_PPO(Algorithm):
                 obs, rhs, done, deterministic)
 
             value_dict = self.actor.get_value(obs, rhs, done)
-            value = value_dict.get("value_net1")
-            rhs = value_dict.get("rhs")
+            ext_value = value_dict.pop("value_net1")
+            int_value = value_dict.pop("value_net2")
+            rhs = value_dict.pop("rhs")
 
-            other = {prl.VAL: value, prl.LOGP: logp_action}
+            # predict intrinsic reward
+            obs = torch.clamp(
+                (obs - torch.tensor(self.state_rms.mean, dtype=torch.float32).to(self.device)) /
+                (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
+            predictor_encoded_features = self.actor.predictor_model(obs)
+            target_encoded_features = self.actor.target_model(obs)
+            int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1)
+
+            other = {prl.VAL: ext_value, prl.IVAL: int_value, prl.LOGP: logp_action, prl.IREW: int_reward}
 
         return action, clipped_action, rhs, other
 
@@ -345,14 +366,24 @@ class RND_PPO(Algorithm):
         o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
-        new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
-        new_v = self.actor.get_value(o, rhs, d).get("value_net1")
+        # RDN PPO
+        ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
 
+        advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
+
+        new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
+
+        new_vs = self.actor.get_value(o, rhs, d)
+        new_v = new_vs.get("value_net1")
+        new_iv = new_vs.get("value_net2")
+
+        # Policy loss
         ratio = torch.exp(new_logp - old_logp)
-        surr1 = ratio * adv
-        surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv
+        surr1 = ratio * advs
+        surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * advs
         action_loss = - torch.min(surr1, surr2).mean()
 
+        # Ext value loss
         if self.use_clipped_value_loss:
             value_losses = (new_v - r).pow(2)
             value_pred_clipped = old_v + (new_v - old_v).clamp(-self.clip_param, self.clip_param)
@@ -361,7 +392,30 @@ class RND_PPO(Algorithm):
         else:
             value_loss = 0.5 * (r - new_v).pow(2).mean()
 
-        loss = value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy
+        # Int value loss
+        if self.use_clipped_value_loss:
+            ivalue_losses = (new_iv - ir).pow(2)
+            ivalue_pred_clipped = old_iv + (new_iv - old_iv).clamp(-self.clip_param, self.clip_param)
+            ivalue_losses_clipped = (ivalue_pred_clipped - ir).pow(2)
+            ivalue_loss = 0.5 * torch.max(ivalue_losses, ivalue_losses_clipped).mean()
+        else:
+            ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean()
+
+        total_value_loss = value_loss + ivalue_loss
+
+        #  When exactly should I do that?
+        self.state_rms.update(o)
+        o = ((o - self.state_rms.mean) / (self.state_rms.var ** 0.5)).clip(-5, 5)
+
+        # Rnd loss
+        encoded_target_features = self.actor.target_model(o)
+        encoded_predictor_features = self.actor.predictor_model(o)
+        loss = (encoded_predictor_features - encoded_target_features).pow(2).mean(-1)
+        mask = torch.rand(loss.size(), device=self.device)
+        mask = (mask < self.predictor_proportion).float()
+        rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
+
+        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy + rnd_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
@@ -546,3 +600,36 @@ class PredictorModel(nn.Module, ABC):
         x = F.relu(self.fc2(x))
 
         return self.encoded_features(x)
+
+
+def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count):
+    delta = batch_mean - mean
+    tot_count = count + batch_count
+
+    new_mean = mean + delta * batch_count / tot_count
+    m_a = var * count
+    m_b = batch_var * batch_count
+    M2 = m_a + m_b + np.square(delta) * count * batch_count / tot_count
+    new_var = M2 / tot_count
+    new_count = tot_count
+
+    return new_mean, new_var, new_count
+
+
+class RunningMeanStd:
+    # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+    # -> It's indeed batch normalization. :D
+    def __init__(self, epsilon=1e-4, shape=()):
+        self.mean = np.zeros(shape, 'float64')
+        self.var = np.ones(shape, 'float64')
+        self.count = epsilon
+
+    def update(self, x):
+        batch_mean = np.mean(x, axis=0)
+        batch_var = np.var(x, axis=0)
+        batch_count = x.shape[0]
+        self.update_from_moments(batch_mean, batch_var, batch_count)
+
+    def update_from_moments(self, batch_mean, batch_var, batch_count):
+        self.mean, self.var, self.count = update_mean_var_count_from_moments(
+            self.mean, self.var, self.count, batch_mean, batch_var, batch_count)

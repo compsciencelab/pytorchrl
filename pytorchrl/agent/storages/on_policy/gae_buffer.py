@@ -60,14 +60,29 @@ class GAEBuffer(B):
             return cls(size, device, actor, algorithm, envs, gae_lambda)
         return create_buffer_instance
 
+    @property
+    def used_capacity(self):
+        """Returns the step up to which storage is full with env transitions."""
+        return self.step - 1 if self.step != 0 else self.max_size
+
     def compute_returns(self):
         """Compute return values."""
-        gamma = self.algo.gamma
-        len = self.step - 1 if self.step != 0 else self.max_size
+
+        self.compute_gae(
+            rewards=self.data[prl.REW],
+            returns=self.data[prl.RET],
+            values=self.data[prl.VAL],
+            dones=self.data[prl.DONE],
+            gamma=self.algo.gamma,
+            gae_lambda=self.gae_lambda,
+            length=self.used_capacity(),
+        )
+
+    @staticmethod
+    def compute_gae(rewards, returns, values, dones, gamma, gae_lambda, length):
         gae = 0
-        for step in reversed(range(len)):
-            delta = (self.data[prl.REW][step] + gamma * self.data[prl.VAL][step + 1] * (
-                1.0 - self.data[prl.DONE][step + 1]) - self.data[prl.VAL][step])
-            gae = delta + gamma * self.gae_lambda * (1.0 - self.data[prl.DONE][step + 1]) * gae
-            self.data[prl.RET][step] = gae + self.data[prl.VAL][step]
+        for step in reversed(range(length)):
+            delta = (rewards[step] + gamma * values[step + 1] * (1.0 - dones[step + 1]) - values[step])
+            gae = delta + gamma * gae_lambda * (1.0 - dones[step + 1]) * gae
+            returns[step] = gae + values[step]
 
