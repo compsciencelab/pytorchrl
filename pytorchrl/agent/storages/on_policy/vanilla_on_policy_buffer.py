@@ -6,14 +6,6 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, Sequenti
 import pytorchrl as prl
 from pytorchrl.agent.storages.base import Storage as S
 
-# value can be a dict, but returns will always be computed with respect to external reward
-# ivalue can also be a dict, returns will always be computed with respect to intrinsic reward
-
-# For now 1 rewards and one intrinsic reward accepted
-
-# irew
-# should actor make a distinction between value nets for int and for ext reward?
-
 
 class VanillaOnPolicyBuffer(S):
     """
@@ -279,35 +271,17 @@ class VanillaOnPolicyBuffer(S):
 
     def compute_returns(self, rewards, returns, values, dones):
         """Compute return values."""
-        # TODO: what if self.data[prl.VAL] and self.data[prl.IVAL] are dicts?
-
         gamma = self.algo.gamma
         length = self.step - 1 if self.step != 0 else self.max_size
         returns[length].copy_(values[length])
         for step in reversed(range(length)):
             returns[step] = (returns[step + 1] * gamma * (1.0 - dones[step + 1]) + rewards[step])
 
-        # self.data[prl.RET][length].copy_(self.data[prl.VAL][length])
-        # for step in reversed(range(length)):
-        #     self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
-        #         1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
-        #
-        # # No episodic life of intrisic rewards
-        # for step in reversed(range(length)):
-        #     self.data[prl.IRET][step] = (self.data[prl.IRET][step + 1] * gamma + self.data[prl.IREW][step])
-
     def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
-        # TODO: what if self.data[prl.VAL] and self.data[prl.IVAL] are dicts?
         adv = returns[:-1] - values[:-1]
-        return (adv - adv.mean()) / (adv.std() + 1e-5)
-
-
-        adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
-        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
-
-        adv = self.data[prl.IRET][:-1] - self.data[prl.IVAL][:-1]
-        self.data[prl.IADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
+        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        return adv
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """
