@@ -191,7 +191,8 @@ class VanillaOnPolicyBuffer(S):
         Before updating actor policy model, compute returns and advantages.
         """
 
-        self.normalize_int_rewards()
+        if hasattr(self.algo, "gamma_int"):
+            self.normalize_int_rewards()
 
         last_tensors = {}
         step = self.step if self.step != 0 else -1
@@ -226,18 +227,19 @@ class VanillaOnPolicyBuffer(S):
             self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
         # Compute ireturns and iadvantages
-        if isinstance(self.data[prl.IVAL], dict):
-            for x in self.data[prl.IVAL]:
-                self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
+        if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
+            if isinstance(self.data[prl.IVAL], dict):
+                for x in self.data[prl.IVAL]:
+                    self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
+                    self.compute_returns(
+                        self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
+                        torch.zeros_like(self.data[prl.DONE]))
+                    self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
+            else:
+                self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
                 self.compute_returns(
-                    self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
-                    torch.zeros_like(self.data[prl.DONE]))
-                self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
-        else:
-            self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
-            self.compute_returns(
-                self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL], torch.zeros_like(self.data[prl.DONE]))
-            self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
+                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL], torch.zeros_like(self.data[prl.DONE]))
+                self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
     def after_gradients(self, batch, info):
         """
@@ -350,7 +352,7 @@ class VanillaOnPolicyBuffer(S):
             for _ in range(num_epochs):
                 for samples in BatchSampler(sampler(range(num_proc * l)), mini_batch_size, drop_last=shuffle):
 
-                    batch = {k: None for k in self.storage_tensors}
+                    batch = {k: None for k in self.data.keys()}
 
                     for k in batch:
 

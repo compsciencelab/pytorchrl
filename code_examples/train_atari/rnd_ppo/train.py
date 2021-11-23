@@ -76,7 +76,12 @@ def main():
         # Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=atari_train_env_factory,
-            env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
+            env_kwargs={
+                "env_id": args.env_id,
+                "frame_stack": args.frame_stack,
+                "episodic_life": args.episodic_life,
+                "clip_rewards": args.clip_rewards,
+            },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))
 
