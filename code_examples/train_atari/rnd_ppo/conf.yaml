@@ -1,4 +1,3 @@
-agent_demos_dir: agent_demos
 agent_name: MontezumaAgent
 clip_param: 0.1
 clip_rewards: true
@@ -14,7 +13,6 @@ frame_skip: 0
 frame_stack: 4
 gae_lambda: 0.95
 gamma: 0.99
-human_demos_dir: human_demos
 log_dir: null
 log_interval: 1
 lr: 0.0007
@@ -36,6 +34,5 @@ save_interval: 10000
 seed: 0
 start_env_steps: 0
 target_env_steps: 100000000
-value_demos_dir: value_demos
 value_loss_coef: 1.0
 wandb_key: b5ef9811ad92fac918facca483c7b6caa73df290

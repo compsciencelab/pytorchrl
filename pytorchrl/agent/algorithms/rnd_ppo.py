@@ -423,7 +423,7 @@ class RND_PPO(Algorithm):
         for addon in self.policy_loss_addons:
             loss += addon.compute_loss_term(self.actor, dist, data)
 
-        return value_loss, action_loss, dist_entropy, loss
+        return value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -445,7 +445,7 @@ class RND_PPO(Algorithm):
             Dict containing current PPO iteration information.
         """
 
-        value_loss, action_loss, dist_entropy, loss = self.compute_loss(batch)
+        value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss = self.compute_loss(batch)
         self.optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
@@ -457,6 +457,8 @@ class RND_PPO(Algorithm):
         info = {
             "loss": loss.item(),
             "value_loss": value_loss.item(),
+            "ivalue_loss": ivalue_loss.item(),
+            "rnd_loss": rnd_loss.item(),
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item()
         }

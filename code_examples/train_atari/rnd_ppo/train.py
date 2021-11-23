@@ -22,7 +22,7 @@ import torch.nn as nn
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import PPO
+from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory
@@ -81,7 +81,7 @@ def main():
             info_keywords=tuple(info_keywords))
 
         # Define RL training algorithm
-        algo_factory, algo_name = PPO.create_factory(
+        algo_factory, algo_name = RND_PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
