@@ -34,7 +34,7 @@ def atari_train_env_factory(
     env : gym.Env
         Train environment.
     """
-    env = make_atari(env_id)
+    env = make_atari(env_id, max_episode_steps=4500)
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
         env, episode_life=episode_life,

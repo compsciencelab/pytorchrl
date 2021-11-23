@@ -113,7 +113,7 @@ class CWorker(W):
         self.actor = actor_factory(self.device)
 
         # Create Algorithm instance
-        self.algo = algo_factory(self.device, self.actor)
+        self.algo = algo_factory(self.device, self.actor, self.envs_train)
 
         # Create Storage instance and set world initial state
         self.storage = storage_factory(self.device, self.actor, self.algo, self.envs_train)

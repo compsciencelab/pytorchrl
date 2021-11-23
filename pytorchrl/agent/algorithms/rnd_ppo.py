@@ -63,8 +63,9 @@ class RND_PPO(Algorithm):
     """
 
     def __init__(self,
-                 device,
+                 envs,
                  actor,
+                 device,
                  lr=1e-4,
                  eps=1e-8,
                  gamma=0.99,
@@ -85,7 +86,7 @@ class RND_PPO(Algorithm):
         self._gamma = gamma
 
         # Number of steps collected with initial random policy
-        self._start_steps = 0  # Default to 0 for On-policy algos
+        self._start_steps = 50   # Pre-normalization steps
 
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(num_epochs)
@@ -107,8 +108,9 @@ class RND_PPO(Algorithm):
 
         # ---- PPO-specific attributes ----------------------------------------
 
-        self.device = device
+        self.envs = envs
         self.actor = actor
+        self.device = device
         self.clip_param = clip_param
         self.entropy_coef = entropy_coef
         self.max_grad_norm = max_grad_norm
@@ -143,9 +145,9 @@ class RND_PPO(Algorithm):
         ### RND PPO STUFF ##################################################################################################
 
         self.int_gamma = 0.99
-        self.ext_adv_coeff = 1.0
-        self.int_adv_coeff = 0.0
-        self.predictor_proportion = 32 / 16  # 16 is the number of workers, the more workers the lower proportion, why?
+        self.ext_adv_coeff = 2.0
+        self.int_adv_coeff = 1.0
+        self.predictor_proportion = 0.25  # why? explained in the paper
 
         # Create target model
         setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
@@ -218,12 +220,13 @@ class RND_PPO(Algorithm):
         algo_name : str
             Name of the algorithm.
         """
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(lr=lr,
                        eps=eps,
+                       envs=envs,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
-                       actor=actor,
                        test_every=test_every,
                        num_epochs=num_epochs,
                        clip_param=clip_param,
@@ -365,7 +368,7 @@ class RND_PPO(Algorithm):
         # RDN PPO
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
 
-        advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
+        advs = adv * self.ext_adv_coeff  # + iadv * self.int_adv_coeff
 
         new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
 
@@ -381,23 +384,23 @@ class RND_PPO(Algorithm):
 
         # Ext value loss
         if self.use_clipped_value_loss:
+            # Ext value
             value_losses = (new_v - r).pow(2)
             value_pred_clipped = old_v + (new_v - old_v).clamp(-self.clip_param, self.clip_param)
             value_losses_clipped = (value_pred_clipped - r).pow(2)
             value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
-        else:
-            value_loss = 0.5 * (r - new_v).pow(2).mean()
-
-        # Int value loss
-        if self.use_clipped_value_loss:
+            # Int value
             ivalue_losses = (new_iv - ir).pow(2)
             ivalue_pred_clipped = old_iv + (new_iv - old_iv).clamp(-self.clip_param, self.clip_param)
             ivalue_losses_clipped = (ivalue_pred_clipped - ir).pow(2)
             ivalue_loss = 0.5 * torch.max(ivalue_losses, ivalue_losses_clipped).mean()
         else:
+            # Ext value
+            value_loss = 0.5 * (r - new_v).pow(2).mean()
+            # Int value
             ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean()
 
-        total_value_loss = value_loss # + ivalue_loss
+        total_value_loss = value_loss  # + ivalue_loss
 
         #  When exactly should I do that?
         self.state_rms.update(o)
@@ -411,7 +414,7 @@ class RND_PPO(Algorithm):
         mask = (mask < self.predictor_proportion).float()
         rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
 
-        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy # + rnd_loss
+        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy  # + rnd_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
@@ -612,6 +615,7 @@ def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, 
     new_count = tot_count
 
     return new_mean, new_var, new_count
+
 
 class RunningMeanStd:
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
