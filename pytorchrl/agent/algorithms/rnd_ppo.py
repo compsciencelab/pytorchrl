@@ -367,7 +367,6 @@ class RND_PPO(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # RDN PPO
-        import ipdb; ipdb.set_trace()
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
 
         advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
@@ -377,9 +376,6 @@ class RND_PPO(Algorithm):
         new_vs = self.actor.get_value(o, rhs, d)
         new_v = new_vs.get("value_net1")
         new_iv = new_vs.get("value_net2")
-
-        import ipdb;
-        ipdb.set_trace()
 
         # Policy loss
         ratio = torch.exp(new_logp - old_logp)
@@ -407,12 +403,9 @@ class RND_PPO(Algorithm):
 
         total_value_loss = value_loss + ivalue_loss
 
-        import ipdb;
-        ipdb.set_trace()
-
         #  When exactly should I do that?
-        self.state_rms.update(o)
-        o = ((o - self.state_rms.mean) / (self.state_rms.var ** 0.5)).clip(-5, 5)
+        self.state_rms.update(o.cpu().numpy())
+        o = ((o - torch.tensor(self.state_rms.mean).to(self.device)) / (torch.tensor(self.state_rms.var).to(self.device) ** 0.5)).clip(-5, 5)
 
         import ipdb;
         ipdb.set_trace()
