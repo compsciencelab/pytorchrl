@@ -378,6 +378,9 @@ class RND_PPO(Algorithm):
         new_v = new_vs.get("value_net1")
         new_iv = new_vs.get("value_net2")
 
+        import ipdb;
+        ipdb.set_trace()
+
         # Policy loss
         ratio = torch.exp(new_logp - old_logp)
         surr1 = ratio * advs
@@ -404,9 +407,15 @@ class RND_PPO(Algorithm):
 
         total_value_loss = value_loss + ivalue_loss
 
+        import ipdb;
+        ipdb.set_trace()
+
         #  When exactly should I do that?
         self.state_rms.update(o)
         o = ((o - self.state_rms.mean) / (self.state_rms.var ** 0.5)).clip(-5, 5)
+
+        import ipdb;
+        ipdb.set_trace()
 
         # Rnd loss
         encoded_target_features = self.actor.target_model(o)
