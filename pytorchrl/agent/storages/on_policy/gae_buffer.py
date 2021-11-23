@@ -67,10 +67,7 @@ class GAEBuffer(B):
 
     def compute_returns(self, rewards, returns, values, dones):
         """Compute return values."""
-        gamma = self.algo.gamma
-        gae_lambda = self.gae_lambda
-        length = self.used_capacity
-        gae = 0
+        gamma, gae_lambda, length, gae = self.algo.gamma, self.gae_lambda, self.used_capacity, 0
         returns[length].copy_(values[length])
         for step in reversed(range(length)):
             delta = (rewards[step] + gamma * values[step + 1] * (1.0 - dones[step + 1]) - values[step])
