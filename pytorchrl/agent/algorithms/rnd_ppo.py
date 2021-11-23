@@ -336,7 +336,7 @@ class RND_PPO(Algorithm):
                 (torch.tensor(self.state_rms.var ** 0.5, dtype=torch.float32)).to(self.device), -5, 5)
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
-            int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1)
+            int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)
 
             other = {prl.VAL: ext_value, prl.IVAL: int_value, prl.LOGP: logp_action, prl.IREW: int_reward}
 
@@ -367,6 +367,7 @@ class RND_PPO(Algorithm):
         r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
 
         # RDN PPO
+        import ipdb; ipdb.set_trace()
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
 
         advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
