@@ -164,6 +164,7 @@ class RND_PPO(Algorithm):
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
         # TODO. "pre_normalization_steps": 50?
+        import ipdb; ipdb.set_trace()
 
 
     @classmethod

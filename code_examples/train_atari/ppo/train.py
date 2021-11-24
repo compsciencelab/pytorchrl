@@ -17,9 +17,6 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
-# Testing
-from pytorchrl.agent.algorithms import RND_PPO
-
 
 def main():
 
@@ -57,18 +54,11 @@ def main():
         vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
     # 3. Define RL training algorithm
-    # algo_factory, algo_name = PPO.create_factory(
-    #     lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
-    #     entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
-    #     max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-    #     use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
-    
-    algo_factory, algo_name = RND_PPO.create_factory(
+    algo_factory, algo_name = PPO.create_factory(
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
         use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
-
 
     # 4. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
