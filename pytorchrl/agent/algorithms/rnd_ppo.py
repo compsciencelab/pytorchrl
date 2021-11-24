@@ -120,29 +120,6 @@ class RND_PPO(Algorithm):
         assert hasattr(self.actor, "value_net1"), "RND_PPO requires value critic"
         assert hasattr(self.actor, "ivalue_net1"), "RND_PPO requires ivalue critic"
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
-
-        # ----- Policy Loss Addons --------------------------------------------
-
-        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
-        # or a list of PolicyLossAddOn instances
-        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
-            "PPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
-            "or a list of PolicyLossAddOn instances"
-        if isinstance(policy_loss_addons, list):
-            for addon in policy_loss_addons:
-                assert isinstance(addon, PolicyLossAddOn), \
-                    "PPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
-                    "instance or a list of PolicyLossAddOn instances"
-        else:
-            policy_loss_addons = [policy_loss_addons]
-
-        self.policy_loss_addons = policy_loss_addons
-        for addon in self.policy_loss_addons:
-            addon.setup(self.device)
-
         ### RND PPO STUFF ##################################################################################################
 
         self.int_gamma = 0.99
@@ -167,15 +144,40 @@ class RND_PPO(Algorithm):
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
         print("---Pre_normalization started.---")
+        obs, rhs, done = self.actor.actor_initial_states(envs.reset())
+        total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
         for i in range(self.pre_normalization_steps * self.rollout_length):
-            obs, rhs, done = self.actor.actor_initial_states(envs.reset())
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            self.state_rms.update(obs)
-            if i % self.rollout_length == 0:
+            total_obs[i % self.rollout_length].copy_(obs)
+            if i % self.rollout_length == 0 and i != 0:
+                self.state_rms.update(obs)
                 print("{}/{}".format(i//self.rollout_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
+
+        # ----- Policy Loss Addons --------------------------------------------
+
+        # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
+        # or a list of PolicyLossAddOn instances
+        assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
+            "PPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "or a list of PolicyLossAddOn instances"
+        if isinstance(policy_loss_addons, list):
+            for addon in policy_loss_addons:
+                assert isinstance(addon, PolicyLossAddOn), \
+                    "PPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "instance or a list of PolicyLossAddOn instances"
+        else:
+            policy_loss_addons = [policy_loss_addons]
+
+        self.policy_loss_addons = policy_loss_addons
+        for addon in self.policy_loss_addons:
+            addon.setup(self.device)
 
     @classmethod
     def create_factory(cls,
@@ -414,7 +416,6 @@ class RND_PPO(Algorithm):
         total_value_loss = value_loss + ivalue_loss
 
         #  When exactly should I do that?
-        self.state_rms.update(o)
         o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
         # Rnd loss

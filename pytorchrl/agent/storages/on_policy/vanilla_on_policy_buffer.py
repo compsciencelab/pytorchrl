@@ -194,6 +194,7 @@ class VanillaOnPolicyBuffer(S):
 
         if hasattr(self.algo, "gamma_int"):
             self.normalize_int_rewards()
+            self.algo.state_rms.update(self.data[prl.OBS])
 
         # Get most recent state
         last_tensors = {}
