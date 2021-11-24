@@ -32,6 +32,8 @@ class MPC():
         if type(action_space) == gym.spaces.discrete.Discrete:
             self.action_space = 1
             self.action_type = "discrete"
+            self.action_low = None
+            self.action_high = None
         elif type(action_space) == gym.spaces.box.Box:
             self.action_space = action_space.shape[0]
             self.action_type = "continuous"

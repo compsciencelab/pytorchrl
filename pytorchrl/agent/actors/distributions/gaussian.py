@@ -154,7 +154,7 @@ class DiagGaussianEnsemble(nn.Module):
 
         log_var = self.max_logvar - F.softplus(self.max_logvar - log_var)
         log_var = self.min_logvar + F.softplus(log_var - self.min_logvar)
-        assert mean.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
-        assert log_var.shape == (x.shape[0], self.ensemble_size, self.num_outputs)
+        assert mean.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
+        assert log_var.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
         return mean, log_var, (self.max_logvar, self.min_logvar)
 
