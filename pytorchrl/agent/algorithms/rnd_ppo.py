@@ -165,13 +165,14 @@ class RND_PPO(Algorithm):
         self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
-        # TODO. "pre_normalization_steps": 50?
+        print("---Pre_normalization started.---")
         for _ in range(self.pre_normalization_steps * self.rollout_length):
             obs, rhs, done = self.actor.actor_initial_states(envs.reset())
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
             self.state_rms.update(obs)
         envs.reset()
+        print("---Pre_normalization is done.---")
 
     @classmethod
     def create_factory(cls,
