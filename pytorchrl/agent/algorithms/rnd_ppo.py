@@ -86,7 +86,7 @@ class RND_PPO(Algorithm):
         self._gamma = gamma
 
         # Number of steps collected with initial random policy
-        self._start_steps = 50   # Pre-normalization steps
+        self._start_steps = 0  # Default to 0 for On-policy algos
 
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(num_epochs)
