@@ -375,7 +375,7 @@ class RND_PPO(Algorithm):
         # RDN PPO
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
 
-        advs = adv * self.ext_adv_coeff  # + iadv * self.int_adv_coeff
+        advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
 
         new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
 
@@ -407,7 +407,7 @@ class RND_PPO(Algorithm):
             # Int value
             ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean()
 
-        total_value_loss = value_loss  # + ivalue_loss
+        total_value_loss = value_loss + ivalue_loss
 
         #  When exactly should I do that?
         self.state_rms.update(o)
@@ -421,7 +421,7 @@ class RND_PPO(Algorithm):
         mask = (mask < self.predictor_proportion).float()
         rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
 
-        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy  # + rnd_loss
+        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy + rnd_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
