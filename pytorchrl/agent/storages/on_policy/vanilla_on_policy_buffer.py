@@ -194,7 +194,7 @@ class VanillaOnPolicyBuffer(S):
 
         if hasattr(self.algo, "gamma_int"):
             self.normalize_int_rewards()
-            self.algo.state_rms.update(self.data[prl.OBS])
+            self.algo.state_rms.update(self.data[prl.OBS].reshape(-1, *self.data[prl.OBS].shape[2:]))
 
         # Get most recent state
         last_tensors = {}
@@ -405,6 +405,7 @@ class VanillaOnPolicyBuffer(S):
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
 
         for rew in rewems:
-            self.algo.int_reward_rms.update(rew)
+            import ipdb; ipdb.set_trace()
+            self.algo.int_reward_rms.update(rew.reshape(-1, 1))
 
         return self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)

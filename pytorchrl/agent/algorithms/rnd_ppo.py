@@ -149,9 +149,9 @@ class RND_PPO(Algorithm):
         for i in range(self.pre_normalization_steps * self.rollout_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            total_obs[i % self.rollout_length].copy_(obs)
+            total_obs[i % self.rollout_length].copy_(obs, *obs.shape)
             if i % self.rollout_length == 0 and i != 0:
-                self.state_rms.update(obs)
+                self.state_rms.update(obs.reshape(-1, *obs.shape))
                 print("{}/{}".format(i//self.rollout_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
