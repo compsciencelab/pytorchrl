@@ -147,6 +147,8 @@ class RND_PPO(Algorithm):
         self.int_gamma = 0.99
         self.ext_adv_coeff = 2.0
         self.int_adv_coeff = 1.0
+        self.rollout_length = 128
+        self.pre_normalization_steps = 50
         self.predictor_proportion = 0.25  # why? explained in the paper
 
         # Create target model
@@ -164,8 +166,12 @@ class RND_PPO(Algorithm):
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
         # TODO. "pre_normalization_steps": 50?
-        import ipdb; ipdb.set_trace()
-
+        for _ in range(self.pre_normalization_steps * self.rollout_length):
+            obs, rhs, done = self.actor.actor_initial_states(envs.reset())
+            _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
+            obs, _, _, _ = envs.step(clipped_action)
+            self.state_rms.update(obs)
+        envs.reset()
 
     @classmethod
     def create_factory(cls,
@@ -510,7 +516,6 @@ class RND_PPO(Algorithm):
         if parameter_name == "lr":
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = new_parameter_value
-
 
 # UTILS ################################################################################################################
 
