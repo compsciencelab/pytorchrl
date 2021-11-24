@@ -122,11 +122,11 @@ class RND_PPO(Algorithm):
 
         ### RND PPO STUFF ##################################################################################################
 
-        self.int_gamma = 0.99
+        self.gamma_int = 0.99
         self.ext_adv_coeff = 2.0
         self.int_adv_coeff = 1.0
         self.rollout_length = 128
-        self.pre_normalization_steps = 50
+        self.pre_normalization_steps = 5 # 50
         self.predictor_proportion = 2.0  # why? explained in the paper
 
         # Create target model
@@ -145,13 +145,14 @@ class RND_PPO(Algorithm):
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
-        total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
+        # total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
+        total_obs = torch.zeros(self.rollout_length, 1, *obs.shape[1:]).to(self.device)
         for i in range(self.pre_normalization_steps * self.rollout_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            total_obs[i % self.rollout_length].copy_(obs, *obs.shape)
+            total_obs[i % self.rollout_length].copy_(obs[:, -1, :, :])
             if i % self.rollout_length == 0 and i != 0:
-                self.state_rms.update(obs.reshape(-1, *obs.shape))
+                self.state_rms.update(total_obs.reshape(-1, *obs.shape[1:]))
                 print("{}/{}".format(i//self.rollout_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
@@ -646,6 +647,7 @@ class RunningMeanStd:
         self.count = epsilon
 
     def update(self, x):
+        import ipdb; ipdb.set_trace()
         batch_mean = torch.mean(x, dim=0)
         batch_var = torch.var(x, dim=0)
         batch_count = x.shape[0]

@@ -398,14 +398,10 @@ class VanillaOnPolicyBuffer(S):
         # OpenAI's usage of Forward filter is definitely wrong;
         # Because: https://github.com/openai/random-network-distillation/issues/16#issuecomment-488387659
 
-        gamma = self.algo.int_gamma
+        gamma = self.algo.gamma_int
         length = self.step - 1 if self.step != 0 else self.max_size
         rewems = torch.zeros_like(self.data[prl.RET])
         for step in reversed(range(length)):
             rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
-
-        for rew in rewems:
-            import ipdb; ipdb.set_trace()
-            self.algo.int_reward_rms.update(rew.reshape(-1, 1))
-
+        self.algo.int_reward_rms.update(rewems.reshape(-1, 1))
         return self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)
