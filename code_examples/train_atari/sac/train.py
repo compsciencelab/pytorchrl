@@ -13,7 +13,7 @@ from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
 from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
-from pytorchrl.envs import atari_train_env_factory, atari_test_env_factory
+from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 

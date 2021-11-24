@@ -29,7 +29,8 @@ class VanillaOnPolicyBuffer(S):
     def __init__(self, size, device, actor, algorithm, envs):
 
         self.envs = envs
-        self.num_envs = envs.num_envs
+        if self.envs:
+            self.num_envs = envs.num_envs
         self.actor = actor
         self.device = device
         self.algo = algorithm
@@ -74,15 +75,20 @@ class VanillaOnPolicyBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                size = 0
+            else:
+                size = self.max_size
+
             # Handle dict sample value
             # init tensors for all dict entries
             if isinstance(sample[k], dict):
                 self.data[k] = {}
                 for x, v in sample[k].items():
-                    self.data[k][x] = torch.zeros(self.max_size + 1, *v.shape).to(self.device)
+                    self.data[k][x] = torch.zeros(size + 1, *v.shape).to(self.device)
 
             else:  # Handle non dict sample value
-                self.data[k] = torch.zeros(self.max_size + 1, *sample[k].shape).to(self.device)
+                self.data[k] = torch.zeros(size + 1, *sample[k].shape).to(self.device)
 
         self.data[prl.RET] = self.data[prl.REW].clone()
         self.data[prl.ADV] = self.data[prl.VAL].clone()
@@ -149,6 +155,9 @@ class VanillaOnPolicyBuffer(S):
         for k in sample:
 
             if k not in self.storage_tensors:
+                continue
+
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
                 continue
 
             # We use the same tensor to store obs and obs2
@@ -310,16 +319,23 @@ class VanillaOnPolicyBuffer(S):
             mini_batch_size = num_proc * l // num_mini_batch
             sampler = SubsetRandomSampler if shuffle else SequentialSampler
             for _ in range(num_epochs):
-                for idxs in BatchSampler(sampler(range(num_proc * l)), mini_batch_size, drop_last=shuffle):
+                for samples in BatchSampler(sampler(range(num_proc * l)), mini_batch_size, drop_last=shuffle):
 
                     batch = {k: None for k in self.storage_tensors}
 
                     for k in batch:
+
+                        if k in (prl.RHS, prl.RHS2):
+                            size, idxs = 1, torch.tensor([0])
+                        else:
+                            size, idxs = l, samples
+
                         if isinstance(self.data[k], dict):
-                            tensor = {x: self.data[k][x][0:l].reshape(
+                            tensor = {x: self.data[k][x][0:size].reshape(
                                 -1, *self.data[k][x].shape[2:])[idxs] for x in self.data[k]}
                         else:
-                            tensor = self.data[k][0:l].reshape(-1, *self.data[k].shape[2:])[idxs]
+                            tensor = self.data[k][0:size].reshape(-1, *self.data[k].shape[2:])[idxs]
+
                         batch[k] = tensor
 
                     yield batch

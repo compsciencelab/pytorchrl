@@ -12,7 +12,7 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
+from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 
@@ -78,14 +78,14 @@ def main():
     params.update({
         "num_col_workers": args.num_col_workers,
         "col_workers_communication": args.com_col_workers,
-        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.25},
     })
 
     # add gradient specs
     params.update({
         "num_grad_workers": args.num_grad_workers,
         "grad_workers_communication": args.com_grad_workers,
-        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.25},
     })
 
     scheme = Scheme(**params)

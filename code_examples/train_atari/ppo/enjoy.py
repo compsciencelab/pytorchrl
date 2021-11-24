@@ -4,7 +4,7 @@ import os
 import time
 import torch
 import argparse
-from pytorchrl.envs import atari_test_env_factory
+from pytorchrl.envs.atari import atari_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 from pytorchrl.agent.env.env_wrappers import TransposeImage

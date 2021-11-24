@@ -48,8 +48,9 @@ class HERBuffer(B):
                  epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
 
         super(HERBuffer, self).__init__(
-            self, size, device, actor, algorithm, n_step=n_step, epsilon=epsilon,
-            alpha=alpha, beta=beta, default_error=default_error, eta=eta, cmin=cmin)
+            size=size, device=device, actor=actor, algorithm=algorithm, envs=envs,
+            n_step=n_step, epsilon=epsilon, alpha=alpha, beta=beta, default_error=default_error,
+            eta=eta, cmin=cmin)
 
         self.her_function = her_function
         self.last_episode_start = 0
@@ -108,6 +109,10 @@ class HERBuffer(B):
 
             # Add obs2, rhs2 and done2 directly
             for k in (prl.OBS2, prl.RHS2, prl.DONE2):
+
+                if not self.recurrent_actor and k == prl.RHS2:
+                    continue
+
                 if isinstance(sample[k], dict):
                     for x, y in sample[k].items():
                         self.data[k][x][self.step] = y.cpu()
@@ -120,6 +125,10 @@ class HERBuffer(B):
 
             # Get obs, rhs and act from step buffer
             for k in (prl.OBS, prl.RHS, prl.ACT):
+
+                if not self.recurrent_actor and k == prl.RHS:
+                    continue
+
                 tensor = self.n_step_buffer[k].popleft()
                 if isinstance(tensor, dict):
                     for x, y in tensor.items():
@@ -136,7 +145,10 @@ class HERBuffer(B):
             self.handle_end_of_episode()
 
     def copy_single_tensor(self, key, position):
-        """ _ """
+        """Generates a copy of tensor `key` at index `position`."""
+
+        if not self.recurrent_actor and key in (prl.RHS, prl.RHS2):
+            position = 0
 
         if isinstance(self.data[key], dict):
             copied_data = {x: None for x in self.data[key]}
@@ -148,54 +160,6 @@ class HERBuffer(B):
         return copied_data
 
     def handle_end_of_episode(self):
-        """ _ """
-
-        final_state = np.copy(self.data[prl.OBS][self.step - 1])
-        initial_state = np.copy(self.data[prl.OBS][self.last_episode_start])
-
-        # could also be self.step. I am choosing not to add the transition
-        # in which obs and obs2 belong to different episodes
-        current_step = self.step - 1
-
-        for i in range(self.last_episode_start, current_step):
-
-            obs, rhs, obs2, rew = self.her_function(
-                np.copy(self.data[prl.OBS][i]),
-                np.copy(self.data[prl.RHS][i]),
-                np.copy(self.data[prl.OBS2][i]),
-                np.copy(self.data[prl.REW][i]),
-                initial_state,
-                final_state)
-
-            sample = {
-                prl.OBS: torch.tensor(obs), prl.RHS: torch.tensor(rhs),
-                prl.REW: torch.tensor(rew), prl.OBS2: torch.tensor(obs2),
-                prl.ACT: torch.tensor(np.copy(self.data[prl.ACT][i])),
-                prl.DONE: torch.tensor(np.copy(self.data[prl.DONE][i])),
-            }
-
-            # Add obs2 directly
-            self.data[prl.OBS2][self.step] = sample[prl.OBS2]
-
-            # Add obs, rew, rhs, done and act to n_step buffer
-            self.n_step_buffer[prl.OBS].append(sample[prl.OBS])
-            self.n_step_buffer[prl.REW].append(sample[prl.REW])
-            self.n_step_buffer[prl.ACT].append(sample[prl.ACT])
-            self.n_step_buffer[prl.RHS].append(sample[prl.RHS])
-            self.n_step_buffer[prl.DONE].append(sample[prl.DONE])
-
-            if len(self.n_step_buffer[prl.OBS]) == self.n_step:
-                self.data[prl.REW][self.step], self.data[prl.DONE][self.step] = self._nstep_return()
-                self.data[prl.OBS][self.step] = self.n_step_buffer[prl.OBS].popleft()
-                self.data[prl.ACT][self.step] = self.n_step_buffer[prl.ACT].popleft()
-                self.data[prl.RHS][self.step] = self.n_step_buffer[prl.RHS].popleft()
-
-            self.step = (self.step + 1) % self.max_size
-            self.size = min(self.size + 1, self.max_size)
-
-        self.last_episode_start = self.step
-
-    def handle_end_of_episode_new(self):
         """
         At the end of an environment episode, generates HER data and adds it
         to the replay buffer.
@@ -225,8 +189,7 @@ class HERBuffer(B):
             done = self.copy_single_tensor(prl.DONE, i)
             done2 = self.copy_single_tensor(prl.DONE2, i)
 
-            sample = prl.DataTransition(
-                obs, rhs, done, act, rew, obs2, rhs2, done2)._asdict()
+            sample = prl.DataTransition(obs, rhs, done, act, rew, obs2, rhs2, done2)._asdict()
 
             # Turn to tensors
             for k, v in sample.items():
@@ -252,6 +215,10 @@ class HERBuffer(B):
 
                 # Add obs2, rhs2 and done2 directly
                 for k in (prl.OBS2, prl.RHS2, prl.DONE2):
+
+                    if not self.recurrent_actor and k == prl.RHS2:
+                        continue
+
                     if isinstance(sample[k], dict):
                         for x, y in sample[k].items():
                             self.data[k][x][self.step] = y.cpu()
@@ -264,6 +231,10 @@ class HERBuffer(B):
 
                 # Get obs, rhs and act from step buffer
                 for k in (prl.OBS, prl.RHS, prl.ACT):
+
+                    if not self.recurrent_actor and k == prl.RHS:
+                        continue
+
                     tensor = self.n_step_buffer[k].popleft()
                     if isinstance(tensor, dict):
                         for x, y in tensor.items():

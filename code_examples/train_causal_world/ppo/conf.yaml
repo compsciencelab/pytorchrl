@@ -1,7 +1,7 @@
 experiment_name: Causal_World
 agent_name: PPO
 wandb_key: null
-num_env_steps : 10000000
+num_env_steps : 10_000_000
 log_dir: /tmp/causal_world_ppo
 gamma: 0.99
 save_interval: 10000

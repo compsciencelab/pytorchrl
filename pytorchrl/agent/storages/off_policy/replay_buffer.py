@@ -94,12 +94,17 @@ class ReplayBuffer(S):
             if k not in self.storage_tensors:
                 continue
 
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                size = 1
+            else:
+                size = self.max_size
+
             if isinstance(v, dict):
                 self.data[k] = {}
                 for x, y in sample[k].items():
-                    self.data[k][x] = np.zeros((self.max_size, *y.shape), dtype=np.float32)
+                    self.data[k][x] = np.zeros((size, *y.shape), dtype=np.float32)
             else:
-                self.data[k] = np.zeros((self.max_size, *v.shape), dtype=np.float32)
+                self.data[k] = np.zeros((size, *v.shape), dtype=np.float32)
 
     def get_data_slice(self, start_pos, end_pos):
         """
@@ -208,6 +213,9 @@ class ReplayBuffer(S):
             if v is None:
                 continue
 
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                continue
+
             if isinstance(new_data[k], dict):
 
                 if self.data[k] is None:
@@ -280,6 +288,13 @@ class ReplayBuffer(S):
 
         # Insert
         for k, v in sample.items():
+
+            if k not in self.storage_tensors:
+                continue
+
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                continue
+
             if isinstance(sample[k], dict):
                 for x, y in sample[k].items():
                     self.data[k][x][self.step] = y.cpu()
@@ -372,14 +387,20 @@ class ReplayBuffer(S):
 
             else:
                 batch = {k: {} for k in self.storage_tensors}
-                idxs = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
+                samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                 for k, v in self.data.items():
+
+                    if k in (prl.RHS, prl.RHS2):
+                        size, idxs = 1, np.array([0])
+                    else:
+                        size, idxs = self.size, samples
+
                     if isinstance(v, dict):
                         for x, y in v.items():
-                            batch[k][x] = torch.as_tensor(y[0:self.size].reshape(
+                            batch[k][x] = torch.as_tensor(y[0:size].reshape(
                                 -1, *y.shape[2:])[idxs], dtype=torch.float32).to(self.device)
                     else:
-                        batch[k] = torch.as_tensor(v[0:self.size].reshape(
+                        batch[k] = torch.as_tensor(v[0:size].reshape(
                             -1, *v.shape[2:])[idxs], dtype=torch.float32).to(self.device)
                 yield batch
 

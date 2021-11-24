@@ -1,5 +1,4 @@
 import os
-import sys
 import ray
 import time
 import torch
@@ -94,6 +93,7 @@ class GWorker(W):
         self.iter = 0
         self.col_communication = col_communication
         self.compress_grads_to_send = compress_grads_to_send
+        self.processing_time_start = None
 
         # Computation device
         dev = device or "cuda" if torch.cuda.is_available() else "cpu"
@@ -102,7 +102,8 @@ class GWorker(W):
         self.col_workers = col_workers_factory(dev, initial_weights, index_worker)
         self.local_worker = self.col_workers.local_worker()
         self.remote_workers = self.col_workers.remote_workers()
-        self.num_workers = len(self.remote_workers)
+        self.num_remote_workers = len(self.remote_workers)
+        self.num_collection_workers = 1 if self.num_remote_workers == 0 else self.num_remote_workers
 
         # Get Actor Critic instance
         self.actor = self.local_worker.actor
@@ -113,15 +114,22 @@ class GWorker(W):
         # Get storage instance.
         if col_communication == prl.ASYNC and self.local_worker.envs_train is not None:
 
-            # If async, collection storage sizes need a storage copy
-            # Define it with the minimum size required, to save memory
+            # If async collection, c_worker and g_worker need different storage instances
+            # To avoid overwriting data. Define c_worker one with the minimum size required,
+            # to save memory
             size1 = self.local_worker.storage.max_size
             size2 = self.local_worker.algo.update_every
             size2 = size2 * 2 if size2 is not None else float("Inf")
             new_size = min(size1, size2)
 
             if self.local_worker.envs_train is not None:
+
+                # Create a storage class deepcopy, but be careful with envs attribute,
+                # can not be deep-copied
+                envs = getattr(self.local_worker.storage, "envs")
+                self.local_worker.storage.envs = None
                 self.storage = deepcopy(self.local_worker.storage)
+                self.local_worker.storage.envs = envs
                 self.local_worker.update_storage_parameter("max_size", new_size)
             else:
                 self.storage = self.local_worker.storage
@@ -195,8 +203,21 @@ class GWorker(W):
 
         # except (StopIteration, AttributeError):
         except Exception:
-            if self.col_communication == prl.SYNC: self.collector.step()
+            if self.col_communication == prl.SYNC:
+                self.collector.step()
+
             data, self.info = self.collector.queue.get()
+
+            # Time data processing and calculate collection-to-processing time ratio
+            if not self.processing_time_start:
+                self.processing_time_start = time.time()
+            else:
+                self.info[prl.TIME][prl.PROCESSING] = time.time() - self.processing_time_start
+                self.info[prl.TIME][prl.CPRATIO] = \
+                    (self.info[prl.TIME][prl.COLLECTION] / self.num_collection_workers
+                     ) / self.info[prl.TIME][prl.PROCESSING]
+                self.processing_time_start = time.time()
+
             self.storage.insert_data_slice(data)
             self.storage.before_gradients()
             self.batches = self.storage.generate_batches(
@@ -272,7 +293,7 @@ class GWorker(W):
 
             for p in self.actor.parameters():
                 if p.grad is not None:
-                    p.grad /= self.num_workers
+                    p.grad /= self.num_remote_workers
 
             grads = None
 
@@ -415,7 +436,8 @@ class CollectorThread(threading.Thread):
 
         self.local_worker = local_worker
         self.remote_workers = remote_workers
-        self.num_workers = len(self.remote_workers)
+        self.num_remote_workers = len(self.remote_workers)
+        self.num_collection_workers = 1 if self.num_remote_workers == 0 else self.num_remote_workers
 
         # Counters
         self.num_sent_since_broadcast = 0
@@ -480,7 +502,7 @@ class CollectorThread(threading.Thread):
                 # Keep checking how many workers have finished until
                 # percent% are ready
                 samples_ready = []
-                while len(samples_ready) < (self.num_workers * self.fraction_workers):
+                while len(samples_ready) < (self.num_remote_workers * self.fraction_workers):
                     samples_ready, samples_not_ready = ray.wait(
                         pending_samples, num_returns=len(pending_samples), timeout=0.001)
 
@@ -522,7 +544,7 @@ class CollectorThread(threading.Thread):
 
     def broadcast_new_weights(self):
         """Broadcast a new set of weights from the local worker."""
-        if self.num_workers > 0:
+        if self.num_remote_workers > 0:
             latest_weights = ray.put({
                 prl.VERSION: self.local_worker.actor_version,
                 prl.WEIGHTS: self.local_worker.get_weights()})

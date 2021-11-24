@@ -50,6 +50,9 @@ class PPODBuffer(B):
         Save top demos every  `save_demo_frequency`th data collection.
     num_saved_demos : int
         Number of top reward demos to save.
+    use_initial_demos_as_reward_threshold : bool
+        Whether or not to use initially provided demos to define the reward threshold
+        to accept future demos found by the agent.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -60,7 +63,8 @@ class PPODBuffer(B):
 
     def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0,
                  initial_demos_dir=None, target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95,
-                 alpha=10, max_demos=51, save_demo_frequency=10, num_saved_demos=10):
+                 alpha=10, max_demos=51, save_demo_frequency=10, num_saved_demos=10,
+                 use_initial_demos_as_reward_threshold=True):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -90,12 +94,16 @@ class PPODBuffer(B):
         # Load initial demos
         if initial_demos_dir:
             self.load_initial_demos()
+        
+        # Define reward threshold for new demos 
+        if use_initial_demos_as_reward_threshold:
             self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
                 self.reward_demos) > 0 else - np.inf
         else:
             self.reward_threshold = - np.inf
 
-        # Define variables to track potential demos
+        # Define variables to track demos
+        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else 0.0
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
         self.potential_demos = {"env{}".format(i + 1): defaultdict(list) for i in range(self.num_envs)}
 
@@ -128,7 +136,8 @@ class PPODBuffer(B):
                        alpha=10,
                        max_demos=51,
                        save_demo_frequency=10,
-                       num_saved_demos=10):
+                       num_saved_demos=10,
+                       use_initial_demos_as_reward_threshold=True):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -158,6 +167,9 @@ class PPODBuffer(B):
             Save top demos every  `save_demo_frequency`th data collection.
         num_saved_demos : int
             Number of top reward demos to save.
+        use_initial_demos_as_reward_threshold : bool
+            Whether or not to use initially provided demos to define the reward threshold
+            to accept future demos found by the agent.
 
         Returns
         -------
@@ -169,7 +181,8 @@ class PPODBuffer(B):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, frame_stack,
                        frame_skip, initial_demos_dir, target_demos_dir, rho,
-                       phi, gae_lambda, alpha, max_demos, save_demo_frequency, num_saved_demos)
+                       phi, gae_lambda, alpha, max_demos, save_demo_frequency,
+                       num_saved_demos, use_initial_demos_as_reward_threshold)
 
         return create_buffer_instance
 
@@ -178,8 +191,8 @@ class PPODBuffer(B):
         Before updating actor policy model, compute returns and advantages.
         """
 
-        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}\n".format(
-            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold))
+        print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
+            len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
         # Retrieve most recent obs, rhs and done tensors
         last_tensors = {}
@@ -347,7 +360,7 @@ class PPODBuffer(B):
         for i in range(self.num_envs):
 
             # Copy transition
-            # TODO. in theory deepcopy should not be necessary - try without deepcopy!
+            # TODO. is deepcopy necessary?
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
@@ -387,8 +400,11 @@ class PPODBuffer(B):
                     # Anneal rho and phi
                     self.anneal_parameters()
 
-                    # # Update reward_threshold. TODO. review, this is not in the original paper.
-                    # self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+                    # Update reward_threshold.
+                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+
+                    # Also keep track of best demo reward
+                    self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
                 else:  # Consider candidate demos for value reward
 
@@ -414,6 +430,7 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """
         Load initial demonstrations.
+
         Warning: make sure the frame_skip and frame_stack hyperparameters are
         the same as those used to record the demonstrations!
         """
@@ -559,13 +576,11 @@ class PPODBuffer(B):
             for _ in range(len(self.reward_demos) - self.max_demos):
 
                 # Option 1: FIFO (original paper)
-                del self.reward_demos[self.num_loaded_demos]
+                # del self.reward_demos[self.num_loaded_demos]
 
-                # Option 2
-                # probs = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
-                # probs[0] = 0.0  # Original demo is never ejected
-                # probs = probs / probs.sum()
-                # del self.reward_demos[np.random.choice(range(len(self.reward_demos)), p=probs)]
+                # Option 2: Eject demo with lowest reward
+                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
+                del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
 
     def save_demos(self):
         """
@@ -577,9 +592,12 @@ class PPODBuffer(B):
             os.makedirs(self.target_demos_dir, exist_ok=True)
 
         reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos]).argsort())[:self.num_saved_demos]
+            [d["TotalReward"] for d in self.reward_demos[
+                self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+
         for num, demo_pos in enumerate(reward_ranking):
             filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
+            demo_pos += self.num_loaded_demos
             np.savez(
                 filename,
                 Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),

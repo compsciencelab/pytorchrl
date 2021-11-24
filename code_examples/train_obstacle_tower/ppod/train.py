@@ -11,13 +11,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.storages import PPODBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
-
-# Testing
-from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
 def main():
@@ -48,40 +45,44 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # 1. Define Train Vector of Envs
+        # Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=obstacle_train_env_factory,
             env_kwargs={
+                "min_floor": args.min_floor,
+                "max_floor": args.max_floor,
+                "seed_list": args.seed_list,
                 "frame_skip": args.frame_skip,
                 "frame_stack": args.frame_stack,
+                "num_actions": args.num_actions,
                 "reward_shape": args.reward_shape,
                 "reduced_actions": args.reduced_action_space,
-                "num_actions": args.num_actions,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=('floor', 'start', 'seed'))
 
-        # 3. Define RL training algorithm
+        # Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
-        # 4. Define RL Policy
+        # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor(args.nn),
             restart_model=args.restart_model, recurrent_nets=args.recurrent_nets)
 
-        # 5. Define rollouts storage
+        # Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
             frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos_6_actions/",
+            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+            use_initial_demos_as_reward_threshold=False,
         )
 
-        # 6. Define scheme
+        # Define scheme
         params = {}
 
         # add core modules
@@ -108,10 +109,10 @@ def main():
 
         scheme = Scheme(**params)
 
-        # 7. Define learner
+        # Define learner
         learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        # 8. Define train loop
+        # Define train loop
         iterations = 0
         start_time = time.time()
         while not learner.done():
@@ -137,6 +138,7 @@ def main():
 
 
 def get_args():
+
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
@@ -166,6 +168,15 @@ def get_args():
     parser.add_argument(
         '--num-actions', type=int, default=6,
         help='Size of the reduced action space (6, 7 or 8) (default: 6)')
+    parser.add_argument(
+        '--min-floor', type=int, default=0,
+        help='Environment minimum floor (default: 0)')
+    parser.add_argument(
+        '--max-floor', type=int, default=50,
+        help='Environment macimum floor (default: 50)')
+    parser.add_argument(
+        '--seed-list', default=[],
+        help='List of environment seeds (default: None)')
 
     # PPOD specs
     parser.add_argument(
@@ -213,7 +224,7 @@ def get_args():
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
     parser.add_argument(
-        '--demos-dir', default='/tmp/pybullet_ppo',
+        '--demos-dir', default=None,
         help='target directory to store and retrieve demos_6_actions.')
 
     # Feature extractor model specs

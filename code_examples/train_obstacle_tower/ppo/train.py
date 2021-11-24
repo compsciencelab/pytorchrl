@@ -79,7 +79,7 @@ def main():
         # 5. Define scheme
         params = {}
 
-        # add core modules
+        # Add core modules
         params.update({
             "algo_factory": algo_factory,
             "actor_factory": actor_factory,
@@ -87,14 +87,14 @@ def main():
             "train_envs_factory": train_envs_factory,
         })
 
-        # add collection specs
+        # Add collection specs
         params.update({
             "num_col_workers": args.num_col_workers,
             "col_workers_communication": args.com_col_workers,
-            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+            "col_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
         })
 
-        # add gradient specs
+        # Add gradient specs
         params.update({
             "num_grad_workers": args.num_grad_workers,
             "grad_workers_communication": args.com_grad_workers,

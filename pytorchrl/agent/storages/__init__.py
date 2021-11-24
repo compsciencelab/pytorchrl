@@ -9,3 +9,4 @@ from pytorchrl.agent.storages.on_policy.vtrace_buffer import VTraceBuffer
 from pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer
 
 from pytorchrl.agent.storages.off_policy.mb_dataset import MBReplayBuffer
+from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
