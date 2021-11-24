@@ -192,7 +192,7 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
         if done:
             if "episode" not in info:
                 info["episode"] = {}
-            info["episode"].update(visited_room=deepcopy(self.visited_rooms))
+            info["episode"].update(VisitedRooms=deepcopy(self.visited_rooms))
             self.visited_rooms.clear()
         return state, reward, done, info
 

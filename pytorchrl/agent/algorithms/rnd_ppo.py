@@ -149,7 +149,7 @@ class RND_PPO(Algorithm):
         self.int_adv_coeff = 1.0
         self.rollout_length = 128
         self.pre_normalization_steps = 50
-        self.predictor_proportion = 0.25  # why? explained in the paper
+        self.predictor_proportion = 2.0  # why? explained in the paper
 
         # Create target model
         setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from pytorchrl.agent.actors.utils import init
 
 
@@ -26,7 +27,7 @@ class CNN(nn.Module):
     def __init__(self,
                  input_space,
                  rgb_norm=True,
-                 output_size=512,
+                 output_size=256,
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
                  filters=[32, 64, 64],
@@ -64,6 +65,10 @@ class CNN(nn.Module):
             nn.Linear(feature_size, output_size),
             activation())
 
+        # Added
+        self.fc2 = nn.Linear(in_features=256, out_features=448)
+        self.extra_fc = nn.Linear(in_features=448, out_features=448)
+
         self.train()
         self.rgb_norm = rgb_norm
 
@@ -85,4 +90,9 @@ class CNN(nn.Module):
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
         out = self.head(out)
+
+        # Added
+        out = F.relu(self.fc2(out))
+        out = F.relu(self.extra_fc(out))
+
         return out
