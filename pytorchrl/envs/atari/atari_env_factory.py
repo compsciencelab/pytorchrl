@@ -4,7 +4,7 @@ from pytorchrl.envs.common import DelayedReward
 
 def atari_train_env_factory(
         env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1,
-        episode_life=True, clip_rewards=False):
+        episodic_life=True, clip_rewards=False):
     """
     Create train Atari environment.
 
@@ -24,7 +24,7 @@ def atari_train_env_factory(
         Observations composed of last `frame_stack` frames stacked.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
-    episode_life : bool
+    episodic_life : bool
         Whether or not simulate end of episode when losing a life.
     clip_rewards : bool
         Whether or not to clip rewards between -1 and 1.
@@ -37,7 +37,7 @@ def atari_train_env_factory(
     env = make_atari(env_id, max_episode_steps=4500)
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
-        env, episode_life=episode_life,
+        env, episode_life=episodic_life,
         clip_rewards=clip_rewards,
         scale=False,
         frame_stack=frame_stack)
