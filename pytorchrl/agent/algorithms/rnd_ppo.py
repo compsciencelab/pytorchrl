@@ -113,11 +113,12 @@ class RND_PPO(Algorithm):
         self.device = device
         self.clip_param = clip_param
         self.entropy_coef = entropy_coef
-        self.max_grad_norm = max_grad_norm
+        self.max_grad_norm = 2.0  # TODO. added --> max_grad_norm
         self.value_loss_coef = value_loss_coef
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        assert hasattr(self.actor, "value_net1"), "PPO requires value critic (num_critics=1)"
+        assert hasattr(self.actor, "value_net1"), "RND_PPO requires value critic"
+        assert hasattr(self.actor, "ivalue_net1"), "RND_PPO requires ivalue critic"
 
         # ----- Optimizers ----------------------------------------------------
 
@@ -459,7 +460,10 @@ class RND_PPO(Algorithm):
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
-        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
+        iv_grads = get_gradients(self.actor.ivalue_net1, grads_to_cpu=grads_to_cpu)
+        pred_grads = get_gradients(self.actor.predictor_model, grads_to_cpu=grads_to_cpu)
+
+        grads = {"pi_grads": pi_grads, "v_grads": v_grads, "iv_grads": iv_grads, "pred_grads": pred_grads}
 
         info = {
             "loss": loss.item(),
@@ -489,6 +493,12 @@ class RND_PPO(Algorithm):
             set_gradients(
                 self.actor.value_net1,
                 gradients=gradients["v_grads"], device=self.device)
+            set_gradients(
+                self.actor.ivalue_net1,
+                gradients=gradients["iv_grads"], device=self.device)
+            set_gradients(
+                self.actor.predictor_model,
+                gradients=gradients["pred_grads"], device=self.device)
         self.optimizer.step()
 
     def set_weights(self, actor_weights):

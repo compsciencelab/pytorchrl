@@ -7,7 +7,6 @@ os.environ.setdefault('PATH', '')
 import gym
 import cv2
 import numpy as np
-from copy import deepcopy
 
 cv2.ocl.setUseOpenCL(False)
 from pytorchrl.envs.common import FrameStack
@@ -189,14 +188,11 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
         ram = self.unwrapped.ale.getRAM()
         assert len(ram) == 128
         self.visited_rooms.add(ram[self.room_address])
-        if done:
-            if "episode" not in info:
-                info["episode"] = {}
-            info["episode"].update(VisitedRooms=deepcopy(self.visited_rooms))
-            self.visited_rooms.clear()
+        info['VisitedRooms'] = len(self.visited_rooms)
         return state, reward, done, info
 
     def reset(self):
+        self.visited_rooms.clear()
         return self.env.reset()
 
 

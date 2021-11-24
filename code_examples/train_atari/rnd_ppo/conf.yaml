@@ -30,7 +30,7 @@ ppo_epoch: 3
 recurrent_policy: false
 restart_model: null
 rho: 0.2
-save_interval: 10000
+save_interval: 100
 seed: 0
 start_env_steps: 0
 target_env_steps: 100000000
