@@ -1,4 +1,4 @@
-from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari
+from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari, MontezumaVisitedRoomEnv
 from pytorchrl.envs.common import DelayedReward
 
 
@@ -41,6 +41,8 @@ def atari_train_env_factory(
         clip_rewards=clip_rewards,
         scale=False,
         frame_stack=frame_stack)
+
+    env = MontezumaVisitedRoomEnv()
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
