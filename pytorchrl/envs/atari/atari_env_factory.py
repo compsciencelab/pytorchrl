@@ -42,7 +42,7 @@ def atari_train_env_factory(
         scale=False,
         frame_stack=frame_stack)
 
-    env = MontezumaVisitedRoomEnv()
+    env = MontezumaVisitedRoomEnv(env, 3)
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
