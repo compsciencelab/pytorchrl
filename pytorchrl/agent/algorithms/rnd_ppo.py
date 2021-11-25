@@ -126,33 +126,38 @@ class RND_PPO(Algorithm):
         self.ext_adv_coeff = 2.0
         self.int_adv_coeff = 1.0
         self.rollout_length = 128
-        self.pre_normalization_steps = 5 # 50
+        self.pre_normalization_steps = 50
         self.predictor_proportion = 2.0  # why? explained in the paper
 
         # Create target model
-        setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
+        # setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
+        setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
 
         # Freeze target model parameters
         for param in self.actor.target_model.parameters():
             param.requires_grad = False
 
         # Create predictor model
-        setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space.shape).to(self.device))
+        # setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space.shape).to(self.device))
+        setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
 
         # Define running means for int reward and obs
-        self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
+        # self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
+        self.state_rms = RunningMeanStd(shape=(1, ) + self.actor.input_space.shape[1:], device=self.device)
         self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
         # total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
-        total_obs = torch.zeros(self.rollout_length, 1, *obs.shape[1:]).to(self.device)
+        total_obs = torch.zeros((self.rollout_length,  obs.shape[0], 1) + obs.shape[2:]).to(self.device)
         for i in range(self.pre_normalization_steps * self.rollout_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            total_obs[i % self.rollout_length].copy_(obs[:, -1, :, :])
+            # total_obs[i % self.rollout_length].copy_(obs)
+            total_obs[i % self.rollout_length].copy_(obs[:, -1:, : , :])
             if i % self.rollout_length == 0 and i != 0:
-                self.state_rms.update(total_obs.reshape(-1, *obs.shape[1:]))
+                # self.state_rms.update(total_obs.reshape(-1, *obs.shape[1:]))
+                self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
                 print("{}/{}".format(i//self.rollout_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
@@ -346,6 +351,7 @@ class RND_PPO(Algorithm):
             rhs = value_dict.pop("rhs")
 
             # predict intrinsic reward
+            obs = obs[:, -1:, ...]
             obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
@@ -416,7 +422,7 @@ class RND_PPO(Algorithm):
 
         total_value_loss = value_loss + ivalue_loss
 
-        #  When exactly should I do that?
+        o = o[:, -1:, ...]
         o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
         # Rnd loss
@@ -458,7 +464,9 @@ class RND_PPO(Algorithm):
         value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss = self.compute_loss(batch)
         self.optimizer.zero_grad()
         loss.backward()
-        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+
+        clip_grad_norm_(self.actor.parameters())
+        # nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
@@ -501,6 +509,7 @@ class RND_PPO(Algorithm):
             set_gradients(
                 self.actor.predictor_model,
                 gradients=gradients["pred_grads"], device=self.device)
+
         self.optimizer.step()
 
     def set_weights(self, actor_weights):
@@ -647,7 +656,6 @@ class RunningMeanStd:
         self.count = epsilon
 
     def update(self, x):
-        import ipdb; ipdb.set_trace()
         batch_mean = torch.mean(x, dim=0)
         batch_var = torch.var(x, dim=0)
         batch_count = x.shape[0]
@@ -656,3 +664,23 @@ class RunningMeanStd:
     def update_from_moments(self, batch_mean, batch_var, batch_count):
         self.mean, self.var, self.count = update_mean_var_count_from_moments(
             self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
+
+from torch._six import inf
+def clip_grad_norm_(parameters, norm_type: float = 2.0):
+    """
+    This is the official clip_grad_norm implemented in pytorch but the max_norm part has been removed.
+    https://github.com/pytorch/pytorch/blob/52f2db752d2b29267da356a06ca91e10cd732dbc/torch/nn/utils/clip_grad.py#L9
+    """
+    if isinstance(parameters, torch.Tensor):
+        parameters = [parameters]
+    parameters = [p for p in parameters if p.grad is not None]
+    norm_type = float(norm_type)
+    if len(parameters) == 0:
+        return torch.tensor(0.)
+    device = parameters[0].grad.device
+    if norm_type == inf:
+        total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
+    else:
+        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]),
+                                norm_type)
+    return total_norm

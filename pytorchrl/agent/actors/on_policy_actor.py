@@ -386,8 +386,12 @@ class OnPolicyActor(nn.Module):
 
         # ---- 3. Define value predictor --------------------------------------
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        value_predictor = init_(nn.Linear(self.recurrent_size, 1))
+        # init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        # value_predictor = init_(nn.Linear(self.recurrent_size, 1))
+
+        value_predictor = nn.Linear(self.recurrent_size, 1)
+        value_predictor.bias.data.zero_()
+        nn.init.orthogonal_(value_predictor.weight, gain=np.sqrt(0.01))
 
         # ---- 4. Concatenate all value net modules ---------------------------
 

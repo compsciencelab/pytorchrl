@@ -1,6 +1,6 @@
 import gym
 from pytorchrl.agent.actors.feature_extractors.mlp import MLP
-from pytorchrl.agent.actors.feature_extractors.cnn import CNN
+from pytorchrl.agent.actors.feature_extractors.cnn_old import CNN
 from pytorchrl.agent.actors.feature_extractors.dictnet import DictNet
 from pytorchrl.agent.actors.feature_extractors.fixup_cnn import FixupCNN
 

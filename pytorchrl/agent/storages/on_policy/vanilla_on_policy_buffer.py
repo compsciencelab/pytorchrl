@@ -194,7 +194,8 @@ class VanillaOnPolicyBuffer(S):
 
         if hasattr(self.algo, "gamma_int"):
             self.normalize_int_rewards()
-            self.algo.state_rms.update(self.data[prl.OBS].reshape(-1, *self.data[prl.OBS].shape[2:]))
+            # self.algo.state_rms.update(self.data[prl.OBS].reshape(-1, *self.data[prl.OBS].shape[2:]))
+            self.algo.state_rms.update(self.data[prl.OBS][:, :, -1:, :, :].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
 
         # Get most recent state
         last_tensors = {}
@@ -224,12 +225,13 @@ class VanillaOnPolicyBuffer(S):
             for x in self.data[prl.VAL]:
                 self.data[prl.VAL][x][step].copy_(value_dict.get(x))
                 self.compute_returns(
-                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE])
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
                 self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
         else:
             # If single critic
             self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-            self.compute_returns(self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE])
+            self.compute_returns(
+                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
             self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
         # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
@@ -240,13 +242,14 @@ class VanillaOnPolicyBuffer(S):
                     self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
                     self.compute_returns(
                         self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
-                        torch.zeros_like(self.data[prl.DONE]))
+                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_int)
                     self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
             else:
                 # If single critic
                 self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
                 self.compute_returns(
-                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL], torch.zeros_like(self.data[prl.DONE]))
+                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
+                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_int)
                 self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
     def after_gradients(self, batch, info):
@@ -279,9 +282,8 @@ class VanillaOnPolicyBuffer(S):
 
         return info
 
-    def compute_returns(self, rewards, returns, values, dones):
+    def compute_returns(self, rewards, returns, values, dones, gamma):
         """Compute return values."""
-        gamma = self.algo.gamma
         length = self.step - 1 if self.step != 0 else self.max_size
         returns[length].copy_(values[length])
         for step in reversed(range(length)):
@@ -290,7 +292,7 @@ class VanillaOnPolicyBuffer(S):
     def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
         adv = returns[:-1] - values[:-1]
-        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        # adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
@@ -397,11 +399,10 @@ class VanillaOnPolicyBuffer(S):
     def normalize_int_rewards(self):
         # OpenAI's usage of Forward filter is definitely wrong;
         # Because: https://github.com/openai/random-network-distillation/issues/16#issuecomment-488387659
-
         gamma = self.algo.gamma_int
         length = self.step - 1 if self.step != 0 else self.max_size
         rewems = torch.zeros_like(self.data[prl.RET])
         for step in reversed(range(length)):
-            rewems[step] = rewems[step] * gamma + self.data[prl.IREW][step + 1]
-        self.algo.int_reward_rms.update(rewems.reshape(-1, 1))
-        return self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)
+            rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
+        self.algo.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
+        self.data[prl.IREW] = self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)
