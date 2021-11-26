@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
+from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
@@ -54,9 +55,21 @@ class RND_PPO(Algorithm):
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
 
+    gamma_intrinsic: float
+
+    ext_adv_coeff: float
+
+    int_adv_coeff: float
+
+    predictor_proportion: float
+
+    pre_normalization_length: int
+
+    pre_normalization_steps: int
+
     Examples
     --------
-    >>> create_algo = PPO.create_factory(
+    >>> create_algo = RND_PPO.create_factory(
         lr=0.01, eps=1e-5, num_epochs=4, clip_param=0.2,
         entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5,
         num_mini_batch=4, use_clipped_value_loss=True, gamma=0.99)
@@ -73,10 +86,16 @@ class RND_PPO(Algorithm):
                  clip_param=0.2,
                  num_mini_batch=1,
                  test_every=1000,
-                 max_grad_norm=0.5,
+                 max_grad_norm=2.0,
                  entropy_coef=0.01,
                  value_loss_coef=0.5,
                  num_test_episodes=5,
+                 gamma_intrinsic=0.99,
+                 ext_adv_coeff=2.0,
+                 int_adv_coeff=1.0,
+                 predictor_proportion=2.0,
+                 pre_normalization_steps=50,
+                 pre_normalization_length=128,
                  use_clipped_value_loss=False,
                  policy_loss_addons=[]):
 
@@ -106,28 +125,28 @@ class RND_PPO(Algorithm):
         # Number of episodes to complete when testing
         self._num_test_episodes = int(num_test_episodes)
 
-        # ---- PPO-specific attributes ----------------------------------------
+        # ---- RND-PPO-specific attributes ----------------------------------------
 
         self.envs = envs
         self.actor = actor
         self.device = device
         self.clip_param = clip_param
         self.entropy_coef = entropy_coef
-        self.max_grad_norm = 2.0  # TODO. added --> max_grad_norm
+        self.max_grad_norm = max_grad_norm
         self.value_loss_coef = value_loss_coef
         self.use_clipped_value_loss = use_clipped_value_loss
+
+        self.ext_adv_coeff = ext_adv_coeff
+        self.int_adv_coeff = int_adv_coeff
+        self.gamma_intrinsic = gamma_intrinsic
+        self.predictor_proportion = predictor_proportion
+        self.pre_normalization_steps = pre_normalization_steps
+        self.pre_normalization_length = pre_normalization_length
 
         assert hasattr(self.actor, "value_net1"), "RND_PPO requires value critic"
         assert hasattr(self.actor, "ivalue_net1"), "RND_PPO requires ivalue critic"
 
         ### RND PPO STUFF ##################################################################################################
-
-        self.gamma_int = 0.99
-        self.ext_adv_coeff = 2.0
-        self.int_adv_coeff = 1.0
-        self.rollout_length = 128
-        self.pre_normalization_steps = 50
-        self.predictor_proportion = 2.0  # why? explained in the paper
 
         # Create target model
         # setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
@@ -144,21 +163,20 @@ class RND_PPO(Algorithm):
         # Define running means for int reward and obs
         # self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
         self.state_rms = RunningMeanStd(shape=(1, ) + self.actor.input_space.shape[1:], device=self.device)
-        self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
         # total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
-        total_obs = torch.zeros((self.rollout_length,  obs.shape[0], 1) + obs.shape[2:]).to(self.device)
-        for i in range(self.pre_normalization_steps * self.rollout_length):
+        total_obs = torch.zeros((self.pre_normalization_length,  obs.shape[0], 1) + obs.shape[2:]).to(self.device)
+        for i in range(self.pre_normalization_steps * self.pre_normalization_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
             # total_obs[i % self.rollout_length].copy_(obs)
-            total_obs[i % self.rollout_length].copy_(obs[:, -1:, : , :])
-            if i % self.rollout_length == 0 and i != 0:
+            total_obs[i % self.pre_normalization_length].copy_(obs[:, -1:, :, :])
+            if i % self.pre_normalization_length == 0 and i != 0:
                 # self.state_rms.update(total_obs.reshape(-1, *obs.shape[1:]))
                 self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
-                print("{}/{}".format(i//self.rollout_length, self.pre_normalization_steps))
+                print("{}/{}".format(i//self.pre_normalization_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
 
@@ -198,6 +216,12 @@ class RND_PPO(Algorithm):
                        entropy_coef=0.01,
                        value_loss_coef=0.5,
                        num_test_episodes=5,
+                       gamma_intrinsic=0.99,
+                       ext_adv_coeff=2.0,
+                       int_adv_coeff=1.0,
+                       predictor_proportion=2.0,
+                       pre_normalization_steps=50,
+                       pre_normalization_length=128,
                        use_clipped_value_loss=True,
                        policy_loss_addons=[]):
         """
@@ -231,6 +255,17 @@ class RND_PPO(Algorithm):
             Prevent value loss from shifting too fast.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
+        gamma_intrinsic: float
+
+        ext_adv_coeff: float
+
+        int_adv_coeff: float
+
+        predictor_proportion: float
+
+        pre_normalization_length: int
+
+        pre_normalization_steps: int
 
         Returns
         -------
@@ -250,10 +285,16 @@ class RND_PPO(Algorithm):
                        num_epochs=num_epochs,
                        clip_param=clip_param,
                        entropy_coef=entropy_coef,
+                       ext_adv_coeff=ext_adv_coeff,
+                       int_adv_coeff=int_adv_coeff,
                        max_grad_norm=max_grad_norm,
                        num_mini_batch=num_mini_batch,
                        value_loss_coef=value_loss_coef,
+                       gamma_intrinsic=gamma_intrinsic,
                        num_test_episodes=num_test_episodes,
+                       predictor_proportion=predictor_proportion,
+                       pre_normalization_length=pre_normalization_length,
+                       pre_normalization_steps=pre_normalization_steps,
                        use_clipped_value_loss=use_clipped_value_loss,
                        policy_loss_addons=policy_loss_addons)
 
@@ -465,8 +506,8 @@ class RND_PPO(Algorithm):
         self.optimizer.zero_grad()
         loss.backward()
 
-        clip_grad_norm_(self.actor.parameters())
-        # nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+        # clip_grad_norm_(self.actor.parameters())
+        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
@@ -632,38 +673,6 @@ class PredictorModel(nn.Module, ABC):
         x = F.relu(self.fc2(x))
 
         return self.encoded_features(x)
-
-
-def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count):
-    delta = batch_mean - mean
-    tot_count = count + batch_count
-    new_mean = mean + delta * batch_count / tot_count
-    m_a = var * count
-    m_b = batch_var * batch_count
-    M2 = m_a + m_b + torch.square(delta) * count * batch_count / tot_count
-    new_var = M2 / tot_count
-    new_count = tot_count
-
-    return new_mean, new_var, new_count
-
-
-class RunningMeanStd:
-    # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
-    # -> It's indeed batch normalization. :D
-    def __init__(self, epsilon=1e-4, shape=(), device=torch.device("cpu")):
-        self.mean = torch.zeros(shape, dtype=torch.float64).to(device)
-        self.var = torch.ones(shape, dtype=torch.float64).to(device)
-        self.count = epsilon
-
-    def update(self, x):
-        batch_mean = torch.mean(x, dim=0)
-        batch_var = torch.var(x, dim=0)
-        batch_count = x.shape[0]
-        self.update_from_moments(batch_mean, batch_var, batch_count)
-
-    def update_from_moments(self, batch_mean, batch_var, batch_count):
-        self.mean, self.var, self.count = update_mean_var_count_from_moments(
-            self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
 
 from torch._six import inf
 def clip_grad_norm_(parameters, norm_type: float = 2.0):

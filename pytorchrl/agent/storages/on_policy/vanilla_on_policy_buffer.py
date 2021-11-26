@@ -4,6 +4,7 @@ import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
 
 import pytorchrl as prl
+from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.storages.base import Storage as S
 
 
@@ -33,6 +34,11 @@ class VanillaOnPolicyBuffer(S):
         self.envs = envs
         if self.envs:
             self.num_envs = envs.num_envs
+            if "frame_stack" in self.envs.env_kwargs.keys():
+                self.frame_stack = self.envs.env_kwargs["frame_stack"]
+            if "frame_skip" in self.envs.env_kwargs.keys():
+                self.frame_skip = self.envs.env_kwargs["frame_skip"]
+
         self.actor = actor
         self.device = device
         self.algo = algorithm
@@ -99,6 +105,18 @@ class VanillaOnPolicyBuffer(S):
         if prl.IREW in sample.keys() and prl.IVAL in sample.keys():
             self.data[prl.IRET] = deepcopy(self.data[prl.IREW])
             self.data[prl.IADV] = deepcopy(self.data[prl.IVAL])
+            self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
+
+    def get_num_channels_obs(self, sample):
+        """
+        Obtain num_channels_obs and set it as class attribute.
+
+        Parameters
+        ----------
+        sample : dict
+            Data sample (containing all tensors of an environment transition)
+        """
+        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
 
     def get_all_buffer_data(self, data_to_cpu=False):
         """
@@ -158,6 +176,7 @@ class VanillaOnPolicyBuffer(S):
         """
         if self.size == 0 and self.data[prl.OBS] is None:  # data tensors lazy initialization
             self.init_tensors(sample)
+            self.get_num_channels_obs(sample)
 
         for k in sample:
 
@@ -191,11 +210,6 @@ class VanillaOnPolicyBuffer(S):
         """
         Before updating actor policy model, compute returns and advantages.
         """
-
-        if hasattr(self.algo, "gamma_int"):
-            self.normalize_int_rewards()
-            # self.algo.state_rms.update(self.data[prl.OBS].reshape(-1, *self.data[prl.OBS].shape[2:]))
-            self.algo.state_rms.update(self.data[prl.OBS][:, :, -1:, :, :].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
 
         # Get most recent state
         last_tensors = {}
@@ -234,6 +248,13 @@ class VanillaOnPolicyBuffer(S):
                 self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
             self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
+        if hasattr(self.algo, "gamma_intrinsic"):
+            self.normalize_int_rewards()
+            # self.algo.state_rms.update(
+            #     self.data[prl.OBS][:, :, -self.num_channels_obs:, :, :].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
+            self.algo.state_rms.update(
+                self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
+
         # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
         if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
             if isinstance(self.data[prl.IVAL], dict):
@@ -242,14 +263,14 @@ class VanillaOnPolicyBuffer(S):
                     self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
                     self.compute_returns(
                         self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
-                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_int)
+                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
                     self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
             else:
                 # If single critic
                 self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
                 self.compute_returns(
                     self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
-                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_int)
+                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
                 self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
     def after_gradients(self, batch, info):
@@ -292,8 +313,21 @@ class VanillaOnPolicyBuffer(S):
     def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
         adv = returns[:-1] - values[:-1]
-        # adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
+
+    def normalize_int_rewards(self):
+        """
+        In order to keep the rewards on a consistent scale, the intrinsic rewards are normalized by dividing
+        them by a running estimate of their standard deviation.
+        """
+        gamma = self.algo.gamma_intrinsic
+        length = self.step - 1 if self.step != 0 else self.max_size
+        rewems = torch.zeros_like(self.data[prl.RET])
+        for step in reversed(range(length)):
+            rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
+        self.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
+        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """
@@ -395,14 +429,3 @@ class VanillaOnPolicyBuffer(S):
         """
         if hasattr(self, parameter_name):
             setattr(self, parameter_name, new_parameter_value)
-
-    def normalize_int_rewards(self):
-        # OpenAI's usage of Forward filter is definitely wrong;
-        # Because: https://github.com/openai/random-network-distillation/issues/16#issuecomment-488387659
-        gamma = self.algo.gamma_int
-        length = self.step - 1 if self.step != 0 else self.max_size
-        rewems = torch.zeros_like(self.data[prl.RET])
-        for step in reversed(range(length)):
-            rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
-        self.algo.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
-        self.data[prl.IREW] = self.data[prl.IREW] / (self.algo.int_reward_rms.var.float() ** 0.5)

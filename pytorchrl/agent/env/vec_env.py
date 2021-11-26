@@ -60,6 +60,8 @@ class VecEnv:
 
             envs = VecPyTorch(envs, device)
 
+            envs.env_kwargs = env_kwargs
+
             return envs
 
         dummy_env = [make_env(

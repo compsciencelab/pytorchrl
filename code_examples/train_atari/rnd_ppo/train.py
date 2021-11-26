@@ -90,7 +90,11 @@ def main():
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            gamma=args.gamma, use_clipped_value_loss=False)
+            use_clipped_value_loss=False, gamma_intrinsic=args.gamma_intrinsic,
+            ext_adv_coeff=args.ext_adv_coeff, int_adv_coeff=args.int_adv_coeff,
+            predictor_proportion=args.predictor_proportion, gamma=args.gamma,
+            pre_normalization_length=args.pre_normalization_length,
+            pre_normalization_steps=args.pre_normalization_steps)
 
         # Look for available model checkpoint in log_dir - node failure case
         checkpoints = sorted(glob.glob(os.path.join(args.log_dir, "model.state_dict*")))
@@ -211,6 +215,14 @@ def get_args():
     # Configuration file, keep first
     parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
 
+    # Wandb
+    parser.add_argument(
+        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+    parser.add_argument(
+        '--agent_name', default=None, help='Name of the wandb run')
+    parser.add_argument(
+        '--wandb_key', default=None, help='Init key from wandb account')
+
     # Environment specs
     parser.add_argument(
         '--env-id', type=str, default=None,
@@ -225,7 +237,7 @@ def get_args():
         '--frame-stack', type=int, default=1,
         help='Number of frame to stack in observation (default no stack)')
 
-    # PPO specs
+    # RND PPO specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
@@ -255,6 +267,21 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        '--gamma-intrinsic', type=float, default=0.99,
+        help='rnd ppo intrinsic gamma parameter (default: 0.99)')
+    parser.add_argument(
+        '--ext-adv-coeff', type=float, default=2.0,
+        help='rnd ppo external advantage coefficient parameter (default: 2.0)')
+    parser.add_argument(
+        '--int-adv-coeff', type=float, default=1.0,
+        help='rnd ppo internal advantage coefficient parameter (default: 1.0)')
+    parser.add_argument(
+        '--predictor-proportion', type=float, default=1.0,
+        help='rnd ppo proportion of batch samples to use to update predictor net (default: 1.0)')
+    parser.add_argument(
+        '--pre-normalization-steps', type=int, default=50,
+        help='rnd ppo number of pre-normalization steps parameter (default: 50)')
 
     # Feature extractor model specs
     parser.add_argument(

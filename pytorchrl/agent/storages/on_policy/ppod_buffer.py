@@ -61,7 +61,7 @@ class PPODBuffer(B):
     # Data tensors to collect for each demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0,
+    def __init__(self, size, device, actor, algorithm, envs,
                  initial_demos_dir=None, target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95,
                  alpha=10, max_demos=51, save_demo_frequency=10, num_saved_demos=10,
                  use_initial_demos_as_reward_threshold=True):
@@ -84,8 +84,6 @@ class PPODBuffer(B):
         self.max_demos = max_demos
         self.initial_demos_dir = initial_demos_dir
         self.target_demos_dir = target_demos_dir
-        self.frame_stack = frame_stack
-        self.frame_skip = frame_skip
 
         # Reward and Value buffers
         self.reward_demos = []
@@ -128,8 +126,6 @@ class PPODBuffer(B):
                        size,
                        initial_demos_dir=None,
                        target_demos_dir=None,
-                       frame_stack=1,
-                       frame_skip=0,
                        rho=0.1,
                        phi=0.3,
                        gae_lambda=0.95,
@@ -149,10 +145,6 @@ class PPODBuffer(B):
             Path to directory containing initial demonstrations.
         target_demos_dir : str
             Path to directory where best demonstrations should be saved.
-        frame_skip : int
-            Environment skips every `frame_skip`-th observation.
-        frame_stack : int
-            Environment observations composed of last `frame_stack` frames stacked.
         rho : float
             PPO+D rho parameter
         phi : float
@@ -179,10 +171,9 @@ class PPODBuffer(B):
 
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
-            return cls(size, device, actor, algorithm, envs, frame_stack,
-                       frame_skip, initial_demos_dir, target_demos_dir, rho,
-                       phi, gae_lambda, alpha, max_demos, save_demo_frequency,
-                       num_saved_demos, use_initial_demos_as_reward_threshold)
+            return cls(size, device, actor, algorithm, envs, initial_demos_dir,
+                       target_demos_dir, rho, phi, gae_lambda, alpha, max_demos,
+                       save_demo_frequency, num_saved_demos, use_initial_demos_as_reward_threshold)
 
         return create_buffer_instance
 
