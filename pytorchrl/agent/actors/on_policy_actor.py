@@ -386,12 +386,8 @@ class OnPolicyActor(nn.Module):
 
         # ---- 3. Define value predictor --------------------------------------
 
-        # init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
-        # value_predictor = init_(nn.Linear(self.recurrent_size, 1))
-
-        value_predictor = nn.Linear(self.recurrent_size, 1)
-        value_predictor.bias.data.zero_()
-        nn.init.orthogonal_(value_predictor.weight, gain=np.sqrt(0.01))
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+        value_predictor = init_(nn.Linear(self.recurrent_size, 1))
 
         # ---- 4. Concatenate all value net modules ---------------------------
 
@@ -417,8 +413,7 @@ class OnPolicyActor(nn.Module):
         """
 
         # If feature_extractor_network not defined, take default one based on input_space
-        feature_extractor = self.feature_extractor_network or default_feature_extractor(
-            self.input_space)
+        feature_extractor = self.feature_extractor_network or default_feature_extractor(self.input_space)
 
         # ---- 1. Define obs feature extractor --------------------------------
 

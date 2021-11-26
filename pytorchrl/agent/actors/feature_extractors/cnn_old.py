@@ -27,7 +27,7 @@ class CNN(nn.Module):
     def __init__(self,
                  input_space,
                  rgb_norm=True,
-                 output_size=256,
+                 output_size=[256, 448],
                  activation=nn.ReLU,
                  strides=[4, 2, 1],
                  filters=[32, 64, 64],
@@ -35,6 +35,7 @@ class CNN(nn.Module):
 
         super(CNN, self).__init__()
 
+        self.rgb_norm = rgb_norm
         input_shape = input_space.shape
 
         if len(input_shape) != 3:
@@ -58,19 +59,15 @@ class CNN(nn.Module):
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
-        # Define final layer
-        feature_size = int(np.prod(self.feature_extractor(
-            torch.randn(1, *input_space.shape)).shape))
-        self.head = nn.Sequential(
-            nn.Linear(feature_size, output_size),
-            activation())
-
-        # Added
-        self.fc2 = nn.Linear(in_features=256, out_features=448)
-        self.extra_fc = nn.Linear(in_features=448, out_features=448)
+        # Define final MLP layer
+        feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_space.shape)).shape))
+        layers = []
+        sizes = [feature_size] + [output_size]
+        for j in range(len(sizes) - 1):
+            layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
+        self.head = nn.Sequential(*layers)
 
         self.train()
-        self.rgb_norm = rgb_norm
 
     def forward(self, inputs):
         """
@@ -90,9 +87,5 @@ class CNN(nn.Module):
 
         out = self.feature_extractor(inputs).view(inputs.size(0), -1)
         out = self.head(out)
-
-        # Added
-        out = F.relu(self.fc2(out))
-        out = F.relu(self.extra_fc(out))
 
         return out

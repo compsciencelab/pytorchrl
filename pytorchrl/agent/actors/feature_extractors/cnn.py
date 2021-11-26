@@ -19,8 +19,7 @@ class CNN(nn.Module, ABC):
         c, w, h = input_space.shape
         self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3,
-                               stride=1)  # Nature paper -> kernel_size = 3, OpenAI repo -> kernel_size = 4
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
 
         conv1_out_w = conv_shape(w, 8, 4)
         conv1_out_h = conv_shape(h, 8, 4)

@@ -674,6 +674,7 @@ class PredictorModel(nn.Module, ABC):
 
         return self.encoded_features(x)
 
+
 from torch._six import inf
 def clip_grad_norm_(parameters, norm_type: float = 2.0):
     """
@@ -690,6 +691,6 @@ def clip_grad_norm_(parameters, norm_type: float = 2.0):
     if norm_type == inf:
         total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
     else:
-        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]),
-                                norm_type)
+        total_norm = torch.norm(
+            torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
     return total_norm

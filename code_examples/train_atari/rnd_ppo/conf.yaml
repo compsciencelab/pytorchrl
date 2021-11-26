@@ -32,7 +32,7 @@ seed: 0
 start_env_steps: 0
 target_env_steps: 100000000
 value_loss_coef: 1.0
-gamma_intrinsic: 0.99
+gamma_intrinsic: 0.999
 ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
 predictor_proportion: 2.0
