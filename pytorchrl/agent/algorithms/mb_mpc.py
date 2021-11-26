@@ -54,19 +54,16 @@ class MB_MPC(Algorithm):
         # ---- MB MPC-specific attributes ----------------------------------------
         if config.mpc_type == "RS":
             self.mpc = MPC.RandomShooting(action_space=self.actor.action_space,
-                            n_planner=config.n_planner,
-                            horion=config.horizon,
-                            device=device)
+                                          config=config,
+                                          device=device)
         elif config.mpc_type == "CEM":
             self.mpc = MPC.CEM(action_space=self.actor.action_space,
-                            n_planner=config.n_planner,
-                            horion=config.horizon,
-                            device=device)
+                               config=config,
+                               device=device)
         elif config.mpc_type == "PDDM":
             self.mpc = MPC.PDDM(action_space=self.actor.action_space,
-                n_planner=config.n_planner,
-                horion=config.horizon,
-                device=device)
+                                config=config,
+                                device=device)
         else:
             raise ValueError
         self.iter = 0
