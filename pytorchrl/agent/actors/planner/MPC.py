@@ -31,9 +31,9 @@ class RandomShooting(MPC):
     def __init__(self, action_space, config, device) -> None:
         super(RandomShooting, self).__init__(action_space=action_space, config=config, device=device)
         if self.action_type == "discrete":
-            self.get_rollout_actions = self.get_discrete_action
+            self.get_rollout_actions = self._get_discrete_actions
         elif self.action_type == "continuous":
-            self.get_rollout_actions = self._get_continuous_action
+            self.get_rollout_actions = self._get_continuous_actions
         else:
             raise ValueError("Selected action type does not exist!")
 
