@@ -12,7 +12,7 @@ from pytorchrl.agent.algorithms import MB_MPC
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import MBReplayBuffer
 from pytorchrl.agent.actors import MBActor
-from pytorchrl.envs import pybullet_train_env_factory, pybullet_test_env_factory
+from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 def main():

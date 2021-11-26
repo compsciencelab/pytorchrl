@@ -1,4 +1,4 @@
-env_id: Pendulum-v0
+env_id: Pendulum-v1
 num_env_steps : 1000000
 log_dir: /tmp/pybullet_mpc
 frame_skip: 0
