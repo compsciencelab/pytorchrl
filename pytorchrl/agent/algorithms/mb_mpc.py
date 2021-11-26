@@ -68,7 +68,7 @@ class MB_MPC(Algorithm):
             raise ValueError
         self.iter = 0
         self.device = device
-        self.max_grad_norm = config.max_grad_norm
+        self.max_grad_norm = 0.5
         self._update_every = config.update_every
 
         # List of parameters for the dynamics Model
