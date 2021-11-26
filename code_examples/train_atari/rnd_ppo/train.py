@@ -236,6 +236,12 @@ def get_args():
     parser.add_argument(
         '--frame-stack', type=int, default=1,
         help='Number of frame to stack in observation (default no stack)')
+    parser.add_argument(
+        '--clip-rewards', action='store_true', default=False,
+        help='Clip env rewards between -1 and 1')
+    parser.add_argument(
+        '--episodic-life', action='store_true', default=False,
+        help='Treat end-of-life as end-of-episode')
 
     # RND PPO specs
     parser.add_argument(
