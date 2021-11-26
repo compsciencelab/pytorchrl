@@ -180,7 +180,7 @@ class MBActor(nn.Module):
                        inputs: torch.Tensor,
                        ret_log_var: bool=False
                        )-> Tuple[torch.Tensor, torch.Tensor]:
-        print("In get prediction: ret_log_var: ", ret_log_var)
+
         if ret_log_var:
             mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, log_var, min_max_var
