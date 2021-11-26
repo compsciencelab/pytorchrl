@@ -91,8 +91,9 @@ def main():
             use_clipped_value_loss=False, gamma_intrinsic=args.gamma_intrinsic,
             ext_adv_coeff=args.ext_adv_coeff, int_adv_coeff=args.int_adv_coeff,
             predictor_proportion=args.predictor_proportion, gamma=args.gamma,
-            pre_normalization_length=args.pre_normalization_length,
-            pre_normalization_steps=args.num_steps)
+            pre_normalization_steps=args.pre_normalization_steps,
+            pre_normalization_length=args.num_steps,
+        )
 
         # Look for available model checkpoint in log_dir - node failure case
         checkpoints = sorted(glob.glob(os.path.join(args.log_dir, "model.state_dict*")))
