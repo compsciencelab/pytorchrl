@@ -42,8 +42,6 @@ def main():
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
-
     # Handle Ray init
     if args.cluster:
         ray.init(address="auto")
@@ -340,22 +338,6 @@ def get_args():
         help='directory to save agent logs (default: /tmp/pybullet_ppo)')
 
     args = parser.parse_args()
-
-    try:  # Unpack data.zip, only needed if running in lab machines
-        if not os.path.isfile(os.path.join(os.getcwd(), "conf.yaml")):
-            shutil.unpack_archive(os.path.join(os.getcwd(), "data.zip"), os.getcwd(), "zip")
-    except shutil.ReadError:
-        pass
-
-    # Load agent configuration file
-    config_path = os.path.join(os.getcwd(), "conf.yaml")
-    os.chmod(config_path, 0o777)
-    config_file = open(config_path, 'rt', encoding='utf8')
-    conf_dict = yaml.load(config_file, Loader=yaml.FullLoader)
-    args.__dict__.update(conf_dict)
-
-    # Set current working directory as log directory
-    args.log_dir = os.path.join(os.path.expanduser(os.getcwd()))
 
     return args
 
