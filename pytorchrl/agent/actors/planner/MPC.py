@@ -48,9 +48,9 @@ class RandomShooting(MPC):
                                     size=(self.n_planner, self.horizon, self.action_space))
         return torch.from_numpy(actions).to(self.device)
     
-    def get_action(self, initial_state: torch.Tensor, model: torch.nn.Module, noise: bool=False)-> torch.Tensor:
+    def get_action(self, state: torch.Tensor, model: torch.nn.Module, noise: bool=False)-> torch.Tensor:
 
-        initial_states = initial_state.repeat((self.n_planner, 1)).to(self.device)
+        initial_states = state.repeat((self.n_planner, 1)).to(self.device)
         rollout_actions = self.get_rollout_actions()
         returns = self.compute_returns(initial_states, rollout_actions, model)
         optimal_action = rollout_actions[:, 0, :][returns.argmax()]
@@ -81,8 +81,8 @@ class CEM(MPC):
         self.ub = 1
         self.lb = -1
         
-    def get_action(self, initial_state, model, noise=False):
-        initial_state = torch.repeat(initial_state[None, :], self.n_planner, 0).to(self.device)
+    def get_action(self, state, model, noise=False):
+        initial_state = torch.repeat(state[None, :], self.n_planner, 0).to(self.device)
         mu = np.zeros(self.horizon*self.action_space)
         var = 5 * np.ones(self.horizon*self.action_space)
         X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
@@ -147,8 +147,8 @@ class PDDM(MPC):
         self.beta = config.beta
         self.mu = np.zeros((self.horizon, self.action_space))
         
-    def get_action(self, initial_state, model, noise=False):
-        initial_states = torch.repeat(initial_state[None, :], self.n_planner, 0).to(self.device)
+    def get_action(self, state, model, noise=False):
+        initial_states = torch.repeat(state[None, :], self.n_planner, 0).to(self.device)
         actions, returns = self.get_pred_trajectories(initial_states, model)
         optimal_action = self.update_mu(actions, returns)
        
