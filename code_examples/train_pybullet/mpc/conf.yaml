@@ -5,10 +5,10 @@ frame_skip: 0
 frame_stack: 1
 lr: 1.0e-3
 mpc_type: RS
-n_planner: 10
-horizon: 12
-ensemble_size: 2
-elite_size: 1
+n_planner: 700
+horizon: 24
+ensemble_size: 5
+elite_size: 3
 dynamics_type: probabilistic
 validation_percentage: 0.2
 max_time: 86400

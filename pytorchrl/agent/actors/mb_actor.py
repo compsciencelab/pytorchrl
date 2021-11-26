@@ -256,7 +256,6 @@ class MBActor(nn.Module):
         holdout_labels = batch["holdout_labels"]
         
         self.train()
-        print("NOW train --- \n")
         mean, logvar, min_max_var = self.get_prediction(inputs=train_inputs, ret_log_var=True)
         loss, total_loss_min_max = self.calculate_loss(mean=mean,
                                                        logvar=logvar,
@@ -278,4 +277,4 @@ class MBActor(nn.Module):
             # TODO: add early stopping
             break_condition = True
 
-        return loss, total_loss_min_max, validation_loss, break_condition
+        return loss, total_loss_min_max, validation_loss
