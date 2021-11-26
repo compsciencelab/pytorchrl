@@ -21,7 +21,6 @@ max_time: 86400
 nn: CNN
 num_col_workers: 1
 num_env_processes: 16
-num_env_steps: 100000000
 num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128

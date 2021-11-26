@@ -315,7 +315,6 @@ def get_args():
     parser.add_argument(
         '--com-col-workers', default='synchronised',
         help='communication patters col workers (default: synchronised)')
-
     parser.add_argument(
         '--cluster', action='store_true', default=False,
         help='script is running in a cluster')
