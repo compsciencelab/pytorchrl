@@ -56,14 +56,7 @@ def main():
                                               restart_model=args.restart_model)
 
     # 4. Define RL training algorithm
-    algo_factory, algo = MB_MPC.create_factory(lr=args.lr,
-                                            n_planner=args.n_planner,
-                                            planning_depth=args.planning_depth,
-                                            update_every=args.update_every, 
-                                            start_steps=args.start_steps,
-                                            mini_batch_size=args.mini_batch_size)
-
-
+    algo_factory, algo = MB_MPC.create_factory(args)
 
     # 5. Define rollouts storage
     storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size, validation_percentage=args.validation_percentage)
@@ -149,10 +142,12 @@ def get_args():
         help="Number of parallel planner for each actor (default: 500)"
     )
     parser.add_argument(
-        "--planning-depth", type=int, default=12,
-
-        help="Number of planning depth for the random shooting (default: 12)"
+        "--horizon", type=int, default=12,
+        help="The horizon of online planning (default: 12)"
     )
+    parser.add_argument("--mpc-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
+                        help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
+    parser.add_argument("--action-noise", default=False, action='store_true', help="Adding noise to the actions, (default: False)")
     parser.add_argument(
         '--start-steps', type=int, default=1000,
         help='SAC num initial random steps (default: 1000)')
@@ -164,12 +159,19 @@ def get_args():
         help='Num env collected steps between SAC network update stages (default: 50)')
     parser.add_argument(
         '--num-updates', type=int, default=50,
-        help='Num network updates per SAC network update stage (default 50)')
+        help='Num network updates per dynamics network update stage (default 50)')
     parser.add_argument(
         '--mini-batch-size', type=int, default=32,
         help='Mini batch size for network updates (default: 32)')
+    
+    # CEM parameter
+    parser.add_argument("--iter-update-steps", type=int, default=3, help="Iterative update steps for CEM (default: 3)")
+    parser.add_argument("--update-alpha", type=float, default=0.0, help="Soft update alpha for each iteration (default: 0.0)")
+    # PDDM parameter
+    parser.add_argument("--gamma", type=float, default=1.0, help="")
+    parser.add_argument("--beta", type=float, default=0.5, help="")
 
-    # Feature extractor model specs
+    # Feature dynamics model specs
 
     parser.add_argument("--ensemble-size", type=int, default=7, help="")
     parser.add_argument("--elite-size", type=int, default=5, help="")

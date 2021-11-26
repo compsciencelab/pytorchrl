@@ -65,6 +65,7 @@ class MBActor(nn.Module):
         self.rollout_select = "random"
         self.batch_size = 256
         self.hidden_size = 200
+        self.hidden_layer = 2
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
@@ -88,7 +89,6 @@ class MBActor(nn.Module):
                          elite_size=elite_size,
                          dynamics_type=dynamics_type,
                          device=device)
-
 
             if isinstance(restart_model, str):
                 model.load_state_dict(torch.load(restart_model, map_location=device))
@@ -140,23 +140,29 @@ class MBActor(nn.Module):
 
     def create_dynamics(self, name="dynamics_model"):
         if type(self.action_space) == gym.spaces.discrete.Discrete:
-            dynamics_layer_1 = EnsembleFC(self.input_space + self.action_space.n, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+            input_layer = EnsembleFC(self.input_space + self.action_space.n, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
         else:
-            dynamics_layer_1 = EnsembleFC(self.input_space + self.action_space.shape[0], out_features=self.hidden_size, ensemble_size=self.ensemble_size)
-        dynamics_layer_2 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
-        dynamics_layer_3 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
-        dynamics_layer_4 = EnsembleFC(in_features=self.hidden_size, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+            input_layer = EnsembleFC(self.input_space + self.action_space.shape[0], out_features=self.hidden_size, ensemble_size=self.ensemble_size)
 
+        dynamics_layers = []
+        dynamics_layers.append(input_layer)
+        dynamics_layers.append(nn.SiLU())
+
+        for _ in range(self.hidden_layer):
+            dynamics_layers.append(EnsembleFC(self.hidden_size, self.hidden_size, self.ensemble_size))
+            dynamics_layers.append(nn.SiLU())
+        
         if self.dynamics_type == "deterministic":
-            output = get_dist("DeterministicEnsemble")(num_inputs=self.hidden_size,
+            output_layer = get_dist("DeterministicEnsemble")(num_inputs=self.hidden_size,
                                                        num_outputs=self.input_space + 1,
                                                        ensemble_size=self.ensemble_size)
         elif self.dynamics_type == "probabilistic":
-            output = get_dist("DiagGaussianEnsemble")(num_inputs=self.hidden_size,
+            output_layer = get_dist("DiagGaussianEnsemble")(num_inputs=self.hidden_size,
                                                       num_outputs=self.input_space + 1,
                                                       ensemble_size=self.ensemble_size)
         else:
             raise ValueError
+        dynamics_layers.append(output_layer)
         
         if type(self.action_space) == gym.spaces.box.Box:
             self.scale = Scale(self.action_space)
@@ -164,18 +170,8 @@ class MBActor(nn.Module):
         else:
             self.scale = None
             self.unscale = None
-        # ---- 6. Concatenate all dynamics net modules ------------------------------
-        dynamics_net = nn.Sequential(OrderedDict([
-            ('dynamics_layer_1', dynamics_layer_1),
-            ('swish1', nn.SiLU()),
-            ('dynamics_layer_2', dynamics_layer_2),
-            ('swish2', nn.SiLU()),
-            ('dynamics_layer_3', dynamics_layer_3),
-            ('swish3', nn.SiLU()),
-            ('dynamics_layer_4', dynamics_layer_4),
-            ('swish4', nn.SiLU()),
-            ("output", output),
-        ]))
+
+        dynamics_net = nn.Sequential(*dynamics_layers)
 
         setattr(self, name, dynamics_net)
 
@@ -249,8 +245,9 @@ class MBActor(nn.Module):
             mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
             total_loss = torch.sum(mse_loss)
             return total_loss
-
-
+    def check_break_condition(self, ):
+        pass
+    # TODO: add to algo 
     def training_step(self, batch)-> torch.Tensor:
         train_inputs = batch["train_input"]
         train_labels = batch["train_label"]
@@ -279,5 +276,6 @@ class MBActor(nn.Module):
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
             # TODO: add early stopping
+            break_condition = True
 
-        return loss, total_loss_min_max, validation_loss
+        return loss, total_loss_min_max, validation_loss, break_condition

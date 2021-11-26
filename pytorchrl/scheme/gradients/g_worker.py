@@ -203,25 +203,34 @@ class GWorker(W):
 
         # except (StopIteration, AttributeError):
         except Exception:
-            if self.col_communication == prl.SYNC:
-                self.collector.step()
 
-            data, self.info = self.collector.queue.get()
+            # Check if more batches with the same data are required
+            reuse_batches = hasattr(self.algo, "reuse_data")
+            if not reuse_batches or (reuse_batches and self.algo.reuse_data):
 
-            # Time data processing and calculate collection-to-processing time ratio
-            if not self.processing_time_start:
-                self.processing_time_start = time.time()
-            else:
-                self.info[prl.TIME][prl.PROCESSING] = time.time() - self.processing_time_start
-                self.info[prl.TIME][prl.CPRATIO] = \
-                    (self.info[prl.TIME][prl.COLLECTION] / self.num_collection_workers
-                     ) / self.info[prl.TIME][prl.PROCESSING]
-                self.processing_time_start = time.time()
+                # Get new data
+                if self.col_communication == prl.SYNC:
+                    self.collector.step()
+                data, self.info = self.collector.queue.get()
 
-            self.storage.insert_data_slice(data)
-            self.storage.before_gradients()
+                # Calculate and log data collection-to-processing time ratio
+                if not self.processing_time_start:
+                    self.processing_time_start = time.time()
+                else:
+                    self.info[prl.TIME][prl.PROCESSING] = time.time() - self.processing_time_start
+                    self.info[prl.TIME][prl.CPRATIO] = (
+                        self.info[prl.TIME][prl.COLLECTION] / self.num_collection_workers) / self.info[prl.TIME][
+                        prl.PROCESSING]
+                    self.processing_time_start = time.time()
+
+                # Proprocess new data
+                self.storage.insert_data_slice(data)
+                self.storage.before_gradients()
+
+            # Genarate batches
             self.batches = self.storage.generate_batches(
-                self.algo.num_mini_batch, self.algo.mini_batch_size,
+                self.algo.num_mini_batch,
+                self.algo.mini_batch_size,
                 self.algo.num_epochs)
             self.next_batch = self.batches.__next__()
 

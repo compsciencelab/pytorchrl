@@ -21,77 +21,91 @@ class MB_MPC(Algorithm):
     def __init__(self,
                  actor,
                  device,
-                 lr,
-                 n_planner=5000,
-                 planning_depth=32,
-                 update_every=50,
-                 test_every=1000,
-                 max_grad_norm=0.5,
-                 start_steps=20000,
-                 mini_batch_size=256,
-                 num_test_episodes=5
+                 config,
+                #  n_planner=5000,
+                #  planning_depth=32,
+                #  update_every=50,
+                #  test_every=1000,
+                #  max_grad_norm=0.5,
+                #  start_steps=20000,
+                #  mini_batch_size=256,
+                #  num_test_episodes=5
                  ):
 
         # ---- General algo attributes ----------------------------------------
 
         # Number of steps collected with initial random policy
-        self._start_steps = int(start_steps)
+        self._start_steps = int(config.start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(10)  # Default to 1 for off-policy algorithms
 
 
         # Size of update mini batches
-        self._mini_batch_size = int(mini_batch_size)
+        self._mini_batch_size = int(config.mini_batch_size)
         self._num_mini_batch = 1
         # Number of network updates between test evaluations
-        self._test_every = int(test_every)
+        self._test_every = int(config.test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(num_test_episodes)
+        self._num_test_episodes = int(config.num_test_episodes)
         self.actor = actor
+        self.action_noise = config.action_noise
         # ---- MB MPC-specific attributes ----------------------------------------
-        self.mpc = MPC.MPC(action_space=self.actor.action_space,
-                           n_planner=n_planner,
-                           planning_depth=planning_depth,
-                           device=device)
+        if config.mpc_type == "RS":
+            self.mpc = MPC.RandomShooting(action_space=self.actor.action_space,
+                            n_planner=config.n_planner,
+                            horion=config.horizon,
+                            device=device)
+        elif config.mpc_type == "CEM":
+            self.mpc = MPC.CEM(action_space=self.actor.action_space,
+                            n_planner=config.n_planner,
+                            horion=config.horizon,
+                            device=device)
+        elif config.mpc_type == "PDDM":
+            self.mpc = MPC.PDDM(action_space=self.actor.action_space,
+                n_planner=config.n_planner,
+                horion=config.horizon,
+                device=device)
+        else:
+            raise ValueError
         self.iter = 0
         self.device = device
-        self.max_grad_norm = max_grad_norm
-        self._update_every = update_every
+        self.max_grad_norm = config.max_grad_norm
+        self._update_every = config.update_every
 
-        # List of parameters for both Q-networks
+        # List of parameters for the dynamics Model
         dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
 
         # ----- Optimizers ----------------------------------------------------
 
-        self.dynamics_optimizer = optim.Adam(dynamics_params, lr=lr)
+        self.dynamics_optimizer = optim.Adam(dynamics_params, lr=config.lr)
 
     @classmethod
     def create_factory(cls,
-                       lr,
-                       n_planner=5000,
-                       planning_depth=32,
-                       test_every=5000,
-                       update_every=50,
-                       start_steps=1000,
-                       max_grad_norm=0.5,
-                       mini_batch_size=256,
-                       num_test_episodes=5
+                       config,
+                    #    n_planner=5000,
+                    #    planning_depth=32,
+                    #    test_every=5000,
+                    #    update_every=50,
+                    #    start_steps=1000,
+                    #    max_grad_norm=0.5,
+                    #    mini_batch_size=256,
+                    #    num_test_episodes=5
                        ):
 
         def create_algo_instance(device, actor):
             return cls(actor=actor,
                        device=device,
-                       lr=lr,
-                       n_planner=n_planner,
-                       planning_depth=planning_depth,
-                       test_every=test_every,
-                       start_steps=start_steps,
-                       update_every=update_every,
-                       max_grad_norm=max_grad_norm,
-                       mini_batch_size=mini_batch_size,
-                       num_test_episodes=num_test_episodes)
+                       config=config,)
+                    #    n_planner=n_planner,
+                    #    planning_depth=planning_depth,
+                    #    test_every=test_every,
+                    #    start_steps=start_steps,
+                    #    update_every=update_every,
+                    #    max_grad_norm=max_grad_norm,
+                    #    mini_batch_size=mini_batch_size,
+                    #    num_test_episodes=num_test_episodes)
 
         return create_algo_instance, prl.MPC
     
@@ -151,13 +165,14 @@ class MB_MPC(Algorithm):
     def acting_step(self, obs, rhs, done, deterministic=False):
         # do MPC planning here just pass the model in there
         with torch.no_grad():
-            action = self.mpc.get_next_action(state=obs, model=self.actor, noise=True)
+            action = self.mpc.get_action(state=obs, model=self.actor, noise=self.action_noise)
             clipped_action = torch.clamp(action, -1, 1)
         if self.actor.unscale:
             action = self.actor.unscale(action)
             clipped_action = self.actor.unscale(clipped_action)
 
         return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
+    
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
