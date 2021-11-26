@@ -301,6 +301,9 @@ def get_args():
 
     # Scheme specs
     parser.add_argument(
+        '--num-env-processes', type=int, default=16,
+        help='how many training CPU processes to use (default: 16)')
+    parser.add_argument(
         '--num-grad-workers', type=int, default=1,
         help='how many agent workers to use (default: 1)')
     parser.add_argument(
