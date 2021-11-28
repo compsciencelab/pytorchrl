@@ -73,7 +73,7 @@ class RandomShooting(MPC):
 
 class CEM(MPC):
     def __init__(self, action_space, config, device=None)-> None:
-        super(RandomShooting, self).__init__(action_space=action_space, config=config, device=device)
+        super(CEM, self).__init__(action_space=action_space, config=config, device=device)
 
         self.iter_update_steps = config.iter_update_steps
         self.update_alpha = config.update_alpha # Add this to CEM config
@@ -82,7 +82,7 @@ class CEM(MPC):
         self.lb = -1
         
     def get_action(self, state, model, noise=False):
-        initial_state = torch.repeat(state[None, :], self.n_planner, 0).to(self.device)
+        initial_state = state[None, :].repeate(self.n_planner, 0).to(self.device)
         mu = np.zeros(self.horizon*self.action_space)
         var = 5 * np.ones(self.horizon*self.action_space)
         X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
@@ -141,14 +141,14 @@ class CEM(MPC):
 
 class PDDM(MPC):
     def __init__(self, action_space, config, device=None)-> None:
-        super(RandomShooting, self).__init__(action_space=action_space, config=config, device=device)
+        super(PDDM, self).__init__(action_space=action_space, config=config, device=device)
 
         self.gamma = config.gamma
         self.beta = config.beta
         self.mu = np.zeros((self.horizon, self.action_space))
         
     def get_action(self, state, model, noise=False):
-        initial_states = torch.repeat(state[None, :], self.n_planner, 0).to(self.device)
+        initial_states = state[None, :].repeate(self.n_planner, 0).to(self.device)
         actions, returns = self.get_pred_trajectories(initial_states, model)
         optimal_action = self.update_mu(actions, returns)
        
