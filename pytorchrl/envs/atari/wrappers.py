@@ -174,11 +174,32 @@ class MaxAndSkipEnv(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class MontezumaVisitedRoomEnv(gym.Wrapper):
+    def __init__(self, env, room_address):
+        gym.Wrapper.__init__(self, env)
+
+        # TODO. assert with env.spec.id that env is Montezuma
+
+        self.room_address = room_address
+        self.visited_rooms = set()  # Only stores unique numbers.
+
+    def step(self, action):
+        state, reward, done, info = self.env.step(action)
+        ram = self.unwrapped.ale.getRAM()
+        assert len(ram) == 128
+        self.visited_rooms.add(ram[self.room_address])
+        info['VisitedRooms'] = len(self.visited_rooms)
+        return state, reward, done, info
+
+    def reset(self):
+        self.visited_rooms.clear()
+        return self.env.reset()
+
+
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env, width=84, height=84, grayscale=True, dict_space_key=None):
         """
         Warp frames to 84x84 as done in the Nature paper and later work.
-
         If the environment uses dictionary observations, `dict_space_key` can be specified which indicates which
         observation should be warped.
         """
@@ -239,32 +260,12 @@ class ScaledFloatFrame(gym.ObservationWrapper):
         return np.array(observation).astype(np.float32) / 255.0
 
 
-class StickyActionEnv(gym.Wrapper):
-    def __init__(self, env, p=0.25):
-        super(StickyActionEnv, self).__init__(env)
-        self.p = p
-        self.last_action = 0
-
-    def step(self, action):
-        if np.random.uniform() < self.p:
-            action = self.last_action
-
-        self.last_action = action
-        return self.env.step(action)
-
-    def reset(self):
-        self.last_action = 0
-        return self.env.reset()
-
-
 class LazyFrames(object):
     def __init__(self, frames):
         """This object ensures that common frames between the observations are only stored once.
         It exists purely to optimize memory usage which can be huge for DQN's 1M frames replay
         buffers.
-
         This object should only be converted to numpy array before being passed to the model.
-
         You'd not believe how complex the previous solution was."""
         self._frames = frames
         self._out = None
