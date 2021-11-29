@@ -236,6 +236,9 @@ class PPODBuffer(B):
             if k not in self.storage_tensors:
                 continue
 
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                continue
+
             # We use the same tensor to store obs and obs2
             # We also use single tensors for rhs and rhs2,
             # and done and done2
@@ -322,8 +325,9 @@ class PPODBuffer(B):
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
-                    for k in self.data[prl.RHS]:
-                        self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
+                    if self.recurrent_actor:
+                        for k in self.data[prl.RHS]:
+                            self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
 
             # Otherwise check if end of episode reached and randomly start new demo
             elif sample[prl.DONE2][i] == 1.0:
@@ -535,8 +539,9 @@ class PPODBuffer(B):
         self.data[prl.DONE][self.step + 1][env_id].copy_(torch.ones(1).to(self.device))
 
         # Set initial rhs to zeros
-        for k in self.data[prl.RHS]:
-            self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
+        if self.recurrent_actor:
+            for k in self.data[prl.RHS]:
+                self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
 
         if demo:
 
