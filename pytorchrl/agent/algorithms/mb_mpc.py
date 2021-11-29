@@ -65,7 +65,7 @@ class MB_MPC(Algorithm):
         self.reuse_data = True
         
         # training break conditions
-        self.num_epochs = 0
+        self.mb_train_epochs = 0
         self.max_not_improvements = 5
         self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
         self.improvement_threshold = 0.01
@@ -227,7 +227,7 @@ class MB_MPC(Algorithm):
         """
         if batch["batch_number"] == 1:
             self.reuse_data = True
-            self.num_epochs += 1
+            self.mb_train_epochs += 1
         logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
@@ -237,11 +237,11 @@ class MB_MPC(Algorithm):
         info = {
             "train_loss": logging_loss.item(),
             "validation_loss": validation_loss.item(),
-            "Training Epoch": self.num_epochs
+            "Training Epoch": self.mb_train_epochs
         }
         if break_condition:
             self.reuse_data = False
-            self.num_epochs = 0
+            self.mb_train_epochs = 0
 
         grads = {"dyna_grads": dyna_grads}
 
