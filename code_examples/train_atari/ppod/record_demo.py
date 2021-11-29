@@ -107,6 +107,8 @@ def record():
         env_kwargs={
             "env_id": args.env_id,
             "frame_stack": args.frame_stack,
+            "episodic_life": args.episodic_life,
+            "clip_rewards": args.clip_rewards,
         },
         vec_env_size=1)
 
@@ -118,7 +120,7 @@ def record():
     done = False
     episode_reward = 0
 
-    obs_rollouts = [obs]
+    obs_rollouts = [obs[:, -1:, :, :]]
     rews_rollouts = []
     actions_rollouts = []
 
@@ -137,7 +139,7 @@ def record():
             obs, reward, done, info = env.step(
                 torch.tensor([action]).unsqueeze(1))
 
-            obs_rollouts.append(obs)
+            obs_rollouts.append(obs[:, -1:, :, :])
             rews_rollouts.append(reward)
             actions_rollouts.append(action)
 
