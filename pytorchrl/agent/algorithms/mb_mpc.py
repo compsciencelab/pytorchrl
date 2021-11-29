@@ -169,7 +169,7 @@ class MB_MPC(Algorithm):
                                                        labels=train_labels,
                                                        inc_var_loss=True)
         
-        self.eval()
+        self.actor.eval()
         with torch.no_grad():
             val_mean, val_log_var, _ = self.actor.get_prediction(inputs=holdout_inputs, ret_log_var=True)
             validation_loss = self.actor.calculate_loss(mean=val_mean,
@@ -180,7 +180,6 @@ class MB_MPC(Algorithm):
             validation_loss = validation_loss.detach().cpu().numpy()
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
-            # TODO: add early stopping
             break_condition = self.test_break_condition(validation_loss)
 
         return loss, total_loss_min_max, validation_loss, break_condition
@@ -226,7 +225,7 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-        logging_loss, train_loss, validation_loss, break_condition = self.actor.training_step(batch)
+        logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
