@@ -23,6 +23,8 @@ def enjoy():
         env_kwargs={
             "env_id": args.env_id,
             "frame_stack": args.frame_stack,
+            "episodic_life": args.episodic_life,
+            "clip_rewards": args.clip_rewards,
         }, vec_env_size=1)
 
     policy = OnPolicyActor.create_factory(
