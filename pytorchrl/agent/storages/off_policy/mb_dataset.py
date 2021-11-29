@@ -340,19 +340,20 @@ class MBReplayBuffer(S):
         holdout_inputs = holdout_inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
         holdout_labels = holdout_labels[None, :, :].repeat(self.ensemble_size, 1, 1)
         
-        for _ in range(num_epochs):
-            train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
-            for start_pos in range(0, train_inputs.shape[0], mini_batch_size):
-                idx = train_idx[:, start_pos: start_pos + mini_batch_size]
-                train_input = train_inputs[idx]
-                train_label = train_labels[idx]
-                train_input = torch.from_numpy(train_input).float().to(self.device)
-                train_label = torch.from_numpy(train_label).float().to(self.device)
-                batch = {"train_input": train_input,
-                         "train_label": train_label,
-                         "holdout_inputs": holdout_inputs,
-                         "holdout_labels": holdout_labels}
-                yield batch
+
+        train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
+        for batch_number, start_pos in enumerate(0, train_inputs.shape[0], mini_batch_size):
+            idx = train_idx[:, start_pos: start_pos + mini_batch_size]
+            train_input = train_inputs[idx]
+            train_label = train_labels[idx]
+            train_input = torch.from_numpy(train_input).float().to(self.device)
+            train_label = torch.from_numpy(train_label).float().to(self.device)
+            batch = {"train_input": train_input,
+                        "train_label": train_label,
+                        "holdout_inputs": holdout_inputs,
+                        "holdout_labels": holdout_labels,
+                        "batch_number": batch_number}
+            yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
         """
