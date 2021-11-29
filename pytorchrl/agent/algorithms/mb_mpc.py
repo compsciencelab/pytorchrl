@@ -179,7 +179,7 @@ class MB_MPC(Algorithm):
                                                   inc_var_loss=False)
             validation_loss = validation_loss.detach().cpu().numpy()
             sorted_loss_idx = np.argsort(validation_loss)
-            self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
+            self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
 
         return loss, total_loss_min_max, validation_loss, break_condition
