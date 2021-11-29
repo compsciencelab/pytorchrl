@@ -417,7 +417,7 @@ class PPODBuffer(B):
         num_loaded_reward_demos = 0
 
         initial_human_demos = glob.glob(self.initial_human_demos_dir + '/*.npz') if self.initial_human_demos_dir else []
-        initial_reward_demos = glob.glob(self.initial_agent_demos_dir + '/*.npz') if self.nitial_agent_demos_dir else []
+        initial_reward_demos = glob.glob(self.initial_agent_demos_dir + '/*.npz') if self.initial_agent_demos_dir else []
 
         if len(initial_human_demos) + len(initial_reward_demos) > self.max_demos:
             raise ValueError("demo dir contains more than ´total_buffer_demo_capacity´")
