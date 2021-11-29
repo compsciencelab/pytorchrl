@@ -76,13 +76,15 @@ class CEM(MPC):
         super(CEM, self).__init__(action_space=action_space, config=config, device=device)
 
         self.iter_update_steps = config.iter_update_steps
+        self.k_best = config.k_best
         self.update_alpha = config.update_alpha # Add this to CEM config
         self.epsilon = 0.001
         self.ub = 1
         self.lb = -1
+        self.device = device
         
     def get_action(self, state, model, noise=False):
-        initial_state = state[None, :].repeate(self.n_planner, 0).to(self.device)
+        initial_state = state.repeat(self.n_planner, 1).to(self.device)
         mu = np.zeros(self.horizon*self.action_space)
         var = 5 * np.ones(self.horizon*self.action_space)
         X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
@@ -111,7 +113,7 @@ class CEM(MPC):
         best_action_sequence = mu.reshape(self.horizon, -1)
         best_action = np.copy(best_action_sequence[-1])
         assert best_action.shape == (self.action_space,)
-        return best_action
+        return torch.from_numpy(best_action).float().to(self.device)
             
     
     def select_k_best(self, rewards, action_hist):
@@ -146,15 +148,16 @@ class PDDM(MPC):
         self.gamma = config.gamma
         self.beta = config.beta
         self.mu = np.zeros((self.horizon, self.action_space))
+        self.device = device
         
     def get_action(self, state, model, noise=False):
-        initial_states = state[None, :].repeate(self.n_planner, 0).to(self.device)
+        initial_states = state.repeat(self.n_planner, 1).to(self.device)
         actions, returns = self.get_pred_trajectories(initial_states, model)
         optimal_action = self.update_mu(actions, returns)
        
         if noise:
             optimal_action += np.random.normal(0, 0.005, size=optimal_action.shape)
-        return optimal_action
+        return torch.from_numpy(optimal_action).float().to(self.device)
         
     def update_mu(self, action_hist, returns):
         assert action_hist.shape == (self.n_planner, self.horizon, self.action_space)

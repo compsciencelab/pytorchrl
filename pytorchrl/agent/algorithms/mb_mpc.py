@@ -22,14 +22,6 @@ class MB_MPC(Algorithm):
                  actor,
                  device,
                  config,
-                #  n_planner=5000,
-                #  planning_depth=32,
-                #  update_every=50,
-                #  test_every=1000,
-                #  max_grad_norm=0.5,
-                #  start_steps=20000,
-                #  mini_batch_size=256,
-                #  num_test_episodes=5
                  ):
 
         # ---- General algo attributes ----------------------------------------
@@ -70,6 +62,13 @@ class MB_MPC(Algorithm):
         self.device = device
         self.max_grad_norm = 0.5
         self._update_every = config.update_every
+        self.reuse_data = True
+        
+        # training break conditions
+        self.max_not_improvements = 5
+        self._current_best = [1e10 for i in range(self.ensemble_size)]
+        self.improvement_threshold = 0.01
+        self.break_counter = 0
 
         # List of parameters for the dynamics Model
         dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
@@ -81,28 +80,12 @@ class MB_MPC(Algorithm):
     @classmethod
     def create_factory(cls,
                        config,
-                    #    n_planner=5000,
-                    #    planning_depth=32,
-                    #    test_every=5000,
-                    #    update_every=50,
-                    #    start_steps=1000,
-                    #    max_grad_norm=0.5,
-                    #    mini_batch_size=256,
-                    #    num_test_episodes=5
                        ):
 
         def create_algo_instance(device, actor):
             return cls(actor=actor,
                        device=device,
                        config=config,)
-                    #    n_planner=n_planner,
-                    #    planning_depth=planning_depth,
-                    #    test_every=test_every,
-                    #    start_steps=start_steps,
-                    #    update_every=update_every,
-                    #    max_grad_norm=max_grad_norm,
-                    #    mini_batch_size=mini_batch_size,
-                    #    num_test_episodes=num_test_episodes)
 
         return create_algo_instance, prl.MPC
     
@@ -170,6 +153,58 @@ class MB_MPC(Algorithm):
 
         return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
+    
+    def training_step(self, batch)-> torch.Tensor:
+        train_inputs = batch["train_input"]
+        train_labels = batch["train_label"]
+
+        holdout_inputs = batch["holdout_inputs"]
+        holdout_labels = batch["holdout_labels"]
+        
+        self.actor.train()
+        mean, logvar, min_max_var = self.actor.get_prediction(inputs=train_inputs, ret_log_var=True)
+        loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
+                                                       logvar=logvar,
+                                                       min_max_var=min_max_var,
+                                                       labels=train_labels,
+                                                       inc_var_loss=True)
+        
+        self.eval()
+        with torch.no_grad():
+            val_mean, val_log_var, _ = self.actor.get_prediction(inputs=holdout_inputs, ret_log_var=True)
+            validation_loss = self.actor.calculate_loss(mean=val_mean,
+                                                  logvar=val_log_var,
+                                                  min_max_var=min_max_var,
+                                                  labels=holdout_labels,
+                                                  inc_var_loss=False)
+            validation_loss = validation_loss.detach().cpu().numpy()
+            sorted_loss_idx = np.argsort(validation_loss)
+            self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
+            # TODO: add early stopping
+            break_condition = self.test_break_condition(validation_loss)
+
+        return loss, total_loss_min_max, validation_loss, break_condition
+    
+    def test_break_condition(self, current_losses):
+        keep_train = False
+        for i in range(len(current_losses)):
+            current_loss = current_losses[i]
+            best_loss = self._current_best[i]
+            improvement = (best_loss - current_loss) / best_loss
+            if improvement > self.improvement_threshold:
+                self._current_best[i] = current_loss
+                keep_train = True
+    
+        if keep_train:
+            self.break_counter = 0
+        else:
+            self.break_counter += 1
+        if self.break_counter >= self.max_not_improvements:
+            return True
+        else:
+            return False
+    
+    
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -191,7 +226,7 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
 
-        logging_loss, train_loss, validation_loss = self.actor.training_step(batch)
+        logging_loss, train_loss, validation_loss, break_condition = self.actor.training_step(batch)
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
@@ -201,6 +236,8 @@ class MB_MPC(Algorithm):
             "train_loss": logging_loss.item(),
             "validation_loss": validation_loss.item()
         }
+        if break_condition:
+            self.reuse_data = False
 
         grads = {"dyna_grads": dyna_grads}
 

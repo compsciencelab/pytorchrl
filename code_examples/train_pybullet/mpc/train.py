@@ -166,6 +166,7 @@ def get_args():
     
     # CEM parameter
     parser.add_argument("--iter-update-steps", type=int, default=3, help="Iterative update steps for CEM (default: 3)")
+    parser.add_argument("--k_best", type=int, default=5, help="")
     parser.add_argument("--update-alpha", type=float, default=0.0, help="Soft update alpha for each iteration (default: 0.0)")
     # PDDM parameter
     parser.add_argument("--gamma", type=float, default=1.0, help="")
