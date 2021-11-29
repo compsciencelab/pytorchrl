@@ -66,7 +66,7 @@ class MB_MPC(Algorithm):
         
         # training break conditions
         self.max_not_improvements = 5
-        self._current_best = [1e10 for i in range(self.ensemble_size)]
+        self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
         self.improvement_threshold = 0.01
         self.break_counter = 0
 
