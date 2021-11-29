@@ -226,6 +226,9 @@ class GWorker(W):
                 # Proprocess new data
                 self.storage.insert_data_slice(data)
                 self.storage.before_gradients()
+            else:
+                # Only record collected samples once
+                self.info[prl.NUMSAMPLES] = 0
 
             # Genarate batches
             self.batches = self.storage.generate_batches(
