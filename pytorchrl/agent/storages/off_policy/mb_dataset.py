@@ -342,7 +342,7 @@ class MBReplayBuffer(S):
         
 
         train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
-        for batch_number, start_pos in enumerate(0, train_inputs.shape[0], mini_batch_size):
+        for batch_number, start_pos in enumerate(range(0, train_inputs.shape[0], mini_batch_size)):
             idx = train_idx[:, start_pos: start_pos + mini_batch_size]
             train_input = train_inputs[idx]
             train_label = train_labels[idx]
