@@ -11,10 +11,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import PPODBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
-from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
 def main():
@@ -89,7 +89,9 @@ def main():
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_agent_demos_dir="/tmp/animalai_demos/", gae_lambda=args.gae_lambda)
+            target_agent_demos_dir="/tmp/animalai_demos/", gae_lambda=args.gae_lambda,
+            initial_reward_threshold=2.95,
+        )
 
         # 5. Define scheme
         params = {}

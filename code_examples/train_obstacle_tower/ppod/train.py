@@ -79,7 +79,7 @@ def main():
             size=args.num_steps, rho=args.rho, phi=args.phi,
             target_agent_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            initial_reward_threshold=None)
+            initial_reward_threshold=0.4)
 
         # Define scheme
         params = {}
