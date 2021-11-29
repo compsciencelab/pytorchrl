@@ -69,10 +69,6 @@ class MBActor(nn.Module):
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
-        self.max_not_improvements = 5
-        self._current_best = [1e10 for i in range(self.ensemble_size)]
-        self.improvement_threshold = 0.01
-        self.break_counter = 0
 
         self.create_dynamics()
 
@@ -251,52 +247,4 @@ class MBActor(nn.Module):
             total_loss = torch.sum(mse_loss)
             return total_loss
     
-    def training_step(self, batch)-> torch.Tensor:
-        train_inputs = batch["train_input"]
-        train_labels = batch["train_label"]
 
-        holdout_inputs = batch["holdout_inputs"]
-        holdout_labels = batch["holdout_labels"]
-        
-        self.train()
-        mean, logvar, min_max_var = self.get_prediction(inputs=train_inputs, ret_log_var=True)
-        loss, total_loss_min_max = self.calculate_loss(mean=mean,
-                                                       logvar=logvar,
-                                                       min_max_var=min_max_var,
-                                                       labels=train_labels,
-                                                       inc_var_loss=True)
-        
-        self.eval()
-        with torch.no_grad():
-            val_mean, val_log_var, _ = self.get_prediction(inputs=holdout_inputs, ret_log_var=True)
-            validation_loss = self.calculate_loss(mean=val_mean,
-                                                  logvar=val_log_var,
-                                                  min_max_var=min_max_var,
-                                                  labels=holdout_labels,
-                                                  inc_var_loss=False)
-            validation_loss = validation_loss.detach().cpu().numpy()
-            sorted_loss_idx = np.argsort(validation_loss)
-            self.elite_idxs = sorted_loss_idx[:self.elite_size].tolist()
-            # TODO: add early stopping
-            break_condition = self.test_break_condition(validation_loss)
-
-        return loss, total_loss_min_max, validation_loss, break_condition
-    
-    def test_break_condition(self, current_losses):
-        keep_train = False
-        for i in range(len(current_losses)):
-            current_loss = current_losses[i]
-            best_loss = self._current_best[i]
-            improvement = (best_loss - current_loss) / best_loss
-            if improvement > self.improvement_threshold:
-                self._current_best[i] = current_loss
-                keep_train = True
-    
-        if keep_train:
-            self.break_counter = 0
-        else:
-            self.break_counter += 1
-        if self.break_counter >= self.max_not_improvements:
-            return True
-        else:
-            return False
