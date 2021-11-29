@@ -28,10 +28,6 @@ class PPODBuffer(B):
         Algorithm class instance
     envs: VecEnv
         Train environments vector.
-    frame_skip : int
-        Environment skips every `frame_skip`-th observation.
-    frame_stack : int
-        Environment observations composed of last `frame_stack` frames stacked.
     initial_human_demos_dir : str
         Path to directory containing human initial demonstrations.
     initial_agent_demos_dir : str
@@ -48,8 +44,6 @@ class PPODBuffer(B):
         GAE lambda parameter.
     total_buffer_demo_capacity : int
         Maximum number of demos to keep between reward and value demos.
-    save_demos_prefix : str
-        Prefix string to add to the filename of saved demos.
     save_demos_every : int
         Save top demos every  `save_demo_frequency`th data collection.
     num_agent_demos_to_save : int
@@ -64,10 +58,10 @@ class PPODBuffer(B):
     # Data tensors to collect for each demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0, rho=0.1, phi=0.3,
-                 gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,
-                 initial_agent_demos_dir=None, target_agent_demos_dir=None, save_demos_prefix=None,
-                 save_demos_every=10, num_agent_demos_to_save=10, initial_reward_threshold=None):
+    def __init__(self, size, device, actor, algorithm, envs, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10,
+                 total_buffer_demo_capacity=51, initial_human_demos_dir=None, initial_agent_demos_dir=None,
+                 target_agent_demos_dir=None, save_demos_every=10, num_agent_demos_to_save=10,
+                 initial_reward_threshold=None):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -85,10 +79,7 @@ class PPODBuffer(B):
         self.alpha = alpha
         self.initial_rho = rho
         self.initial_phi = phi
-        self.frame_skip = frame_skip
-        self.frame_stack = frame_stack
         self.save_demos_every = save_demos_every
-        self.save_demos_prefix = save_demos_prefix
         self.max_demos = total_buffer_demo_capacity
         self.num_agent_demos_to_save = num_agent_demos_to_save
         self.initial_human_demos_dir = initial_human_demos_dir
@@ -127,9 +118,8 @@ class PPODBuffer(B):
             } for i in range(self.num_envs)}
 
     @classmethod
-    def create_factory(cls, size, frame_stack=1, frame_skip=0, rho=0.1, phi=0.3, gae_lambda=0.95,
-                       alpha=10, total_buffer_demo_capacity=51, initial_human_demos_dir=None,
-                       initial_agent_demos_dir=None, target_agent_demos_dir=None, save_demos_prefix=None,
+    def create_factory(cls, size, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51,
+                       initial_human_demos_dir=None, initial_agent_demos_dir=None, target_agent_demos_dir=None,
                        save_demos_every=10, num_agent_demos_to_save=10, initial_reward_threshold=None):
         """
         Returns a function that creates PPODBuffer instances.
@@ -138,10 +128,6 @@ class PPODBuffer(B):
         ----------
         size : int
             Storage capacity along time axis.
-        frame_skip : int
-            Environment skips every `frame_skip`-th observation.
-        frame_stack : int
-            Environment observations composed of last `frame_stack` frames stacked.
         initial_human_demos_dir : str
             Path to directory containing human initial demonstrations.
         initial_agent_demos_dir : str
@@ -158,8 +144,6 @@ class PPODBuffer(B):
             GAE lambda parameter.
         total_buffer_demo_capacity : int
             Maximum number of demos to keep between reward and value demos.
-        save_demos_prefix : str
-            Prefix string to add to the filename of saved demos.
         save_demos_every : int
             Save top demos every  `save_demo_frequency`th data collection.
         num_agent_demos_to_save : int
@@ -175,10 +159,9 @@ class PPODBuffer(B):
 
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
-            return cls(size, device, actor, algorithm, envs,
-                       frame_stack, frame_skip, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
-                       initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir, save_demos_prefix,
-                       save_demos_every, num_agent_demos_to_save, initial_reward_threshold)
+            return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
+                       initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir, save_demos_every,
+                       num_agent_demos_to_save, initial_reward_threshold)
 
         return create_buffer_instance
 
@@ -515,7 +498,7 @@ class PPODBuffer(B):
 
         self.num_loaded_human_demos = num_loaded_human_demos
         self.num_loaded_reward_demos = num_loaded_reward_demos
-        print("\nLOADED {} HUMAN DEMOS  AND{} REWARD DEMOS".format(
+        print("\nLOADED {} HUMAN DEMOS AND {} REWARD DEMOS".format(
             num_loaded_human_demos, num_loaded_reward_demos))
 
     def sample_demo(self, env_id):
@@ -632,13 +615,10 @@ class PPODBuffer(B):
             for num, demo_pos in enumerate(reward_ranking):
                 filename = "reward_demo_{}".format(num + 1)
                 demo_pos += self.num_loaded_human_demos
-                if self.save_demos_prefix:
-                    filename = "{}_{}".format(self.save_demos_prefix, filename)
                 np.savez(
                     os.path.join(self.target_agent_demos_dir, filename),
                     Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_obs_dtype),
                     Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
                     Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
-                    FrameSkip=self.frame_skip,
-                )
+                    FrameSkip=self.frame_skip)
 

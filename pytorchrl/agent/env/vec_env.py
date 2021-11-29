@@ -13,7 +13,6 @@ class VecEnv:
         """
         Returns a function to create a vector of environments of size
         num_processes, so it can be executed by any worker, remote or not.
-
         Parameters
         ----------
         env_fn : func
@@ -26,7 +25,6 @@ class VecEnv:
             Target path for envs to log information through bench.Monitor class.
         info_keywords : tuple
             Information keywords to be logged stored by bench.Monitor class.
-
         Returns
         -------
         make_vec_env : func
@@ -60,6 +58,8 @@ class VecEnv:
 
             envs = VecPyTorch(envs, device)
 
+            envs.env_kwargs = env_kwargs
+
             return envs
 
         dummy_env = [make_env(
@@ -72,4 +72,3 @@ class VecEnv:
         dummy_env.envs[0].close()
 
         return make_vec_env, dummy_env.action_space, dummy_env.observation_space
-
