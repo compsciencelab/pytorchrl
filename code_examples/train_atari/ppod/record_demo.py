@@ -8,7 +8,7 @@ import numpy as np
 from pynput import keyboard
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.envs.atari import atari_train_env_factory
-from code_examples.train_atari.ppo.train import get_args
+from code_examples.train_atari.ppod.train import get_args
 
 
 pressed_keys = set([])
@@ -16,7 +16,7 @@ pressed_keys = set([])
 
 # ACTIONS:
 
-# 'NOOP',  # --> 0
+# 'NOOP',  # NO KEY --> 0
 # 'FIRE',  # Space  --> 1
 # 'UP',  # W --> 2
 # 'RIGHT',  # D --> 3
@@ -95,8 +95,8 @@ def create_action():
 def record():
     args = get_args()
 
-    # if not os.path.isdir(args.demos_dir):
-    #     os.makedirs(args.demos_dir)
+    if not os.path.isdir(args.demos_dir):
+        os.makedirs(args.demos_dir)
 
     args.env_id = "MontezumaRevengeNoFrameskip-v4"
 
@@ -143,34 +143,31 @@ def record():
             step += 1
             episode_reward += reward
 
-            time.sleep(0.05)
+            time.sleep(0.1)
 
             if done:
 
                 print("EPISODE FINISHED: {} steps: ".format(step), flush=True)
 
-                # obs_rollouts.pop(-1)
-                #
-                # num = 0
-                # filename = os.path.join(
-                #     args.demos_dir, "human_demo_{}".format(num + 1))
-                # while os.path.exists(filename + ".npz"):
-                #     num += 1
-                #     filename = os.path.join(
-                #         args.demos_dir, "human_demo_{}".format(num + 1))
-                #
-                # for action in actions_rollouts:
-                #     assert action in expand.keys()
-                #
-                # np.savez(
-                #     filename,
-                #     Observation=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
-                #     Reward=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-                #     Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1),
-                #     FrameSkip=args.frame_skip,
-                # )
-                #
-                # sys.exit()
+                obs_rollouts.pop(-1)
+
+                num = 0
+                filename = os.path.join(
+                    args.demos_dir, "human_demo_{}".format(num + 1))
+                while os.path.exists(filename + ".npz"):
+                    num += 1
+                    filename = os.path.join(
+                        args.demos_dir, "human_demo_{}".format(num + 1))
+
+                np.savez(
+                    filename,
+                    Observation=np.array(np.stack(obs_rollouts).astype(np.uint8)).squeeze(1),
+                    Reward=np.array(np.stack(rews_rollouts).astype(np.float16)).squeeze(1),
+                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.int8)), axis=1),
+                    FrameSkip=args.frame_skip,
+                )
+
+                sys.exit()
 
 
 if __name__ == "__main__":

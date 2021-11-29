@@ -97,7 +97,7 @@ class PPODBuffer(B):
         self.value_demos = []
 
         # Load initial demos
-        self.load_initial_demos(initial_human_demos_dir, initial_agent_demos_dir)
+        self.load_initial_demos()
         self.reward_threshold = initial_reward_threshold or - np.inf
         self.max_demo_reward = max(
             [d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else -np.inf
@@ -406,7 +406,7 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_val["env{}".format(i + 1)] = - np.inf
 
-    def load_initial_demos(self, initial_human_demos_dir=None, initial_agent_demos_dir=None):
+    def load_initial_demos(self):
         """
         Load initial demonstrations.
         Warning: make sure the frame_skip and frame_stack hyperparameters are
@@ -416,8 +416,8 @@ class PPODBuffer(B):
         num_loaded_human_demos = 0
         num_loaded_reward_demos = 0
 
-        initial_human_demos = glob.glob(initial_human_demos_dir + '/*.npz') if initial_human_demos_dir else []
-        initial_reward_demos = glob.glob(initial_agent_demos_dir + '/*.npz') if initial_agent_demos_dir else []
+        initial_human_demos = glob.glob(self.initial_human_demos_dir + '/*.npz') if self.initial_human_demos_dir else []
+        initial_reward_demos = glob.glob(self.initial_agent_demos_dir + '/*.npz') if self.nitial_agent_demos_dir else []
 
         if len(initial_human_demos) + len(initial_reward_demos) > self.max_demos:
             raise ValueError("demo dir contains more than ´total_buffer_demo_capacity´")
@@ -498,8 +498,7 @@ class PPODBuffer(B):
 
         self.num_loaded_human_demos = num_loaded_human_demos
         self.num_loaded_reward_demos = num_loaded_reward_demos
-        print("\nLOADED {} HUMAN DEMOS AND {} REWARD DEMOS".format(
-            num_loaded_human_demos, num_loaded_reward_demos))
+        print("\nLOADED {} HUMAN DEMOS AND {} REWARD DEMOS".format(num_loaded_human_demos, num_loaded_reward_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demos, with probability phi insert value demos."""
@@ -589,8 +588,7 @@ class PPODBuffer(B):
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             for _ in range(len(self.reward_demos) - self.max_demos):
-
-                # Eject demo with lowest reward
+                # Eject agent demo with lowest reward
                 rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
                 del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
 
@@ -621,4 +619,3 @@ class PPODBuffer(B):
                     Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_rew_dtype),
                     Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_act_dtype),
                     FrameSkip=self.frame_skip)
-

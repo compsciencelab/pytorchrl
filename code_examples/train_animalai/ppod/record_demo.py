@@ -101,9 +101,9 @@ def record():
 
                 np.savez(
                     filename,
-                    Observation=np.array(np.stack(obs_rollouts).astype(np.float32)).squeeze(1),
-                    Reward=np.array(np.stack(rews_rollouts).astype(np.float32)).squeeze(1),
-                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.float32)), axis=1),
+                    Observation=np.array(np.stack(obs_rollouts).astype(np.uint8)).squeeze(1),
+                    Reward=np.array(np.stack(rews_rollouts).astype(np.float16)).squeeze(1),
+                    Action=np.expand_dims(np.array(np.stack(actions_rollouts).astype(np.int8)), axis=1),
                     FrameSkip=args.frame_skip,
                 )
 

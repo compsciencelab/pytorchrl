@@ -210,8 +210,8 @@ def get_args():
         '--arenas-dir', default='',
         help='directory containing arenas configuration .yaml files')
     parser.add_argument(
-        '--demos-dir', default='/tmp/pybullet_ppo',
-        help='target directory to store and retrieve demos_6_actions.')
+        '--demos-dir', default='/tmp/animalai_ppod',
+        help='target directory to store and retrieve demos.')
 
     # Feature extractor model specs
     parser.add_argument(

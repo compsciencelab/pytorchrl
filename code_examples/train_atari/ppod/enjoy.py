@@ -3,13 +3,11 @@
 import os
 import time
 import torch
-import argparse
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
-from pytorchrl.utils import LoadFromFile
-from code_examples.train_atari.ppo.train import get_args
+from code_examples.train_atari.ppod.train import get_args
 
 
 def enjoy():
@@ -26,7 +24,7 @@ def enjoy():
         env_kwargs={
             "env_id": args.env_id,
             "frame_stack": args.frame_stack,
-        }, vec_env_size=1)  # (device)
+        }, vec_env_size=1)
 
     policy = OnPolicyActor.create_factory(
         obs_space, action_space, prl.PPO,
