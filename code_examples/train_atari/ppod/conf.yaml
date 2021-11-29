@@ -1,3 +1,6 @@
+experiment_name: MontezumaRevengeNoFrameskip-v4
+agent_name: AtariAgent
+wandb_key: null
 env_id: MontezumaRevengeNoFrameskip-v4
 num_env_steps : 10000000
 log_dir: /tmp/atari_ppo
