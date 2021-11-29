@@ -72,7 +72,7 @@ def main():
         size=args.num_steps, rho=args.rho, phi=args.phi,
         initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
         target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
-        initial_reward_threshold=2.95,
+        initial_reward_threshold=4.0,
     )
 
     # 6. Define scheme

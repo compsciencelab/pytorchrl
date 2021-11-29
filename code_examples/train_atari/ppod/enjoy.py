@@ -18,7 +18,6 @@ def enjoy():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Define single copy of the environment
-    args.env_id = "MontezumaRevengeNoFrameskip-v4"
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=atari_train_env_factory,
         env_kwargs={

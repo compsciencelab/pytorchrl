@@ -1,18 +1,5 @@
-import os
-import sys
-import time
-
-import torch
-import threading
-import numpy as np
-from pynput import keyboard
-from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs.atari import atari_train_env_factory
-from code_examples.train_atari.ppod.train import get_args
-
-
-pressed_keys = set([])
-
+"""
+This script can only record demos of the Montezuma's Revenge environment.
 
 # ACTIONS:
 
@@ -34,6 +21,22 @@ pressed_keys = set([])
 # 'UPLEFTFIRE',  # Space + W + A --> 15
 # 'DOWNRIGHTFIRE',  # Space + S + D --> 16
 # 'DOWNLEFTFIRE',  # Space + S + A --> 17
+"""
+
+import os
+import sys
+import time
+
+import torch
+import threading
+import numpy as np
+from pynput import keyboard
+from pytorchrl.agent.env import VecEnv
+from pytorchrl.envs.atari import atari_train_env_factory
+from code_examples.train_atari.ppod.train import get_args
+
+
+pressed_keys = set([])
 
 def create_action():
     action = 0
@@ -97,8 +100,6 @@ def record():
 
     if not os.path.isdir(args.demos_dir):
         os.makedirs(args.demos_dir)
-
-    args.env_id = "MontezumaRevengeNoFrameskip-v4"
 
     # Define Single Env
     env, action_space, obs_space = VecEnv.create_factory(

@@ -1,4 +1,4 @@
-env_id: PongNoFrameskip-v4
+env_id: MontezumaRevengeNoFrameskip-v4
 num_env_steps : 10000000
 log_dir: /tmp/atari_ppo
 gamma: 0.99
