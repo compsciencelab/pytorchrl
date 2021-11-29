@@ -2,16 +2,16 @@ experiment_name: MontezumaRevengeNoFrameskip-v4
 agent_name: AtariAgent
 wandb_key: null
 env_id: MontezumaRevengeNoFrameskip-v4
-num_env_steps : 10000000
+num_env_steps : 10_000_000
 log_dir: /tmp/atari_ppo
 gamma: 0.99
 save_interval: 10000
 max_time: 86400
-num_env_processes: 8
+num_env_processes: 16
 num_steps: 128
 num_mini_batch: 4
 clip_param: 0.1
-ppo_epoch: 3
+ppo_epoch: 4
 gae_lambda: 0.95
 value_loss_coef: 1.0
 entropy_coef: 0.01
