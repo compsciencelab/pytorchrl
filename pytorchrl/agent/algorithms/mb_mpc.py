@@ -225,7 +225,7 @@ class MB_MPC(Algorithm):
         info: dict
             Dict containing current DDPG iteration information.
         """
-        if batch["batch_number"] == 1:
+        if batch["batch_number"] == 0:
             self.reuse_data = True
             self.mb_train_epochs += 1
         logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
