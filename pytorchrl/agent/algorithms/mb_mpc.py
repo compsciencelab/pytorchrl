@@ -228,6 +228,7 @@ class MB_MPC(Algorithm):
         if batch["batch_number"] == 0:
             self.reuse_data = True
             self.mb_train_epochs += 1
+            self.break_counter = 0
         logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
