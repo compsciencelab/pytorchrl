@@ -183,7 +183,7 @@ class MB_MPC(Algorithm):
             self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
 
-        return loss, total_loss_min_max, validation_loss, break_condition
+        return loss, total_loss_min_max, validation_loss.sum(), break_condition
     
     def test_break_condition(self, current_losses):
         keep_train = False

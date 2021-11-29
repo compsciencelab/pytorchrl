@@ -244,7 +244,6 @@ class MBActor(nn.Module):
             return total_loss, total_loss_min_max
         else:
             mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
-            total_loss = torch.sum(mse_loss)
-            return total_loss
+            return mse_loss
     
 
