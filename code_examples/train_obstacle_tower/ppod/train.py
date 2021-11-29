@@ -76,11 +76,10 @@ def main():
 
         # Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
-            size=args.num_steps, rho=args.rho, phi=args.phi, frame_stack=args.frame_stack,
-            frame_skip=args.frame_skip, target_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            use_initial_demos_as_reward_threshold=False,
-        )
+            size=args.num_steps, rho=args.rho, phi=args.phi,
+            target_agent_demos_dir="/tmp/obstacle_demos/", gae_lambda=args.gae_lambda,
+            initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+            initial_reward_threshold=None)
 
         # Define scheme
         params = {}
