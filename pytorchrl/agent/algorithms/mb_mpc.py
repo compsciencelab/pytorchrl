@@ -62,11 +62,11 @@ class MB_MPC(Algorithm):
         self.device = device
         self.max_grad_norm = 0.5
         self._update_every = config.update_every
-        self.reuse_data = True
+        self.reuse_data = False
         
         # training break conditions
-        self.mb_train_epochs = 0
-        self.max_not_improvements = 5
+        self.mb_train_epochs = 1
+        self.max_not_improvements = min(round((self._start_steps + self._update_every) / self._mini_batch_size, 0), 5)
         self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
         self.improvement_threshold = 0.01
         self.break_counter = 0
@@ -178,7 +178,8 @@ class MB_MPC(Algorithm):
                                                   min_max_var=min_max_var,
                                                   labels=holdout_labels,
                                                   inc_var_loss=False)
-            validation_loss = validation_loss.detach().cpu().numpy()
+            validation_loss = validation_loss.cpu().numpy()
+            assert validation_loss.shape == (self.actor.ensemble_size, )
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
@@ -230,6 +231,8 @@ class MB_MPC(Algorithm):
             self.mb_train_epochs += 1
             self.break_counter = 0
         logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
+        print("BREAK CONDITION: ", break_condition)
+        print("BREAK COUNTER: ", self.break_counter)
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
@@ -242,7 +245,7 @@ class MB_MPC(Algorithm):
         }
         if break_condition:
             self.reuse_data = False
-            self.mb_train_epochs = 0
+            self.mb_train_epochs = 1
 
         grads = {"dyna_grads": dyna_grads}
 

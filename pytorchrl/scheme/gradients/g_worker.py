@@ -206,7 +206,7 @@ class GWorker(W):
 
             # Check if more batches with the same data are required
             reuse_batches = hasattr(self.algo, "reuse_data")
-            if not reuse_batches or (reuse_batches and self.algo.reuse_data):
+            if not self.algo.reuse_data:
 
                 # Get new data
                 if self.col_communication == prl.SYNC:

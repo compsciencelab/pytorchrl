@@ -349,10 +349,10 @@ class MBReplayBuffer(S):
             train_input = torch.from_numpy(train_input).float().to(self.device)
             train_label = torch.from_numpy(train_label).float().to(self.device)
             batch = {"train_input": train_input,
-                        "train_label": train_label,
-                        "holdout_inputs": holdout_inputs,
-                        "holdout_labels": holdout_labels,
-                        "batch_number": batch_number}
+                     "train_label": train_label,
+                     "holdout_inputs": holdout_inputs,
+                     "holdout_labels": holdout_labels,
+                     "batch_number": batch_number}
             yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
