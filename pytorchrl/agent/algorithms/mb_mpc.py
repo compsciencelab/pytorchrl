@@ -244,8 +244,6 @@ class MB_MPC(Algorithm):
 
         info = {
             "train_loss": logging_loss.item(),
-            "Training Epoch": self.mb_train_epochs,
-            "Batch": "{} / {}".format(batch["batch_number"], batch["max_batches"])
         }
         # Validation run 
         if batch["batch_number"] == batch["max_batches"]:
@@ -254,6 +252,7 @@ class MB_MPC(Algorithm):
 
             if break_condition:
                 self.reuse_data = False
+                info.update({"Training Epoch": self.mb_train_epochs})
                 self.mb_train_epochs = 0
                 self.break_counter = 0
 
