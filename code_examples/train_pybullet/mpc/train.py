@@ -4,6 +4,7 @@ import os
 import ray
 import sys
 import time
+import wandb
 import argparse
 
 from pytorchrl.learner import Learner
@@ -30,88 +31,102 @@ def main():
         resources += "{} {}, ".format(k, v)
     print(resources[:-2], flush=True)
 
-    # 1. Define Train Vector of Envs
+    # Handle wandb init
+    if args.wandb_key:
+        mode = "online"
+        wandb.login(key=str(args.wandb_key))
+    else:
+        mode = "disabled"
 
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
-                                                                        log_dir=args.log_dir,
-                                                                        env_fn=pybullet_train_env_factory,
-                                                                        env_kwargs={"env_id": args.env_id,
-                                                                                    "frame_skip": args.frame_skip,
-                                                                                    "frame_stack": args.frame_stack})
 
-    # 2. Define Test Vector of Envs (Optional)
-    test_envs_factory, _, _ = VecEnv.create_factory(vec_env_size=args.num_env_processes,
-                                                    log_dir=args.log_dir,
-                                                    env_fn=pybullet_test_env_factory,
-                                                    env_kwargs={"env_id": args.env_id,
-                                                                "frame_skip": args.frame_skip,
-                                                                "frame_stack": args.frame_stack})
+    with wandb.init(project=args.experiment_name, name=args.agent_name, config=args, mode=mode):
 
-    # 3. Define RL Dynamics Model
-    dynamics_factory = MBActor.create_factory(obs_space,
-                                              action_space,
-                                              ensemble_size=args.ensemble_size,
-                                              elite_size=args.elite_size,
-                                              dynamics_type=args.dynamics_type,
-                                              restart_model=args.restart_model)
+        # Sanity check, make sure that logging matches execution
+        args = wandb.config
+        # 1. Define Train Vector of Envs
+        train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
+                                                                            log_dir=args.log_dir,
+                                                                            env_fn=pybullet_train_env_factory,
+                                                                            env_kwargs={"env_id": args.env_id,
+                                                                                        "frame_skip": args.frame_skip,
+                                                                                        "frame_stack": args.frame_stack})
 
-    # 4. Define RL training algorithm
-    algo_factory, algo = MB_MPC.create_factory(args)
+        # 2. Define Test Vector of Envs (Optional)
+        test_envs_factory, _, _ = VecEnv.create_factory(vec_env_size=args.num_env_processes,
+                                                        log_dir=args.log_dir,
+                                                        env_fn=pybullet_test_env_factory,
+                                                        env_kwargs={"env_id": args.env_id,
+                                                                    "frame_skip": args.frame_skip,
+                                                                    "frame_stack": args.frame_stack})
 
-    # 5. Define rollouts storage
-    storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size, validation_percentage=args.validation_percentage)
+        # 3. Define RL Dynamics Model
+        dynamics_factory = MBActor.create_factory(obs_space,
+                                                action_space,
+                                                ensemble_size=args.ensemble_size,
+                                                elite_size=args.elite_size,
+                                                dynamics_type=args.dynamics_type,
+                                                restart_model=args.restart_model)
 
-    # 6. Define scheme
-    params = {}
+        # 4. Define RL training algorithm
+        algo_factory, algo = MB_MPC.create_factory(args)
 
-    # add core modules
-    params.update({
-        "algo_factory": algo_factory,
-        "actor_factory": dynamics_factory,
-        "storage_factory": storage_factory,
-        "train_envs_factory": train_envs_factory,
-        "test_envs_factory": test_envs_factory,
-    })
+        # 5. Define rollouts storage
+        storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size, validation_percentage=args.validation_percentage)
 
-    # add collection specs
-    params.update({
-        "num_col_workers": args.num_col_workers,
-        "col_workers_communication": args.com_col_workers,
-        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
-    })
+        # 6. Define scheme
+        params = {}
 
-    # add gradient specs
-    params.update({
-        "num_grad_workers": args.num_grad_workers,
-        "grad_workers_communication": args.com_grad_workers,
-        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
-    })
+        # add core modules
+        params.update({
+            "algo_factory": algo_factory,
+            "actor_factory": dynamics_factory,
+            "storage_factory": storage_factory,
+            "train_envs_factory": train_envs_factory,
+            "test_envs_factory": test_envs_factory,
+        })
 
-    scheme = Scheme(**params)
+        # add collection specs
+        params.update({
+            "num_col_workers": args.num_col_workers,
+            "col_workers_communication": args.com_col_workers,
+            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
+        })
 
-    # 7. Define learner
-    learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
+        # add gradient specs
+        params.update({
+            "num_grad_workers": args.num_grad_workers,
+            "grad_workers_communication": args.com_grad_workers,
+            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
+        })
 
-    # 8. Define train loop
-    iterations = 0
-    start_time = time.time()
-    while not learner.done():
+        scheme = Scheme(**params)
 
-        learner.step()
+        # 7. Define learner
+        learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        if iterations % args.log_interval == 0:
-            learner.print_info()
+        # 8. Define train loop
+        iterations = 0
+        start_time = time.time()
+        while not learner.done():
 
-        if iterations % args.save_interval == 0:
-            save_name = learner.save_model()
+            learner.step()
 
-        if args.max_time != -1 and (time.time() - start_time) > args.max_time:
-            break
+            if iterations % args.log_interval == 0:
+                log_data = learner.get_metrics(add_episodes_metrics=True)
+                log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
+                wandb.log(log_data, step=learner.num_samples_collected)
+                learner.print_info()
 
-        iterations += 1
+            if iterations % args.save_interval == 0:
+                save_name = learner.save_model()
 
-    print("Finished!")
-    sys.exit()
+            if args.max_time != -1 and (time.time() - start_time) > args.max_time:
+                break
+
+            iterations += 1
+
+        print("Finished!")
+        sys.exit()
 
 
 def get_args():
