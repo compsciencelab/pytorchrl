@@ -1,4 +1,5 @@
 import itertools
+from typing import Tuple
 import numpy as np
 from copy import deepcopy
 
@@ -155,13 +156,10 @@ class MB_MPC(Algorithm):
         return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
     
-    def training_step(self, batch)-> torch.Tensor:
+    def training_step(self, batch)-> Tuple[torch.Tensor, torch.Tensor]:
         train_inputs = batch["train_input"]
         train_labels = batch["train_label"]
 
-        holdout_inputs = batch["holdout_inputs"]
-        holdout_labels = batch["holdout_labels"]
-        
         self.actor.train()
         mean, logvar, min_max_var = self.actor.get_prediction(inputs=train_inputs, ret_log_var=True)
         loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
@@ -170,12 +168,18 @@ class MB_MPC(Algorithm):
                                                        labels=train_labels,
                                                        inc_var_loss=True)
         
+
+        return loss, total_loss_min_max
+    
+    def validation(self, batch)-> Tuple[torch.Tensor, bool]:
+        holdout_inputs = batch["holdout_inputs"]
+        holdout_labels = batch["holdout_labels"]
         self.actor.eval()
         with torch.no_grad():
             val_mean, val_log_var, _ = self.actor.get_prediction(inputs=holdout_inputs, ret_log_var=True)
             validation_loss = self.actor.calculate_loss(mean=val_mean,
                                                   logvar=val_log_var,
-                                                  min_max_var=min_max_var,
+                                                  min_max_var=0,
                                                   labels=holdout_labels,
                                                   inc_var_loss=False)
             validation_loss = validation_loss.cpu().numpy()
@@ -183,8 +187,8 @@ class MB_MPC(Algorithm):
             sorted_loss_idx = np.argsort(validation_loss)
             self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
-
-        return loss, total_loss_min_max, validation_loss.sum(), break_condition
+        
+        return validation_loss.sum(), break_condition
     
     def test_break_condition(self, current_losses):
         keep_train = False
@@ -230,9 +234,9 @@ class MB_MPC(Algorithm):
             self.reuse_data = True
             self.mb_train_epochs += 1
             self.break_counter = 0
-        logging_loss, train_loss, validation_loss, break_condition = self.training_step(batch)
-        print("BREAK CONDITION: ", break_condition)
-        print("BREAK COUNTER: ", self.break_counter)
+
+        logging_loss, train_loss = self.training_step(batch)
+
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
@@ -240,10 +244,17 @@ class MB_MPC(Algorithm):
 
         info = {
             "train_loss": logging_loss.item(),
-            "validation_loss": validation_loss.item(),
             "Training Epoch": self.mb_train_epochs,
             "Batch": "{} / {}".format(batch["batch_number"], batch["max_batches"])
         }
+        # Validation run 
+        if batch["batch_number"] == batch["max_batches"]:
+            validation_loss, break_condition= self.validation(batch)
+            info.update({"validation_loss": validation_loss.item()})
+
+        print("BREAK CONDITION: ", break_condition)
+        print("BREAK COUNTER: ", self.break_counter)
+
         if break_condition:
             self.reuse_data = False
             self.mb_train_epochs = 1

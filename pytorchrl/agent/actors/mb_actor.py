@@ -218,6 +218,7 @@ class MBActor(nn.Module):
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
         next_states = predictions[:, :-1]
+        # TODO: add selection between given reward function or learned one
         rewards = predictions[:, -1].unsqueeze(-1)
         # TODO: add Termination function?
         return next_states, rewards
