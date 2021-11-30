@@ -19,7 +19,7 @@ num_env_processes: 1
 mini_batch_size: 256 
 update_every: 250
 num_updates: 1
-start_steps: 500
+start_steps: 5000
 buffer_size: 1000000
 save_interval: 50000
 num_grad_workers: 1
