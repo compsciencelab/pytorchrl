@@ -354,7 +354,7 @@ class MBReplayBuffer(S):
                      "holdout_inputs": holdout_inputs,
                      "holdout_labels": holdout_labels,
                      "batch_number": batch_number,
-                     "max_batches:": max_batches}
+                     "max_batches": max_batches}
             yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):
