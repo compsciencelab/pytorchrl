@@ -1,7 +1,7 @@
-experiment_name: PPOD_AnimalAI_Hard_Arena
+experiment_name: PPOD_AnimalAI
 agent_name: AnimalAgent
 wandb_key: null
-num_env_steps : 10000000000
+num_env_steps : 10_000_000
 log_dir: /tmp/animal_ppod
 gamma: 0.998
 rho: 0.3

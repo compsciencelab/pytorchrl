@@ -31,6 +31,12 @@ class VanillaOnPolicyBuffer(S):
         self.envs = envs
         if self.envs:
             self.num_envs = envs.num_envs
+            self.frame_stack, self.frame_skip = 1, 0
+            if "frame_stack" in self.envs.env_kwargs.keys():
+                self.frame_stack = self.envs.env_kwargs["frame_stack"]
+            if "frame_skip" in self.envs.env_kwargs.keys():
+                self.frame_skip = self.envs.env_kwargs["frame_skip"]
+
         self.actor = actor
         self.device = device
         self.algo = algorithm

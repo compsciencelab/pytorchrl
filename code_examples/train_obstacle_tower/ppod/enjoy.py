@@ -13,6 +13,9 @@ def enjoy():
 
     args = get_args()
 
+    # Define device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # Define single copy of the environment
     env, action_space, obs_space = VecEnv.create_factory(
         env_fn=obstacle_train_env_factory,
@@ -25,11 +28,8 @@ def enjoy():
             "reward_shape": args.reward_shape,
             "reduced_actions": args.reduced_action_space,
             "num_actions": args.num_actions,
-            "realtime": False,
-        }, vec_env_size=2)
-
-    # Define agent device and agent
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            "realtime": True,
+        }, vec_env_size=1)(device)
 
     policy = OnPolicyActor.create_factory(
         obs_space, action_space, prl.PPO,
@@ -42,8 +42,6 @@ def enjoy():
     env = env()
     obs = env.reset()
     done, episode_reward, step = False, 0, 0
-
-    import ipdb; ipdb.set_trace()
 
     _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
 
