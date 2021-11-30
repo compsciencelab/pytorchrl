@@ -252,12 +252,12 @@ class MB_MPC(Algorithm):
             validation_loss, break_condition= self.validation(batch)
             info.update({"validation_loss": validation_loss.item()})
 
-        print("BREAK CONDITION: ", break_condition)
-        print("BREAK COUNTER: ", self.break_counter)
+            print("BREAK CONDITION: ", break_condition)
+            print("BREAK COUNTER: ", self.break_counter)
 
-        if break_condition:
-            self.reuse_data = False
-            self.mb_train_epochs = 1
+            if break_condition:
+                self.reuse_data = False
+                self.mb_train_epochs = 1
 
         grads = {"dyna_grads": dyna_grads}
 
