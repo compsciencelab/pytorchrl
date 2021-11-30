@@ -66,7 +66,7 @@ class MB_MPC(Algorithm):
         self.reuse_data = False
         
         # training break conditions
-        self.mb_train_epochs = 1
+        self.mb_train_epochs = 0
         self.max_not_improvements = min(round((self._start_steps + self._update_every) / self._mini_batch_size, 0), 5)
         self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
         self.improvement_threshold = 0.01
@@ -233,7 +233,7 @@ class MB_MPC(Algorithm):
         if batch["batch_number"] == 0:
             self.reuse_data = True
             self.mb_train_epochs += 1
-            self.break_counter = 0
+
 
         logging_loss, train_loss = self.training_step(batch)
 
@@ -257,7 +257,8 @@ class MB_MPC(Algorithm):
 
             if break_condition:
                 self.reuse_data = False
-                self.mb_train_epochs = 1
+                self.mb_train_epochs = 0
+                self.break_counter = 0
 
         grads = {"dyna_grads": dyna_grads}
 
