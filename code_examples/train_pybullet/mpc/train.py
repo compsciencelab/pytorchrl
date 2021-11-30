@@ -172,7 +172,7 @@ def get_args():
                         help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
     parser.add_argument("--action-noise", default=False, action='store_true', help="Adding noise to the actions, (default: False)")
     parser.add_argument(
-        '--start-steps', type=int, default=1000,
+        '--start-steps', type=int, default=5000,
         help='SAC num initial random steps (default: 1000)')
     parser.add_argument(
         '--buffer-size', type=int, default=10000,
@@ -186,6 +186,7 @@ def get_args():
     parser.add_argument(
         '--mini-batch-size', type=int, default=32,
         help='Mini batch size for network updates (default: 32)')
+    parser.add_argument("--test_every", type=int, default=1, help="")
     
     # CEM parameter
     parser.add_argument("--iter-update-steps", type=int, default=3, help="Iterative update steps for CEM (default: 3)")

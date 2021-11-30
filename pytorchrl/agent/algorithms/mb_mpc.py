@@ -38,7 +38,7 @@ class MB_MPC(Algorithm):
         self._mini_batch_size = int(config.mini_batch_size)
         self._num_mini_batch = 1
         # Number of network updates between test evaluations
-        self._test_every = int(5000)
+        self._test_every = int(config.test_every)
 
         # Number of episodes to complete when testing
         self._num_test_episodes = int(5)

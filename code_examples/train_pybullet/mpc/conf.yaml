@@ -1,5 +1,5 @@
 env_id: Pendulum-v1
-num_env_steps : 1000000
+num_env_steps : 50_000
 log_dir: /tmp/pybullet_mpc
 experiment_name: MPC
 agent_name: RS-MPC
@@ -9,7 +9,7 @@ frame_stack: 1
 lr: 1.0e-3
 mpc_type: RS
 n_planner: 700
-horizon: 24
+horizon: 30
 ensemble_size: 5
 elite_size: 3
 dynamics_type: probabilistic
@@ -18,6 +18,7 @@ max_time: 86400
 num_env_processes: 1
 mini_batch_size: 256 
 update_every: 250
+test_every: 1
 num_updates: 1
 start_steps: 5000
 buffer_size: 1000000
