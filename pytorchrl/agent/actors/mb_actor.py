@@ -32,14 +32,6 @@ class StandardScaler(object):
 
     def inverse_transform(self, data: np.array)-> np.array:
         return self.std * data + self.mu
-    
-class Print(nn.Module):
-    def __init__(self):
-        super(Print, self).__init__()
-
-    def forward(self, x):
-        print(x.shape)
-        return x
 
 
 class MBActor(nn.Module):
@@ -207,6 +199,7 @@ class MBActor(nn.Module):
             ensemble_predictions = torch.normal(ensemble_means, ensemble_std)
         else:
             ensemble_predictions = ensemble_means
+
         if self.rollout_select == "random":
             # choose what predictions we select from what ensemble member
             ensemble_idx = random.choices(self.elite_idxs, k=states.shape[0])

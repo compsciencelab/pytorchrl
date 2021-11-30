@@ -60,6 +60,9 @@ class MB_MPC(Algorithm):
         else:
             raise ValueError
 
+        self.action_high = self.mpc.action_high
+        self.action_low = self.mpc.action_low
+
         self.iter = 0
         self.device = device
         self.max_grad_norm = 0.5
@@ -77,7 +80,6 @@ class MB_MPC(Algorithm):
         dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
 
         # ----- Optimizers ----------------------------------------------------
-
         self.dynamics_optimizer = optim.Adam(dynamics_params, lr=config.lr)
 
     @classmethod
@@ -146,13 +148,16 @@ class MB_MPC(Algorithm):
         return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        # do MPC planning here just pass the model in there
+        if not deterministic and self.action_noise:
+            noise = True
+        else:
+            noise = False
         with torch.no_grad():
-            action = self.mpc.get_action(state=obs, model=self.actor, noise=self.action_noise)
-            clipped_action = torch.clamp(action, -1, 1)
-        if self.actor.unscale:
-            action = self.actor.unscale(action)
-            clipped_action = self.actor.unscale(clipped_action)
+            action = self.mpc.get_action(state=obs, model=self.actor, noise=noise)
+            clipped_action = torch.clamp(action, self.action_low, self.action_high)
+        #if self.actor.unscale:
+        #    action = self.actor.unscale(action)
+        #    clipped_action = self.actor.unscale(clipped_action)
 
         return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
@@ -167,7 +172,7 @@ class MB_MPC(Algorithm):
                                                             logvar=logvar,
                                                             min_max_var=min_max_var,
                                                             labels=train_labels,
-                                                            inc_var_loss=True)
+                                                                inc_var_loss=True)
         
         return loss, total_loss_min_max
     
@@ -188,7 +193,7 @@ class MB_MPC(Algorithm):
             self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
         
-        return validation_loss.sum(), break_condition
+        return validation_loss.mean(), break_condition
     
     def test_break_condition(self, current_losses):
         keep_train = False
