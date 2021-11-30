@@ -73,6 +73,29 @@ OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
 DemosDataKeys = (OBS, ACT, REW)
 
+# DATA TYPES
+float32 = "float32"
+float16 = "float16"
+int16 = "int16"
+int8 = "int8"
+uint8 = "uint8"
+
+DEFAULT_DTYPES = {
+    OBS: float32,
+    RHS: float32,
+    DONE: float32,
+    ACT: float32,
+    ACTPROBS: float32,
+    REW: float32,
+    OBS2: float32,
+    RHS2: float32,
+    DONE2: float32,
+    VAL: float32,
+    LOGP: float32,
+    ADV: float32,
+    RET: float32,
+}
+
 # ALGORITHMS
 A2C = "A2C"
 PPO = "PPO"

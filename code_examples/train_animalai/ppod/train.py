@@ -11,10 +11,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages import PPODBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
-from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 
 
 def main():
@@ -88,10 +88,9 @@ def main():
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
-            frame_stack=args.frame_stack, frame_skip=args.frame_skip,
-            initial_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
-            target_demos_dir="/tmp/animalai_demos/",
-            gae_lambda=args.gae_lambda,
+            initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
+            target_agent_demos_dir="/tmp/animalai_demos/", gae_lambda=args.gae_lambda,
+            initial_reward_threshold=2.95,
         )
 
         # 5. Define scheme
@@ -211,8 +210,8 @@ def get_args():
         '--arenas-dir', default='',
         help='directory containing arenas configuration .yaml files')
     parser.add_argument(
-        '--demos-dir', default='/tmp/pybullet_ppo',
-        help='target directory to store and retrieve demos_6_actions.')
+        '--demos-dir', default='/tmp/animalai_ppod',
+        help='target directory to store and retrieve demos.')
 
     # Feature extractor model specs
     parser.add_argument(
