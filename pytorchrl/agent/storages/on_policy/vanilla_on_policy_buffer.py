@@ -314,7 +314,7 @@ class VanillaOnPolicyBuffer(S):
     def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
         adv = returns[:-1] - values[:-1]
-        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        # adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
 
     def normalize_int_rewards(self):

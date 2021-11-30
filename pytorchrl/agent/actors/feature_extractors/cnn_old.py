@@ -62,7 +62,7 @@ class CNN(nn.Module):
         # Define final MLP layer
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_space.shape)).shape))
         layers = []
-        sizes = [feature_size] + [output_size]
+        sizes = [feature_size] + output_size
         for j in range(len(sizes) - 1):
             layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
         self.head = nn.Sequential(*layers)
