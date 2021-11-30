@@ -18,11 +18,11 @@ max_time: 86400
 num_env_processes: 1
 mini_batch_size: 256 
 update_every: 250
-test_every: 1
+test_every: 4
 num_updates: 1
 start_steps: 5000
 buffer_size: 1000000
-save_interval: 50000
+save_interval: 5
 num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous

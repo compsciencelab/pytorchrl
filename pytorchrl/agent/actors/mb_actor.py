@@ -65,7 +65,7 @@ class MBActor(nn.Module):
         self.rollout_select = "random"
         self.batch_size = 256
         self.hidden_size = 200
-        self.hidden_layer = 2
+        self.hidden_layer = 3
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
@@ -244,7 +244,5 @@ class MBActor(nn.Module):
             total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
             return total_loss, total_loss_min_max
         else:
-            mse_loss = torch.mean(torch.pow(mean - labels, 2), dim=(1, 2))
+            mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
             return mse_loss
-    
-

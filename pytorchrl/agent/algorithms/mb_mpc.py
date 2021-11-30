@@ -59,6 +59,7 @@ class MB_MPC(Algorithm):
                                 device=device)
         else:
             raise ValueError
+
         self.iter = 0
         self.device = device
         self.max_grad_norm = 0.5
@@ -163,12 +164,11 @@ class MB_MPC(Algorithm):
         self.actor.train()
         mean, logvar, min_max_var = self.actor.get_prediction(inputs=train_inputs, ret_log_var=True)
         loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
-                                                       logvar=logvar,
-                                                       min_max_var=min_max_var,
-                                                       labels=train_labels,
-                                                       inc_var_loss=True)
+                                                            logvar=logvar,
+                                                            min_max_var=min_max_var,
+                                                            labels=train_labels,
+                                                            inc_var_loss=True)
         
-
         return loss, total_loss_min_max
     
     def validation(self, batch)-> Tuple[torch.Tensor, bool]:
@@ -178,10 +178,10 @@ class MB_MPC(Algorithm):
         with torch.no_grad():
             val_mean, val_log_var, _ = self.actor.get_prediction(inputs=holdout_inputs, ret_log_var=True)
             validation_loss = self.actor.calculate_loss(mean=val_mean,
-                                                  logvar=val_log_var,
-                                                  min_max_var=0,
-                                                  labels=holdout_labels,
-                                                  inc_var_loss=False)
+                                                        logvar=val_log_var,
+                                                        min_max_var=0,
+                                                        labels=holdout_labels,
+                                                        inc_var_loss=False)
             validation_loss = validation_loss.cpu().numpy()
             assert validation_loss.shape == (self.actor.ensemble_size, )
             sorted_loss_idx = np.argsort(validation_loss)
@@ -234,7 +234,6 @@ class MB_MPC(Algorithm):
             self.reuse_data = True
             self.mb_train_epochs += 1
 
-
         logging_loss, train_loss = self.training_step(batch)
 
         self.dynamics_optimizer.zero_grad()
@@ -242,12 +241,11 @@ class MB_MPC(Algorithm):
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
-        info = {
-            "train_loss": logging_loss.item(),
-        }
+        info = {"train_loss": logging_loss.item()}
+
         # Validation run 
         if batch["batch_number"] == batch["max_batches"]:
-            validation_loss, break_condition= self.validation(batch)
+            validation_loss, break_condition = self.validation(batch)
             info.update({"validation_loss": validation_loss.item()})
 
             if break_condition:
