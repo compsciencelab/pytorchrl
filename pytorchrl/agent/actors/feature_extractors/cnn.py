@@ -70,7 +70,7 @@ class CNN(nn.Module):
         self.feature_extractor = nn.Sequential(*layers)
 
         # Define final MLP layers
-        feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_space.shape)).shape))
+        feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_shape)).shape))
         layers = []
         sizes = [feature_size] + output_sizes
         for j in range(len(sizes) - 1):
