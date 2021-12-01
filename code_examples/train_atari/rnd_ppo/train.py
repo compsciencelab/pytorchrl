@@ -93,10 +93,12 @@ def main():
             intrinsic_rewards_target_network_kwargs={
                 "output_sizes": [512],
                  "activation": nn.LeakyReLU,
+                "final_activation": False,
             },
             intrinsic_rewards_predictor_network_kwargs={
                 "output_sizes": [512, 512, 512],
                  "activation": nn.LeakyReLU,
+                "final_activation": False,
             },
         )
 
