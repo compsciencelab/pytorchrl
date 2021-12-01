@@ -1,73 +1,105 @@
-from abc import ABC
-import numpy as np
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from pytorchrl.agent.actors.utils import init
 
 
+class CNN(nn.Module):
+    """
+    Convolutional Neural Network.
 
-def conv_shape(input, kernel_size, stride, padding=0):
-    return (input + 2 * padding - kernel_size) // stride + 1
+    Parameters
+    ----------
+    input_space : gym.Space
+        Environment observation space.
+    rgb_norm : bool
+        Whether or not to divide input by 255.
+    activation : func
+        Non-linear activation function.
+    final_activation : bool
+        Whether or not to apply activation function after last layer.
+    strides : list
+        Convolutional layers strides.
+    filters : list
+        Convolutional layers number of filters.
+    kernel_sizes : list
+        Convolutional layers kernel sizes.
+    output_sizes : list
+        output hidden layers sizes.
+    """
+    def __init__(self,
+                 input_space,
+                 rgb_norm=True,
+                 activation=nn.ReLU,
+                 final_activation=True,
+                 strides=[4, 2, 1],
+                 filters=[32, 64, 64],
+                 kernel_sizes=[8, 4, 3],
+                 output_sizes=[256, 448]):
 
-
-class CNN(nn.Module, ABC):
-
-    def __init__(self, input_space):
         super(CNN, self).__init__()
+
+        self.rgb_norm = rgb_norm
 
         if isinstance(input_space, gym.Space):
             input_shape = input_space.shape
         else:
             input_shape = input_space
 
-        c, w, h = input_shape
-        self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
+        if len(input_shape) != 3:
+            raise ValueError("Trying to extract features with a CNN for an obs space with len(shape) != 3")
 
-        conv1_out_w = conv_shape(w, 8, 4)
-        conv1_out_h = conv_shape(h, 8, 4)
-        conv2_out_w = conv_shape(conv1_out_w, 4, 2)
-        conv2_out_h = conv_shape(conv1_out_h, 4, 2)
-        conv3_out_w = conv_shape(conv2_out_w, 3, 1)
-        conv3_out_h = conv_shape(conv2_out_h, 3, 1)
+        assert len(filters) == len(strides) and len(strides) == len(kernel_sizes)
 
-        flatten_size = conv3_out_w * conv3_out_h * 64
+        try:
+            gain = nn.init.calculate_gain(activation.__name__.lower())
+        except Exception:
+            gain = 1.0
 
-        self.fc1 = nn.Linear(in_features=flatten_size, out_features=256)
-        self.fc2 = nn.Linear(in_features=256, out_features=448)
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
 
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
-                layer.bias.data.zero_()
+        # Define feature extractor
+        layers = []
+        filters = [input_shape[0]] + filters
+        for j in range(len(filters) - 1):
+            layers += [init_(nn.Conv2d(
+                filters[j], filters[j + 1], stride=strides[j],
+                kernel_size=kernel_sizes[j])), activation()]
+        self.feature_extractor = nn.Sequential(*layers)
 
-        nn.init.orthogonal_(self.fc1.weight, gain=np.sqrt(2))
-        self.fc1.bias.data.zero_()
-        nn.init.orthogonal_(self.fc2.weight, gain=np.sqrt(2))
-        self.fc2.bias.data.zero_()
+        # Define final MLP layers
+        feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_space.shape)).shape))
+        layers = []
+        sizes = [feature_size] + output_sizes
+        for j in range(len(sizes) - 1):
+            layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
+            if not (j == len(sizes) - 2 and final_activation):
+                layers += [activation()]
+        self.head = nn.Sequential(*layers)
 
-        # nn.init.orthogonal_(self.extra_policy_fc.weight, gain=np.sqrt(0.1))
-        # self.extra_policy_fc.bias.data.zero_()
-        # nn.init.orthogonal_(self.extra_value_fc.weight, gain=np.sqrt(0.1))
-        # self.extra_value_fc.bias.data.zero_()
-
-        # nn.init.orthogonal_(self.policy.weight, gain=np.sqrt(0.01))
-        # self.policy.bias.data.zero_()
-        # nn.init.orthogonal_(self.int_value.weight, gain=np.sqrt(0.01))
-        # self.int_value.bias.data.zero_()
-        # nn.init.orthogonal_(self.ext_value.weight, gain=np.sqrt(0.01))
-        # self.ext_value.bias.data.zero_()
+        self.train()
 
     def forward(self, inputs):
-        x = inputs / 255.
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = x.contiguous()
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        out = F.relu(self.fc2(x))
+        """
+        Forward pass Neural Network
+        Parameters
+        ----------
+        inputs : torch.tensor
+            Input data.
+        Returns
+        -------
+        out : torch.tensor
+            Output feature map.
+        """
+
+        if self.rgb_norm:
+            inputs = inputs / 255.0
+
+        out = self.feature_extractor(inputs)
+        out = out.contiguous()
+        out = out.view(inputs.size(0).size(0), -1)
+        out = self.head(out)
+
         return out
