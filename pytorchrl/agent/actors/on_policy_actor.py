@@ -396,8 +396,8 @@ class OnPolicyActor(nn.Module):
 
         # TODO: added!
         extra_value_fc = nn.Linear(in_features=448, out_features=448)
-        nn.init.orthogonal_(self.extra_value_fc.weight, gain=np.sqrt(0.1))
-        self.extra_value_fc.bias.data.zero_()
+        nn.init.orthogonal_(extra_value_fc.weight, gain=np.sqrt(0.1))
+        extra_value_fc.bias.data.zero_()
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain=np.sqrt(0.01))
         value_predictor = init_(nn.Linear(self.recurrent_size, 1))

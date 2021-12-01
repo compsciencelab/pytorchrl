@@ -249,10 +249,8 @@ class VanillaOnPolicyBuffer(S):
                 self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
             self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
-        if hasattr(self.algo, "gamma_intrinsic"):
+        if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
             self.normalize_int_rewards()
-            # self.algo.state_rms.update(
-            #     self.data[prl.OBS][:, :, -self.num_channels_obs:, :, :].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
             self.algo.state_rms.update(
                 self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
 
@@ -328,7 +326,8 @@ class VanillaOnPolicyBuffer(S):
         for step in reversed(range(length)):
             rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
         self.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
-        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
+        # self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
+        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var ** 0.5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """

@@ -13,6 +13,10 @@ import numpy as np
 from torch.nn import functional as F
 
 
+# TODO. could try using self.mse_loss = torch.nn.MSELoss()
+# TODO. maybe its the tuned clip_grad_norm_
+# TODO: They compute all intrinsic rewards at the end, but I do it on the fly (it should not make any diff)
+
 class RND_PPO(Algorithm):
     """
     Proximal Policy Optimization algorithm class.
@@ -149,7 +153,6 @@ class RND_PPO(Algorithm):
         ### RND PPO STUFF ##################################################################################################
 
         # Create target model
-        # setattr(self.actor, "target_model", TargetModel(self.actor.input_space.shape).to(self.device))
         setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
 
         # Freeze target model parameters
@@ -157,24 +160,19 @@ class RND_PPO(Algorithm):
             param.requires_grad = False
 
         # Create predictor model
-        # setattr(self.actor, "predictor_model", PredictorModel(self.actor.input_space.shape).to(self.device))
         setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
 
         # Define running means for int reward and obs
-        # self.state_rms = RunningMeanStd(shape=self.actor.input_space.shape, device=self.device)
         self.state_rms = RunningMeanStd(shape=(1, ) + self.actor.input_space.shape[1:], device=self.device)
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
-        # total_obs = torch.zeros(self.rollout_length, *obs.shape).to(self.device)
         total_obs = torch.zeros((self.pre_normalization_length,  obs.shape[0], 1) + obs.shape[2:]).to(self.device)
         for i in range(self.pre_normalization_steps * self.pre_normalization_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            # total_obs[i % self.rollout_length].copy_(obs)
             total_obs[i % self.pre_normalization_length].copy_(obs[:, -1:, :, :])
             if i % self.pre_normalization_length == 0 and i != 0:
-                # self.state_rms.update(total_obs.reshape(-1, *obs.shape[1:]))
                 self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
                 print("{}/{}".format(i//self.pre_normalization_length, self.pre_normalization_steps))
         envs.reset()
@@ -189,12 +187,12 @@ class RND_PPO(Algorithm):
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
         # or a list of PolicyLossAddOn instances
         assert isinstance(policy_loss_addons, (PolicyLossAddOn, list)),\
-            "PPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
+            "RND PPO policy_loss_addons parameter should be a  PolicyLossAddOn instance " \
             "or a list of PolicyLossAddOn instances"
         if isinstance(policy_loss_addons, list):
             for addon in policy_loss_addons:
                 assert isinstance(addon, PolicyLossAddOn), \
-                    "PPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
+                    "RND PPO policy_loss_addons parameter should be a  PolicyLossAddOn " \
                     "instance or a list of PolicyLossAddOn instances"
         else:
             policy_loss_addons = [policy_loss_addons]
@@ -393,7 +391,8 @@ class RND_PPO(Algorithm):
 
             # predict intrinsic reward
             obs = obs[:, -1:, ...]
-            obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
+            # obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
+            obs = torch.clamp((obs - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5).float()
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
             int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)
@@ -506,8 +505,8 @@ class RND_PPO(Algorithm):
         self.optimizer.zero_grad()
         loss.backward()
 
-        # clip_grad_norm_(self.actor.parameters())
-        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+        clip_grad_norm_(self.actor.parameters())
+        # nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
 
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
