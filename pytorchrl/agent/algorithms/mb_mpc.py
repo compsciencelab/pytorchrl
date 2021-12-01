@@ -171,8 +171,7 @@ class MB_MPC(Algorithm):
         loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
                                                              logvar=logvar,
                                                              min_max_var=min_max_var,
-                                                             labels=train_labels,
-                                                             inc_var_loss=True)
+                                                             labels=train_labels)
         
         return loss, total_loss_min_max
     
@@ -186,7 +185,8 @@ class MB_MPC(Algorithm):
                                                         logvar=val_log_var,
                                                         min_max_var=0,
                                                         labels=holdout_labels,
-                                                        inc_var_loss=False)
+                                                        validate=True)
+
             validation_loss = validation_loss.cpu().numpy()
             assert validation_loss.shape == (self.actor.ensemble_size, )
             sorted_loss_idx = np.argsort(validation_loss)

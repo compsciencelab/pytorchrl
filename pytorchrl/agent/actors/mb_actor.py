@@ -57,6 +57,9 @@ class MBActor(nn.Module):
         self.batch_size = 256
         self.hidden_size = 200
         self.hidden_layer = 3
+        self.loss_type = "mse"
+        if self.loss_type == "mse":
+            self.loss_f = nn.MSELoss(reduction='none')
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
@@ -218,17 +221,27 @@ class MBActor(nn.Module):
                              logvar: torch.Tensor,
                              min_max_var: Tuple[torch.Tensor, torch.Tensor],
                              labels: torch.Tensor,
-                             inc_var_loss: bool=True
+                             validate: bool=False
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
         assert len(mean.shape) == len(logvar.shape) == len(labels.shape) == 3
-        inv_var = (-logvar).exp()
-        if inc_var_loss:
-            mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
-            var_loss = logvar.mean(-1).mean(-1).sum()
-            total_loss = mse_loss + var_loss
-            total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
-            return total_loss, total_loss_min_max
+        if self.loss_type == "maximum likelihood":
+            inv_var = (-logvar).exp()
+            if not validate:
+                mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
+                var_loss = logvar.mean(-1).mean(-1).sum()
+                total_loss = mse_loss + var_loss
+                total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+                return total_loss, total_loss_min_max
+            else:
+                mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
+                return mse_loss
         else:
-            mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
-            return mse_loss
+            prediction = torch.normal(mean, torch.sqrt(torch.exp(logvar)))
+            assert prediction.shape == labels.shape
+            if not validate:
+                loss = self.loss_f(prediction, labels).mean(-1).mean(-1).sum()
+                return loss
+            else:
+                loss = self.loss_f(prediction, labels).mean(-1).mean(-1)
+                return loss
