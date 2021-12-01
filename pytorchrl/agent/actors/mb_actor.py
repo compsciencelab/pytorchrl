@@ -232,7 +232,7 @@ class MBActor(nn.Module):
                 var_loss = logvar.mean(-1).mean(-1).sum()
                 total_loss = mse_loss + var_loss
                 total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
-                return total_loss, total_loss_min_max
+                return total_loss_min_max
             else:
                 mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
                 return mse_loss

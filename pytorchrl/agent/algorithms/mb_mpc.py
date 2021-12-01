@@ -168,12 +168,12 @@ class MB_MPC(Algorithm):
 
         self.actor.train()
         mean, logvar, min_max_var = self.actor.get_prediction(inputs=train_inputs, ret_log_var=True)
-        loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
-                                                             logvar=logvar,
-                                                             min_max_var=min_max_var,
-                                                             labels=train_labels)
+        loss = self.actor.calculate_loss(mean=mean,
+                                         logvar=logvar,
+                                         min_max_var=min_max_var,
+                                         labels=train_labels)
         
-        return loss, total_loss_min_max
+        return loss
     
     def validation(self, batch)-> Tuple[torch.Tensor, bool]:
         holdout_inputs = batch["holdout_inputs"]
@@ -239,14 +239,14 @@ class MB_MPC(Algorithm):
             self.reuse_data = True
             self.mb_train_epochs += 1
 
-        logging_loss, train_loss = self.training_step(batch)
+        train_loss = self.training_step(batch)
 
         self.dynamics_optimizer.zero_grad()
         train_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.dynamics_model.parameters(), self.max_grad_norm)
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
-        info = {"train_loss": logging_loss.item()}
+        info = {"train_loss": train_loss.item()}
 
         # Validation run 
         if batch["batch_number"] == batch["max_batches"]:
