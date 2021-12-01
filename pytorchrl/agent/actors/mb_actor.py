@@ -17,23 +17,6 @@ from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_ch
 from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
 
 
-class StandardScaler(object):
-    def __init__(self)-> None:
-        self.mu = np.zeros(1)
-        self.std = np.ones(1)
-
-    def fit(self, data: np.array)-> None:
-        self.mu = np.mean(data, axis=0, keepdims=True)
-        self.std = np.std(data, axis=0, keepdims=True)
-        self.std[self.std < 1e-12] = 1.0
-
-    def transform(self, data: np.array)-> np.array:
-        return (data - self.mu) / self.std
-
-    def inverse_transform(self, data: np.array)-> np.array:
-        return self.std * data + self.mu
-
-
 class MBActor(nn.Module):
     def __init__(self,
                  input_space,
@@ -53,18 +36,15 @@ class MBActor(nn.Module):
         self.ensemble_size = ensemble_size
         self.elite_size = elite_size
         self.elite_idxs = [i for i in range(self.elite_size)]
-        self.scaler = StandardScaler()
+
         self.batch_size = 256
         self.hidden_size = 200
         self.hidden_layer = 3
-        self.loss_type = "mse"
-        if self.loss_type == "mse":
-            self.loss_f = nn.MSELoss(reduction='none')
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
-
         self.create_dynamics()
+        print(self.dynamics_model)
 
     @classmethod
     def create_factory(
@@ -93,7 +73,6 @@ class MBActor(nn.Module):
             model.to(device)
 
             return model
-
 
         return create_dynamics_instance
 
@@ -199,8 +178,7 @@ class MBActor(nn.Module):
         ensemble_stds = torch.sqrt(ensemble_var).mean(0)
 
         if self.dynamics_type == "probabilistic":
-            predictions = ensemble_means + torch.normal(mean=torch.zeros(ensemble_means.shape),
-                                                        std=torch.ones(ensemble_means.shape)).to(ensemble_means.device) * ensemble_stds
+            predictions = torch.normal(mean=ensemble_means, std=ensemble_stds)
         else:
             predictions = ensemble_means
 
@@ -225,23 +203,15 @@ class MBActor(nn.Module):
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
         assert len(mean.shape) == len(logvar.shape) == len(labels.shape) == 3
-        if self.loss_type == "maximum likelihood":
-            inv_var = (-logvar).exp()
-            if not validate:
-                mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
-                var_loss = logvar.mean(-1).mean(-1).sum()
-                total_loss = mse_loss + var_loss
-                total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
-                return total_loss_min_max
-            else:
-                mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
-                return mse_loss
+
+        inv_var = (-logvar).exp()
+        if not validate:
+            mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
+            var_loss = logvar.mean(-1).mean(-1).sum()
+            total_loss = mse_loss + var_loss
+            total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+            return total_loss_min_max
         else:
-            prediction = torch.normal(mean, torch.sqrt(torch.exp(logvar)))
-            assert prediction.shape == labels.shape
-            if not validate:
-                loss = self.loss_f(prediction, labels).mean(-1).mean(-1).sum()
-                return loss
-            else:
-                loss = self.loss_f(prediction, labels).mean(-1).mean(-1)
-                return loss
+            mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
+            return mse_loss
+
