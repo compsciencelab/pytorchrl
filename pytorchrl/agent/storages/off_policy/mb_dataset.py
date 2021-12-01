@@ -44,7 +44,7 @@ class MBReplayBuffer(S):
 
         self.actor = actor
         self.ensemble_size = actor.ensemble_size
-        self.scaler = actor.scaler
+        #self.scaler = actor.scaler
         self.validation_percentage = validation_percentage
         self.ensemble_size = actor.ensemble_size
         self.device = device
