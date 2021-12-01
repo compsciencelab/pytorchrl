@@ -99,7 +99,7 @@ class CNN(nn.Module):
 
         out = self.feature_extractor(inputs)
         out = out.contiguous()
-        out = out.view(inputs.size(0).size(0), -1)
+        out = out.view(inputs.size(0), -1)
         out = self.head(out)
 
         return out
