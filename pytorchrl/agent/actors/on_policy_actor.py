@@ -8,7 +8,7 @@ import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.memory_networks import GruNet
-from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor
+from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
 
 class OnPolicyActor(nn.Module):
@@ -24,7 +24,7 @@ class OnPolicyActor(nn.Module):
         Environment observation space.
     action_space : gym.Space
         Environment action space.
-    algorithm : str
+    algorithm_name : str
         Name of the RL algorithm used for learning.
     recurrent_nets : bool
         Whether to use a RNNs on top of the feature extractors.
@@ -41,7 +41,8 @@ class OnPolicyActor(nn.Module):
     def __init__(self,
                  input_space,
                  action_space,
-                 algorithm,
+                 algorithm_name,
+                 checkpoint=None,
                  recurrent_nets=False,
                  recurrent_nets_kwargs={},
                  feature_extractor_network=None,
@@ -49,6 +50,7 @@ class OnPolicyActor(nn.Module):
                  shared_policy_value_network=True):
 
         super(OnPolicyActor, self).__init__()
+        self.checkpoint = checkpoint
         self.input_space = input_space
         self.action_space = action_space
         self.recurrent_nets = recurrent_nets
@@ -57,10 +59,10 @@ class OnPolicyActor(nn.Module):
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
 
-        if algorithm in (prl.A2C, prl.PPO):
+        if algorithm_name in (prl.A2C, prl.PPO):
             self.num_critics_ext = 1
             self.num_critics_int = 0
-        elif algorithm in (prl.RND_PPO):
+        elif algorithm_name in (prl.RND_PPO):
             self.num_critics_ext = 1
             self.num_critics_int = 1
 
@@ -81,7 +83,7 @@ class OnPolicyActor(nn.Module):
             cls,
             input_space,
             action_space,
-            algorithm,
+            algorithm_name,
             restart_model=None,
             recurrent_nets=False,
             feature_extractor_kwargs={},
@@ -96,8 +98,8 @@ class OnPolicyActor(nn.Module):
             Environment observation space.
         action_space : gym.Space
             Environment action space.
-        algorithm : str
-            Name of the RL algorithm used for learning.
+        algorithm_name : str
+            Name of the RL algorithm_name used for learning.
         restart_model : str
             Path to a previously trained ActorCritic checkpoint to be loaded.
         feature_extractor_network : nn.Module
@@ -119,17 +121,19 @@ class OnPolicyActor(nn.Module):
             """Create and return an actor critic instance."""
             policy = cls(input_space=input_space,
                          action_space=action_space,
-                         algorithm=algorithm,
+                         algorithm_name=algorithm_name,
                          recurrent_nets=recurrent_nets,
+                         checkpoint=restart_model,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
 
-            if isinstance(restart_model, str):
-                policy.load_state_dict(torch.load(restart_model, map_location=device))
-            elif isinstance(restart_model, dict):
-                for submodule, checkpoint in restart_model.items():
-                    partially_load_checkpoint(policy, submodule, checkpoint)
+            # if isinstance(restart_model, str):
+            #     policy.load_state_dict(torch.load(restart_model, map_location=device))
+            # elif isinstance(restart_model, dict):
+            #     for submodule, checkpoint in restart_model.items():
+            #         partially_load_checkpoint(policy, submodule, checkpoint)
+
             policy.to(device)
 
             return policy
@@ -473,3 +477,11 @@ class OnPolicyActor(nn.Module):
         ]))
 
         setattr(self, name, policy_net)
+
+    def try_load_from_checkpoint(self):
+        """Load weights from previously saved checkpoint."""
+        if isinstance(self.checkpoint, str):
+            self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
+        elif isinstance(self.checkpoint, dict):
+            for submodule, checkpoint in self.checkpoint.items():
+                partially_load_checkpoint(self, submodule, checkpoint)

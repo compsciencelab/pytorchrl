@@ -24,7 +24,7 @@ class OffPolicyActor(nn.Module):
         Environment observation space.
     action_space : gym.Space
         Environment action space.
-    algorithm : str
+    algorithm_name : str
         Name of the RL algorithm used for learning.
     noise : str
         Type of exploration noise that will be added to the deterministic actions.
@@ -56,7 +56,7 @@ class OffPolicyActor(nn.Module):
     def __init__(self,
                  input_space,
                  action_space,
-                 algorithm,
+                 algorithm_name,
                  noise=None,
                  sequence_overlap=0.5,
                  recurrent_nets=False,
@@ -72,7 +72,7 @@ class OffPolicyActor(nn.Module):
         super(OffPolicyActor, self).__init__()
 
         self.noise = noise
-        self.algorithm = algorithm
+        self.algorithm_name = algorithm_name
         self.input_space = input_space
         self.action_space = action_space
         self.act_feature_extractor = act_feature_extractor
@@ -85,7 +85,7 @@ class OffPolicyActor(nn.Module):
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
         self.num_critics = num_critics
-        self.deterministic = algorithm in [prl.DDPG, prl.TD3]
+        self.deterministic = algorithm_name in [prl.DDPG, prl.TD3]
 
         # ----- Policy Network ----------------------------------------------------
 
@@ -101,7 +101,7 @@ class OffPolicyActor(nn.Module):
             cls,
             input_space,
             action_space,
-            algorithm,
+            algorithm_name,
             noise=None,
             restart_model=None,
             sequence_overlap=0.5,
@@ -125,7 +125,7 @@ class OffPolicyActor(nn.Module):
             Environment observation space.
         action_space : gym.Space
             Environment action space.
-        algorithm : str
+        algorithm_name : str
             Name of the RL algorithm used for learning.
         noise : str
             Type of exploration noise that will be added to the deterministic actions.
@@ -161,7 +161,7 @@ class OffPolicyActor(nn.Module):
             """Create and return an actor critic instance."""
             policy = cls(input_space=input_space,
                          action_space=action_space,
-                         algorithm=algorithm,
+                         algorithm_name=algorithm_name,
                          noise=noise,
                          sequence_overlap=sequence_overlap,
                          recurrent_nets_kwargs=recurrent_nets_kwargs,
@@ -556,7 +556,7 @@ class OffPolicyActor(nn.Module):
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.Box) and not self.deterministic:
-            if self.algorithm in [prl.SAC]:
+            if self.algorithm_name in [prl.SAC]:
                 dist = get_dist("SquashedGaussian")(self.recurrent_size, self.action_space.shape[0])
             else:
                 dist = get_dist("Gaussian")(self.recurrent_size, self.action_space.shape[0])

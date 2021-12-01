@@ -1,3 +1,4 @@
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -36,7 +37,11 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
 
         self.rgb_norm = rgb_norm
-        input_shape = input_space.shape
+
+        if isinstance(input_space, gym.Space):
+            input_shape = input_space.shape
+        else:
+            input_shape = input_space
 
         if len(input_shape) != 3:
             raise ValueError("Trying to extract features with a CNN for an obs space with len(shape) != 3")
@@ -85,7 +90,9 @@ class CNN(nn.Module):
         if self.rgb_norm:
             inputs = inputs / 255.0
 
-        out = self.feature_extractor(inputs).view(inputs.size(0), -1)
+        out = self.feature_extractor(inputs)
+        out = out.contiguous()
+        out = out.view(inputs.size(0).size(0), -1)
         out = self.head(out)
 
         return out

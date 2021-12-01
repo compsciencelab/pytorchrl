@@ -118,6 +118,9 @@ class CWorker(W):
         # Create Storage instance and set world initial state
         self.storage = storage_factory(self.device, self.actor, self.algo, self.envs_train)
 
+        # Try to load weight from previous checkpoint to actor
+        self.actor.try_load_from_checkpoint()
+
         # Define counters and other attributes
         self.iter, self.actor_version, self.samples_collected = 0, 0, 0
         self.update_every = self.algo.update_every or self.storage.max_size

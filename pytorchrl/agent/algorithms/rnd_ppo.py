@@ -7,6 +7,7 @@ from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
+from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
 from abc import ABC
 import numpy as np
@@ -101,6 +102,9 @@ class RND_PPO(Algorithm):
                  pre_normalization_steps=50,
                  pre_normalization_length=128,
                  use_clipped_value_loss=False,
+                 intrinsic_rewards_network=None,
+                 intrinsic_rewards_target_network_kwargs={},
+                 intrinsic_rewards_predictor_network_kwargs={},
                  policy_loss_addons=[]):
 
         # ---- General algo attributes ----------------------------------------
@@ -152,31 +156,56 @@ class RND_PPO(Algorithm):
 
         ### RND PPO STUFF ##################################################################################################
 
+        import ipdb; ipdb.set_trace()
+
+        # Get observation shape
+        obs_space = self.envs.observation_space.shape
+
+        # Get frame stack value
+        frame_stack = 1
+        if "frame_stack" in self.envs.env_kwargs.keys():
+            frame_stack = self.envs.env_kwargs["frame_stack"]
+
+        # Get number of obs channels
+        obs_channels = int(obs_space[0] / frame_stack)
+
+        # Define network type
+        int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
+
         # Create target model
-        setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
+        # setattr(self.actor, "target_model", TargetModel((obs_channels,) + obs_space[1:]).to(self.device))
+        setattr(self.actor, "target_model", int_net((obs_channels,) + obs_space[1:], **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
         for param in self.actor.target_model.parameters():
             param.requires_grad = False
 
         # Create predictor model
-        setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
+        # setattr(self.actor, "predictor_model", PredictorModel((obs_channels,) + obs_space[1:]).to(self.device))
+        setattr(self.actor, "predictor_model", int_net((obs_channels,) + obs_space[1:], **intrinsic_rewards_predictor_network_kwargs).to(self.device))
+
 
         # Define running means for int reward and obs
-        self.state_rms = RunningMeanStd(shape=(1, ) + self.actor.input_space.shape[1:], device=self.device)
+        self.state_rms = RunningMeanStd(shape=(1, ) + obs_space[1:], device=self.device)
+
+        import ipdb; ipdb.set_trace()
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
-        total_obs = torch.zeros((self.pre_normalization_length,  obs.shape[0], 1) + obs.shape[2:]).to(self.device)
+        total_obs = torch.zeros(
+            (self.pre_normalization_length,  obs.shape[0], obs_channels) + obs.shape[2:]).to(self.device)
         for i in range(self.pre_normalization_steps * self.pre_normalization_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            total_obs[i % self.pre_normalization_length].copy_(obs[:, -1:, :, :])
+            # total_obs[i % self.pre_normalization_length].copy_(obs[:, -1:, :, :])
+            total_obs[i % self.pre_normalization_length].copy_(obs[:, -obs_channels:, ...])
             if i % self.pre_normalization_length == 0 and i != 0:
                 self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
                 print("{}/{}".format(i//self.pre_normalization_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
+
+        import ipdb; ipdb.set_trace()
 
         # ----- Optimizers ----------------------------------------------------
 
