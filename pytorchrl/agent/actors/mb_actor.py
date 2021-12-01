@@ -54,7 +54,6 @@ class MBActor(nn.Module):
         self.elite_size = elite_size
         self.elite_idxs = [i for i in range(self.elite_size)]
         self.scaler = StandardScaler()
-        self.rollout_select = "random"
         self.batch_size = 256
         self.hidden_size = 200
         self.hidden_layer = 3
@@ -193,21 +192,14 @@ class MBActor(nn.Module):
 
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         ensemble_means[:, :, :-1] += states.to(self.device)
-        ensemble_std = torch.sqrt(ensemble_var)
+        ensemble_means = ensemble_means.mean(0)
+        ensemble_stds = np.sqrt(ensemble_var).mean(0)
 
         if self.dynamics_type == "probabilistic":
-            ensemble_predictions = torch.normal(ensemble_means, ensemble_std)
+            predictions = ensemble_means + np.random.normal(size=ensemble_means.shape) * ensemble_stds
         else:
-            ensemble_predictions = ensemble_means
+            predictions = ensemble_means
 
-        if self.rollout_select == "random":
-            # choose what predictions we select from what ensemble member
-            ensemble_idx = random.choices(self.elite_idxs, k=states.shape[0])
-            step_idx = np.arange(states.shape[0])
-            # pick prediction based on ensemble idxs
-            predictions = ensemble_predictions[ensemble_idx, step_idx, :]
-        else:
-            predictions = ensemble_predictions[self.elite_idxs].mean(0)
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
         next_states = predictions[:, :-1]
