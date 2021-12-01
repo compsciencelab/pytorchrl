@@ -7,7 +7,7 @@ from collections import OrderedDict
 import pytorchrl as prl
 from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
-from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
+from pytorchrl.agent.actors.utils import Scale, Unscale, init
 from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor, get_feature_extractor
 
@@ -21,12 +21,16 @@ class OffPolicyActor(Actor):
 
     Parameters
     ----------
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
     input_space : gym.Space
         Environment observation space.
     action_space : gym.Space
         Environment action space.
     algorithm_name : str
         Name of the RL algorithm used for learning.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
     noise : str
         Type of exploration noise that will be added to the deterministic actions.
     obs_feature_extractor : nn.Module
@@ -157,20 +161,22 @@ class OffPolicyActor(Actor):
             Keyword arguments for the memory network.
         num_critics : int
             Number of Q networks to be instantiated.
+        restart_model : str
+            Path to a previously trained Actor checkpoint to be loaded.
 
         Returns
         -------
-        create_actor_critic_instance : func
+        create_actor_instance : func
             creates a new OffPolicyActor class instance.
         """
 
-        def create_actor_critic_instance(device):
+        def create_actor_instance(device):
             """Create and return an actor critic instance."""
-            policy = cls(device=device,
+            policy = cls(noise=noise,
+                         device=device,
                          input_space=input_space,
                          action_space=action_space,
                          algorithm_name=algorithm_name,
-                         noise=noise,
                          checkpoint=restart_model,
                          sequence_overlap=sequence_overlap,
                          recurrent_nets_kwargs=recurrent_nets_kwargs,
@@ -182,17 +188,10 @@ class OffPolicyActor(Actor):
                          common_feature_extractor=common_feature_extractor,
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
                          num_critics=num_critics)
-
-            if isinstance(restart_model, str):
-                policy.load_state_dict(torch.load(restart_model, map_location=device))
-            elif isinstance(restart_model, dict):
-                for submodule, checkpoint in restart_model.items():
-                    partially_load_checkpoint(policy, submodule, checkpoint)
             policy.to(device)
-
             return policy
 
-        return create_actor_critic_instance
+        return create_actor_instance
 
     @property
     def is_recurrent(self):

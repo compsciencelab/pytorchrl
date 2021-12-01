@@ -7,6 +7,7 @@ def atari_train_env_factory(
         episodic_life=True, clip_rewards=False, max_episode_steps=4500):
     """
     Create train Atari environment.
+
     Parameters
     ----------
     env_id : str
@@ -29,10 +30,7 @@ def atari_train_env_factory(
         Whether or not to clip rewards between -1 and 1.
     max_episode_steps : int
         Maximum number of steps per episode.
-<<<<<<< HEAD
 
-=======
->>>>>>> master
     Returns
     -------
     env : gym.Env
@@ -58,6 +56,7 @@ def atari_train_env_factory(
 def atari_test_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1):
     """
     Create test Atari environment.
+
     Parameters
     ----------
     env_id : str
@@ -74,6 +73,7 @@ def atari_test_env_factory(env_id, index_col_worker, index_grad_worker, index_en
         Observations composed of last `frame_stack` frames stacked.
     reward_delay : int
         Only return accumulated reward every `reward_delay` steps to simulate sparse reward environment.
+
     Returns
     -------
     env : gym.Env

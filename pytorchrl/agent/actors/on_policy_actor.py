@@ -7,7 +7,7 @@ from collections import OrderedDict
 import pytorchrl as prl
 from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
-from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
+from pytorchrl.agent.actors.utils import Scale, Unscale, init
 from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
@@ -21,12 +21,16 @@ class OnPolicyActor(Actor):
 
     Parameters
     ----------
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
     input_space : gym.Space
         Environment observation space.
     action_space : gym.Space
         Environment action space.
     algorithm_name : str
         Name of the RL algorithm used for learning.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
     recurrent_nets : bool
         Whether to use a RNNs on top of the feature extractors.
     recurrent_nets_kwargs:
@@ -105,7 +109,7 @@ class OnPolicyActor(Actor):
         algorithm_name : str
             Name of the RL algorithm_name used for learning.
         restart_model : str
-            Path to a previously trained ActorCritic checkpoint to be loaded.
+            Path to a previously trained Actor checkpoint to be loaded.
         feature_extractor_network : nn.Module
             PyTorch nn.Module used as the features extraction block in all networks.
         feature_extractor_kwargs : dict
@@ -132,13 +136,6 @@ class OnPolicyActor(Actor):
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
-
-            # if isinstance(restart_model, str):
-            #     policy.load_state_dict(torch.load(restart_model, map_location=device))
-            # elif isinstance(restart_model, dict):
-            #     for submodule, checkpoint in restart_model.items():
-            #         partially_load_checkpoint(policy, submodule, checkpoint)
-
             policy.to(device)
 
             return policy

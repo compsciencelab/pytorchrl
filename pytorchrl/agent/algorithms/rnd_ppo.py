@@ -31,6 +31,8 @@ class RND_PPO(Algorithm):
     ----------
     device: torch.device
         CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     lr : float
@@ -199,8 +201,6 @@ class RND_PPO(Algorithm):
                 print("{}/{}".format(i//self.pre_normalization_length, self.pre_normalization_steps))
         envs.reset()
         print("---Pre_normalization is done.---")
-
-        import ipdb; ipdb.set_trace()
 
         # ----- Optimizers ----------------------------------------------------
 

@@ -10,10 +10,14 @@ class Actor(nn.Module, ABC):
 
     Parameters
     ----------
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
     input_space : gym.Space
         Environment observation space.
     action_space : gym.Space
         Environment action space.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
     """
     def __init__(self,
                  device,
@@ -42,10 +46,14 @@ class Actor(nn.Module, ABC):
 
         Parameters
         ----------
+        device: torch.device
+            CPU or specific GPU where class computations will take place.
         input_space : gym.Space
             Environment observation space.
         action_space : gym.Space
             Environment action space.
+        checkpoint : str
+            Path to a previously trained Actor checkpoint to be loaded.
 
         Returns
         -------

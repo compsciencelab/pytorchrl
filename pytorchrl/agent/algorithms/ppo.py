@@ -21,6 +21,8 @@ class PPO(Algorithm):
     ----------
     device: torch.device
         CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     lr : float
@@ -60,6 +62,7 @@ class PPO(Algorithm):
 
     def __init__(self,
                  device,
+                 envs,
                  actor,
                  lr=1e-4,
                  eps=1e-8,
@@ -103,8 +106,9 @@ class PPO(Algorithm):
 
         # ---- PPO-specific attributes ----------------------------------------
 
-        self.device = device
+        self.envs = envs
         self.actor = actor
+        self.device = device
         self.clip_param = clip_param
         self.entropy_coef = entropy_coef
         self.max_grad_norm = max_grad_norm
@@ -190,12 +194,13 @@ class PPO(Algorithm):
         algo_name : str
             Name of the algorithm.
         """
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(lr=lr,
                        eps=eps,
+                       envs=envs,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
-                       actor=actor,
                        test_every=test_every,
                        num_epochs=num_epochs,
                        clip_param=clip_param,

@@ -22,12 +22,12 @@ class PPODBuffer(B):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     algorithm : Algorithm
-        Algorithm class instance
-    envs: VecEnv
-        Train environments vector.
+        Algorithm class instance.
     initial_human_demos_dir : str
         Path to directory containing human initial demonstrations.
     initial_agent_demos_dir : str
