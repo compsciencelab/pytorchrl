@@ -60,8 +60,8 @@ class MB_MPC(Algorithm):
         else:
             raise ValueError
 
-        self.action_high = torch.from_numpy(self.mpc.action_high).float()
-        self.action_low = torch.from_numpy(self.mpc.action_low).float()
+        self.action_high = torch.from_numpy(self.mpc.action_high).float().to(device)
+        self.action_low = torch.from_numpy(self.mpc.action_low).float().to(device)
 
         self.iter = 0
         self.device = device
