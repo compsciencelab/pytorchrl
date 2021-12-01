@@ -193,10 +193,10 @@ class MBActor(nn.Module):
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         ensemble_means[:, :, :-1] += states.to(self.device)
         ensemble_means = ensemble_means.mean(0)
-        ensemble_stds = np.sqrt(ensemble_var).mean(0)
+        ensemble_stds = torch.sqrt(ensemble_var).mean(0)
 
         if self.dynamics_type == "probabilistic":
-            predictions = ensemble_means + np.random.normal(size=ensemble_means.shape) * ensemble_stds
+            predictions = ensemble_means + torch.normal(size=ensemble_means.shape) * ensemble_stds
         else:
             predictions = ensemble_means
 
