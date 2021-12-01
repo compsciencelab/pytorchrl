@@ -156,8 +156,6 @@ class RND_PPO(Algorithm):
 
         ### RND PPO STUFF ##################################################################################################
 
-        import ipdb; ipdb.set_trace()
-
         # Get observation shape
         obs_space = self.envs.observation_space.shape
 
@@ -184,11 +182,8 @@ class RND_PPO(Algorithm):
         # setattr(self.actor, "predictor_model", PredictorModel((obs_channels,) + obs_space[1:]).to(self.device))
         setattr(self.actor, "predictor_model", int_net((obs_channels,) + obs_space[1:], **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
-
         # Define running means for int reward and obs
         self.state_rms = RunningMeanStd(shape=(1, ) + obs_space[1:], device=self.device)
-
-        import ipdb; ipdb.set_trace()
 
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())

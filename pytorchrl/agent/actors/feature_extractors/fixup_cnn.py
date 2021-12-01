@@ -1,4 +1,5 @@
 
+import gym
 import math
 import numpy as np
 import torch
@@ -22,7 +23,12 @@ class FixupCNN(nn.Module):
         super(FixupCNN, self).__init__()
 
         self.rgb_norm = rgb_norm
-        input_shape = input_space.shape
+
+        if isinstance(input_space, gym.Space):
+            input_shape = input_space.shape
+        else:
+            input_shape = input_space
+
         if len(input_shape) != 3:
             raise ValueError("Trying to extract features with Fixup CNN for "
                              "an obs space with len(shape) != 3")

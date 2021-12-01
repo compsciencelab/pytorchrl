@@ -1,5 +1,6 @@
 from abc import ABC
 import numpy as np
+import gym
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -16,7 +17,12 @@ class CNN(nn.Module, ABC):
     def __init__(self, input_space):
         super(CNN, self).__init__()
 
-        c, w, h = input_space.shape
+        if isinstance(input_space, gym.Space):
+            input_shape = input_space.shape
+        else:
+            input_shape = input_space
+
+        c, w, h = input_shape
         self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
