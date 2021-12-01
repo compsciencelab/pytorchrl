@@ -5,13 +5,14 @@ import numpy as np
 from collections import OrderedDict
 
 import pytorchrl as prl
+from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor, get_feature_extractor
 
 
-class OffPolicyActor(nn.Module):
+class OffPolicyActor(Actor):
     """
     Actor critic class for Off-Policy algorithms.
 
@@ -54,10 +55,12 @@ class OffPolicyActor(nn.Module):
     --------
     """
     def __init__(self,
+                 device,
                  input_space,
                  action_space,
                  algorithm_name,
                  noise=None,
+                 checkpoint=None,
                  sequence_overlap=0.5,
                  recurrent_nets=False,
                  recurrent_nets_kwargs={},
@@ -69,7 +72,11 @@ class OffPolicyActor(nn.Module):
                  common_feature_extractor_kwargs={},
                  num_critics=2):
 
-        super(OffPolicyActor, self).__init__()
+        super(OffPolicyActor, self).__init__(
+            device=device,
+            checkpoint=checkpoint,
+            input_space=input_space,
+            action_space=action_space)
 
         self.noise = noise
         self.algorithm_name = algorithm_name
@@ -159,10 +166,12 @@ class OffPolicyActor(nn.Module):
 
         def create_actor_critic_instance(device):
             """Create and return an actor critic instance."""
-            policy = cls(input_space=input_space,
+            policy = cls(device=device,
+                         input_space=input_space,
                          action_space=action_space,
                          algorithm_name=algorithm_name,
                          noise=noise,
+                         checkpoint=restart_model,
                          sequence_overlap=sequence_overlap,
                          recurrent_nets_kwargs=recurrent_nets_kwargs,
                          recurrent_nets=recurrent_nets,

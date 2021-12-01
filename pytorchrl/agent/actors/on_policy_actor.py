@@ -57,10 +57,6 @@ class OnPolicyActor(Actor):
             input_space=input_space,
             action_space=action_space)
 
-        # self.device = device
-        # self.checkpoint = checkpoint
-        # self.input_space = input_space
-        # self.action_space = action_space
         self.recurrent_nets = recurrent_nets
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
         self.feature_extractor_network = feature_extractor_network
@@ -486,13 +482,3 @@ class OnPolicyActor(Actor):
         ]))
 
         setattr(self, name, policy_net)
-
-    def try_load_from_checkpoint(self):
-        """Load weights from previously saved checkpoint."""
-        if isinstance(self.checkpoint, str):
-            print("Loading all model weight from {}".format(self.checkpoint))
-            self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
-        elif isinstance(self.checkpoint, dict):
-            for submodule, checkpoint in self.checkpoint.items():
-                print("Loading {} model weight from {}".format(submodule, self.checkpoint))
-                partially_load_checkpoint(self, submodule, checkpoint)
