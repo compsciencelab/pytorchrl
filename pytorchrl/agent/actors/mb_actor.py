@@ -196,7 +196,8 @@ class MBActor(nn.Module):
         ensemble_stds = torch.sqrt(ensemble_var).mean(0)
 
         if self.dynamics_type == "probabilistic":
-            predictions = ensemble_means + torch.normal(size=ensemble_means.shape) * ensemble_stds
+            predictions = ensemble_means + torch.normal(mean=torch.zeros(ensemble_means.shape),
+                                                        std=torch.ones(ensemble_means.shape)) * ensemble_stds
         else:
             predictions = ensemble_means
 
