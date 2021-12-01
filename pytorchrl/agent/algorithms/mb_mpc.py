@@ -169,10 +169,10 @@ class MB_MPC(Algorithm):
         self.actor.train()
         mean, logvar, min_max_var = self.actor.get_prediction(inputs=train_inputs, ret_log_var=True)
         loss, total_loss_min_max = self.actor.calculate_loss(mean=mean,
-                                                            logvar=logvar,
-                                                            min_max_var=min_max_var,
-                                                            labels=train_labels,
-                                                                inc_var_loss=True)
+                                                             logvar=logvar,
+                                                             min_max_var=min_max_var,
+                                                             labels=train_labels,
+                                                             inc_var_loss=True)
         
         return loss, total_loss_min_max
     
