@@ -18,21 +18,26 @@ class CNN(nn.Module):
         Whether or not to divide input by 255.
     activation : func
         Non-linear activation function.
+    final_activation : bool
+        Whether or not to apply activation function after last layer.
     strides : list
         Convolutional layers strides.
     filters : list
         Convolutional layers number of filters.
     kernel_sizes : list
         Convolutional layers kernel sizes.
+    output_sizes : list
+        output hidden layers sizes.
     """
     def __init__(self,
                  input_space,
                  rgb_norm=True,
-                 output_size=[256, 448],
                  activation=nn.ReLU,
+                 final_activation=True,
                  strides=[4, 2, 1],
                  filters=[32, 64, 64],
-                 kernel_sizes=[8, 4, 3]):
+                 kernel_sizes=[8, 4, 3],
+                 output_sizes=[256, 448]):
 
         super(CNN, self).__init__()
 
@@ -64,12 +69,14 @@ class CNN(nn.Module):
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
-        # Define final MLP layer
+        # Define final MLP layers
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_space.shape)).shape))
         layers = []
-        sizes = [feature_size] + output_size
+        sizes = [feature_size] + output_sizes
         for j in range(len(sizes) - 1):
-            layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
+            layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
+            if not (j == len(sizes) - 2 and final_activation):
+                layers += [activation()]
         self.head = nn.Sequential(*layers)
 
         self.train()

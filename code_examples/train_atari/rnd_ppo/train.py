@@ -2,11 +2,6 @@
 import sys
 import subprocess
 
-
-# Install required pip packages
-def install(package): subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-
 import os
 import ray
 import time
@@ -28,6 +23,7 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.storages import GAEBuffer
+
 
 def main():
 
@@ -93,15 +89,22 @@ def main():
             predictor_proportion=args.predictor_proportion, gamma=args.gamma,
             pre_normalization_steps=args.pre_normalization_steps,
             pre_normalization_length=args.num_steps,
+            intrinsic_rewards_network=get_feature_extractor(args.nn),
+            intrinsic_rewards_target_network_kwargs={
+                "output_sizes": [512],
+                 "activation": nn.LeakyReLU,
+            },
+            intrinsic_rewards_predictor_network_kwargs={
+                "output_sizes": [512, 512, 512],
+                 "activation": nn.LeakyReLU,
+            },
         )
 
         # Look for available model checkpoint in log_dir - node failure case
         checkpoints = sorted(glob.glob(os.path.join(args.log_dir, "model.state_dict*")))
         if len(checkpoints) > 0:
             checkpoint = checkpoints[-1]
-            print("Loading model from {}\n".format(checkpoint))
         else:
-            print("Training model from scratch\n")
             checkpoint = None
 
         # Define RL Policy

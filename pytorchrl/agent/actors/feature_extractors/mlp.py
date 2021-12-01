@@ -17,8 +17,10 @@ class MLP(nn.Module):
         Hidden layers sizes.
     activation : func
         Non-linear activation function.
+    final_activation : bool
+        Whether or not to apply activation function after last layer.
     """
-    def __init__(self, input_space, hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU):
+    def __init__(self, input_space, hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU, final_activation=True):
         super(MLP, self).__init__()
 
         if isinstance(input_space, gym.Space):
@@ -37,7 +39,9 @@ class MLP(nn.Module):
         layers = []
         sizes = [np.prod(input_shape)] + hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
-            layers += [init_(nn.Linear(sizes[j], sizes[j + 1])), activation()]
+            layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
+            if not (j == len(sizes) - 2 and final_activation):
+                layers += [activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
         self.train()

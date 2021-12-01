@@ -22,10 +22,10 @@ class RND_PPO(Algorithm):
     """
     Proximal Policy Optimization algorithm class.
 
-    Algorithm class to execute PPO, from Schulman et al.
-    (https://arxiv.org/abs/1707.06347). Algorithms are modules generally
-    required by multiple workers, so PPO.algo_factory(...) returns a function
-    that can be passed on to workers to instantiate their own PPO module.
+    Algorithm class to execute RND PPO, from Burda et al., 2018
+    (https://arxiv.org/abs/1810.12894). Algorithms are modules generally
+    required by multiple workers, so RND_PPO.algo_factory(...) returns a function
+    that can be passed on to workers to instantiate their own RND_PPO module.
 
     Parameters
     ----------
@@ -61,18 +61,24 @@ class RND_PPO(Algorithm):
         Prevent value loss from shifting too fast.
     policy_loss_addons : list
         List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
-
     gamma_intrinsic: float
-
+        Discount factor parameter for intrinsic rewards.
     ext_adv_coeff: float
-
+        Extrinsic advantage coefficient.
     int_adv_coeff: float
-
+        Intrinsic advantage coefficient.
     predictor_proportion: float
-
-    pre_normalization_length: int
-
+        Proportion of buffer sample to use to train the predictor network.
     pre_normalization_steps: int
+        Number of obs running average normalization steps to take before starting to train.
+    pre_normalization_length: int
+        Length of each pre normalization steps (in environment steps).
+    intrinsic_rewards_network : nn.Module
+        PyTorch nn.Module used for target and predictor networks.
+    intrinsic_rewards_target_network_kwargs : dict
+        Keyword arguments for the target network.
+    intrinsic_rewards_predictor_network_kwargs : dict
+        Keyword arguments for the predictor network.
 
     Examples
     --------
@@ -156,8 +162,6 @@ class RND_PPO(Algorithm):
         assert hasattr(self.actor, "value_net1"), "RND_PPO requires value critic"
         assert hasattr(self.actor, "ivalue_net1"), "RND_PPO requires ivalue critic"
 
-        ### RND PPO STUFF ##################################################################################################
-
         # Get observation shape
         obs_space = self.envs.observation_space.shape
 
@@ -173,16 +177,20 @@ class RND_PPO(Algorithm):
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
 
         # Create target model
-        # setattr(self.actor, "target_model", TargetModel((obs_channels,) + obs_space[1:]).to(self.device))
-        setattr(self.actor, "target_model", int_net((obs_channels,) + obs_space[1:], **intrinsic_rewards_target_network_kwargs).to(self.device))
+        setattr(
+            self.actor, "target_model",
+            int_net((obs_channels,) + obs_space[1:],
+                    **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
         for param in self.actor.target_model.parameters():
             param.requires_grad = False
 
         # Create predictor model
-        # setattr(self.actor, "predictor_model", PredictorModel((obs_channels,) + obs_space[1:]).to(self.device))
-        setattr(self.actor, "predictor_model", int_net((obs_channels,) + obs_space[1:], **intrinsic_rewards_predictor_network_kwargs).to(self.device))
+        setattr(
+            self.actor, "predictor_model",
+            int_net((obs_channels,) + obs_space[1:],
+                    **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
         # Define running means for int reward and obs
         self.state_rms = RunningMeanStd(shape=(1, ) + obs_space[1:], device=self.device)
@@ -194,7 +202,6 @@ class RND_PPO(Algorithm):
         for i in range(self.pre_normalization_steps * self.pre_normalization_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            # total_obs[i % self.pre_normalization_length].copy_(obs[:, -1:, :, :])
             total_obs[i % self.pre_normalization_length].copy_(obs[:, -obs_channels:, ...])
             if i % self.pre_normalization_length == 0 and i != 0:
                 self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
@@ -245,9 +252,12 @@ class RND_PPO(Algorithm):
                        pre_normalization_steps=50,
                        pre_normalization_length=128,
                        use_clipped_value_loss=True,
+                       intrinsic_rewards_network=None,
+                       intrinsic_rewards_target_network_kwargs={},
+                       intrinsic_rewards_predictor_network_kwargs={},
                        policy_loss_addons=[]):
         """
-        Returns a function to create new PPO instances.
+        Returns a function to create new RND PPO instances.
 
         Parameters
         ----------
@@ -275,19 +285,26 @@ class RND_PPO(Algorithm):
             PPO value coefficient parameter.
         use_clipped_value_loss : bool
             Prevent value loss from shifting too fast.
+        gamma_intrinsic: float
+            Discount factor parameter for intrinsic rewards.
+        ext_adv_coeff: float
+            Extrinsic advantage coefficient.
+        int_adv_coeff: float
+            Intrinsic advantage coefficient.
+        predictor_proportion: float
+            Proportion of buffer sample to use to train the predictor network.
+        pre_normalization_steps: int
+            Number of obs running average normalization steps to take before starting to train.
+        pre_normalization_length: int
+            Length of each pre normalization steps (in environment steps).
+        intrinsic_rewards_network : nn.Module
+            PyTorch nn.Module used for target and predictor networks.
+        intrinsic_rewards_target_network_kwargs : dict
+            Keyword arguments for the target network.
+        intrinsic_rewards_predictor_network_kwargs : dict
+            Keyword arguments for the predictor network.
         policy_loss_addons : list
             List of PolicyLossAddOn components adding loss terms to the algorithm policy loss.
-        gamma_intrinsic: float
-
-        ext_adv_coeff: float
-
-        int_adv_coeff: float
-
-        predictor_proportion: float
-
-        pre_normalization_length: int
-
-        pre_normalization_steps: int
 
         Returns
         -------
@@ -318,6 +335,9 @@ class RND_PPO(Algorithm):
                        pre_normalization_length=pre_normalization_length,
                        pre_normalization_steps=pre_normalization_steps,
                        use_clipped_value_loss=use_clipped_value_loss,
+                       intrinsic_rewards_network=intrinsic_rewards_network,
+                       intrinsic_rewards_target_network_kwargs=intrinsic_rewards_target_network_kwargs,
+                       intrinsic_rewards_predictor_network_kwargs=intrinsic_rewards_predictor_network_kwargs,
                        policy_loss_addons=policy_loss_addons)
 
         return create_algo_instance, prl.RND_PPO

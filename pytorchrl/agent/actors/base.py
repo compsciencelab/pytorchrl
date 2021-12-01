@@ -229,3 +229,5 @@ class Actor(nn.Module, ABC):
             for submodule, checkpoint in self.checkpoint.items():
                 print("Loading {} model weight from {}".format(submodule, self.checkpoint))
                 partially_load_checkpoint(self, submodule, checkpoint)
+        else:
+            print("Training model from scratch")
