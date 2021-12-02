@@ -189,6 +189,12 @@ class OffPolicyActor(Actor):
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
                          num_critics=num_critics)
             policy.to(device)
+
+            try:
+                policy.try_load_from_checkpoint()
+            except RuntimeError:
+                pass
+
             return policy
 
         return create_actor_instance

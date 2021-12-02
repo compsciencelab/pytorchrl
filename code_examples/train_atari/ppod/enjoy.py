@@ -5,8 +5,8 @@ import time
 import torch
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+from pytorchrl.envs.atari import atari_train_env_factory
+from pytorchrl.agent.actors import OnPolicyActor
 from code_examples.train_atari.ppod.train import get_args
 
 

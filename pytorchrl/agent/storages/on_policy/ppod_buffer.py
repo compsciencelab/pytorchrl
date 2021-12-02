@@ -172,7 +172,7 @@ class PPODBuffer(B):
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
-        # Retrieve most recent obs, rhs and done tensors
+        # Get most recent state
         last_tensors = {}
         step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
@@ -181,23 +181,33 @@ class PPODBuffer(B):
             else:
                 last_tensors[k] = self.data[k][step]
 
-        # Compute next value prediction
+        # Predict values given most recent state
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        # Assign predictions to self.data
-        self.data[prl.VAL][step].copy_(next_value)
+        # Store next recurrent hidden state
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
                 self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
-            self.data[prl.RHS][step].copy_(next_rhs)
+            self.data[prl.RHS][step] = next_rhs
 
-        self.compute_returns()
-        self.compute_advantages()
+        # Compute returns and advantages
+        if isinstance(self.data[prl.VAL], dict):
+            # If multiple critics
+            for x in self.data[prl.VAL]:
+                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
+                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
+        else:
+            # If single critic
+            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+            self.compute_returns(
+                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
+            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
@@ -433,7 +443,7 @@ class PPODBuffer(B):
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                if demo["FrameSkip"] != self.frame_skip:
+                if int(demo["FrameSkip"]) != self.frame_skip:
                     raise ValueError(
                         "Env and demo with different frame skip!")
 

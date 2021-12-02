@@ -1,8 +1,8 @@
 import gym
 import numpy as np
-import torch
 import torch.nn as nn
 from pytorchrl.agent.actors.utils import init
+from pytorchrl.agent.actors.feature_extractors.utils import get_gain
 
 
 class MLP(nn.Module):
@@ -28,12 +28,7 @@ class MLP(nn.Module):
         else:
             input_shape = input_space
 
-        try:
-            gain = nn.init.calculate_gain(activation.__name__.lower())
-        except Exception:
-            gain = 1.0
-
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init. constant_(x, 0), gain)
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init. constant_(x, 0), get_gain(activation))
 
         # Define feature extractor
         layers = []

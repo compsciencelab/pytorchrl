@@ -89,14 +89,11 @@ def init(module, weight_init, bias_init, gain=1):
     return module
 
 
-def partially_load_checkpoint(module, submodule_name, checkpoint):
+def partially_load_checkpoint(module, submodule_name, checkpoint, map_location):
     """Load `submodule_name` to `module` from checkpoint."""
 
     current_state = module.state_dict()
-    checkpoint_state = torch.load(checkpoint)
-
-    # assert current_state.keys() == checkpoint_state.keys()
-
+    checkpoint_state = torch.load(checkpoint, map_location=map_location)
     for name, param in checkpoint_state.items():
         if name.startswith(submodule_name):
             current_state[name].copy_(param)

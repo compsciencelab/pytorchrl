@@ -138,6 +138,11 @@ class OnPolicyActor(Actor):
                          shared_policy_value_network=shared_policy_value_network)
             policy.to(device)
 
+            try:
+                policy.try_load_from_checkpoint()
+            except RuntimeError:
+                pass
+
             return policy
 
         return create_actor_critic_instance

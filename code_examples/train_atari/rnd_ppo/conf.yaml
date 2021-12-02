@@ -1,6 +1,5 @@
 agent_name: MontezumaAgent
 clip_param: 0.1
-clip_rewards: true
 cluster: false
 com_col_workers: synchronous
 com_grad_workers: synchronous
@@ -8,6 +7,8 @@ conf: null
 entropy_coef: 0.001
 env_id: MontezumaRevengeNoFrameskip-v4
 episodic_life: false
+sticky_actions: True
+clip_rewards: true
 experiment_name: MontezumaRevengeNoFrameskip-v4
 frame_skip: 0
 frame_stack: 4
@@ -20,15 +21,14 @@ max_grad_norm: 50.0
 max_time: 8640000
 nn: CNN
 num_col_workers: 1
-num_env_processes: 128
+num_env_processes: 2
 num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128
 ppo_epoch: 4
-recurrent_policy: false
+recurrent_nets: false
 restart_model: null
 save_interval: 100
-seed: 0
 start_env_steps: 0
 target_env_steps: 1_000_000_000
 value_loss_coef: 1.0
@@ -38,4 +38,3 @@ int_adv_coeff: 1.0
 predictor_proportion: 0.25
 pre_normalization_steps: 50
 wandb_key: null
-sticky_actions: True

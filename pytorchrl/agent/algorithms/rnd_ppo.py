@@ -176,25 +176,27 @@ class RND_PPO(Algorithm):
         # Define network type
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
 
-        # Create target model
-        setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
+        import ipdb; ipdb.set_trace()
 
-        # setattr(
-        #     self.actor, "target_model",
-        #     int_net((obs_channels,) + obs_space[1:],
-        #             **intrinsic_rewards_target_network_kwargs).to(self.device))
+        # Create target model
+        #  setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
+
+        setattr(
+            self.actor, "target_model",
+            int_net((obs_channels,) + obs_space[1:],
+                    **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
         for param in self.actor.target_model.parameters():
             param.requires_grad = False
 
         # Create predictor model
-        setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
+        #  setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
 
-        # setattr(
-        #     self.actor, "predictor_model",
-        #     int_net((obs_channels,) + obs_space[1:],
-        #             **intrinsic_rewards_predictor_network_kwargs).to(self.device))
+        setattr(
+            self.actor, "predictor_model",
+            int_net((obs_channels,) + obs_space[1:],
+                    **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
         # Define running means for int reward and obs
         self.state_rms = RunningMeanStd(shape=(1, ) + obs_space[1:], device=self.device)

@@ -2,8 +2,8 @@ import gym
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 from pytorchrl.agent.actors.utils import init
+from pytorchrl.agent.actors.feature_extractors.utils import get_gain
 
 
 class CNN(nn.Module):
@@ -43,6 +43,8 @@ class CNN(nn.Module):
 
         self.rgb_norm = rgb_norm
 
+        assert len(filters) == len(strides) and len(strides) == len(kernel_sizes)
+
         if isinstance(input_space, gym.Space):
             input_shape = input_space.shape
         else:
@@ -51,16 +53,9 @@ class CNN(nn.Module):
         if len(input_shape) != 3:
             raise ValueError("Trying to extract features with a CNN for an obs space with len(shape) != 3")
 
-        assert len(filters) == len(strides) and len(strides) == len(kernel_sizes)
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), get_gain(activation))
 
-        try:
-            gain = nn.init.calculate_gain(activation.__name__.lower())
-        except Exception:
-            gain = 1.0
-
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain)
-
-        # Define feature extractor
+        # Define CNN feature extractor
         layers = []
         filters = [input_shape[0]] + filters
         for j in range(len(filters) - 1):

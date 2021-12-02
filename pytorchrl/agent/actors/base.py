@@ -228,6 +228,6 @@ class Actor(nn.Module, ABC):
         elif isinstance(self.checkpoint, dict):
             for submodule, checkpoint in self.checkpoint.items():
                 print("Loading {} model weight from {}".format(submodule, self.checkpoint))
-                partially_load_checkpoint(self, submodule, checkpoint)
+                partially_load_checkpoint(self, submodule, checkpoint, map_location=self.device)
         else:
             print("Training model from scratch")
