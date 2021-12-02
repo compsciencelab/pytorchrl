@@ -20,9 +20,9 @@ class Categorical(nn.Module):
         super(Categorical, self).__init__()
 
         # TODO. added!
-        self.extra_policy_fc = nn.Linear(in_features=448, out_features=448)
-        nn.init.orthogonal_(self.extra_policy_fc.weight, gain=np.sqrt(0.1))
-        self.extra_policy_fc.bias.data.zero_()
+        # self.extra_policy_fc = nn.Linear(in_features=448, out_features=448)
+        # nn.init.orthogonal_(self.extra_policy_fc.weight, gain=np.sqrt(0.1))
+        # self.extra_policy_fc.bias.data.zero_()
 
         init_ = lambda m: init(
             m,
@@ -60,7 +60,7 @@ class Categorical(nn.Module):
         """
 
         # TODO: added!
-        x = x + F.relu(self.extra_policy_fc(x))
+        # x = x + F.relu(self.extra_policy_fc(x))
 
         # Predict distribution parameters
         x = self.linear(x)
@@ -105,7 +105,7 @@ class Categorical(nn.Module):
         """
 
         # TODO: added!
-        x = x + F.relu(self.extra_policy_fc(x))
+        # x = x + F.relu(self.extra_policy_fc(x))
 
         # Predict distribution parameters
         x = self.linear(x)

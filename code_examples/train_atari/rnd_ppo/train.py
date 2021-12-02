@@ -75,6 +75,7 @@ def main():
                 "frame_stack": args.frame_stack,
                 "episodic_life": args.episodic_life,
                 "clip_rewards": args.clip_rewards,
+                "sticky_actions": args.sticky_actions,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))
@@ -246,6 +247,9 @@ def get_args():
     parser.add_argument(
         '--episodic-life', action='store_true', default=False,
         help='Treat end-of-life as end-of-episode')
+    parser.add_argument(
+        '--sticky-actions', action='store_true', default=False,
+        help='Use sticky actions')
 
     # RND PPO specs
     parser.add_argument(

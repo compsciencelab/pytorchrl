@@ -302,10 +302,10 @@ class OnPolicyActor(Actor):
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
 
-            # value = value_net.predictor(self.last_action_features)
+            value = value_net.predictor(self.last_action_features)
 
             # TODO: added
-            value = value_net.predictor(value_net.extra_value_fc(self.last_action_features))
+            #  value = value_net.predictor(value_net.extra_value_fc(self.last_action_features))
 
         else:
             value_features = value_net.feature_extractor(obs)
@@ -313,10 +313,10 @@ class OnPolicyActor(Actor):
                 value_features, rhs[value_net_name] = value_net.memory_net(
                     value_features, rhs[value_net_name], done)
 
-           #  value = value_net.predictor(value_features)
+            value = value_net.predictor(value_features)
 
             # TODO: added
-            value = value_net.predictor(value_net.extra_value_fc(self.last_action_features))
+            #  value = value_net.predictor(value_net.extra_value_fc(self.last_action_features))
 
         return value, rhs
 
@@ -401,9 +401,9 @@ class OnPolicyActor(Actor):
         # ---- 3. Define value predictor --------------------------------------
 
         # TODO: added!
-        extra_value_fc = nn.Linear(in_features=448, out_features=448)
-        nn.init.orthogonal_(extra_value_fc.weight, gain=np.sqrt(0.1))
-        extra_value_fc.bias.data.zero_()
+        # extra_value_fc = nn.Linear(in_features=448, out_features=448)
+        # nn.init.orthogonal_(extra_value_fc.weight, gain=np.sqrt(0.1))
+        # extra_value_fc.bias.data.zero_()
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain=np.sqrt(0.01))
         value_predictor = init_(nn.Linear(self.recurrent_size, 1))
@@ -413,7 +413,7 @@ class OnPolicyActor(Actor):
         v_net = nn.Sequential(OrderedDict([
             ('feature_extractor', value_feature_extractor),
             ('memory_net', value_memory_net),
-            ('extra_value_fc', extra_value_fc),
+            # ('extra_value_fc', extra_value_fc),
             ("predictor", value_predictor),
         ]))
 

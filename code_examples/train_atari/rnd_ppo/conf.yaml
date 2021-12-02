@@ -38,3 +38,4 @@ int_adv_coeff: 1.0
 predictor_proportion: 0.25
 pre_normalization_steps: 50
 wandb_key: null
+sticky_actions: True

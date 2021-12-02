@@ -177,20 +177,24 @@ class RND_PPO(Algorithm):
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
 
         # Create target model
-        setattr(
-            self.actor, "target_model",
-            int_net((obs_channels,) + obs_space[1:],
-                    **intrinsic_rewards_target_network_kwargs).to(self.device))
+        setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
+
+        # setattr(
+        #     self.actor, "target_model",
+        #     int_net((obs_channels,) + obs_space[1:],
+        #             **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
         for param in self.actor.target_model.parameters():
             param.requires_grad = False
 
         # Create predictor model
-        setattr(
-            self.actor, "predictor_model",
-            int_net((obs_channels,) + obs_space[1:],
-                    **intrinsic_rewards_predictor_network_kwargs).to(self.device))
+        setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
+
+        # setattr(
+        #     self.actor, "predictor_model",
+        #     int_net((obs_channels,) + obs_space[1:],
+        #             **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
         # Define running means for int reward and obs
         self.state_rms = RunningMeanStd(shape=(1, ) + obs_space[1:], device=self.device)
@@ -435,8 +439,8 @@ class RND_PPO(Algorithm):
 
             # predict intrinsic reward
             obs = obs[:, -1:, ...]
-            # obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
-            obs = torch.clamp((obs - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5).float()
+            obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
+            # obs = torch.clamp((obs - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5).float()
             predictor_encoded_features = self.actor.predictor_model(obs)
             target_encoded_features = self.actor.target_model(obs)
             int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)

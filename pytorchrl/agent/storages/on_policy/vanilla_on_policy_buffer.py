@@ -328,8 +328,8 @@ class VanillaOnPolicyBuffer(S):
         for step in reversed(range(length)):
             rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
         self.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
-        # self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
-        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var ** 0.5)
+        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
+        # self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var ** 0.5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """
