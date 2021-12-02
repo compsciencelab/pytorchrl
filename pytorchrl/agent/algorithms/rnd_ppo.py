@@ -176,8 +176,6 @@ class RND_PPO(Algorithm):
         # Define network type
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
 
-        import ipdb; ipdb.set_trace()
-
         # Create target model
         #  setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
 

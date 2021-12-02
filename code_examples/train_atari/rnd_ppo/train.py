@@ -80,7 +80,6 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))
 
-        import ipdb; ipdb.set_trace()
         # Define RL training algorithm
         algo_factory, algo_name = RND_PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
