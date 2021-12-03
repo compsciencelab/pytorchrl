@@ -154,12 +154,12 @@ class MBActor(nn.Module):
                        inputs: torch.Tensor,
                        ret_log_var: bool=False
                        )-> Tuple[torch.Tensor, torch.Tensor]:
+        # inputs: [batch size, state size + action size]
+        mean, log_var, min_max_var = self.dynamics_model(inputs)
 
         if ret_log_var:
-            mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, log_var, min_max_var
         else:
-            mean, log_var, min_max_var = self.dynamics_model(inputs)
             return mean, torch.exp(log_var), min_max_var
 
 
@@ -167,20 +167,25 @@ class MBActor(nn.Module):
 
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
-        inputs = torch.cat((states, actions), dim=-1)
 
-        # TODO: fix this torch -> numpy -> torch // cuda -> cpu -> cuda 
-        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float()
+        inputs = torch.cat((states, actions), dim=-1)
+        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
 
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         ensemble_means[:, :, :-1] += states.to(self.device)
-        ensemble_means = ensemble_means.mean(0)
-        ensemble_stds = torch.sqrt(ensemble_var).mean(0)
+        elite_mean = ensemble_means[self.elite_idxs]
+        elite_sts = ensemble_var[self.elite_idxs]
+        
+        assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
+        assert elite_sts.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
+
+        means = elite_mean.mean(0)
+        stds = torch.sqrt(elite_sts).mean(0)    
 
         if self.dynamics_type == "probabilistic":
-            predictions = torch.normal(mean=ensemble_means, std=ensemble_stds)
+            predictions = torch.normal(mean=means, std=stds)
         else:
-            predictions = ensemble_means
+            predictions = means
 
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
@@ -206,7 +211,7 @@ class MBActor(nn.Module):
 
         inv_var = (-logvar).exp()
         if not validate:
-            mse_loss = (torch.pow(mean - labels, 2) * inv_var).mean(-1).mean(-1).sum()
+            mse_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum()
             var_loss = logvar.mean(-1).mean(-1).sum()
             total_loss = mse_loss + var_loss
             total_loss_min_max = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])

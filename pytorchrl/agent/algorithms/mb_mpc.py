@@ -41,7 +41,7 @@ class MB_MPC(Algorithm):
         self._test_every = int(config.test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(5)
+        self._num_test_episodes = int(3)
         self.actor = actor
         self.action_noise = config.action_noise
         # ---- MB MPC-specific attributes ----------------------------------------
@@ -169,7 +169,6 @@ class MB_MPC(Algorithm):
                                          logvar=logvar,
                                          min_max_var=min_max_var,
                                          labels=train_labels)
-        
         return loss
     
     def validation(self, batch)-> Tuple[torch.Tensor, bool]:
@@ -187,7 +186,7 @@ class MB_MPC(Algorithm):
             validation_loss = validation_loss.cpu().numpy()
             assert validation_loss.shape == (self.actor.ensemble_size, )
             sorted_loss_idx = np.argsort(validation_loss)
-            self.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
+            self.actor.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
             break_condition = self.test_break_condition(validation_loss)
         
         return validation_loss.mean(), break_condition

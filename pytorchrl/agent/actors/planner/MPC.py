@@ -61,8 +61,7 @@ class RandomShooting(MPC):
         return optimal_action
 
 
-    def compute_returns(self, states: torch.Tensor, actions: torch.Tensor, model: torch.nn.Module)-> Tuple[torch.Tensor, torch.Tensor]:
-        
+    def compute_returns(self, states: torch.Tensor, actions: torch.Tensor, model: torch.nn.Module)-> Tuple[torch.Tensor]:
         returns = torch.zeros((self.n_planner, 1)).to(self.device)
         for t in range(self.horizon):
             with torch.no_grad():
@@ -77,30 +76,29 @@ class CEM(MPC):
 
         self.iter_update_steps = config.iter_update_steps
         self.k_best = config.k_best
-        self.update_alpha = config.update_alpha # Add this to CEM config
+        self.update_alpha = config.update_alpha
         self.epsilon = 0.001
-        self.ub = 1
-        self.lb = -1
         self.device = device
         
     def get_action(self, state, model, noise=False):
         initial_state = state.repeat(self.n_planner, 1).to(self.device)
         mu = np.zeros(self.horizon*self.action_space)
         var = 5 * np.ones(self.horizon*self.action_space)
-        X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
+        X = stats.truncnorm(self.action_low, self.action_high, loc=np.zeros_like(mu), scale=np.ones_like(mu))
         i = 0
         while ((i < self.iter_update_steps) and (np.max(var) > self.epsilon)):
             states = initial_state
             returns = np.zeros((self.n_planner, 1))
             #variables
-            lb_dist = mu - self.lb
-            ub_dist = self.ub - mu
+            lb_dist = mu - self.action_low
+            ub_dist = self.action_high - mu
             constrained_var = np.minimum(np.minimum(np.square(lb_dist / 2), np.square(ub_dist / 2)), var)
             
             actions = X.rvs(size=[self.n_planner, self.horizon*self.action_space]) * np.sqrt(constrained_var) + mu
-            actions_t = torch.from_numpy(np.clip(actions, -1, 1).reshape(self.n_planner,
-                                                                         self.horizon,
-                                                                         self.action_space)).float().to(self.device)
+            actions = np.clip(actions, self.action_low, self.action_high)
+            actions_t = torch.from_numpy(actions.reshape(self.n_planner,
+                                                         self.horizon,
+                                                         self.action_space)).float().to(self.device)
             for t in range(self.horizon):
                 with torch.no_grad():
                     states, rewards = model.predict(states, actions_t[:, t, :])
@@ -111,7 +109,7 @@ class CEM(MPC):
             i += 1
         
         best_action_sequence = mu.reshape(self.horizon, -1)
-        best_action = np.copy(best_action_sequence[-1])
+        best_action = np.copy(best_action_sequence[0])
         assert best_action.shape == (self.action_space,)
         return torch.from_numpy(best_action).float().to(self.device)
             
@@ -184,7 +182,7 @@ class PDDM(MPC):
             else:
                 actions[:, t, :] = self.beta * (self.mu[t, :] + u[:, t, :]) + (1 - self.beta) * actions[:, t-1, :]
         assert actions.shape == (self.n_planner, self.horizon, self.action_space), "Has shape {} but should have shape {}".format(actions.shape, (self.n_planner, self.horizon, self.action_space))
-        actions = np.clip(actions, -1, 1)
+        actions = np.clip(actions, self.action_low, self.action_high)
         return actions
     
     def get_pred_trajectories(self, states, model): 
