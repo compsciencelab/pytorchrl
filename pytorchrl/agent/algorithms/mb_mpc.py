@@ -76,11 +76,8 @@ class MB_MPC(Algorithm):
         self.improvement_threshold = 0.01
         self.break_counter = 0
 
-        # List of parameters for the dynamics Model
-        dynamics_params = itertools.chain(self.actor.dynamics_model.parameters())
-
         # ----- Optimizers ----------------------------------------------------
-        self.dynamics_optimizer = optim.Adam(dynamics_params, lr=config.lr)
+        self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=config.lr)
 
     @classmethod
     def create_factory(cls,

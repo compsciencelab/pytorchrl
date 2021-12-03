@@ -138,12 +138,12 @@ class MBActor(nn.Module):
             raise ValueError
         dynamics_layers.append(output_layer)
         
-        if type(self.action_space) == gym.spaces.box.Box:
-            self.scale = Scale(self.action_space)
-            self.unscale = Unscale(self.action_space)
-        else:
-            self.scale = None
-            self.unscale = None
+        # if type(self.action_space) == gym.spaces.box.Box:
+        #     self.scale = Scale(self.action_space)
+        #     self.unscale = Unscale(self.action_space)
+        # else:
+        #     self.scale = None
+        #     self.unscale = None
 
         dynamics_net = nn.Sequential(*dynamics_layers)
 
@@ -174,13 +174,13 @@ class MBActor(nn.Module):
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
         ensemble_means[:, :, :-1] += states.to(self.device)
         elite_mean = ensemble_means[self.elite_idxs]
-        elite_sts = ensemble_var[self.elite_idxs]
+        elite_std = ensemble_var[self.elite_idxs]
         
         assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
-        assert elite_sts.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
+        assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
 
         means = elite_mean.mean(0)
-        stds = torch.sqrt(elite_sts).mean(0)    
+        stds = torch.sqrt(elite_std).mean(0)    
 
         if self.dynamics_type == "probabilistic":
             predictions = torch.normal(mean=means, std=stds)
