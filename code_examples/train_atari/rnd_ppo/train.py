@@ -65,7 +65,7 @@ def main():
         if args.episodic_life:
             info_keywords += ['EpisodicReward', 'Lives']
         if args.clip_rewards:
-            info_keywords += ['ClippedReward']
+            info_keywords += ['UnclippedReward']
 
         # Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(

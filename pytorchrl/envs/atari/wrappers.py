@@ -153,7 +153,7 @@ class ClipRewardEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['ClippedReward'] = self.total_reward
+        info['UnclippedReward'] = self.total_reward
 
         reward = np.sign(reward)
         return obs, reward, done, info
