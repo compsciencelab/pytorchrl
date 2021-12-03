@@ -20,7 +20,9 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.agent.storages import PPODBuffer
+
+# TODO. testing
+from pytorchrl.agent.storages.on_policy.ppod_buffer_new import PPODBuffer
 
 
 def main():

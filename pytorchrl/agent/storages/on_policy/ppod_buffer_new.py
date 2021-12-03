@@ -406,6 +406,7 @@ class PPODBuffer(B):
                 # Consider candidate demos for demos reward
                 if episode_reward >= self.reward_threshold:
 
+                    # TODO. testing
                     # If better than any other existing demo, empty buffer
                     if episode_reward > self.max_demo_reward:
                         self.reward_demos = []
@@ -425,7 +426,6 @@ class PPODBuffer(B):
                     # Update max demo reward
                     self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
-
                 else:  # Consider candidate demos for value reward
 
                     # Find current number of demos, and current value threshold
@@ -436,8 +436,9 @@ class PPODBuffer(B):
 
                     if self.potential_demos_val["env{}".format(i + 1)] >= value_thresh or total_demos < self.max_demos:
 
+                        # TODO: not used for now
                         # Add demos to value buffer
-                        self.value_demos.append(potential_demo)
+                        # self.value_demos.append(potential_demo)
 
                         # Check if buffers are full
                         self.check_demo_buffer_capacity()
