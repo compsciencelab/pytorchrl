@@ -7,7 +7,7 @@ conf: null
 entropy_coef: 0.001
 env_id: MontezumaRevengeNoFrameskip-v4
 episodic_life: false
-sticky_actions: True
+sticky_actions: true
 clip_rewards: true
 experiment_name: MontezumaRevengeNoFrameskip-v4
 frame_skip: 0
@@ -21,7 +21,7 @@ max_grad_norm: 1.0
 max_time: 8640000
 nn: CNN
 num_col_workers: 1
-num_env_processes: 2
+num_env_processes: 128
 num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128

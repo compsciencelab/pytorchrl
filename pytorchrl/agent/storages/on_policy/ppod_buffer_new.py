@@ -313,19 +313,18 @@ class PPODBuffer(B):
                 # Run forward pass
                 _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
 
-                # Insert demo act tensor to self.step
-                self.data[prl.ACT][self.step][i].copy_(self.demos_in_progress["env{}".format(
-                    i + 1)]["Demo"][prl.ACT][demo_step])
-
-                # Insert demo rew tensor to self.step
-                self.data[prl.REW][self.step][i].copy_(self.demos_in_progress["env{}".format(
-                    i + 1)]["Demo"][prl.REW][demo_step])
+                # Insert demo act and rew tensors to self.step
+                for tensor in (prl.ACT, prl.REW):
+                    self.data[tensor][self.step][i].copy_(self.demos_in_progress["env{}".format(
+                        i + 1)]["Demo"][tensor][demo_step])
 
                 # Insert demo logprob to self.step. Demo action prob is 1.0, so logprob is 0.0
                 self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
 
-                # Insert demo values predicted by the forward pass
-                self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
+                # Insert other tensors predicted in the forward pass
+                for tensor in (prl.IREW, prl.VAL, prl.IVAL):
+                    if tensor in algo_data.keys():
+                        self.data[tensor][self.step][i].copy_(algo_data[tensor].squeeze())
 
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
@@ -406,6 +405,10 @@ class PPODBuffer(B):
 
                 # Consider candidate demos for demos reward
                 if episode_reward >= self.reward_threshold:
+
+                    # If better than any other existing demo, empty buffer
+                    if episode_reward > self.max_demo_reward:
+                        self.reward_demos = []
 
                     # Add demos to reward buffer
                     self.reward_demos.append(potential_demo)

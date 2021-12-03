@@ -17,11 +17,11 @@ gamma: 0.999
 log_dir: /tmp/rnd_ppo
 log_interval: 1
 lr: 0.0001
-max_grad_norm: 2.0
+max_grad_norm: 1.0
 max_time: 8640000
 nn: CNN
 num_col_workers: 1
-num_env_processes: 2
+num_env_processes: 128
 num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128
