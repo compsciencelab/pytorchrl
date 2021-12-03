@@ -31,7 +31,7 @@ class MB_MPC(Algorithm):
         self._start_steps = int(config.start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        # self._num_epochs = int(10)  # Default to 1 for off-policy algorithms
+        self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
 
 
         # Size of update mini batches

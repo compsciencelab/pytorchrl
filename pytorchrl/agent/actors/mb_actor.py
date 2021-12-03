@@ -208,12 +208,11 @@ class MBActor(nn.Module):
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
         assert len(mean.shape) == len(logvar.shape) == len(labels.shape) == 3
-
+        
         inv_var = (-logvar).exp()
         if not validate:
             total_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum() + logvar.mean(-1).mean(-1).sum()
-            if self.dynamics_type == "probabilistic":
-                total_loss = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+            total_loss = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
             return total_loss
         else:
             mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
