@@ -211,9 +211,7 @@ class MBActor(nn.Module):
 
         inv_var = (-logvar).exp()
         if not validate:
-            mse_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum()
-            var_loss = logvar.mean(-1).mean(-1).sum()
-            total_loss = mse_loss + var_loss
+            total_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum() + logvar.mean(-1).mean(-1).sum()
             if self.dynamics_type == "probabilistic":
                 total_loss = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
             return total_loss

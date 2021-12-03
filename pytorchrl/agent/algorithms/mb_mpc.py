@@ -31,7 +31,7 @@ class MB_MPC(Algorithm):
         self._start_steps = int(config.start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(10)  # Default to 1 for off-policy algorithms
+        # self._num_epochs = int(10)  # Default to 1 for off-policy algorithms
 
 
         # Size of update mini batches
@@ -145,14 +145,9 @@ class MB_MPC(Algorithm):
         return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        if not deterministic and self.action_noise:
-            noise = True
-        else:
-            noise = False
         with torch.no_grad():
-            action = self.mpc.get_action(state=obs, model=self.actor, noise=noise)
+            action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
             clipped_action = torch.clamp(action, self.action_low, self.action_high)
-
         return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
     
