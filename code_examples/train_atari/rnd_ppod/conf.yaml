@@ -17,7 +17,7 @@ gamma: 0.999
 log_dir: /tmp/rnd_ppo
 log_interval: 1
 lr: 0.0001
-max_grad_norm: 2.0
+max_grad_norm: 1.0
 max_time: 8640000
 nn: CNN
 num_col_workers: 1
@@ -37,4 +37,8 @@ ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
 predictor_proportion: 0.25
 pre_normalization_steps: 50
+rho: 0.15
+phi: 0.0
+demos_dir: code_examples/train_atari/ppod/demos/
 wandb_key: null
+

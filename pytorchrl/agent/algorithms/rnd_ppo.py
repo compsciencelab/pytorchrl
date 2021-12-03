@@ -3,24 +3,16 @@ import torch.nn as nn
 import torch.optim as optim
 
 import pytorchrl as prl
-from pytorchrl.utils import RunningMeanStd
+from pytorchrl.utils import RunningMeanStd, clip_grad_norm_
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
-from abc import ABC
-import numpy as np
-from torch.nn import functional as F
-
-
-# TODO. could try using self.mse_loss = torch.nn.MSELoss()
-# TODO. maybe its the tuned clip_grad_norm_
-# TODO: They compute all intrinsic rewards at the end, but I do it on the fly (it should not make any diff)
 
 class RND_PPO(Algorithm):
     """
-    Proximal Policy Optimization algorithm class.
+    Exploration by Random Network Distillation with Proximal Policy Optimization algorithm class.
 
     Algorithm class to execute RND PPO, from Burda et al., 2018
     (https://arxiv.org/abs/1810.12894). Algorithms are modules generally
@@ -177,8 +169,6 @@ class RND_PPO(Algorithm):
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
 
         # Create target model
-        #  setattr(self.actor, "target_model", TargetModel((1, 84, 84)).to(self.device))
-
         setattr(
             self.actor, "target_model",
             int_net((obs_channels,) + obs_space[1:],
@@ -189,8 +179,6 @@ class RND_PPO(Algorithm):
             param.requires_grad = False
 
         # Create predictor model
-        #  setattr(self.actor, "predictor_model", PredictorModel((1, 84, 84)).to(self.device))
-
         setattr(
             self.actor, "predictor_model",
             int_net((obs_channels,) + obs_space[1:],
@@ -628,116 +616,3 @@ class RND_PPO(Algorithm):
         if parameter_name == "lr":
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = new_parameter_value
-
-# UTILS ################################################################################################################
-
-
-def conv_shape(input, kernel_size, stride, padding=0):
-    return (input + 2 * padding - kernel_size) // stride + 1
-
-
-class TargetModel(nn.Module, ABC):
-
-    def __init__(self, state_shape):
-        super(TargetModel, self).__init__()
-        self.state_shape = state_shape
-
-        c, w, h = state_shape
-        self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
-
-        conv1_out_w = conv_shape(w, 8, 4)
-        conv1_out_h = conv_shape(h, 8, 4)
-        conv2_out_w = conv_shape(conv1_out_w, 4, 2)
-        conv2_out_h = conv_shape(conv1_out_h, 4, 2)
-        conv3_out_w = conv_shape(conv2_out_w, 3, 1)
-        conv3_out_h = conv_shape(conv2_out_h, 3, 1)
-
-        flatten_size = conv3_out_w * conv3_out_h * 64
-
-        self.encoded_features = nn.Linear(in_features=flatten_size, out_features=512)
-
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
-                layer.bias.data.zero_()
-            elif isinstance(layer, nn.Linear):
-                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
-                layer.bias.data.zero_()
-
-    def forward(self, inputs):
-        x = inputs
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
-        x = F.leaky_relu((self.conv3(x)))
-        x = x.contiguous()
-        x = x.view(x.size(0), -1)
-
-        return self.encoded_features(x)
-
-
-class PredictorModel(nn.Module, ABC):
-
-    def __init__(self, state_shape):
-        super(PredictorModel, self).__init__()
-        self.state_shape = state_shape
-
-        c, w, h = state_shape
-        self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
-
-        conv1_out_w = conv_shape(w, 8, 4)
-        conv1_out_h = conv_shape(h, 8, 4)
-        conv2_out_w = conv_shape(conv1_out_w, 4, 2)
-        conv2_out_h = conv_shape(conv1_out_h, 4, 2)
-        conv3_out_w = conv_shape(conv2_out_w, 3, 1)
-        conv3_out_h = conv_shape(conv2_out_h, 3, 1)
-
-        flatten_size = conv3_out_w * conv3_out_h * 64
-
-        self.fc1 = nn.Linear(in_features=flatten_size, out_features=512)
-        self.fc2 = nn.Linear(in_features=512, out_features=512)
-        self.encoded_features = nn.Linear(in_features=512, out_features=512)
-
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
-                layer.bias.data.zero_()
-            elif isinstance(layer, nn.Linear):
-                nn.init.orthogonal_(layer.weight, gain=np.sqrt(2))
-                layer.bias.data.zero_()
-
-    def forward(self, inputs):
-        x = inputs
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
-        x = F.leaky_relu((self.conv3(x)))
-        x = x.contiguous()
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-
-        return self.encoded_features(x)
-
-
-from torch._six import inf
-def clip_grad_norm_(parameters, norm_type: float = 2.0):
-    """
-    This is the official clip_grad_norm implemented in pytorch but the max_norm part has been removed.
-    https://github.com/pytorch/pytorch/blob/52f2db752d2b29267da356a06ca91e10cd732dbc/torch/nn/utils/clip_grad.py#L9
-    """
-    if isinstance(parameters, torch.Tensor):
-        parameters = [parameters]
-    parameters = [p for p in parameters if p.grad is not None]
-    norm_type = float(norm_type)
-    if len(parameters) == 0:
-        return torch.tensor(0.)
-    device = parameters[0].grad.device
-    if norm_type == inf:
-        total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
-    else:
-        total_norm = torch.norm(
-            torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
-    return total_norm

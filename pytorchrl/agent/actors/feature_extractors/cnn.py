@@ -64,6 +64,13 @@ class CNN(nn.Module):
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
+        # TODO. test without and remove
+        activation = nn.ReLU
+        init_ = lambda m: init(
+            m, nn.init.orthogonal_,
+            lambda x: nn.init.constant_(x, 0),
+            get_gain(activation))
+
         # Define final MLP layers
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_shape)).shape))
         layers = []
@@ -74,15 +81,33 @@ class CNN(nn.Module):
                 layers += [activation()]
         self.head = nn.Sequential(*layers)
 
+        for layer in self.feature_extractor.modules():
+            if isinstance(layer, nn.Conv2d):
+                nn.init.orthogonal_(layer.weight, gain=get_gain(activation))
+                layer.bias.data.zero_()
+            elif isinstance(layer, nn.Linear):
+                nn.init.orthogonal_(layer.weight, gain=get_gain(activation))
+                layer.bias.data.zero_()
+
+        for layer in self.head.modules():
+            if isinstance(layer, nn.Conv2d):
+                nn.init.orthogonal_(layer.weight, gain=get_gain(activation))
+                layer.bias.data.zero_()
+            elif isinstance(layer, nn.Linear):
+                nn.init.orthogonal_(layer.weight, gain=get_gain(activation))
+                layer.bias.data.zero_()
+
         self.train()
 
     def forward(self, inputs):
         """
         Forward pass Neural Network
+
         Parameters
         ----------
         inputs : torch.tensor
             Input data.
+
         Returns
         -------
         out : torch.tensor

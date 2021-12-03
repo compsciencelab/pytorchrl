@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 import sys
-import subprocess
 
 import os
 import ray
 import time
 import glob
-import yaml
 import torch
 import wandb
 import shutil
@@ -22,7 +20,7 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.storages import PPODBuffer
 
 
 def main():
@@ -119,7 +117,11 @@ def main():
             restart_model=checkpoint, recurrent_nets=False)
 
         # Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        storage_factory = PPODBuffer.create_factory(
+            size=args.num_steps, rho=args.rho, phi=args.phi,
+            target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
+            initial_reward_threshold=1.0,
+        )
 
         # Define scheme
         params = {}
@@ -260,6 +262,12 @@ def get_args():
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
     parser.add_argument(
+        '--rho', type=float, default=0.3,
+        help='PPO+D rho parameter (default: 0.3)')
+    parser.add_argument(
+        '--phi', type=float, default=0.0,
+        help='PPO+D phi parameter (default: 0.0)')
+    parser.add_argument(
         '--gae-lambda', type=float, default=0.95,
         help='gae lambda parameter (default: 0.95)')
     parser.add_argument(
@@ -298,6 +306,9 @@ def get_args():
     parser.add_argument(
         '--pre-normalization-steps', type=int, default=50,
         help='rnd ppo number of pre-normalization steps parameter (default: 50)')
+    parser.add_argument(
+        '--demos-dir', default='/tmp/atari_ppod',
+        help='target directory to store and retrieve demos.')
 
     # Feature extractor model specs
     parser.add_argument(
