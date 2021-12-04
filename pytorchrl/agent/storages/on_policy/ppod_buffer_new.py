@@ -93,6 +93,7 @@ class PPODBuffer(B):
         self.demo_obs_dtype = np.float32
         self.demo_rew_dtype = np.float32
         self.num_channels_obs = None  # Lazy initialization
+        self.inserted_samples = 0
 
         # Reward and Value buffers
         self.reward_demos = []
@@ -238,6 +239,37 @@ class PPODBuffer(B):
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
 
+    def after_gradients(self, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+        Parameters
+        ----------
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
+        """
+
+        step = self.step if self.step != 0 else -1
+        for k in (prl.OBS, prl.RHS, prl.DONE):
+            if isinstance(self.data[k], dict):
+                for x in self.data[k]:
+                    self.data[k][x][0].copy_(self.data[k][x][step])
+            else:
+                self.data[k][0].copy_(self.data[k][step])
+
+        if self.step != 0:
+            self.step = 0
+
+        info['NumberSamples'] -= self.inserted_samples
+        self.inserted_samples = 0
+
+        return info
+
     def get_num_channels_obs(self, sample):
         """
         Obtain num_channels_obs and set it as class attribute.
@@ -333,6 +365,8 @@ class PPODBuffer(B):
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
                     [algo_data[prl.VAL].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
+                self.inserted_samples += 1
+
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
@@ -384,6 +418,12 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
                         copy.deepcopy(sample[tensor][i]).cpu().numpy())
 
+            # Track when in the demo happens the last demo
+            # TODO. to make it general can not be zero!
+            if sample[prl.REW][i].cpu().item() > 0.0:
+                self.potential_demos["env{}".format(i + 1)]["LastReward"] = len(
+                    self.potential_demos["env{}".format(i + 1)][prl.REW])
+
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
                 i + 1)], sample[prl.VAL][i].item()])
@@ -394,8 +434,14 @@ class PPODBuffer(B):
                 # Get candidate demos
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
-                    potential_demo[tensor] = torch.Tensor(np.stack(
-                        self.potential_demos["env{}".format(i + 1)][tensor]))
+
+                    potential_demo[tensor] = torch.Tensor(
+                        np.stack(self.potential_demos["env{}".format(i + 1)][tensor]))
+
+                    # # TODO. Does not work!
+                    # potential_demo[tensor] = torch.Tensor(
+                    #     np.stack(self.potential_demos["env{}".format(i + 1)][tensor][
+                    #         0:self.potential_demos["env{}".format(i + 1)]["LastReward"]]))
 
                 # Compute accumulated reward
                 episode_reward = potential_demo[prl.REW].sum().item()
@@ -625,15 +671,21 @@ class PPODBuffer(B):
         total_demos = len(self.reward_demos) + len(self.value_demos)
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
+
                 # Pop value demos with lowest MaxValue
                 del self.value_demos[np.array([p["MaxValue"] for p in self.value_demos]).argmin()]
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             for _ in range(len(self.reward_demos) - self.max_demos):
-                # Eject agent demo with lowest reward
-                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
-                del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
+
+                # Option 1: Eject agent demo with lowest reward
+                # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
+                # del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
+
+                # Option 2: Eject longer agent demo
+                lengths = np.array([p[prl.OBS].shape[0] for p in self.reward_demos[self.num_loaded_human_demos:]])
+                del self.reward_demos[np.argmax(lengths) + self.num_loaded_human_demos]
 
     def save_demos(self):
         """

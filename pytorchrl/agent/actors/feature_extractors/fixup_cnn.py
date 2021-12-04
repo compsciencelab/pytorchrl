@@ -51,7 +51,7 @@ class FixupCNN(nn.Module):
         head = [nn.Linear(feature_size, output_size)]
         if final_activation:
             head += [nn.ReLU(inplace=True)]
-        self.head = nn.Sequential(head)
+        self.head = nn.Sequential(*head)
 
         self.train()
 
