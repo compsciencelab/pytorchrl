@@ -304,20 +304,20 @@ class VanillaOnPolicyBuffer(S):
 
         return info
 
-    def compute_returns_new(self, rewards, returns, values, dones, gamma):
+    def compute_returns(self, rewards, returns, values, dones, gamma):
         """Compute return values."""
         length = self.step - 1 if self.step != 0 else self.max_size
         returns[length].copy_(values[length])
         for step in reversed(range(length)):
             returns[step] = (returns[step + 1] * gamma * (1.0 - dones[step + 1]) + rewards[step])
 
-    def compute_advantages_new(self, returns, values):
+    def compute_advantages(self, returns, values):
         """Compute transition advantage values."""
         adv = returns[:-1] - values[:-1]
-        # adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
 
-    def compute_returns(self):
+    def compute_returns_old(self):
         """Compute return values."""
         gamma = self.algo.gamma
         len = self.step - 1 if self.step != 0 else self.max_size
@@ -325,7 +325,7 @@ class VanillaOnPolicyBuffer(S):
             self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
                 1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
 
-    def compute_advantages(self):
+    def compute_advantages_old(self):
         """Compute transition advantage values."""
         adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
         self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)

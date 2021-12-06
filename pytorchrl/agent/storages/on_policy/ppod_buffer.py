@@ -194,24 +194,24 @@ class PPODBuffer(B):
         else:
             self.data[prl.RHS][step].copy_(next_rhs)
 
-        # # Compute returns and advantages
-        # if isinstance(self.data[prl.VAL], dict):
-        #     # If multiple critics
-        #     for x in self.data[prl.VAL]:
-        #         self.data[prl.VAL][x][step].copy_(value_dict.get(x))
-        #         self.compute_returns(
-        #             self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
-        #         self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
-        # else:
-        #     # If single critic
-        #     self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-        #     self.compute_returns(
-        #         self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
-        #     self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
-        #
-        self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-        self.compute_returns()
-        self.compute_advantages()
+        # Compute returns and advantages
+        if isinstance(self.data[prl.VAL], dict):
+            # If multiple critics
+            for x in self.data[prl.VAL]:
+                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
+                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
+        else:
+            # If single critic
+            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+            self.compute_returns(
+                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
+            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
+
+        # self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+        # self.compute_returns()
+        # self.compute_advantages()
 
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
