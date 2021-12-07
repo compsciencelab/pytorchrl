@@ -26,7 +26,12 @@ def main():
     if args.cluster:
         ray.init(address="auto")
     else:
-        ray.init(num_cpus=0)
+        ray.init(
+            num_cpus=0,
+            object_store_memory=1024 ** 3 * 3,
+            _redis_max_memory=1024 ** 3 * 1,
+            _memory=1024 ** 3 * 1,
+            _driver_object_store_memory=1024 ** 3 * 1)
 
     resources = ""
     for k, v in ray.cluster_resources().items():
