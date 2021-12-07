@@ -68,12 +68,6 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))
 
-        # 2. Define Test Vector of Envs (Optional)
-        test_envs_factory, _, _ = VecEnv.create_factory(
-            env_fn=atari_test_env_factory,
-            env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir)
-
         # 3. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
@@ -103,7 +97,6 @@ def main():
             "actor_factory": actor_factory,
             "storage_factory": storage_factory,
             "train_envs_factory": train_envs_factory,
-            "test_envs_factory": test_envs_factory,
         })
 
         # add collection specs
