@@ -446,8 +446,6 @@ class PPODBuffer(B):
                         nonzero = np.flatnonzero(potential_demo[tensor] > 0.0)
                         last_reward = len(potential_demo[tensor]) if len(nonzero) == 0 else np.max(nonzero)
 
-                print(last_reward)
-
                 # Cut off data after last reward
                 for tensor in self.demos_data_fields:
                     potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
