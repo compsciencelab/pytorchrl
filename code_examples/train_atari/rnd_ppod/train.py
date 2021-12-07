@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import torch.nn as nn
 
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
@@ -120,7 +121,8 @@ def main():
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
-            initial_reward_threshold=1.0,
+            initial_reward_threshold=1.0, initial_human_demos_dir=None,
+            demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16}
         )
 
         # Define scheme

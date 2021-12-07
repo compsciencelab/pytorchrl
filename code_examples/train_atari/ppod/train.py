@@ -6,7 +6,9 @@ import sys
 import time
 import wandb
 import argparse
+import numpy as np
 
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -86,6 +88,7 @@ def main():
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
             initial_reward_threshold=14.0,
+            demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8,  prl.REW: np.float16}
         )
 
         # 6. Define scheme

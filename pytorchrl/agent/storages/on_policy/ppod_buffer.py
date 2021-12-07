@@ -50,6 +50,8 @@ class PPODBuffer(B):
         Number of top reward demos to save.
     initial_reward_threshold : float
         initial value to use as reward threshold for new demos.
+    demo_dtypes : dict
+        data types to use for the demos.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -61,7 +63,7 @@ class PPODBuffer(B):
     def __init__(self, size, device, actor, algorithm, envs, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10,
                  total_buffer_demo_capacity=51, initial_human_demos_dir=None, initial_agent_demos_dir=None,
                  target_agent_demos_dir=None,  num_agent_demos_to_save=10, initial_reward_threshold=None,
-                 save_demos_every=10, demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8,  prl.REW: np.float16}):
+                 save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -119,7 +121,8 @@ class PPODBuffer(B):
     @classmethod
     def create_factory(cls, size, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51,
                        initial_human_demos_dir=None, initial_agent_demos_dir=None, target_agent_demos_dir=None,
-                       num_agent_demos_to_save=10, initial_reward_threshold=None, save_demos_every=10):
+                       num_agent_demos_to_save=10, initial_reward_threshold=None, save_demos_every=10,
+                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -149,6 +152,8 @@ class PPODBuffer(B):
             Number of top reward demos to save.
         initial_reward_threshold : float
             initial value to use as reward threshold for new demos.
+        demo_dtypes : dict
+            data types to use for the demos.
 
         Returns
         -------
@@ -160,7 +165,7 @@ class PPODBuffer(B):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
                        initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir,
-                       num_agent_demos_to_save, initial_reward_threshold, save_demos_every)
+                       num_agent_demos_to_save, initial_reward_threshold, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
     def before_gradients(self):
