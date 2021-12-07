@@ -17,12 +17,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-
-# TODO. testing
-from pytorchrl.agent.storages.on_policy.ppod_buffer_new import PPODBuffer
 
 
 def main():
