@@ -78,14 +78,15 @@ def main():
 
         # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name, restart_model=args.restart_model)
+            obs_space, action_space, algo_name, restart_model=args.restart_model,
+            recurrent_nets=args.recurrent_nets)
 
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
-            initial_reward_threshold=4.0,
+            initial_reward_threshold=14.0,
         )
 
         # 6. Define scheme
@@ -224,7 +225,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
+        '--recurrent-nets', action='store_true', default=False,
         help='Use a recurrent policy')
 
     # Scheme specs
