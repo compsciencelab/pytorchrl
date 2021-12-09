@@ -60,12 +60,14 @@ def main():
                                                                     "frame_stack": args.frame_stack})
 
         # 3. Define RL Dynamics Model
-        dynamics_factory = MBActor.create_factory(obs_space,
-                                                action_space,
-                                                ensemble_size=args.ensemble_size,
-                                                elite_size=args.elite_size,
-                                                dynamics_type=args.dynamics_type,
-                                                restart_model=args.restart_model)
+        dynamics_factory = MBActor.create_factory(args.env_id,
+                                                  obs_space,
+                                                  action_space,
+                                                  ensemble_size=args.ensemble_size,
+                                                  elite_size=args.elite_size,
+                                                  dynamics_type=args.dynamics_type,
+                                                  learn_reward_function=args.learn_reward_function,
+                                                  restart_model=args.restart_model)
 
         # 4. Define RL training algorithm
         algo_factory, algo = MB_MPC.create_factory(args)
@@ -155,6 +157,8 @@ def get_args():
         help='Number of frame to stack in observation (default no stack)')
 
     # MPC specs
+    parser.add_argument(
+        "--learn-reward-function", type=int, default=1, choices=[0,1], help="")
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(

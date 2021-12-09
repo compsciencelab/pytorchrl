@@ -13,17 +13,20 @@ from torch.nn.functional import one_hot
 
 import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
+from pytorchrl.agent.actors.reward_functions import get_reward_function
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
 
 
 class MBActor(nn.Module):
     def __init__(self,
+                 env_id,
                  input_space,
                  action_space,
                  ensemble_size,
                  elite_size,
                  dynamics_type,
+                 learn_reward_function,
                  device,
                  noise=None)-> None:
         super(MBActor, self).__init__()
@@ -33,15 +36,24 @@ class MBActor(nn.Module):
         self.device = device
         self.input_space = input_space.shape[0]
         self.action_space = action_space
+        if not learn_reward_function:
+            self.reward_function = get_reward_function(env_id=env_id)
+        
         self.ensemble_size = ensemble_size
         self.elite_size = elite_size
         self.elite_idxs = [i for i in range(self.elite_size)]
 
+        
         self.batch_size = 256
         self.hidden_size = 200
         self.hidden_layer = 3
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
+
+        if self.reward_function:
+            self.predict = self.predict_given_reward
+        else:
+            self.predict = self.predict_learned_reward
 
         self.create_dynamics()
         print(self.dynamics_model)
@@ -49,20 +61,24 @@ class MBActor(nn.Module):
     @classmethod
     def create_factory(
             cls,
+            env_id,
             input_space,
             action_space,
             ensemble_size,
             elite_size,
             dynamics_type="probabilistic",
+            learn_reward_function=False,
             restart_model=None):
 
         def create_dynamics_instance(device):
             """Create and return an actor critic instance."""
-            model = cls(input_space=input_space,
+            model = cls(env_id=env_id,
+                         input_space=input_space,
                          action_space=action_space,
                          ensemble_size=ensemble_size,
                          elite_size=elite_size,
                          dynamics_type=dynamics_type,
+                         learn_reward_function=learn_reward_function,
                          device=device)
 
             if isinstance(restart_model, str):
@@ -126,13 +142,18 @@ class MBActor(nn.Module):
             dynamics_layers.append(EnsembleFC(self.hidden_size, self.hidden_size, self.ensemble_size))
             dynamics_layers.append(nn.SiLU())
         
+        if self.reward_function:
+            num_outputs = self.input_space
+        else:
+            num_outputs = self.input_space + 1
+
         if self.dynamics_type == "deterministic":
             output_layer = get_dist("DeterministicEnsemble")(num_inputs=self.hidden_size,
-                                                       num_outputs=self.input_space + 1,
+                                                       num_outputs=num_outputs,
                                                        ensemble_size=self.ensemble_size)
         elif self.dynamics_type == "probabilistic":
             output_layer = get_dist("DiagGaussianEnsemble")(num_inputs=self.hidden_size,
-                                                      num_outputs=self.input_space + 1,
+                                                      num_outputs=num_outputs,
                                                       ensemble_size=self.ensemble_size)
         else:
             raise ValueError
@@ -163,7 +184,7 @@ class MBActor(nn.Module):
             return mean, torch.exp(log_var), min_max_var
 
 
-    def predict(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_learned_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
 
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
@@ -190,8 +211,39 @@ class MBActor(nn.Module):
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
         next_states = predictions[:, :-1]
-        # TODO: add selection between given reward function or learned one
         rewards = predictions[:, -1].unsqueeze(-1)
+        # TODO: add Termination function?
+        return next_states, rewards
+    
+    def predict_given_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
+
+        if type(self.action_space) == gym.spaces.discrete.Discrete:
+            actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
+
+        inputs = torch.cat((states, actions), dim=-1)
+        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
+
+        ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
+        ensemble_means[:, :, :] += states.to(self.device)
+        elite_mean = ensemble_means[self.elite_idxs]
+        elite_std = ensemble_var[self.elite_idxs]
+        
+        assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1])
+        assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1])
+
+        means = elite_mean.mean(0)
+        stds = torch.sqrt(elite_std).mean(0)    
+
+        if self.dynamics_type == "probabilistic":
+            predictions = torch.normal(mean=means, std=stds)
+        else:
+            predictions = means
+
+        assert predictions.shape == (states.shape[0], states.shape[1] + 1)
+
+        next_states = predictions
+
+        rewards = self.reward_function(states, actions)
         # TODO: add Termination function?
         return next_states, rewards
 
