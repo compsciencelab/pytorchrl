@@ -135,7 +135,7 @@ class CWorker(W):
 
             # Collect initial samples
             print("Collecting initial samples...")
-            self.collect_train_data(self.algo.start_steps)
+            self.collect_train_data(self.algo.start_steps, random_data=True)
 
         # Print worker information
         self.print_worker_info()
@@ -204,7 +204,7 @@ class CWorker(W):
 
         return data_to_send
 
-    def collect_train_data(self, num_steps=None, listen_to=[]):
+    def collect_train_data(self, num_steps=None, listen_to=[], random_data=False):
         """
         Collect train data from interactions with the environments.
 
@@ -232,8 +232,12 @@ class CWorker(W):
 
             # Predict next action, next rnn hidden state and
             # algo-specific outputs
-            act, clip_act, rhs2, algo_data = self.algo.acting_step(
-                self.obs, self.rhs, self.done)
+            if random_data == True:
+                act = self.envs_train.action_space.sample()
+                clip_act = act
+            else:
+                act, clip_act, rhs2, algo_data = self.algo.acting_step(
+                    self.obs, self.rhs, self.done)
 
             # Interact with env with predicted action (clipped
             # within action space)
