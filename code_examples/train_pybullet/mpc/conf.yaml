@@ -12,7 +12,8 @@ n_planner: 700
 horizon: 30
 ensemble_size: 5
 elite_size: 3
-dynamics_type: probabilistic
+dynamics_type: deterministic # probabilistic
+learn_reward_function: 0
 validation_percentage: 0.2
 max_time: 86400
 num_env_processes: 1
