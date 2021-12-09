@@ -5,13 +5,14 @@ import numpy as np
 from collections import OrderedDict
 
 import pytorchrl as prl
+from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
-from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
+from pytorchrl.agent.actors.utils import Scale, Unscale, init
 from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor, get_feature_extractor
 
 
-class OffPolicyActor(nn.Module):
+class OffPolicyActor(Actor):
     """
     Actor critic class for Off-Policy algorithms.
 
@@ -20,12 +21,16 @@ class OffPolicyActor(nn.Module):
 
     Parameters
     ----------
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
     input_space : gym.Space
         Environment observation space.
     action_space : gym.Space
         Environment action space.
-    algorithm : str
+    algorithm_name : str
         Name of the RL algorithm used for learning.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
     noise : str
         Type of exploration noise that will be added to the deterministic actions.
     obs_feature_extractor : nn.Module
@@ -54,10 +59,12 @@ class OffPolicyActor(nn.Module):
     --------
     """
     def __init__(self,
+                 device,
                  input_space,
                  action_space,
-                 algorithm,
+                 algorithm_name,
                  noise=None,
+                 checkpoint=None,
                  sequence_overlap=0.5,
                  recurrent_nets=False,
                  recurrent_nets_kwargs={},
@@ -69,10 +76,14 @@ class OffPolicyActor(nn.Module):
                  common_feature_extractor_kwargs={},
                  num_critics=2):
 
-        super(OffPolicyActor, self).__init__()
+        super(OffPolicyActor, self).__init__(
+            device=device,
+            checkpoint=checkpoint,
+            input_space=input_space,
+            action_space=action_space)
 
         self.noise = noise
-        self.algorithm = algorithm
+        self.algorithm_name = algorithm_name
         self.input_space = input_space
         self.action_space = action_space
         self.act_feature_extractor = act_feature_extractor
@@ -85,7 +96,7 @@ class OffPolicyActor(nn.Module):
         self.recurrent_nets_kwargs = recurrent_nets_kwargs
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
         self.num_critics = num_critics
-        self.deterministic = algorithm in [prl.DDPG, prl.TD3]
+        self.deterministic = algorithm_name in [prl.DDPG, prl.TD3]
 
         # ----- Policy Network ----------------------------------------------------
 
@@ -101,7 +112,7 @@ class OffPolicyActor(nn.Module):
             cls,
             input_space,
             action_space,
-            algorithm,
+            algorithm_name,
             noise=None,
             restart_model=None,
             sequence_overlap=0.5,
@@ -125,7 +136,7 @@ class OffPolicyActor(nn.Module):
             Environment observation space.
         action_space : gym.Space
             Environment action space.
-        algorithm : str
+        algorithm_name : str
             Name of the RL algorithm used for learning.
         noise : str
             Type of exploration noise that will be added to the deterministic actions.
@@ -150,19 +161,23 @@ class OffPolicyActor(nn.Module):
             Keyword arguments for the memory network.
         num_critics : int
             Number of Q networks to be instantiated.
+        restart_model : str
+            Path to a previously trained Actor checkpoint to be loaded.
 
         Returns
         -------
-        create_actor_critic_instance : func
+        create_actor_instance : func
             creates a new OffPolicyActor class instance.
         """
 
-        def create_actor_critic_instance(device):
+        def create_actor_instance(device):
             """Create and return an actor critic instance."""
-            policy = cls(input_space=input_space,
+            policy = cls(noise=noise,
+                         device=device,
+                         input_space=input_space,
                          action_space=action_space,
-                         algorithm=algorithm,
-                         noise=noise,
+                         algorithm_name=algorithm_name,
+                         checkpoint=restart_model,
                          sequence_overlap=sequence_overlap,
                          recurrent_nets_kwargs=recurrent_nets_kwargs,
                          recurrent_nets=recurrent_nets,
@@ -173,17 +188,16 @@ class OffPolicyActor(nn.Module):
                          common_feature_extractor=common_feature_extractor,
                          common_feature_extractor_kwargs=common_feature_extractor_kwargs,
                          num_critics=num_critics)
-
-            if isinstance(restart_model, str):
-                policy.load_state_dict(torch.load(restart_model, map_location=device))
-            elif isinstance(restart_model, dict):
-                for submodule, checkpoint in restart_model.items():
-                    partially_load_checkpoint(policy, submodule, checkpoint)
             policy.to(device)
+
+            try:
+                policy.try_load_from_checkpoint()
+            except RuntimeError:
+                pass
 
             return policy
 
-        return create_actor_critic_instance
+        return create_actor_instance
 
     @property
     def is_recurrent(self):
@@ -556,7 +570,7 @@ class OffPolicyActor(nn.Module):
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.Box) and not self.deterministic:
-            if self.algorithm in [prl.SAC]:
+            if self.algorithm_name in [prl.SAC]:
                 dist = get_dist("SquashedGaussian")(self.recurrent_size, self.action_space.shape[0])
             else:
                 dist = get_dist("Gaussian")(self.recurrent_size, self.action_space.shape[0])

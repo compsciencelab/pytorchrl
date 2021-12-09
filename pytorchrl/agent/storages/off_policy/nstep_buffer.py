@@ -29,10 +29,12 @@ class NStepReplayBuffer(S):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     algorithm : Algorithm
-        Algorithm class instance
+        Algorithm class instance.
     n_step : int or float
         Number of future steps used to computed the truncated n-step return value.
     """

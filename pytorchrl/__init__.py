@@ -56,17 +56,21 @@ DONE = "Done"
 ACT = "Action"
 ACTPROBS = "ActionProbs"
 REW = "Reward"
+IREW = "IntrinsicReward"
 OBS2 = "NextObservation"
 RHS2 = "NextRecurrentHiddenStates"
 DONE2 = "NextDone"
 VAL = "Value"
+IVAL = "IntrinsicValue"
 LOGP = "LogProbability"
 ADV = "Advantage"
-RET = "Return"
+IADV = "IntrinsicAdvantage"
+RET = "ExternalReturn"
+IRET = "IntrinsicReturn"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
-OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, ACTPROBS)
-OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, RET, VAL, LOGP, ADV)
+OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
+OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
 DemosDataKeys = (OBS, ACT, REW)
 
 # DATA TYPES
@@ -95,6 +99,7 @@ DEFAULT_DTYPES = {
 # ALGORITHMS
 A2C = "A2C"
 PPO = "PPO"
+RND_PPO = "RND_PPO"
 SAC = "SAC"
 MPO = "MPO"
 TD3 = "TD3"

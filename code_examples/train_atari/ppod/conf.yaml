@@ -3,19 +3,22 @@ agent_name: AtariAgent
 wandb_key: null
 env_id: MontezumaRevengeNoFrameskip-v4
 num_env_steps : 10_000_000
-log_dir: /tmp/atari_ppo
-gamma: 0.99
+log_dir: /tmp/atari_ppod
+gamma: 0.999
+rho: 0.15
+phi: 0.0
 save_interval: 10000
 max_time: 86400
-num_env_processes: 16
+num_env_processes: 128
 num_steps: 128
 num_mini_batch: 4
 clip_param: 0.1
 ppo_epoch: 4
 gae_lambda: 0.95
 value_loss_coef: 1.0
-entropy_coef: 0.01
-max_grad_norm: 0.5
+entropy_coef: 0.001
+max_grad_norm: 1.0
+recurrent_nets: True
 lr: 0.00025
 nn: CNN
 clip_rewards: True

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
+from pytorchrl.agent.actors.utils import partially_load_checkpoint
 
 
 class Actor(nn.Module, ABC):
@@ -9,35 +10,50 @@ class Actor(nn.Module, ABC):
 
     Parameters
     ----------
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
     input_space : gym.Space
         Environment observation space.
     action_space : gym.Space
         Environment action space.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
     """
     def __init__(self,
+                 device,
                  input_space,
                  action_space,
+                 checkpoint=None,
                  *args):
 
         super(Actor, self).__init__()
-        raise NotImplementedError
+        self.device = device
+        self.checkpoint = checkpoint
+        self.input_space = input_space
+        self.action_space = action_space
 
     @classmethod
     @abstractmethod
     def create_factory(
             cls,
+            device,
             input_space,
             action_space,
+            checkpoint=None,
             *args):
         """
         Returns a function that creates actor critic instances.
 
         Parameters
         ----------
+        device: torch.device
+            CPU or specific GPU where class computations will take place.
         input_space : gym.Space
             Environment observation space.
         action_space : gym.Space
             Environment action space.
+        checkpoint : str
+            Path to a previously trained Actor checkpoint to be loaded.
 
         Returns
         -------
@@ -80,26 +96,6 @@ class Actor(nn.Module, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def burn_in_recurrent_states(self, data_batch):
-        """
-        Applies a recurrent burn-in phase to data_batch as described in
-        (https://openreview.net/pdf?id=r1lyTjAqYX). First T steps are used
-        to compute on-policy recurrent hidden states. data_batch is then
-        updated, discarding T first steps in all tensors.
-
-        Parameters
-        ----------
-        data_batch : dict
-            data batch containing all required tensors to compute Algorithm loss.
-
-        Returns
-        -------
-        data_batch : dict
-            Updated data batch after burn-in phase.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def get_action(self, obs, rhs, done, deterministic=False, *args):
         """
         Predict and return next action, along with other information.
@@ -125,6 +121,25 @@ class Actor(nn.Module, ABC):
             Updated recurrent hidden states.
         other : torch.tensor
             Additional tensors from specific Actor.
+        """
+        raise NotImplementedError
+
+    def burn_in_recurrent_states(self, data_batch):
+        """
+        Applies a recurrent burn-in phase to data_batch as described in
+        (https://openreview.net/pdf?id=r1lyTjAqYX). First T steps are used
+        to compute on-policy recurrent hidden states. data_batch is then
+        updated, discarding T first steps in all tensors.
+
+        Parameters
+        ----------
+        data_batch : dict
+            data batch containing all required tensors to compute Algorithm loss.
+
+        Returns
+        -------
+        data_batch : dict
+            Updated data batch after burn-in phase.
         """
         raise NotImplementedError
 
@@ -204,3 +219,15 @@ class Actor(nn.Module, ABC):
             Updated recurrent hidden states.
         """
         raise NotImplementedError
+
+    def try_load_from_checkpoint(self):
+        """Load weights from previously saved checkpoint."""
+        if isinstance(self.checkpoint, str):
+            print("Loading all model weight from {}".format(self.checkpoint))
+            self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
+        elif isinstance(self.checkpoint, dict):
+            for submodule, checkpoint in self.checkpoint.items():
+                print("Loading {} model weight from {}".format(submodule, self.checkpoint))
+                partially_load_checkpoint(self, submodule, checkpoint, map_location=self.device)
+        else:
+            print("Training model from scratch")

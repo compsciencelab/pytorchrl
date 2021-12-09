@@ -6,7 +6,9 @@ import sys
 import time
 import wandb
 import argparse
+import numpy as np
 
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -26,7 +28,12 @@ def main():
     if args.cluster:
         ray.init(address="auto")
     else:
-        ray.init(num_cpus=0)
+        ray.init(
+            num_cpus=0,
+            object_store_memory=1024 ** 3 * 3,
+            _redis_max_memory=1024 ** 3 * 1,
+            _memory=1024 ** 3 * 1,
+            _driver_object_store_memory=1024 ** 3 * 1)
 
     resources = ""
     for k, v in ray.cluster_resources().items():
@@ -45,11 +52,10 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        info_keywords = []
         if args.episodic_life:
             info_keywords += ['EpisodicReward', 'Lives']
         if args.clip_rewards:
-            info_keywords += ['ClippedReward']
+            info_keywords += ['UnclippedReward']
         if args.env_id == "MontezumaRevengeNoFrameskip-v4":
             info_keywords += ['VisitedRooms']
 
@@ -65,12 +71,6 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))
 
-        # 2. Define Test Vector of Envs (Optional)
-        test_envs_factory, _, _ = VecEnv.create_factory(
-            env_fn=atari_test_env_factory,
-            env_kwargs={"env_id": args.env_id, "frame_stack": args.frame_stack},
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir)
-
         # 3. Define RL training algorithm
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
@@ -80,14 +80,16 @@ def main():
 
         # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name, restart_model=args.restart_model)
+            obs_space, action_space, algo_name, restart_model=args.restart_model,
+            recurrent_nets=args.recurrent_nets)
 
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             initial_human_demos_dir=os.path.dirname(os.path.abspath(__file__)) + "/demos/",
             target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
-            initial_reward_threshold=4.0,
+            initial_reward_threshold=14.0,
+            demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8,  prl.REW: np.float16}
         )
 
         # 6. Define scheme
@@ -99,7 +101,6 @@ def main():
             "actor_factory": actor_factory,
             "storage_factory": storage_factory,
             "train_envs_factory": train_envs_factory,
-            "test_envs_factory": test_envs_factory,
         })
 
         # add collection specs
@@ -226,7 +227,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
+        '--recurrent-nets', action='store_true', default=False,
         help='Use a recurrent policy')
 
     # Scheme specs

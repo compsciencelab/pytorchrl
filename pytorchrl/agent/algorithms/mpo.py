@@ -29,6 +29,8 @@ class MPO(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor_critic class instance.
     lr_pi : float
@@ -92,6 +94,7 @@ class MPO(Algorithm):
 
     def __init__(self,
                  device,
+                 envs,
                  actor,
                  lr_q=1e-4,
                  lr_pi=1e-4,
@@ -148,6 +151,7 @@ class MPO(Algorithm):
         # ---- MPO-specific attributes ----------------------------------------
 
         self.iter = 0
+        self.envs = envs
         self.actor = actor
         self.device = device
         self.polyak = polyak
@@ -307,13 +311,14 @@ class MPO(Algorithm):
             Name of the algorithm.
         """
 
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(lr_q=lr_q,
                        lr_pi=lr_pi,
+                       envs=envs,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,

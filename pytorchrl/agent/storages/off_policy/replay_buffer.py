@@ -33,6 +33,8 @@ class ReplayBuffer(S):
         Actor class instance.
     algorithm : Algorithm
         Algorithm class instance
+    envs : VecEnv
+        Vector of environments instance.
     """
 
     # Data fields to store in buffer and contained in the generated batches
