@@ -2,5 +2,5 @@ from pytorchrl.agent.actors.reward_functions.gym_reward_functions import pendulu
 
 
 def get_reward_function(env_id):
-    if env_id == "Pendulum-v0" or env_id == "Pendulum-v0":
+    if env_id == "Pendulum-v0" or env_id == "Pendulum-v1":
         return pendulum_reward_function

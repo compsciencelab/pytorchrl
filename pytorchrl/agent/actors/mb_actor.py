@@ -36,9 +36,13 @@ class MBActor(nn.Module):
         self.device = device
         self.input_space = input_space.shape[0]
         self.action_space = action_space
-        if not learn_reward_function:
+        self.reward_function = None
+      
+        if learn_reward_function == 0:
             self.reward_function = get_reward_function(env_id=env_id)
-        
+            self.predict = self.predict_given_reward
+        else:
+            self.predict = self.predict_learned_reward
         self.ensemble_size = ensemble_size
         self.elite_size = elite_size
         self.elite_idxs = [i for i in range(self.elite_size)]
@@ -49,11 +53,6 @@ class MBActor(nn.Module):
         self.hidden_layer = 3
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
-
-        if self.reward_function:
-            self.predict = self.predict_given_reward
-        else:
-            self.predict = self.predict_learned_reward
 
         self.create_dynamics()
         print(self.dynamics_model)
@@ -142,10 +141,10 @@ class MBActor(nn.Module):
             dynamics_layers.append(EnsembleFC(self.hidden_size, self.hidden_size, self.ensemble_size))
             dynamics_layers.append(nn.SiLU())
         
-        if self.reward_function:
-            num_outputs = self.input_space
-        else:
+        if self.reward_function is None:
             num_outputs = self.input_space + 1
+        else:
+            num_outputs = self.input_space
 
         if self.dynamics_type == "deterministic":
             output_layer = get_dist("DeterministicEnsemble")(num_inputs=self.hidden_size,
@@ -216,7 +215,6 @@ class MBActor(nn.Module):
         return next_states, rewards
     
     def predict_given_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
-
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
 
@@ -224,7 +222,7 @@ class MBActor(nn.Module):
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
 
         ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
-        ensemble_means[:, :, :] += states.to(self.device)
+        ensemble_means += states.to(self.device)
         elite_mean = ensemble_means[self.elite_idxs]
         elite_std = ensemble_var[self.elite_idxs]
         
@@ -239,7 +237,7 @@ class MBActor(nn.Module):
         else:
             predictions = means
 
-        assert predictions.shape == (states.shape[0], states.shape[1] + 1)
+        assert predictions.shape == (states.shape[0], states.shape[1])
 
         next_states = predictions
 
@@ -259,7 +257,6 @@ class MBActor(nn.Module):
                              validate: bool=False
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
-        assert len(mean.shape) == len(logvar.shape) == len(labels.shape) == 3
         
         inv_var = (-logvar).exp()
         if not validate:
