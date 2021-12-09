@@ -40,12 +40,13 @@ class MBReplayBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, validation_percentage, device, actor, algorithm, envs):
+    def __init__(self, size, validation_percentage, device, actor, algorithm, learn_reward_function, envs):
 
         self.actor = actor
         self.ensemble_size = actor.ensemble_size
         #self.scaler = actor.scaler
         self.validation_percentage = validation_percentage
+        self.learn_reward_function = learn_reward_function
         self.ensemble_size = actor.ensemble_size
         self.device = device
         self.algo = algorithm
@@ -319,8 +320,10 @@ class MBReplayBuffer(S):
 
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
-        labels = np.concatenate((delta_state, rewards), axis=-1)
-
+        if self.learn_reward_function:
+            labels = np.concatenate((delta_state, rewards), axis=-1)
+        else:
+            labels = delta_state
         num_validation = int(inputs.shape[0] * self.validation_percentage)
 
         train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]

@@ -73,7 +73,9 @@ def main():
         algo_factory, algo = MB_MPC.create_factory(args)
 
         # 5. Define rollouts storage
-        storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size, validation_percentage=args.validation_percentage)
+        storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size,
+                                                        validation_percentage=args.validation_percentage,
+                                                        learn_reward_function=args.learn_reward_function)
 
         # 6. Define scheme
         params = {}
