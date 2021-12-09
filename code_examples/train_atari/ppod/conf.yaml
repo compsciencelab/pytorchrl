@@ -3,7 +3,7 @@ agent_name: AtariAgent
 wandb_key: null
 env_id: MontezumaRevengeNoFrameskip-v4
 num_env_steps : 10_000_000
-log_dir: /tmp/atari_ppo
+log_dir: /tmp/atari_ppod
 gamma: 0.999
 rho: 0.15
 phi: 0.0
