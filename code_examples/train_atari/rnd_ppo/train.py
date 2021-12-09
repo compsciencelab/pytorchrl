@@ -61,11 +61,13 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        info_keywords = ["VisitedRooms"]
+        info_keywords = []
         if args.episodic_life:
             info_keywords += ['EpisodicReward', 'Lives']
         if args.clip_rewards:
             info_keywords += ['UnclippedReward']
+        if args.env_id == "MontezumaRevengeNoFrameskip-v4":
+            info_keywords += ['VisitedRooms']
 
         # Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(

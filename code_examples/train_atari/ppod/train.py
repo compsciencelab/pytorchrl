@@ -52,6 +52,7 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
+        info_keywords = []
         if args.episodic_life:
             info_keywords += ['EpisodicReward', 'Lives']
         if args.clip_rewards:
