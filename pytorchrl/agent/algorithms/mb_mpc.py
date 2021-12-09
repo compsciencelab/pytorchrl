@@ -147,7 +147,11 @@ class MB_MPC(Algorithm):
     def acting_step(self, obs, rhs, done, deterministic=False):
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
-            clipped_action = torch.clamp(action, self.action_low, self.action_high)
+            clipped_action = torch.clamp(action, -1, 1)
+            
+        if self.actor.unscale:
+            action = self.actor.unscale(action)
+            clipped_action = self.actor.unscale(clipped_action)
         return clipped_action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
     

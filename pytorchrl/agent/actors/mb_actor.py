@@ -138,12 +138,12 @@ class MBActor(nn.Module):
             raise ValueError
         dynamics_layers.append(output_layer)
         
-        # if type(self.action_space) == gym.spaces.box.Box:
-        #     self.scale = Scale(self.action_space)
-        #     self.unscale = Unscale(self.action_space)
-        # else:
-        #     self.scale = None
-        #     self.unscale = None
+        if type(self.action_space) == gym.spaces.box.Box:
+            self.scale = Scale(self.action_space)
+            self.unscale = Unscale(self.action_space)
+        else:
+            self.scale = None
+            self.unscale = None
 
         dynamics_net = nn.Sequential(*dynamics_layers)
 

@@ -232,12 +232,13 @@ class CWorker(W):
 
             # Predict next action, next rnn hidden state and
             # algo-specific outputs
+
+            act, clip_act, rhs2, algo_data = self.algo.acting_step(
+                self.obs, self.rhs, self.done)
             if random_data == True:
                 act = self.envs_train.action_space.sample()
+                act = torch.from_numpy(act).unsqueeze(0)
                 clip_act = act
-            else:
-                act, clip_act, rhs2, algo_data = self.algo.acting_step(
-                    self.obs, self.rhs, self.done)
 
             # Interact with env with predicted action (clipped
             # within action space)
