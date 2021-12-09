@@ -56,7 +56,7 @@ class MBReplayBuffer(S):
         self.reset()
 
     @classmethod
-    def create_factory(cls, size, validation_percentage):
+    def create_factory(cls, size, validation_percentage, learn_reward_function):
         """
         Returns a function that creates ReplayBuffer instances.
 
@@ -73,7 +73,7 @@ class MBReplayBuffer(S):
 
         def create_buffer(device, actor, algorithm, envs):
             """Create and return a ReplayBuffer instance."""
-            return cls(size, validation_percentage, device, actor, algorithm, envs)
+            return cls(size, validation_percentage, learn_reward_function, device, actor, algorithm, envs)
 
         return create_buffer
 
