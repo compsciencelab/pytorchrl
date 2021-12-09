@@ -148,7 +148,7 @@ class MB_MPC(Algorithm):
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
             clipped_action = torch.clamp(action, self.action_low, self.action_high)
-        return action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
+        return clipped_action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
     
     
     def training_step(self, batch)-> Tuple[torch.Tensor, torch.Tensor]:
