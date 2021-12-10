@@ -99,7 +99,13 @@ class PPODBuffer(B):
 
         # Load initial demos
         self.load_initial_demos()
+
+        # Define reward_threshold
         self.reward_threshold = initial_reward_threshold or - np.inf
+        if len(self.reward_demos) > 0:
+            new_threshold = min([d["TotalReward"] for d in self.reward_demos])
+            if new_threshold > self.reward_threshold:
+                self.reward_threshold = new_threshold
         self.max_demo_reward = max(
             [d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else -np.inf
 
