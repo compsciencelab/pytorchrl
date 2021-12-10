@@ -674,6 +674,11 @@ class PPODBuffer(B):
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
             for _ in range(len(self.reward_demos) - self.max_demos):
+
+                # # Option 1: Eject agent demo with lowest reward
+                # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
+                # del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
+
                 # Option 2: Eject longer agent demo
                 lengths = np.array([p[prl.OBS].shape[0] for p in self.reward_demos[self.num_loaded_human_demos:]])
                 del self.reward_demos[np.argmax(lengths) + self.num_loaded_human_demos]
