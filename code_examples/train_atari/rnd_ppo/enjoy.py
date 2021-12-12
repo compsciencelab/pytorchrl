@@ -38,7 +38,6 @@ def enjoy():
     obs = env.reset()
     env.render()
     done, episode_reward, step = False, 0, 0
-
     _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
 
     # Execute episodes

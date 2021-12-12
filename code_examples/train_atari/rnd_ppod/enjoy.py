@@ -7,7 +7,7 @@ import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.agent.actors import OnPolicyActor
-from code_examples.train_atari.rnd_ppo.train import get_args
+from code_examples.train_atari.rnd_ppod.train import get_args
 
 
 def enjoy():
