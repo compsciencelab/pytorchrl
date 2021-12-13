@@ -175,12 +175,12 @@ class MBActor(nn.Module):
                        ret_log_var: bool=False
                        )-> Tuple[torch.Tensor, torch.Tensor]:
         # inputs: [batch size, state size + action size]
-        mean, log_var, min_max_var = self.dynamics_model(inputs)
+        mean = self.dynamics_model(inputs) #  log_var, min_max_var
 
         if ret_log_var:
-            return mean, log_var, min_max_var
+            return mean # , log_var, min_max_var
         else:
-            return mean, torch.exp(log_var), min_max_var
+            return mean #, torch.exp(log_var), min_max_var
 
 
     def predict_learned_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
@@ -191,21 +191,20 @@ class MBActor(nn.Module):
         inputs = torch.cat((states, actions), dim=-1)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
 
-        ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
+        ensemble_means = self.get_prediction(inputs=inputs, ret_log_var=False) #, ensemble_var, _
         ensemble_means[:, :, :-1] += states.to(self.device)
         elite_mean = ensemble_means[self.elite_idxs]
-        elite_std = ensemble_var[self.elite_idxs]
+        #elite_std = ensemble_var[self.elite_idxs]
         
         assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
-        assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
+        #assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
 
-        means = elite_mean.mean(0)
-        stds = torch.sqrt(elite_std).mean(0)    
 
         if self.dynamics_type == "probabilistic":
-            predictions = torch.normal(mean=means, std=stds)
+            mean_predictions = torch.normal(mean=elite_mean) #, std=stds)
+            predictions = mean_predictions.mean(0)
         else:
-            predictions = means
+            predictions = elite_mean.mean(0)
 
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
@@ -221,21 +220,21 @@ class MBActor(nn.Module):
         inputs = torch.cat((states, actions), dim=-1)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
 
-        ensemble_means, ensemble_var, _ = self.get_prediction(inputs=inputs, ret_log_var=False)
+        ensemble_means = self.get_prediction(inputs=inputs, ret_log_var=False) # , ensemble_var, _
         ensemble_means += states.to(self.device)
         elite_mean = ensemble_means[self.elite_idxs]
-        elite_std = ensemble_var[self.elite_idxs]
+        #elite_std = ensemble_var[self.elite_idxs]
         
         assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1])
-        assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1])
+        #assert elite_std.shape == (self.elite_size, states.shape[0], states.shape[1])
 
-        means = elite_mean.mean(0)
-        stds = torch.sqrt(elite_std).mean(0)    
+        #stds = torch.sqrt(elite_std).mean(0)    
 
         if self.dynamics_type == "probabilistic":
-            predictions = torch.normal(mean=means, std=stds)
+            mean_predictions = torch.normal(mean=elite_mean) #, std=stds)
+            predictions = mean_predictions.mean(0)
         else:
-            predictions = means
+            predictions = elite_mean.mean(0)
 
         assert predictions.shape == (states.shape[0], states.shape[1])
 
@@ -258,12 +257,12 @@ class MBActor(nn.Module):
                              )-> Tuple[torch.Tensor, torch.Tensor]:
 
         
-        inv_var = (-logvar).exp()
-        if not validate:
-            total_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum() + logvar.mean(-1).mean(-1).sum()
-            total_loss = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
-            return total_loss
-        else:
-            mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
-            return mse_loss
+        # inv_var = (-logvar).exp()
+        # if not validate:
+        #     total_loss = ((mean - labels)**2 * inv_var).mean(-1).mean(-1).sum() + logvar.mean(-1).mean(-1).sum()
+        #     total_loss = total_loss + 0.01 * torch.sum(min_max_var[1]) - 0.01 * torch.sum(min_max_var[0])
+        #     return total_loss
+        # else:
+        mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
+        return mse_loss
 
