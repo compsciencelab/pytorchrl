@@ -141,18 +141,6 @@ class DiagGaussianEnsemble(nn.Module):
         self.num_outputs = num_outputs
         self.ensemble_size = ensemble_size
         self.mu = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
-        # self.log_var = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
-
-        # self.max_logvar = nn.Parameter((torch.ones((1, num_outputs)).float() / 2), requires_grad=False)
-        # self.min_logvar = nn.Parameter((-torch.ones((1, num_outputs)).float() * 10), requires_grad=False)
 
     def forward(self, x: torch.Tensor):
-
-        mean = self.mu(x)
-
-        # log_var = self.max_logvar - F.softplus(self.max_logvar - self.log_var(x))
-        # log_var = self.min_logvar + F.softplus(log_var - self.min_logvar)
-        # assert mean.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
-        # assert log_var.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
-        return mean #, log_var, (self.max_logvar, self.min_logvar)
-
+        return self.mu(x)

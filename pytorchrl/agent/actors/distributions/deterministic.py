@@ -103,7 +103,5 @@ class DeterministicEnsemble(nn.Module):
         
     def forward(self, x: torch.Tensor)-> torch.Tensor:
         mean = self.output(x)
-        #log_var = torch.zeros(mean.shape).to(mean.device)
         assert mean.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
-        #assert log_var.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
-        return mean#, log_var, (torch.zeros(mean.shape).to(mean.device), torch.zeros(mean.shape).to(mean.device))
+        return mean
