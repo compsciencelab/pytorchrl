@@ -160,7 +160,7 @@ class MB_MPC(Algorithm):
         train_labels = batch["train_label"]
 
         self.actor.train()
-        mean = self.actor.dynamics_model(inputs=train_inputs)
+        mean = self.actor.dynamics_model(train_inputs)
         loss = self.actor.calculate_loss(mean=mean,
                                          labels=train_labels)
         return loss
@@ -170,7 +170,7 @@ class MB_MPC(Algorithm):
         holdout_labels = batch["holdout_labels"]
         self.actor.eval()
         with torch.no_grad():
-            val_mean = self.actor.dynamics_model(inputs=holdout_inputs)
+            val_mean = self.actor.dynamics_model(holdout_inputs)
             validation_loss = self.actor.calculate_loss(mean=val_mean,
                                                         labels=holdout_labels,
                                                         validate=True)
