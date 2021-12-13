@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import glob
+import time
+
 import numpy as np
 import pytorchrl as prl
 from matplotlib import pyplot as plt
@@ -33,7 +35,6 @@ def visualize():
             step += 1
 
             if step == length_demo:
-                # print("EPISODE: reward: {}\n".format(demo[prl.REW].sum()))
                 print("EPISODE: reward: {}\n".format(demo["Reward"].sum()))
                 step = 0
                 demo_idx += 1
@@ -52,7 +53,6 @@ def visualize():
             demo_name = demos_list[demo_idx]
             demo = np.load(demo_name)
             length_demo = demo[prl.ACT].shape[0]
-            # print("LOADING DEMO: {}, LENGTH {}, REWARD {}".format(demo_name, length_demo, demo[prl.REW].sum()))
             print("LOADING DEMO: {}, LENGTH {}, REWARD {}".format(demo_name, length_demo, demo["Reward"].sum()))
 
     print("Finished!")
