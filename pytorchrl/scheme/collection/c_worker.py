@@ -135,7 +135,7 @@ class CWorker(W):
 
             # Collect initial samples
             print("Collecting initial samples...")
-            self.collect_train_data(self.algo.start_steps, random_data=True)
+            self.collect_train_data(self.algo.start_steps)
 
         # Print worker information
         self.print_worker_info()
@@ -204,7 +204,7 @@ class CWorker(W):
 
         return data_to_send
 
-    def collect_train_data(self, num_steps=None, listen_to=[], random_data=False):
+    def collect_train_data(self, num_steps=None, listen_to=[]):
         """
         Collect train data from interactions with the environments.
 
@@ -235,10 +235,6 @@ class CWorker(W):
 
             act, clip_act, rhs2, algo_data = self.algo.acting_step(
                 self.obs, self.rhs, self.done)
-            if random_data == True:
-                act = self.envs_train.action_space.sample()
-                act = torch.from_numpy(act).unsqueeze(0)
-                clip_act = act
 
             # Interact with env with predicted action (clipped
             # within action space)
