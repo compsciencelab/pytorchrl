@@ -298,8 +298,6 @@ class MBReplayBuffer(S):
         """
 
         """
-
-        # create dataloader with all obs, action, next_obs data
        
         for k, v in self.data.items():
             if k == prl.OBS:
