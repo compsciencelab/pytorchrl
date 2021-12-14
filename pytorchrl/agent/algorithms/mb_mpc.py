@@ -152,7 +152,7 @@ class MB_MPC(Algorithm):
         if self.actor.unscale:
             action = self.actor.unscale(action)
             clipped_action = self.actor.unscale(clipped_action)
-        return clipped_action.unsqueeze(-1), clipped_action.unsqueeze(-1), rhs, {}
+        return clipped_action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
     
     
     def training_step(self, batch)-> Tuple[torch.Tensor, torch.Tensor]:
