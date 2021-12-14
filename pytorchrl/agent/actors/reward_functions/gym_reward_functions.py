@@ -1,6 +1,10 @@
 import torch
 import math
 
+"""Good Resource of reward functions: https://arxiv.org/pdf/1907.02057.pdf 
+    including gym envrionemnts as well as pybullet environments
+"""
+
 
 def pendulum_reward_function(state: torch.Tensor, action: torch.Tensor)-> torch.Tensor:
     max_torque = 2.0

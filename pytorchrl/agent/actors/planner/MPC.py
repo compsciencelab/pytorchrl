@@ -79,19 +79,21 @@ class CEM(MPC):
         self.update_alpha = config.update_alpha
         self.epsilon = 0.001
         self.device = device
+        self.lb = -1
+        self.ub = 1
         
     def get_action(self, state, model, noise=False):
         initial_state = state.repeat(self.n_planner, 1).to(self.device)
         mu = np.zeros(self.horizon*self.action_space)
         var = 5 * np.ones(self.horizon*self.action_space)
-        X = stats.truncnorm(self.action_low, self.action_high, loc=np.zeros_like(mu), scale=np.ones_like(mu))
+        X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
         i = 0
         while ((i < self.iter_update_steps) and (np.max(var) > self.epsilon)):
             states = initial_state
             returns = np.zeros((self.n_planner, 1))
             #variables
-            lb_dist = mu - self.action_low
-            ub_dist = self.action_high - mu
+            lb_dist = mu - self.lb
+            ub_dist = self.ub - mu
             constrained_var = np.minimum(np.minimum(np.square(lb_dist / 2), np.square(ub_dist / 2)), var)
             
             actions = X.rvs(size=[self.n_planner, self.horizon*self.action_space]) * np.sqrt(constrained_var) + mu
