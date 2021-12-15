@@ -37,6 +37,8 @@ class EREBuffer(B):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     algorithm : Algorithm

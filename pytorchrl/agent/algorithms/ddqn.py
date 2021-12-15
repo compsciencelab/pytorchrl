@@ -25,6 +25,8 @@ class DDQN(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
     actor : ActorCritic
         actor class instance.
     lr : float
@@ -55,6 +57,7 @@ class DDQN(Algorithm):
 
     def __init__(self,
                  device,
+                 envs,
                  actor,
                  lr=1e-4,
                  gamma=0.99,
@@ -100,10 +103,11 @@ class DDQN(Algorithm):
         # ---- DDQN-specific attributes ---------------------------------------
 
         self.iter = 0
+        self.envs = envs
+        self.actor = actor
         self.device = device
         self.polyak = polyak
         self.epsilon = initial_epsilon
-        self.actor = actor
         self.max_grad_norm = max_grad_norm
         self.epsilon_decay = epsilon_decay
         self.target_update_interval = target_update_interval
@@ -198,12 +202,13 @@ class DDQN(Algorithm):
             Name of the algorithm.
         """
 
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(lr=lr,
+                       envs=envs,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,

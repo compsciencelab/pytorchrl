@@ -12,6 +12,24 @@ cv2.ocl.setUseOpenCL(False)
 from pytorchrl.envs.common import FrameStack
 
 
+class StickyActionEnv(gym.Wrapper):
+    def __init__(self, env, p=0.25):
+        super(StickyActionEnv, self).__init__(env)
+        self.p = p
+        self.last_action = 0
+
+    def step(self, action):
+        if np.random.uniform() < self.p:
+            action = self.last_action
+
+        self.last_action = action
+        return self.env.step(action)
+
+    def reset(self):
+        self.last_action = 0
+        return self.env.reset()
+
+
 class TimeLimit(gym.Wrapper):
     def __init__(self, env, max_episode_steps=None):
         super(TimeLimit, self).__init__(env)
@@ -135,7 +153,7 @@ class ClipRewardEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
-        info['ClippedReward'] = self.total_reward
+        info['UnclippedReward'] = self.total_reward
 
         reward = np.sign(reward)
         return obs, reward, done, info
@@ -159,8 +177,10 @@ class MaxAndSkipEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(action)
-            if i == self._skip - 2: self._obs_buffer[0] = obs
-            if i == self._skip - 1: self._obs_buffer[1] = obs
+            if i == self._skip - 2:
+                self._obs_buffer[0] = obs
+            if i == self._skip - 1:
+                self._obs_buffer[1] = obs
             total_reward += reward
             if done:
                 break
@@ -174,11 +194,29 @@ class MaxAndSkipEnv(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class MontezumaVisitedRoomEnv(gym.Wrapper):
+    def __init__(self, env, room_address):
+        gym.Wrapper.__init__(self, env)
+        self.room_address = room_address
+        self.visited_rooms = set()  # Only stores unique numbers.
+
+    def step(self, action):
+        state, reward, done, info = self.env.step(action)
+        ram = self.unwrapped.ale.getRAM()
+        assert len(ram) == 128
+        self.visited_rooms.add(ram[self.room_address])
+        info['VisitedRooms'] = len(self.visited_rooms)
+        return state, reward, done, info
+
+    def reset(self):
+        self.visited_rooms.clear()
+        return self.env.reset()
+
+
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env, width=84, height=84, grayscale=True, dict_space_key=None):
         """
         Warp frames to 84x84 as done in the Nature paper and later work.
-
         If the environment uses dictionary observations, `dict_space_key` can be specified which indicates which
         observation should be warped.
         """
@@ -241,13 +279,13 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 
 class LazyFrames(object):
     def __init__(self, frames):
-        """This object ensures that common frames between the observations are only stored once.
+        """
+        This object ensures that common frames between the observations are only stored once.
         It exists purely to optimize memory usage which can be huge for DQN's 1M frames replay
         buffers.
-
         This object should only be converted to numpy array before being passed to the model.
-
-        You'd not believe how complex the previous solution was."""
+        You'd not believe how complex the previous solution was.
+        """
         self._frames = frames
         self._out = None
 
@@ -292,11 +330,14 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=1, scal
     return env
 
 
-def make_atari(env_id, max_episode_steps=None):
+def make_atari(env_id, max_episode_steps=None, sticky_actions=False):
     env = gym.make(env_id)
+    env._max_episode_steps = max_episode_steps * 4
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
+    if sticky_actions:
+        env = StickyActionEnv(env)
     if max_episode_steps is not None:
         env = TimeLimit(env, max_episode_steps=max_episode_steps)
     return env

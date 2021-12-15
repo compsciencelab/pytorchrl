@@ -18,10 +18,12 @@ class GAEBuffer(B):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     algorithm : Algorithm
-        Algorithm class instance
+        Algorithm class instance.
     """
 
     # Data fields to store in buffer and contained in generated batches
@@ -60,14 +62,29 @@ class GAEBuffer(B):
             return cls(size, device, actor, algorithm, envs, gae_lambda)
         return create_buffer_instance
 
-    def compute_returns(self):
+    @property
+    def used_capacity(self):
+        """Returns the step up to which storage is full with env transitions."""
+        return self.step - 1 if self.step != 0 else self.max_size
+
+    def compute_returns_old(self):
         """Compute return values."""
         gamma = self.algo.gamma
         len = self.step - 1 if self.step != 0 else self.max_size
         gae = 0
         for step in reversed(range(len)):
             delta = (self.data[prl.REW][step] + gamma * self.data[prl.VAL][step + 1] * (
-                1.0 - self.data[prl.DONE][step + 1]) - self.data[prl.VAL][step])
+                    1.0 - self.data[prl.DONE][step + 1]) - self.data[prl.VAL][step])
             gae = delta + gamma * self.gae_lambda * (1.0 - self.data[prl.DONE][step + 1]) * gae
             self.data[prl.RET][step] = gae + self.data[prl.VAL][step]
+
+    def compute_returns(self, rewards, returns, values, dones, gamma):
+        """Compute return values."""
+        gae_lambda, length, gae = self.gae_lambda, self.used_capacity, 0
+        returns[length].copy_(values[length])
+        for step in reversed(range(length)):
+            delta = (rewards[step] + gamma * values[step + 1] * (1.0 - dones[step + 1]) - values[step])
+            gae = delta + gamma * gae_lambda * (1.0 - dones[step + 1]) * gae
+            returns[step] = gae + values[step]
+
 

@@ -25,6 +25,8 @@ class SAC(Algorithm):
     ----------
     device : torch.device
         CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor_critic class instance.
     lr_pi : float
@@ -68,6 +70,7 @@ class SAC(Algorithm):
 
     def __init__(self,
                  device,
+                 envs,
                  actor,
                  lr_q=1e-4,
                  lr_pi=1e-4,
@@ -114,9 +117,10 @@ class SAC(Algorithm):
         # ---- SAC-specific attributes ----------------------------------------
 
         self.iter = 0
+        self.envs = envs
+        self.actor = actor
         self.polyak = polyak
         self.device = device
-        self.actor = actor
         self.max_grad_norm = max_grad_norm
         self.target_update_interval = target_update_interval
 
@@ -233,14 +237,15 @@ class SAC(Algorithm):
             Name of the algorithm.
         """
 
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(lr_q=lr_q,
                        lr_pi=lr_pi,
                        lr_alpha=lr_alpha,
+                       envs=envs,
+                       actor=actor,
                        gamma=gamma,
                        device=device,
                        polyak=polyak,
-                       actor=actor,
                        test_every=test_every,
                        start_steps=start_steps,
                        num_updates=num_updates,

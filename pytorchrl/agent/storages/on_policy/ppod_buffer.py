@@ -22,20 +22,18 @@ class PPODBuffer(B):
         CPU or specific GPU where data tensors will be placed and class
         computations will take place. Should be the same device where the
         actor model is located.
+    envs : VecEnv
+        Vector of environments instance.
     actor : Actor
         Actor class instance.
     algorithm : Algorithm
-        Algorithm class instance
-    envs: VecEnv
-        Train environments vector.
-    frame_skip : int
-        Environment skips every `frame_skip`-th observation.
-    frame_stack : int
-        Environment observations composed of last `frame_stack` frames stacked.
-    initial_demos_dir : str
-        Path to directory containing initial demonstrations.
-    target_demos_dir : str
-        Path to directory where best demonstrations should be saved.
+        Algorithm class instance.
+    initial_human_demos_dir : str
+        Path to directory containing human initial demonstrations.
+    initial_agent_demos_dir : str
+        Path to directory containing other agent initial demonstrations.
+    target_agent_demos_dir : str
+        Path to directory where best reward demonstrations should be saved.
     rho : float
         PPO+D rho parameter.
     phi : float
@@ -44,15 +42,16 @@ class PPODBuffer(B):
         PPO+D alpha parameter
     gae_lambda : float
         GAE lambda parameter.
-    max_demos : int
+    total_buffer_demo_capacity : int
         Maximum number of demos to keep between reward and value demos.
-    save_demo_frequency : int
+    save_demos_every : int
         Save top demos every  `save_demo_frequency`th data collection.
-    num_saved_demos : int
+    num_agent_demos_to_save : int
         Number of top reward demos to save.
-    use_initial_demos_as_reward_threshold : bool
-        Whether or not to use initially provided demos to define the reward threshold
-        to accept future demos found by the agent.
+    initial_reward_threshold : float
+        initial value to use as reward threshold for new demos.
+    demo_dtypes : dict
+        data types to use for the demos.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -61,10 +60,10 @@ class PPODBuffer(B):
     # Data tensors to collect for each demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, frame_stack=1, frame_skip=0,
-                 initial_demos_dir=None, target_demos_dir=None, rho=0.1, phi=0.3, gae_lambda=0.95,
-                 alpha=10, max_demos=51, save_demo_frequency=10, num_saved_demos=10,
-                 use_initial_demos_as_reward_threshold=True):
+    def __init__(self, size, device, actor, algorithm, envs, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10,
+                 total_buffer_demo_capacity=51, initial_human_demos_dir=None, initial_agent_demos_dir=None,
+                 target_agent_demos_dir=None,  num_agent_demos_to_save=10, initial_reward_threshold=None,
+                 save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -78,32 +77,39 @@ class PPODBuffer(B):
         # PPO + D parameters
         self.rho = rho
         self.phi = phi
+        self.iter = 0
         self.alpha = alpha
         self.initial_rho = rho
         self.initial_phi = phi
-        self.max_demos = max_demos
-        self.initial_demos_dir = initial_demos_dir
-        self.target_demos_dir = target_demos_dir
-        self.frame_stack = frame_stack
-        self.frame_skip = frame_skip
+        self.save_demos_every = save_demos_every
+        self.max_demos = total_buffer_demo_capacity
+        self.num_agent_demos_to_save = num_agent_demos_to_save
+        self.initial_human_demos_dir = initial_human_demos_dir
+        self.initial_agent_demos_dir = initial_agent_demos_dir
+        self.target_agent_demos_dir = target_agent_demos_dir
+
+        # Data parameters
+        self.demo_dtypes = demo_dtypes
+        self.num_channels_obs = None  # Lazy initialization
+        self.inserted_samples = 0
 
         # Reward and Value buffers
         self.reward_demos = []
         self.value_demos = []
 
         # Load initial demos
-        if initial_demos_dir:
-            self.load_initial_demos()
-        
-        # Define reward threshold for new demos 
-        if use_initial_demos_as_reward_threshold:
-            self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos]) if len(
-                self.reward_demos) > 0 else - np.inf
-        else:
-            self.reward_threshold = - np.inf
+        self.load_initial_demos()
 
-        # Define variables to track demos
-        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else 0.0
+        # Define reward_threshold
+        self.reward_threshold = initial_reward_threshold or - np.inf
+        if len(self.reward_demos) > 0:
+            new_threshold = min([d["TotalReward"] for d in self.reward_demos])
+            if new_threshold > self.reward_threshold:
+                self.reward_threshold = new_threshold
+        self.max_demo_reward = max(
+            [d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else -np.inf
+
+        # Define variables to track potential demos
         self.potential_demos_val = {"env{}".format(i + 1): - np.inf for i in range(self.num_envs)}
         self.potential_demos = {"env{}".format(i + 1): defaultdict(list) for i in range(self.num_envs)}
 
@@ -118,26 +124,11 @@ class PPODBuffer(B):
                 prl.RHS: None,
             } for i in range(self.num_envs)}
 
-        # Save demos
-        self.iter = 0
-        self.save_demos_every = save_demo_frequency
-        self.num_saved_demos = num_saved_demos
-
     @classmethod
-    def create_factory(cls,
-                       size,
-                       initial_demos_dir=None,
-                       target_demos_dir=None,
-                       frame_stack=1,
-                       frame_skip=0,
-                       rho=0.1,
-                       phi=0.3,
-                       gae_lambda=0.95,
-                       alpha=10,
-                       max_demos=51,
-                       save_demo_frequency=10,
-                       num_saved_demos=10,
-                       use_initial_demos_as_reward_threshold=True):
+    def create_factory(cls, size, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51,
+                       initial_human_demos_dir=None, initial_agent_demos_dir=None, target_agent_demos_dir=None,
+                       num_agent_demos_to_save=10, initial_reward_threshold=None, save_demos_every=10,
+                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -145,31 +136,30 @@ class PPODBuffer(B):
         ----------
         size : int
             Storage capacity along time axis.
-        initial_demos_dir : str
-            Path to directory containing initial demonstrations.
-        target_demos_dir : str
-            Path to directory where best demonstrations should be saved.
-        frame_skip : int
-            Environment skips every `frame_skip`-th observation.
-        frame_stack : int
-            Environment observations composed of last `frame_stack` frames stacked.
+        initial_human_demos_dir : str
+            Path to directory containing human initial demonstrations.
+        initial_agent_demos_dir : str
+            Path to directory containing other agent initial demonstrations.
+        target_agent_demos_dir : str
+            Path to directory where best reward demonstrations should be saved.
         rho : float
-            PPO+D rho parameter
+            PPO+D rho parameter.
         phi : float
             PPO+D phi parameter.
         alpha : float
             PPO+D alpha parameter
         gae_lambda : float
             GAE lambda parameter.
-        max_demos : int
+        total_buffer_demo_capacity : int
             Maximum number of demos to keep between reward and value demos.
-        save_demo_frequency : int
+        save_demos_every : int
             Save top demos every  `save_demo_frequency`th data collection.
-        num_saved_demos : int
+        num_agent_demos_to_save : int
             Number of top reward demos to save.
-        use_initial_demos_as_reward_threshold : bool
-            Whether or not to use initially provided demos to define the reward threshold
-            to accept future demos found by the agent.
+        initial_reward_threshold : float
+            initial value to use as reward threshold for new demos.
+        demo_dtypes : dict
+            data types to use for the demos.
 
         Returns
         -------
@@ -179,11 +169,9 @@ class PPODBuffer(B):
 
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
-            return cls(size, device, actor, algorithm, envs, frame_stack,
-                       frame_skip, initial_demos_dir, target_demos_dir, rho,
-                       phi, gae_lambda, alpha, max_demos, save_demo_frequency,
-                       num_saved_demos, use_initial_demos_as_reward_threshold)
-
+            return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
+                       initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir,
+                       num_agent_demos_to_save, initial_reward_threshold, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
     def before_gradients(self):
@@ -194,7 +182,7 @@ class PPODBuffer(B):
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
-        # Retrieve most recent obs, rhs and done tensors
+        # Get most recent state
         last_tensors = {}
         step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
@@ -203,27 +191,91 @@ class PPODBuffer(B):
             else:
                 last_tensors[k] = self.data[k][step]
 
-        # Compute next value prediction
+        # Predict values given most recent state
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        # Assign predictions to self.data
-        self.data[prl.VAL][step].copy_(next_value)
+        # Store next recurrent hidden state
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
                 self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
-            self.data[prl.RHS][step].copy_(next_rhs)
+            self.data[prl.RHS][step] = next_rhs
 
-        self.compute_returns()
-        self.compute_advantages()
+        # Compute returns and advantages
+        if isinstance(self.data[prl.VAL], dict):
+            # If multiple critics
+            for x in self.data[prl.VAL]:
+                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
+                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
+        else:
+            # If single critic
+            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+            self.compute_returns(
+                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
+            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
+
+        if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
+            self.normalize_int_rewards()
+            self.algo.state_rms.update(
+                self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
+
+        # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
+        if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
+            if isinstance(self.data[prl.IVAL], dict):
+                # If multiple critics
+                for x in self.data[prl.IVAL]:
+                    self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
+                    self.compute_returns(
+                        self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
+                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
+                    self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
+            else:
+                # If single critic
+                self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
+                self.compute_returns(
+                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
+                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
+                self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
+
+    def after_gradients(self, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+        Parameters
+        ----------
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
+        """
+
+        step = self.step if self.step != 0 else -1
+        for k in (prl.OBS, prl.RHS, prl.DONE):
+            if isinstance(self.data[k], dict):
+                for x in self.data[k]:
+                    self.data[k][x][0].copy_(self.data[k][x][step])
+            else:
+                self.data[k][0].copy_(self.data[k][step])
+
+        if self.step != 0:
+            self.step = 0
+
+        # info['NumberSamples'] -= self.inserted_samples
+        self.inserted_samples = 0
+
+        return info
 
     def get_num_channels_obs(self, sample):
         """
@@ -257,6 +309,9 @@ class PPODBuffer(B):
             if k not in self.storage_tensors:
                 continue
 
+            if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
+                continue
+
             # We use the same tensor to store obs and obs2
             # We also use single tensors for rhs and rhs2,
             # and done and done2
@@ -277,14 +332,11 @@ class PPODBuffer(B):
         # Track episodes for potential demos
         self.track_potential_demos(sample)
 
-        # Handle demos in progress
+        all_envs, all_obs, all_done, all_rhs = [], [], [], {k: [] for k in sample[prl.RHS].keys()}
+
         for i in range(self.num_envs):
 
-            # For each environment, insert demo transition if in the middle of a demos
             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]:
-
-                # Get next demo step to be inserted
-                demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
 
                 # Get demo obs, rhs and done tensors to run forward pass
                 obs = self.data[prl.OBS][self.step][i].unsqueeze(0)
@@ -294,29 +346,55 @@ class PPODBuffer(B):
                 else:
                     obs, rhs, done = self.actor.actor_initial_states(obs)
 
-                # Run forward pass
-                _, _, rhs2, algo_data = self.algo.acting_step(obs, rhs, done)
+                all_envs.append(i)
+                all_obs.append(obs)
+                all_done.append(done)
+                for k in rhs:
+                    all_rhs[k].append(rhs[k])
 
-                # Insert demo act tensor to self.step
-                self.data[prl.ACT][self.step][i].copy_(self.demos_in_progress["env{}".format(
-                    i + 1)]["Demo"][prl.ACT][demo_step])
+            # Otherwise check if end of episode reached and randomly start new demo
+            elif sample[prl.DONE2][i] == 1.0:
 
-                # Insert demo rew tensor to self.step
-                self.data[prl.REW][self.step][i].copy_(self.demos_in_progress["env{}".format(
-                    i + 1)]["Demo"][prl.REW][demo_step])
+                self.sample_demo(env_id=i)
+
+        if len(all_envs) > 0:
+
+            # Cast obs, rhs, dones into the right format
+            all_obs = torch.cat(all_obs)
+            all_done = torch.cat(all_done)
+            for k in all_rhs:
+                all_rhs[k] = torch.cat(all_rhs[k])
+
+            # Run forward pass
+            _, _, rhs2, algo_data = self.algo.acting_step(all_obs, all_rhs, all_done)
+
+            for num, i in enumerate(all_envs):
+
+                demo_step = self.demos_in_progress["env{}".format(i + 1)]["Step"]
+
+                # Insert demo act and rew tensors to self.step
+                for tensor in (prl.ACT, prl.REW):
+                    self.data[tensor][self.step][i].copy_(
+                        torch.FloatTensor(self.demos_in_progress["env{}".format(i + 1)]["Demo"][tensor][demo_step]))
 
                 # Insert demo logprob to self.step. Demo action prob is 1.0, so logprob is 0.0
                 self.data[prl.LOGP][self.step][i].copy_(torch.zeros(1))
 
-                # Insert demo values predicted by the forward pass
-                self.data[prl.VAL][self.step][i].copy_(algo_data[prl.VAL].squeeze())
+                # Insert other tensors predicted in the forward pass
+                for tensor in (prl.IREW, prl.VAL, prl.IVAL):
+                    if tensor in algo_data.keys():
+                        self.data[tensor][self.step][i].copy_(algo_data[tensor][num])
 
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
-                self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = rhs2
+
+                self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = {
+                    k: rhs2[k][num].reshape(1, -1) for k in rhs2.keys()}
 
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
-                    [algo_data[prl.VAL].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
+                    [algo_data[prl.VAL][num].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
+
+                self.inserted_samples += 1
 
                 # Handle end of demos
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
@@ -337,19 +415,15 @@ class PPODBuffer(B):
                     self.data[prl.DONE][self.step + 1][i].copy_(torch.zeros(1))
 
                     # Insert demo obs2 tensor to self.step + 1
-                    obs2 = torch.roll(obs, -self.num_channels_obs, dims=1).squeeze(0)
-                    obs2[-self.num_channels_obs:].copy_(
-                        self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1].to(self.device))
+                    obs2 = torch.roll(all_obs[num:num+1], -self.num_channels_obs, dims=1).squeeze(0)
+                    obs2[-self.num_channels_obs:].copy_(torch.FloatTensor(
+                        self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1]))
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
-                    for k in self.data[prl.RHS]:
-                        self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k].squeeze())
-
-            # Otherwise check if end of episode reached and randomly start new demo
-            elif sample[prl.DONE2][i] == 1.0:
-
-                self.sample_demo(env_id=i)
+                    if self.recurrent_actor:
+                        for k in self.data[prl.RHS]:
+                            self.data[prl.RHS][k][self.step + 1][i].copy_(rhs2[k][num].squeeze())
 
         self.step = (self.step + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -360,14 +434,13 @@ class PPODBuffer(B):
         for i in range(self.num_envs):
 
             # Copy transition
-            # TODO. is deepcopy necessary?
             for tensor in self.demos_data_fields:
                 if tensor in (prl.OBS):
-                    self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        copy.deepcopy(sample[tensor][i, -self.num_channels_obs:]).cpu().numpy())
+                    self.potential_demos["env{}".format(i + 1)][tensor].append(copy.deepcopy(
+                        sample[tensor][i, -self.num_channels_obs:]).cpu().numpy().astype(self.demo_dtypes[tensor]))
                 else:
                     self.potential_demos["env{}".format(i + 1)][tensor].append(
-                        copy.deepcopy(sample[tensor][i]).cpu().numpy())
+                        copy.deepcopy(sample[tensor][i]).cpu().numpy().astype(self.demo_dtypes[tensor]))
 
             # Track highest value prediction
             self.potential_demos_val[i] = max([self.potential_demos_val["env{}".format(
@@ -379,17 +452,27 @@ class PPODBuffer(B):
                 # Get candidate demos
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
-                    potential_demo[tensor] = torch.Tensor(np.stack(
-                        self.potential_demos["env{}".format(i + 1)][tensor]))
+                    potential_demo[tensor] = np.stack(self.potential_demos["env{}".format(i + 1)][tensor])
+                    if tensor == prl.REW:
+                        nonzero = np.flatnonzero(potential_demo[tensor] > 0.0)
+                        last_reward = len(potential_demo[tensor]) if len(nonzero) == 0 else np.max(nonzero)
+
+                # Cut off data after last reward
+                for tensor in self.demos_data_fields:
+                    potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
 
                 # Compute accumulated reward
-                episode_reward = potential_demo[prl.REW].sum().item()
+                episode_reward = potential_demo[prl.REW].sum()
                 potential_demo["ID"] = str(uuid.uuid4())
                 potential_demo["TotalReward"] = episode_reward
                 potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
                 # Consider candidate demos for demos reward
                 if episode_reward >= self.reward_threshold:
+
+                    # If better than any other existing demo, empty buffer
+                    if episode_reward > self.max_demo_reward:
+                        self.reward_demos = []
 
                     # Add demos to reward buffer
                     self.reward_demos.append(potential_demo)
@@ -403,7 +486,7 @@ class PPODBuffer(B):
                     # Update reward_threshold.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
-                    # Also keep track of best demo reward
+                    # Update max demo reward
                     self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
                 else:  # Consider candidate demos for value reward
@@ -430,19 +513,20 @@ class PPODBuffer(B):
     def load_initial_demos(self):
         """
         Load initial demonstrations.
-
         Warning: make sure the frame_skip and frame_stack hyperparameters are
         the same as those used to record the demonstrations!
         """
 
-        # Add original demonstrations
-        num_loaded_demos = 0
-        initial_demos = glob.glob(self.initial_demos_dir + '/*.npz')
+        num_loaded_human_demos = 0
+        num_loaded_reward_demos = 0
 
-        if len(initial_demos) > self.max_demos:
-            raise ValueError("demo dir contains more than self.max_demos demonstrations")
+        initial_human_demos = glob.glob(self.initial_human_demos_dir + '/*.npz') if self.initial_human_demos_dir else []
+        initial_reward_demos = glob.glob(self.initial_agent_demos_dir + '/*.npz') if self.initial_agent_demos_dir else []
 
-        for demo_file in initial_demos:
+        if len(initial_human_demos) + len(initial_reward_demos) > self.max_demos:
+            raise ValueError("demo dir contains more than ´total_buffer_demo_capacity´")
+
+        for demo_file in initial_human_demos:
 
             try:
 
@@ -450,34 +534,55 @@ class PPODBuffer(B):
                 demo = np.load(demo_file)
                 new_demo = {k: {} for k in self.demos_data_fields}
 
-                if demo["FrameSkip"] != self.frame_skip:
+                if int(demo["FrameSkip"]) != self.frame_skip:
                     raise ValueError(
                         "Env and demo with different frame skip!")
 
-                # Add action
-                demo_act = torch.FloatTensor(demo[prl.ACT])
-                new_demo[prl.ACT] = demo_act
-
-                # Add obs
-                demo_obs = torch.FloatTensor(demo[prl.OBS])
-                new_demo[prl.OBS] = demo_obs
-
-                # Add rew
-                demo_rew = torch.FloatTensor(demo[prl.REW])
-                new_demo[prl.REW] = demo_rew
+                # Add action, obs, rew
+                new_demo[prl.ACT] = demo[prl.ACT]
+                new_demo[prl.OBS] = demo[prl.OBS]
+                new_demo[prl.REW] = demo[prl.REW]
 
                 new_demo.update({
                     "ID": str(uuid.uuid4()),
                     "DemoLength": demo[prl.ACT].shape[0],
-                    "TotalReward": demo_rew.sum().item()})
+                    "TotalReward": new_demo[prl.REW].sum()})
                 self.reward_demos.append(new_demo)
-                num_loaded_demos += 1
+                num_loaded_human_demos += 1
 
             except Exception:
-                print("Failed to load demo!")
+                print("Failed to load human demo!")
 
-        self.num_loaded_demos = num_loaded_demos
-        print("\nLOADED {} DEMOS".format(num_loaded_demos))
+        for demo_file in initial_reward_demos:
+
+            try:
+
+                # Load demos tensors
+                demo = np.load(demo_file)
+                new_demo = {k: {} for k in self.demos_data_fields}
+
+                if int(demo["FrameSkip"]) != self.frame_skip:
+                    raise ValueError(
+                        "Env and demo with different frame skip!")
+
+                # Add action, obs, rew
+                new_demo[prl.ACT] = demo[prl.ACT]
+                new_demo[prl.OBS] = demo[prl.OBS]
+                new_demo[prl.REW] = demo[prl.REW]
+
+                new_demo.update({
+                    "ID": str(uuid.uuid4()),
+                    "DemoLength": demo[prl.ACT].shape[0],
+                    "TotalReward": new_demo[prl.REW].sum()})
+                self.reward_demos.append(new_demo)
+                num_loaded_reward_demos += 1
+
+            except Exception:
+                print("Failed to load agent demo!")
+
+        self.num_loaded_human_demos = num_loaded_human_demos
+        self.num_loaded_reward_demos = num_loaded_reward_demos
+        print("\nLOADED {} HUMAN DEMOS AND {} REWARD DEMOS".format(num_loaded_human_demos, num_loaded_reward_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demos, with probability phi insert value demos."""
@@ -494,12 +599,6 @@ class PPODBuffer(B):
 
             # Randomly select a reward demo
             selected = np.random.choice(range(len(self.reward_demos)))
-
-            # give priority to shorter demos
-            # probs = 1 / np.array([p["obs"].shape[0] for p in self.reward_demos])
-            # probs = probs / probs.sum()
-            # selected = np.random.choice(range(len(self.reward_demos)), p=probs)
-
             demo = copy.deepcopy(self.reward_demos[selected])
 
         elif episode_source == "value_demo" and len(self.value_demos) > 0:
@@ -520,8 +619,9 @@ class PPODBuffer(B):
         self.data[prl.DONE][self.step + 1][env_id].copy_(torch.ones(1).to(self.device))
 
         # Set initial rhs to zeros
-        for k in self.data[prl.RHS]:
-            self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
+        if self.recurrent_actor:
+            for k in self.data[prl.RHS]:
+                self.data[prl.RHS][k][self.step + 1][env_id].fill_(0.0)
 
         if demo:
 
@@ -534,8 +634,8 @@ class PPODBuffer(B):
             # Set next buffer obs to be the starting demo obs
             for k in range(self.frame_stack):
                 self.data[prl.OBS][self.step + 1][env_id][
-                k * self.num_channels_obs:(k + 1) * self.num_channels_obs].copy_(
-                    self.demos_in_progress["env{}".format(env_id + 1)]["Demo"][prl.OBS][0].to(self.device))
+                k * self.num_channels_obs:(k + 1) * self.num_channels_obs].copy_(torch.FloatTensor(
+                    self.demos_in_progress["env{}".format(env_id + 1)]["Demo"][prl.OBS][0]))
 
         else:
             # Reset `i-th` environment as set next buffer obs to be the starting episode obs
@@ -567,20 +667,21 @@ class PPODBuffer(B):
         total_demos = len(self.reward_demos) + len(self.value_demos)
         if total_demos > self.max_demos:
             for _ in range(min(total_demos - self.max_demos, len(self.value_demos))):
+
                 # Pop value demos with lowest MaxValue
                 del self.value_demos[np.array([p["MaxValue"] for p in self.value_demos]).argmin()]
 
         # If after popping all value demos, still over max_demos, pop reward demos
         if len(self.reward_demos) > self.max_demos:
-            # Randomly remove reward demos, longer demos have higher probability
             for _ in range(len(self.reward_demos) - self.max_demos):
 
-                # Option 1: FIFO (original paper)
-                # del self.reward_demos[self.num_loaded_demos]
+                # # Option 1: Eject agent demo with lowest reward
+                # rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_human_demos:]])
+                # del self.reward_demos[np.argmin(rewards) + self.num_loaded_human_demos]
 
-                # Option 2: Eject demo with lowest reward
-                rewards = np.array([p[prl.REW].sum() for p in self.reward_demos[self.num_loaded_demos:]])
-                del self.reward_demos[np.argmin(rewards) + self.num_loaded_demos]
+                # Option 2: Eject longer agent demo
+                lengths = np.array([p[prl.OBS].shape[0] for p in self.reward_demos[self.num_loaded_human_demos:]])
+                del self.reward_demos[np.argmax(lengths) + self.num_loaded_human_demos]
 
     def save_demos(self):
         """
@@ -588,19 +689,24 @@ class PPODBuffer(B):
         the top `num_value_demos` demos from the value demos buffer.
         """
 
-        if self.target_demos_dir and not os.path.exists(self.target_demos_dir):
-            os.makedirs(self.target_demos_dir, exist_ok=True)
+        if self.target_agent_demos_dir:
 
-        reward_ranking = np.flip(np.array(
-            [d["TotalReward"] for d in self.reward_demos[
-                self.num_loaded_demos:]]).argsort())[:self.num_saved_demos]
+            # Create target dir for reward demos if necessary
+            if not os.path.exists(self.target_agent_demos_dir):
+                os.makedirs(self.target_agent_demos_dir, exist_ok=True)
 
-        for num, demo_pos in enumerate(reward_ranking):
-            filename = os.path.join(self.target_demos_dir, "reward_demo_{}".format(num + 1))
-            demo_pos += self.num_loaded_demos
-            np.savez(
-                filename,
-                Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(np.float32),
-                Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(np.float32),
-                Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(np.float32),
-            )
+            # Rank agent demos according to episode reward
+            reward_ranking = np.flip(np.array(
+                [d["TotalReward"] for d in self.reward_demos[self.num_loaded_human_demos:]]
+            ).argsort())[:self.num_agent_demos_to_save]
+
+            # Save agent reward demos
+            for num, demo_pos in enumerate(reward_ranking):
+                filename = "reward_demo_{}".format(num + 1)
+                demo_pos += self.num_loaded_human_demos
+                np.savez(
+                    os.path.join(self.target_agent_demos_dir, filename),
+                    Observation=np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                    Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                    Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                    FrameSkip=self.frame_skip)

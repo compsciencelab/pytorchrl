@@ -1,7 +1,10 @@
+
+from copy import deepcopy
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
 
 import pytorchrl as prl
+from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.storages.base import Storage as S
 
 
@@ -20,7 +23,9 @@ class VanillaOnPolicyBuffer(S):
     actor : Actor
         Actor class instance.
     algorithm : Algorithm
-        Algorithm class instance
+        Algorithm class instance.
+    envs : VecEnv
+        Vector of environments instance.
     """
 
     # Data fields to store in buffer and contained in the generated batches
@@ -31,6 +36,12 @@ class VanillaOnPolicyBuffer(S):
         self.envs = envs
         if self.envs:
             self.num_envs = envs.num_envs
+            self.frame_stack, self.frame_skip = 1, 0
+            if "frame_stack" in self.envs.env_kwargs.keys():
+                self.frame_stack = self.envs.env_kwargs["frame_stack"]
+            if "frame_skip" in self.envs.env_kwargs.keys():
+                self.frame_skip = self.envs.env_kwargs["frame_skip"]
+
         self.actor = actor
         self.device = device
         self.algo = algorithm
@@ -90,8 +101,25 @@ class VanillaOnPolicyBuffer(S):
             else:  # Handle non dict sample value
                 self.data[k] = torch.zeros(size + 1, *sample[k].shape).to(self.device)
 
-        self.data[prl.RET] = self.data[prl.REW].clone()
-        self.data[prl.ADV] = self.data[prl.VAL].clone()
+        self.data[prl.RET] = deepcopy(self.data[prl.REW])
+        self.data[prl.ADV] = deepcopy(self.data[prl.VAL])
+
+        # In case of an algorithm with intrinsic rewards
+        if prl.IREW in sample.keys() and prl.IVAL in sample.keys():
+            self.data[prl.IRET] = deepcopy(self.data[prl.IREW])
+            self.data[prl.IADV] = deepcopy(self.data[prl.IVAL])
+            self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
+
+    def get_num_channels_obs(self, sample):
+        """
+        Obtain num_channels_obs and set it as class attribute.
+
+        Parameters
+        ----------
+        sample : dict
+            Data sample (containing all tensors of an environment transition)
+        """
+        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
 
     def get_all_buffer_data(self, data_to_cpu=False):
         """
@@ -151,6 +179,7 @@ class VanillaOnPolicyBuffer(S):
         """
         if self.size == 0 and self.data[prl.OBS] is None:  # data tensors lazy initialization
             self.init_tensors(sample)
+            self.get_num_channels_obs(sample)
 
         for k in sample:
 
@@ -185,6 +214,7 @@ class VanillaOnPolicyBuffer(S):
         Before updating actor policy model, compute returns and advantages.
         """
 
+        # Get most recent state
         last_tensors = {}
         step = self.step if self.step != 0 else -1
         for k in (prl.OBS, prl.RHS, prl.DONE):
@@ -193,23 +223,56 @@ class VanillaOnPolicyBuffer(S):
             else:
                 last_tensors[k] = self.data[k][step]
 
+        # Predict values given most recent state
         with torch.no_grad():
             _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
             value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_value = value_dict.get("value_net1")
             next_rhs = value_dict.get("rhs")
 
-        self.data[prl.RET][step].copy_(next_value)
-        self.data[prl.VAL][step].copy_(next_value)
-
+        # Store next recurrent hidden state
         if isinstance(next_rhs, dict):
             for x in self.data[prl.RHS]:
                 self.data[prl.RHS][x][step].copy_(next_rhs[x])
         else:
             self.data[prl.RHS][step] = next_rhs
 
-        self.compute_returns()
-        self.compute_advantages()
+        # Compute returns and advantages
+        if isinstance(self.data[prl.VAL], dict):
+            # If multiple critics
+            for x in self.data[prl.VAL]:
+                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
+                self.compute_returns(
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
+                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
+        else:
+            # If single critic
+            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
+            self.compute_returns(
+                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
+            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
+
+        if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
+            self.normalize_int_rewards()
+            self.algo.state_rms.update(
+                self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
+
+        # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
+        if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
+            if isinstance(self.data[prl.IVAL], dict):
+                # If multiple critics
+                for x in self.data[prl.IVAL]:
+                    self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
+                    self.compute_returns(
+                        self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
+                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
+                    self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
+            else:
+                # If single critic
+                self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
+                self.compute_returns(
+                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
+                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
+                self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
 
     def after_gradients(self, batch, info):
         """
@@ -241,7 +304,20 @@ class VanillaOnPolicyBuffer(S):
 
         return info
 
-    def compute_returns(self):
+    def compute_returns(self, rewards, returns, values, dones, gamma):
+        """Compute return values."""
+        length = self.step - 1 if self.step != 0 else self.max_size
+        returns[length].copy_(values[length])
+        for step in reversed(range(length)):
+            returns[step] = (returns[step + 1] * gamma * (1.0 - dones[step + 1]) + rewards[step])
+
+    def compute_advantages(self, returns, values):
+        """Compute transition advantage values."""
+        adv = returns[:-1] - values[:-1]
+        adv = (adv - adv.mean()) / (adv.std() + 1e-5)
+        return adv
+
+    def compute_returns_old(self):
         """Compute return values."""
         gamma = self.algo.gamma
         len = self.step - 1 if self.step != 0 else self.max_size
@@ -249,10 +325,24 @@ class VanillaOnPolicyBuffer(S):
             self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
                 1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
 
-    def compute_advantages(self):
+    def compute_advantages_old(self):
         """Compute transition advantage values."""
         adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
         self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
+
+    def normalize_int_rewards(self):
+        """
+        In order to keep the rewards on a consistent scale, the intrinsic rewards are normalized by dividing
+        them by a running estimate of their standard deviation.
+        """
+        gamma = self.algo.gamma_intrinsic
+        length = self.step - 1 if self.step != 0 else self.max_size
+        rewems = torch.zeros_like(self.data[prl.RET])
+        for step in reversed(range(length)):
+            rewems[step] = rewems[step + 1] * gamma + self.data[prl.IREW][step]
+        self.int_reward_rms.update(rewems[0:-1].reshape(-1, 1))
+        self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var.float() ** 0.5)
+        # self.data[prl.IREW] = self.data[prl.IREW] / (self.int_reward_rms.var ** 0.5)
 
     def generate_batches(self, num_mini_batch, mini_batch_size, num_epochs=1, shuffle=True):
         """
@@ -276,7 +366,7 @@ class VanillaOnPolicyBuffer(S):
         """
 
         num_proc = self.data[prl.DONE].shape[1]
-        l = self.step if self.step != 0 else self.max_size
+        l = self.step - 1 if self.step != 0 else self.max_size
 
         if self.recurrent_actor:  # Batches for a feed recurrent actor
 
@@ -289,7 +379,7 @@ class VanillaOnPolicyBuffer(S):
 
                     # Define batch structure
                     batch = {k: [] if not isinstance(self.data[k], dict) else
-                    {x: [] for x in self.data[k]} for k in self.storage_tensors}
+                    {x: [] for x in self.data[k]} for k in self.data.keys()}
 
                     # Fill up batch with data
                     for offset in range(num_envs_per_batch):
@@ -321,7 +411,7 @@ class VanillaOnPolicyBuffer(S):
             for _ in range(num_epochs):
                 for samples in BatchSampler(sampler(range(num_proc * l)), mini_batch_size, drop_last=shuffle):
 
-                    batch = {k: None for k in self.storage_tensors}
+                    batch = {k: None for k in self.data.keys()}
 
                     for k in batch:
 

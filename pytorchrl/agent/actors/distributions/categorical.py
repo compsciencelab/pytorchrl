@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from pytorchrl.agent.actors.utils import init
 
 
@@ -17,11 +19,16 @@ class Categorical(nn.Module):
     def __init__(self, num_inputs, num_outputs):
         super(Categorical, self).__init__()
 
+        # TODO. added!
+        # self.extra_policy_fc = nn.Linear(in_features=448, out_features=448)
+        # nn.init.orthogonal_(self.extra_policy_fc.weight, gain=np.sqrt(0.1))
+        # self.extra_policy_fc.bias.data.zero_()
+
         init_ = lambda m: init(
             m,
             nn.init.orthogonal_,
             lambda x: nn.init.constant_(x, 0),
-            gain=0.01)
+            gain=np.sqrt(0.01))
 
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
 
@@ -51,6 +58,9 @@ class Categorical(nn.Module):
         dist : torch.Distribution
             Action probability distribution.
         """
+
+        # TODO: added!
+        # x = x + F.relu(self.extra_policy_fc(x))
 
         # Predict distribution parameters
         x = self.linear(x)
@@ -93,6 +103,9 @@ class Categorical(nn.Module):
         dist : torch.Distribution
             Action probability distribution.
         """
+
+        # TODO: added!
+        # x = x + F.relu(self.extra_policy_fc(x))
 
         # Predict distribution parameters
         x = self.linear(x)
