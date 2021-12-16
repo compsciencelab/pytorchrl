@@ -12,38 +12,6 @@ from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
 from pytorchrl.agent.actors.planner import MPC
 
-class StandardScaler(object):
-    def __init__(self):
-        pass
-
-    def fit(self, data):
-        """Runs two ops, one for assigning the mean of the data to the internal mean, and
-        another for assigning the standard deviation of the data to the internal standard deviation.
-        This function must be called within a 'with <session>.as_default()' block.
-        Arguments:
-        data (np.ndarray): A numpy array containing the input
-        Returns: None.
-        """
-        self.mu = np.mean(data, axis=0, keepdims=True)
-        self.std = np.std(data, axis=0, keepdims=True)
-        self.std[self.std < 1e-12] = 1.0
-
-    def transform(self, data):
-        """Transforms the input matrix data using the parameters of this scaler.
-        Arguments:
-        data (np.array): A numpy array containing the points to be transformed.
-        Returns: (np.array) The transformed dataset.
-        """
-        return (data - self.mu) / self.std
-
-    def inverse_transform(self, data):
-        """Undoes the transformation performed by this scaler.
-        Arguments:
-        data (np.array): A numpy array containing the points to be transformed.
-        Returns: (np.array) The transformed dataset.
-        """
-        return self.std * data + self.mu
-
 
 class MB_MPC(Algorithm):
     """Model-Based MPC class.
@@ -120,7 +88,8 @@ class MB_MPC(Algorithm):
         self.break_counter = 0
 
         # ----- Optimizers ----------------------------------------------------
-        self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=config.lr)
+        self.lr = config.lr
+        self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
 
     @classmethod
     def create_factory(cls,
@@ -312,7 +281,7 @@ class MB_MPC(Algorithm):
         Parameters
         ----------
         batch: dict
-            data batch containing all required tensors to compute DDPG losses.
+            data batch containing all required tensors to compute dynamics model losses.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.
 
@@ -321,11 +290,16 @@ class MB_MPC(Algorithm):
         grads: list of tensors
             List of actor_critic gradients.
         info: dict
-            Dict containing current DDPG iteration information.
+            Dict containing current dynamics model iteration information.
         """
         if batch["batch_number"] == 0:
             # reinitializes model for new training
-            self.actor.reinitialize_dynamics_model()
+            if self.iter != 0 and self.mb_train_epochs == 0:
+                self.actor.reinitialize_dynamics_model()
+                self.actor.to(self.device)
+                self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
+                # reset current best for break condition
+                self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
             self.reuse_data = True
             self.mb_train_epochs += 1
 

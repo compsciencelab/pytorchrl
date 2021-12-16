@@ -44,7 +44,7 @@ class MBReplayBuffer(S):
 
         self.actor = actor
         self.ensemble_size = actor.ensemble_size
-        #self.scaler = actor.scaler
+        self.scaler = actor.standard_scaler
         self.validation_percentage = validation_percentage
         self.learn_reward_function = learn_reward_function
         self.ensemble_size = actor.ensemble_size
@@ -327,9 +327,9 @@ class MBReplayBuffer(S):
         train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]
         holdout_inputs, holdout_labels = inputs[:num_validation], labels[:num_validation]
 
-        # self.actor.scaler.fit(train_inputs)
-        # train_inputs = self.actor.scaler.transform(train_inputs)
-        # holdout_inputs = self.actor.scaler.transform(holdout_inputs)
+        # self.scaler.fit(inputs)
+        # train_inputs = self.scaler.transform(train_inputs)
+        # holdout_inputs = self.scaler.transform(holdout_inputs)
 
         holdout_inputs = torch.from_numpy(holdout_inputs).float().to(self.device)
         holdout_labels = torch.from_numpy(holdout_labels).float().to(self.device)
