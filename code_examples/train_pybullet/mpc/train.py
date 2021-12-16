@@ -63,11 +63,14 @@ def main():
         dynamics_factory = MBActor.create_factory(args.env_id,
                                                   obs_space,
                                                   action_space,
+                                                  hidden_size=args.hidden_size,
+                                                  hidden_layer=args.hidden_layer,
+                                                  batch_size=args.mini_batch_size,
                                                   ensemble_size=args.ensemble_size,
                                                   elite_size=args.elite_size,
                                                   dynamics_type=args.dynamics_type,
                                                   learn_reward_function=args.learn_reward_function,
-                                                  restart_model=args.restart_model)
+                                                  checkpoint=args.restart_model)
 
         # 4. Define RL training algorithm
         algo_factory, algo = MB_MPC.create_factory(args)
@@ -141,7 +144,8 @@ def get_args():
     
     # Wandb
     parser.add_argument(
-        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+        '--experiment_name', default=None,
+        help='Name of the wandb experiment the agent belongs to')
     parser.add_argument(
         '--agent_name', default=None, help='Name of the wandb run')
     parser.add_argument(
@@ -168,15 +172,16 @@ def get_args():
         help='Adam optimizer epsilon (default: 1e-8)')
     parser.add_argument(
         "--n-planner", type=int, default=1000,
-        help="Number of parallel planner for each actor (default: 500)"
-    )
+        help="Number of parallel planner for each actor (default: 500)")
     parser.add_argument(
         "--horizon", type=int, default=12,
-        help="The horizon of online planning (default: 12)"
-    )
-    parser.add_argument("--mpc-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
-                        help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
-    parser.add_argument("--action-noise", default=False, action='store_true', help="Adding noise to the actions, (default: False)")
+        help="The horizon of online planning (default: 12)")
+    parser.add_argument(
+        "--mpc-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
+        help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
+    parser.add_argument(
+        "--action-noise", default=False, action='store_true',
+        help="Adding noise to the actions, (default: False)")
     parser.add_argument(
         '--start-steps', type=int, default=5000,
         help='SAC num initial random steps (default: 1000)')
@@ -195,19 +200,43 @@ def get_args():
     parser.add_argument("--test_every", type=int, default=1, help="")
     
     # CEM parameter
-    parser.add_argument("--iter-update-steps", type=int, default=3, help="Iterative update steps for CEM (default: 3)")
-    parser.add_argument("--k_best", type=int, default=5, help="")
-    parser.add_argument("--update-alpha", type=float, default=0.0, help="Soft update alpha for each iteration (default: 0.0)")
+    parser.add_argument(
+        "--iter-update-steps", type=int, default=3,
+        help="Iterative update steps for CEM (default: 3)")
+    parser.add_argument(
+        "--k-best", type=int, default=5, 
+        help="K-Best members of the mean prediction forming the next mean distribution")
+    parser.add_argument(
+        "--update-alpha", type=float, default=0.0,
+        help="Soft update alpha for each iteration (default: 0.0)")
+
     # PDDM parameter
-    parser.add_argument("--gamma", type=float, default=1.0, help="")
-    parser.add_argument("--beta", type=float, default=0.5, help="")
+    parser.add_argument(
+        "--gamma", type=float, default=1.0,
+        help="PDDM gamma value (default: 1.0)")
+    parser.add_argument(
+        "--beta", type=float, default=0.5,
+        help="PDDM beta value (default: 0.5)")
 
     # Feature dynamics model specs
-
-    parser.add_argument("--ensemble-size", type=int, default=7, help="")
-    parser.add_argument("--elite-size", type=int, default=5, help="")
-    parser.add_argument("--dynamics-type", type=str, default="probabilistic", help="")
-    parser.add_argument("--validation_percentage", type=float, default=0.2, help="")
+    parser.add_argument(
+        "--hidden-size", type=int, default=256,
+        help="Number of hidden nodes for the dynamics model (default: 256)")
+    parser.add_argument(
+        "--hidden-layer", type=int, default=2,
+        help="Number of hidden layers in the dynamics model (default: 2)")
+    parser.add_argument(
+        "--ensemble-size", type=int, default=7,
+        help="Number of ensemble size for the dynamics models (default: 7)")
+    parser.add_argument(
+        "--elite-size", type=int, default=5,
+        help="Number of the elite size of ensemble members for the prediction (default: 5)")
+    parser.add_argument(
+        "--dynamics-type", type=str, default="probabilistic",
+        help="Type of dynamics model deterministic or probabilistic (default: probabilistic)")
+    parser.add_argument(
+        "--validation_percentage", type=float, default=0.2,
+        help="Percentage of the data in the buffer used for validation of the dynamics model training (default: 0.2)")
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

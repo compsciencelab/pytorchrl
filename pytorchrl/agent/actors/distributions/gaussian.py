@@ -130,10 +130,16 @@ class DiagGaussian(nn.Module):
         return logp, entropy_dist, dist
 
 class DiagGaussianEnsemble(nn.Module):
-    """[summary]
-
-    Args:
-        nn ([type]): [description]
+    """Ensemble gaussian output layer 
+    
+        Parameters
+        ----------
+        num_inputs: int
+            Size of input feature maps.
+        num_outputs: int
+            Output size of the gaussian layer.
+        ensemble_size: int
+            Ensemble size in the output layer.
     """
     def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int)-> None:
         super(DiagGaussianEnsemble, self).__init__()
@@ -143,4 +149,5 @@ class DiagGaussianEnsemble(nn.Module):
         self.mu = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
 
     def forward(self, x: torch.Tensor):
+        """Forward pass"""
         return self.mu(x)

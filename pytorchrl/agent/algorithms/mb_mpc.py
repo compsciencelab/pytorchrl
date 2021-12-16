@@ -14,14 +14,29 @@ from pytorchrl.agent.actors.planner import MPC
 
 
 class MB_MPC(Algorithm):
-    """[summary]
+    """Model-Based MPC class.
+    Trains a model of the environment and uses MPC to select actions. 
+    User can choose between different MPC methods:
+    - Random Shooting (RS)
+    - Cross Entropy Method (CEM)
+    - Filtering and Reward-Weighted Refinement (PDDM) 
+        as introduced in the PDDM paper: https://arxiv.org/pdf/1909.11652.pdf
 
-    Args:
-        Algorithm ([type]): [description]
+    Parameters
+    ----------
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
+    envs : VecEnv
+        Vector of environments instance.
+    actor : MBActor
+        MB_actor class instance.
+    config: Namespace
+        Training configuration defined at the beginning of training
     """
     def __init__(self,
                  actor,
                  device,
+                 envs,
                  config,
                  ):
 
@@ -32,7 +47,6 @@ class MB_MPC(Algorithm):
 
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
-
 
         # Size of update mini batches
         self._mini_batch_size = int(config.mini_batch_size)
@@ -60,9 +74,6 @@ class MB_MPC(Algorithm):
         else:
             raise ValueError
 
-        self.action_high = torch.from_numpy(self.mpc.action_high).float().to(device)
-        self.action_low = torch.from_numpy(self.mpc.action_low).float().to(device)
-
         self.iter = 0
         self.device = device
         self.max_grad_norm = 0.5
@@ -84,9 +95,10 @@ class MB_MPC(Algorithm):
                        config,
                        ):
 
-        def create_algo_instance(device, actor):
+        def create_algo_instance(device, actor, envs):
             return cls(actor=actor,
                        device=device,
+                       envs=envs,
                        config=config,)
 
         return create_algo_instance, prl.MPC
@@ -145,6 +157,30 @@ class MB_MPC(Algorithm):
         return self._num_test_episodes
 
     def acting_step(self, obs, rhs, done, deterministic=False):
+        """Does the MPC search.
+
+        Parameters
+        ----------
+        obs: torch.tensor
+            Current world observation
+        rhs: dict
+            RNN recurrent hidden states.
+        done: torch.tensor
+            1.0 if current obs is the last one in the episode, else 0.0.
+        deterministic: bool
+            Whether to randomly sample action from predicted distribution or taking the mode.
+
+        Returns
+        -------
+        action: torch.tensor
+            Predicted next action.
+        clipped_action: torch.tensor
+            Predicted next action (clipped to be within action space).
+        rhs: batch
+            Actor recurrent hidden state.
+        other: dict
+            Additional DDQN predictions, which are not used in other algorithms.
+        """
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
             clipped_action = torch.clamp(action, -1, 1)
@@ -155,7 +191,18 @@ class MB_MPC(Algorithm):
         return clipped_action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
     
     
-    def training_step(self, batch)-> Tuple[torch.Tensor, torch.Tensor]:
+    def training_step(self, batch)-> torch.Tensor:
+        """Does the forward pass and loss calculation of the dynamics model given the training data.
+
+        Parameters
+        ----------
+        batch: dict 
+            Training data with inputs and labels
+
+        Returns
+        -------
+            torch.Tensor: Returns the training loss
+        """
         train_inputs = batch["train_input"]
         train_labels = batch["train_label"]
 
@@ -166,6 +213,17 @@ class MB_MPC(Algorithm):
         return loss
     
     def validation(self, batch)-> Tuple[torch.Tensor, bool]:
+        """Does the validation on the holout dataset.
+
+        Parameters
+        ----------
+        batch: dict
+            Holdout / validation data
+
+        Returns
+        -------
+            Tuple[torch.Tensor, bool]: Returns the validation loss and the break condition
+        """
         holdout_inputs = batch["holdout_inputs"]
         holdout_labels = batch["holdout_labels"]
         self.actor.eval()
@@ -184,6 +242,17 @@ class MB_MPC(Algorithm):
         return validation_loss.mean(), break_condition
     
     def test_break_condition(self, current_losses):
+        """Checks if breaking condition is reached to stop training and mitigate overfitting.
+
+        Parameters
+        ----------
+        current_losses: np.array
+            Current validation loss
+
+        Returns
+        -------
+            [bool]: Returns a bool value to indicate if training should stop or continue.
+        """
         keep_train = False
         for i in range(len(current_losses)):
             current_loss = current_losses[i]

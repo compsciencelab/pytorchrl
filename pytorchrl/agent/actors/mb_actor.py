@@ -16,25 +16,60 @@ from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.reward_functions import get_reward_function
 from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
 from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
+from pytorchrl.agent.actors.base import Actor
 
+class MBActor(Actor):
+    """
+    Model-Based Actor class for Model-Based algorithms.
 
-class MBActor(nn.Module):
+    It contains the dynamics network to predict the next state (and reward if selected). 
+
+    Parameters
+    ----------
+    env_id: str
+        Name of the gym environment
+    input_space : gym.Space
+        Environment observation space.
+    action_space : gym.Space
+        Environment action space.
+    hidden_size: int
+        Hidden size number.
+    hidden_layer: int
+        Number of hidden layers.
+    batch_size: int
+        Batch size.
+    ensemble_size: int
+        Number of models in the ensemble.
+    elite_size: int
+        Number of the elite members of the ensemble.
+    dynamics_type: str
+        Type of the dynamics module. Can be probabilistic or deterministic.
+    learn_reward_function: int
+        Either 0 or 1 if the reward function should be learned (1) or will be provided (0).
+    device: torch.device
+        CPU or specific GPU where class computations will take place.
+    checkpoint : str
+        Path to a previously trained Actor checkpoint to be loaded.
+    """
     def __init__(self,
                  env_id,
                  input_space,
                  action_space,
+                 hidden_size,
+                 hidden_layer,
+                 batch_size,
                  ensemble_size,
                  elite_size,
                  dynamics_type,
                  learn_reward_function,
                  device,
-                 noise=None)-> None:
-        super(MBActor, self).__init__()
+                 checkpoint)-> None:
+        super(MBActor, self).__init__(device=device,
+                                      checkpoint=checkpoint,
+                                      input_space=input_space,
+                                      action_space=action_space)
 
-        self.noise = noise
-        self.device = device
         self.input_space = input_space.shape[0]
-        self.action_space = action_space
         self.reward_function = None
       
         if learn_reward_function == 0:
@@ -47,9 +82,9 @@ class MBActor(nn.Module):
         self.elite_idxs = [i for i in range(self.elite_size)]
 
         
-        self.batch_size = 256
-        self.hidden_size = 200
-        self.hidden_layer = 3
+        self.batch_size = batch_size
+        self.hidden_size = hidden_size
+        self.hidden_layer = hidden_layer
         self.dynamics_type = dynamics_type
         assert dynamics_type in ["probabilistic", "deterministic"]
 
@@ -62,29 +97,68 @@ class MBActor(nn.Module):
             env_id,
             input_space,
             action_space,
+            hidden_size,
+            hidden_layer,
+            batch_size,
             ensemble_size,
             elite_size,
             dynamics_type="probabilistic",
             learn_reward_function=False,
-            restart_model=None):
+            checkpoint=None):
+        """[summary]
+
+
+        Parameters
+        ----------
+        env_id: str
+            Name of the gym environment
+        input_space : gym.Space
+            Environment observation space.
+        action_space : gym.Space
+            Environment action space.
+        hidden_size: int
+            Hidden size number.
+        hidden_layer: int
+            Number of hidden layers.
+        batch_size: int
+            Batch size.
+        ensemble_size: int
+            Number of models in the ensemble.
+        elite_size: int
+            Number of the elite members of the ensemble.
+        dynamics_type: str
+            Type of the dynamics module. Can be probabilistic or deterministic.
+        learn_reward_function: int
+            Either 0 or 1 if the reward function should be learned (1) or will be provided (0).
+        checkpoint : str
+            Path to a previously trained Actor checkpoint to be loaded.
+
+        Returns
+        -------
+        create_dynamics_instance : func
+            creates a new dynamics model class instance.
+        """
 
         def create_dynamics_instance(device):
-            """Create and return an actor critic instance."""
+            """Create and return an dynamics model instance."""
             model = cls(env_id=env_id,
                          input_space=input_space,
                          action_space=action_space,
+                         hidden_size=hidden_size,
+                         hidden_layer=hidden_layer,
+                         batch_size=batch_size,
                          ensemble_size=ensemble_size,
                          elite_size=elite_size,
                          dynamics_type=dynamics_type,
                          learn_reward_function=learn_reward_function,
+                         checkpoint=checkpoint,
                          device=device)
-
-            if isinstance(restart_model, str):
-                model.load_state_dict(torch.load(restart_model, map_location=device))
-            elif isinstance(restart_model, dict):
-                for submodule, checkpoint in restart_model.items():
-                    partially_load_checkpoint(model, submodule, checkpoint)
             model.to(device)
+
+            try:
+                model.try_load_from_checkpoint()
+            except RuntimeError:
+                pass
 
             return model
 
@@ -127,6 +201,14 @@ class MBActor(nn.Module):
 
 
     def create_dynamics(self, name="dynamics_model"):
+        """
+        Create a dynamics model and define it as class attribute under the name `name`.
+
+        Parameters
+        ----------
+        name : str
+            dynamics model name.
+        """
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             input_layer = EnsembleFC(self.input_space + self.action_space.n, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
         else:
@@ -170,7 +252,16 @@ class MBActor(nn.Module):
 
 
     def predict_learned_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
+        """Does the next state prediction and reward prediction with a learn reward function.
 
+        Parameters
+        ----------
+            states (torch.Tensor): Current state s
+            actions (torch.Tensor): Action taken in state s
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Returns the next state and reward prediction.
+        """
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
 
@@ -197,6 +288,16 @@ class MBActor(nn.Module):
         return next_states, rewards
     
     def predict_given_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
+        """Does the next state prediction and calculates the reward given a reward function. 
+
+        Parameters
+        ----------
+            states (torch.Tensor): Current state s
+            actions (torch.Tensor): Action taken in state s
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Returns the next state and calculated reward.
+        """
         if type(self.action_space) == gym.spaces.discrete.Discrete:
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
 
@@ -231,7 +332,17 @@ class MBActor(nn.Module):
     def calculate_loss(self, mean: torch.Tensor,
                              labels: torch.Tensor,
                              validate: bool=False
-                             )-> Tuple[torch.Tensor, torch.Tensor]:
+                             )-> torch.Tensor:
+        """Calculate the MSE loss.
+
+        Args:
+            mean (torch.Tensor): Mean prediction of the next state
+            labels (torch.Tensor): Training labels
+            validate (bool, optional): Set to True if calculating the mse errors for each ensemble member. Defaults to False.
+
+        Returns:
+            torch.Tensor: MSE loss
+        """
 
         if not validate:
             return ((mean - labels)**2).mean(-1).mean(-1).sum()
