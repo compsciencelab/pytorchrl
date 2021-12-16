@@ -1,5 +1,5 @@
 env_id: Pendulum-v1
-num_env_steps : 50_000
+num_env_steps : 20_000
 log_dir: /tmp/pybullet_mpc
 experiment_name: MPC
 agent_name: RS-MPC
@@ -8,12 +8,12 @@ frame_skip: 0
 frame_stack: 1
 lr: 1.0e-3
 mpc_type: RS
-n_planner: 700
+n_planner: 500
 horizon: 30
 ensemble_size: 5
 elite_size: 3
 dynamics_type: deterministic # probabilistic
-learn_reward_function: 0
+learn_reward_function: 1
 validation_percentage: 0.2
 max_time: 86400
 num_env_processes: 1

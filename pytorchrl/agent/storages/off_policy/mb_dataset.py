@@ -327,9 +327,7 @@ class MBReplayBuffer(S):
         train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]
         holdout_inputs, holdout_labels = inputs[:num_validation], labels[:num_validation]
 
-        # self.scaler.fit(inputs)
-        # train_inputs = self.scaler.transform(train_inputs)
-        # holdout_inputs = self.scaler.transform(holdout_inputs)
+        self.scaler.fit(torch.from_numpy(inputs).float())
 
         holdout_inputs = torch.from_numpy(holdout_inputs).float().to(self.device)
         holdout_labels = torch.from_numpy(holdout_labels).float().to(self.device)
@@ -337,6 +335,9 @@ class MBReplayBuffer(S):
         holdout_labels = holdout_labels.squeeze(1)
         train_inputs = train_inputs.squeeze(1)
         train_labels = train_labels.squeeze(1)
+        # scale holdouts
+        holdout_inputs = self.scaler.transform(holdout_inputs)
+        holdout_labels = self.scaler.transform(holdout_labels)
         
         holdout_inputs = holdout_inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
         holdout_labels = holdout_labels[None, :, :].repeat(self.ensemble_size, 1, 1)
@@ -348,8 +349,8 @@ class MBReplayBuffer(S):
             idx = train_idx[:, start_pos: start_pos + mini_batch_size]
             train_input = train_inputs[idx]
             train_label = train_labels[idx]
-            train_input = torch.from_numpy(train_input).float().to(self.device)
-            train_label = torch.from_numpy(train_label).float().to(self.device)
+            train_input = self.scaler.transform(torch.from_numpy(train_input).float().to(self.device))
+            train_label = self.scaler.transform(torch.from_numpy(train_label).float().to(self.device))
             batch = {"train_input": train_input,
                      "train_label": train_label,
                      "holdout_inputs": holdout_inputs,

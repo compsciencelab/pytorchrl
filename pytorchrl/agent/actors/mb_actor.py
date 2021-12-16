@@ -20,8 +20,9 @@ from pytorchrl.agent.actors.base import Actor
 
 
 class StandardScaler(object):
-    def __init__(self):
-        pass
+    def __init__(self, device):
+        self.mu = torch.zeros(1).to(device)
+        self.std = torch.ones(1).to(device)
 
     def fit(self, data):
         """Runs two ops, one for assigning the mean of the data to the internal mean, and
