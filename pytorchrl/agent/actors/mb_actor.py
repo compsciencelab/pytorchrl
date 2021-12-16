@@ -28,26 +28,26 @@ class StandardScaler(object):
         another for assigning the standard deviation of the data to the internal standard deviation.
         This function must be called within a 'with <session>.as_default()' block.
         Arguments:
-        data (np.ndarray): A numpy array containing the input
+        data (torch.Tensor): A torch Tensor containing the input
         Returns: None.
         """
-        self.mu = np.mean(data, axis=0, keepdims=True)
-        self.std = np.std(data, axis=0, keepdims=True)
+        self.mu = torch.mean(data, dim=0, keepdims=True)
+        self.std = torch.std(data, dim=0, keepdims=True)
         self.std[self.std < 1e-12] = 1.0
 
     def transform(self, data):
         """Transforms the input matrix data using the parameters of this scaler.
         Arguments:
-        data (np.array): A numpy array containing the points to be transformed.
-        Returns: (np.array) The transformed dataset.
+        data (torch.Tensor): A torch Tensor containing the points to be transformed.
+        Returns: (torch.Tensor) The transformed dataset.
         """
         return (data - self.mu) / self.std
 
     def inverse_transform(self, data):
         """Undoes the transformation performed by this scaler.
         Arguments:
-        data (np.array): A numpy array containing the points to be transformed.
-        Returns: (np.array) The transformed dataset.
+        data (torch.Tensor): A torch Tensor containing the points to be transformed.
+        Returns: (torch.Tensor) The transformed dataset.
         """
         return self.std * data + self.mu
 
@@ -323,7 +323,8 @@ class MBActor(Actor):
 
         inputs = torch.cat((states, actions), dim=-1)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
-
+        # scale inputs based on recent batch scalings
+        inputs = self.standard_scaler.transform(inputs)
         ensemble_means = self.dynamics_model(inputs)
         ensemble_means[:, :, :-1] += states.to(self.device)
         elite_mean = ensemble_means[self.elite_idxs]
@@ -338,9 +339,12 @@ class MBActor(Actor):
 
         assert predictions.shape == (states.shape[0], states.shape[1] + 1)
 
+        # inverse transform inputs
+        predictions = self.standard_scaler.inverse_transform(predictions)
         next_states = predictions[:, :-1]
         rewards = predictions[:, -1].unsqueeze(-1)
         # TODO: add Termination function?
+        
         return next_states, rewards
     
     def predict_given_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
@@ -359,6 +363,8 @@ class MBActor(Actor):
 
         inputs = torch.cat((states, actions), dim=-1)
         inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
+        # scale inputs based on recent batch scalings
+        inputs = self.standard_scaler.transform(inputs)
 
         ensemble_means = self.dynamics_model(inputs)
         ensemble_means += states.to(self.device)
@@ -373,7 +379,8 @@ class MBActor(Actor):
             predictions = elite_mean.mean(0)
 
         assert predictions.shape == (states.shape[0], states.shape[1])
-
+        # inverse transform inputs
+        predictions = self.standard_scaler.inverse_transform(predictions)
         next_states = predictions
 
         rewards = self.reward_function(states, actions)
