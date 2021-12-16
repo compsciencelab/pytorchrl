@@ -317,19 +317,6 @@ class VanillaOnPolicyBuffer(S):
         adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
 
-    def compute_returns_old(self):
-        """Compute return values."""
-        gamma = self.algo.gamma
-        len = self.step - 1 if self.step != 0 else self.max_size
-        for step in reversed(range(len)):
-            self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
-                1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
-
-    def compute_advantages_old(self):
-        """Compute transition advantage values."""
-        adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
-        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
-
     def normalize_int_rewards(self):
         """
         In order to keep the rewards on a consistent scale, the intrinsic rewards are normalized by dividing
