@@ -164,6 +164,14 @@ class MBActor(Actor):
 
         return create_dynamics_instance
 
+    def get_action(self,):
+        pass
+    
+    def is_recurrent(self,):
+        return False
+    
+    def recurrent_hidden_state_size(self):
+        return 0
 
     def actor_initial_states(self, obs):
         """
