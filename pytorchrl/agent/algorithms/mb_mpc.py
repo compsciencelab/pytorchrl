@@ -303,7 +303,6 @@ class MB_MPC(Algorithm):
         else:
             return False
     
-    
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -325,6 +324,8 @@ class MB_MPC(Algorithm):
             Dict containing current DDPG iteration information.
         """
         if batch["batch_number"] == 0:
+            # reinitializes model for new training
+            self.actor.reinitialize_dynamics_model()
             self.reuse_data = True
             self.mb_train_epochs += 1
 
