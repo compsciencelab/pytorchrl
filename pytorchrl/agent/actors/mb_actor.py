@@ -258,7 +258,18 @@ class MBActor(Actor):
 
         setattr(self, name, dynamics_net)
 
+    def check_dynamics_weights(self, parameter1, parameter2):
+        for p1, p2 in zip(parameter1, parameter2):
+             if p1.data.ne(p2.data).sum() > 0:
+                 return False
+        return True
 
+    def reinitialize_dynamics_model(self, ):
+        old_weights = self.dynamics_model.parameters().deepcopy()
+        self.create_dynamics()
+        new_weights = self.dynamics_model.parameters()
+        assert self.check_dynamics_weights(old_weights, new_weights)
+    
     def predict_learned_reward(self, states: torch.Tensor, actions: torch.Tensor)-> Tuple[torch.Tensor, torch.Tensor]:
         """Does the next state prediction and reward prediction with a learn reward function.
 

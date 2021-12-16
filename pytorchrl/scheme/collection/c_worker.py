@@ -138,7 +138,7 @@ class CWorker(W):
 
             # Collect initial samples
             print("Collecting initial samples...")
-            self.collect_train_data(self.algo.start_steps)
+            self.collect_random_train_data(self.algo.start_steps)
 
         # Print worker information
         self.print_worker_info()
@@ -206,6 +206,33 @@ class CWorker(W):
         self.iter += 1
 
         return data_to_send
+
+    def collect_random_train_data(self, num_steps=None):
+        """Collect random transition data at the beginning of training.
+
+        """
+        act, clip_act, rhs2, algo_data = self.algo.acting_step(
+                        self.obs, self.rhs, self.done)
+        for step in range(num_steps):
+            action = self.envs_train.action_space.sample()
+
+        obs2, reward, done2, episode_infos = self.envs_train.step(action)
+
+        # Define transition sample
+        transition = prl.DataTransition(
+            self.obs, self.rhs, self.done, action, reward,
+            obs2, rhs2, done2)._asdict()
+        transition.update(algo_data)
+
+        # Store transition in buffer
+        self.storage.insert_transition(transition)
+
+        # Update current world state
+        self.obs, self.rhs, self.done = obs2, rhs2, done2
+
+        # Keep track of num collected samples
+        self.samples_collected += self.envs_train.num_envs
+            
 
     def collect_train_data(self, num_steps=None, listen_to=[]):
         """
