@@ -1,4 +1,4 @@
-__version__ = "1.4.54"
+__version__ = "1.4.55"
 
 from collections import namedtuple
 
@@ -67,6 +67,7 @@ ADV = "Advantage"
 IADV = "IntrinsicAdvantage"
 RET = "ExternalReturn"
 IRET = "IntrinsicReturn"
+MASK = "MaskedSamples"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
