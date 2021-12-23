@@ -156,7 +156,7 @@ class Learner:
         """
         self.update_worker.update_algorithm_parameter(parameter_name, new_parameter_value)
 
-    def save_model(self):
+    def save_model(self, fname="model.state_dict"):
         """
         Save currently learned actor_critic version.
 
@@ -165,6 +165,6 @@ class Learner:
         save_name : str
             Path to saved file.
         """
-        fname = os.path.join(self.log_dir, "model.state_dict")
+        fname = os.path.join(self.log_dir, fname)
         save_name = self.update_worker.save_model(fname)
         return save_name
