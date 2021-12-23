@@ -55,14 +55,14 @@ class Scheme:
                  num_col_workers=1,
                  col_compress_data=False,
                  col_workers_communication=prl.SYNC,
-                 col_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
+                 col_workers_resources={"num_cpus": 1, "num_gpus": 0.5},
                  col_preemption_thresholds={"fraction_samples": 1.0, "fraction_workers": 1.0},
 
                  # gradients
                  num_grad_workers=1,
                  grad_compress_data=False,
                  grad_workers_communication=prl.SYNC,
-                 grad_workers_resources={"num_cpus": 1, "num_gpus": 0.2},
+                 grad_workers_resources={"num_cpus": 1, "num_gpus": 0.5},
 
                  # update
                  local_device=None,
