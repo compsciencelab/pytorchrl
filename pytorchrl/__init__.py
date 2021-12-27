@@ -108,6 +108,3 @@ DDPG = "DDPG"
 DDQN = "DDQN"
 
 # -----------------------------------------------------------------------------
-
-from pytorchrl.learner import Learner
-from pytorchrl.scheme import Scheme
