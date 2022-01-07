@@ -2,7 +2,6 @@ import os
 import time
 from functools import partial
 from collections import defaultdict, deque
-from torch.utils.tensorboard import SummaryWriter
 import pytorchrl as prl
 
 
@@ -20,12 +19,10 @@ class Learner:
     target_steps : int
         Number of environment steps to reach to complete training.
     log_dir : str
-        Target directory for model checkpoints and, if specified, Tensorboard logs.
-    log_to_tensorboard : bool
-        Whether or not generating Tensorboard logs.
+        Target directory for model checkpoints and logs.
     """
 
-    def __init__(self, scheme, target_steps, log_dir=None, log_to_tensorboard=False):
+    def __init__(self, scheme, target_steps, log_dir=None):
 
         # Input attributes
         self.log_dir = log_dir
@@ -35,13 +32,6 @@ class Learner:
         # Counters and metrics
         self.num_samples_collected = 0
         self.metrics = {k: defaultdict(partial(deque, maxlen=1)) for k in prl.INFO_KEYS}
-
-        # Define summary writer
-        if log_dir and log_to_tensorboard:
-            tb_log_dir = "{}/tensorboard_logs".format(log_dir)
-            os.makedirs(tb_log_dir, exist_ok=True)
-            self.writer = SummaryWriter(log_dir=tb_log_dir)
-        else: self.writer = None
 
         # Record starting time
         self.start = time.time()
@@ -69,9 +59,6 @@ class Learner:
                 for x, y in info[k].items():
                     if isinstance(y, (float, int)):
                         self.metrics[k][x].append(y)
-                    if self.writer and isinstance(y, (float, int)):
-                        self.writer.add_scalar(os.path.join(
-                            k, x), y, self.num_samples_collected)
 
     def done(self):
         """
