@@ -64,12 +64,9 @@ class CNN(nn.Module):
                 kernel_size=kernel_sizes[j])), activation()]
         self.feature_extractor = nn.Sequential(*layers)
 
-        # TODO. test without and remove
+        # TODO. Final activation always ReLU
         activation = nn.ReLU
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_,
-            lambda x: nn.init.constant_(x, 0),
-            get_gain(activation))
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), get_gain(activation))
 
         # Define final MLP layers
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_shape)).shape))
