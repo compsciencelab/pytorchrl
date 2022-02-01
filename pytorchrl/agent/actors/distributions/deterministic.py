@@ -88,7 +88,7 @@ class Deterministic(nn.Module):
 
         return None, None, pred
 
-class DeterministicEnsemble(nn.Module):
+class DeterministicMB(nn.Module):
     """Deterministic ensemble output layer 
     
         Parameters
@@ -101,14 +101,13 @@ class DeterministicEnsemble(nn.Module):
             Ensemble size in the output layer.
     """
     def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int=7)-> None:
-        super(DeterministicEnsemble, self).__init__()
+        super(DeterministicMB, self).__init__()
 
         self.num_outputs = num_outputs
         self.ensemble_size = ensemble_size
-        self.output = EnsembleFC(in_features=num_inputs, out_features=num_outputs, ensemble_size=ensemble_size)
+        self.output = nn.Linear(in_features=num_inputs, out_features=num_outputs)
         
     def forward(self, x: torch.Tensor)-> torch.Tensor:
         """Forward pass"""
         mean = self.output(x)
-        assert mean.shape == (self.ensemble_size, x.shape[1], self.num_outputs)
         return mean

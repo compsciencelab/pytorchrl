@@ -319,44 +319,24 @@ class MBReplayBuffer(S):
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
         if self.learn_reward_function:
-            labels = np.concatenate((delta_state, rewards), axis=-1)
+            targets = np.concatenate((delta_state, rewards), axis=-1)
         else:
-            labels = delta_state
-        num_validation = int(inputs.shape[0] * self.validation_percentage)
+            targets = delta_state
 
-        train_inputs, train_labels = inputs[num_validation:], labels[num_validation:]
-        holdout_inputs, holdout_labels = inputs[:num_validation], labels[:num_validation]
+        self.scaler.fit(inputs=inputs, targets=targets)
+        norm_inputs, norm_targets = self.scaler.transform(inputs=inputs, targets=targets)
 
-        self.scaler.fit(torch.from_numpy(inputs).float())
-
-        holdout_inputs = torch.from_numpy(holdout_inputs).float().to(self.device)
-        holdout_labels = torch.from_numpy(holdout_labels).float().to(self.device)
-        holdout_inputs = holdout_inputs.squeeze(1)
-        holdout_labels = holdout_labels.squeeze(1)
-        train_inputs = train_inputs.squeeze(1)
-        train_labels = train_labels.squeeze(1)
-        # scale holdouts
-        holdout_inputs = self.scaler.transform(holdout_inputs)
-        holdout_labels = self.scaler.transform(holdout_labels)
-        
-        holdout_inputs = holdout_inputs[None, :, :].repeat(self.ensemble_size, 1, 1)
-        holdout_labels = holdout_labels[None, :, :].repeat(self.ensemble_size, 1, 1)
-        
-
-        train_idx = np.vstack([np.random.permutation(train_inputs.shape[0]) for _ in range(self.ensemble_size)])
-        max_batches = round((train_inputs.shape[0] / mini_batch_size), 0) - 1
-        for batch_number, start_pos in enumerate(range(0, train_inputs.shape[0], mini_batch_size)):
-            idx = train_idx[:, start_pos: start_pos + mini_batch_size]
-            train_input = train_inputs[idx]
-            train_label = train_labels[idx]
-            train_input = self.scaler.transform(torch.from_numpy(train_input).float().to(self.device))
-            train_label = self.scaler.transform(torch.from_numpy(train_label).float().to(self.device))
-            batch = {"train_input": train_input,
-                     "train_label": train_label,
-                     "holdout_inputs": holdout_inputs,
-                     "holdout_labels": holdout_labels,
-                     "batch_number": batch_number,
-                     "max_batches": max_batches}
+        train_indices = np.arange(observations.shape[0])
+        np.random.shuffle(train_indices)
+        for batch_number, j in enumerate(range((norm_inputs.shape[0] // mini_batch_size) + 1)):
+            start_index = j * mini_batch_size
+            indices_shuffled = train_indices[start_index:start_index + mini_batch_size]
+            
+            input_batch = torch.from_numpy(norm_inputs[indices_shuffled, :]).float().to(self.device)
+            target_batch = torch.from_numpy(norm_targets[indices_shuffled, :]).float().to(self.device)
+            batch = {"train_input": input_batch,
+                     "train_label": target_batch,
+                     "batch_number": batch_number}
             yield batch
 
     def update_storage_parameter(self, parameter_name, new_parameter_value):

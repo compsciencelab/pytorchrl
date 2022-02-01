@@ -64,11 +64,7 @@ def main():
                                                   obs_space,
                                                   action_space,
                                                   hidden_size=args.hidden_size,
-                                                  hidden_layer=args.hidden_layer,
                                                   batch_size=args.mini_batch_size,
-                                                  ensemble_size=args.ensemble_size,
-                                                  elite_size=args.elite_size,
-                                                  dynamics_type=args.dynamics_type,
                                                   learn_reward_function=args.learn_reward_function,
                                                   checkpoint=args.restart_model)
 
@@ -184,7 +180,7 @@ def get_args():
         help="Adding noise to the actions, (default: False)")
     parser.add_argument(
         '--start-steps', type=int, default=5000,
-        help='SAC num initial random steps (default: 1000)')
+        help='Number of initial random steps (default: 5000)')
     parser.add_argument(
         '--buffer-size', type=int, default=10000,
         help='Rollouts storage size (default: 10000 transitions)')
@@ -222,21 +218,6 @@ def get_args():
     parser.add_argument(
         "--hidden-size", type=int, default=256,
         help="Number of hidden nodes for the dynamics model (default: 256)")
-    parser.add_argument(
-        "--hidden-layer", type=int, default=2,
-        help="Number of hidden layers in the dynamics model (default: 2)")
-    parser.add_argument(
-        "--ensemble-size", type=int, default=7,
-        help="Number of ensemble size for the dynamics models (default: 7)")
-    parser.add_argument(
-        "--elite-size", type=int, default=5,
-        help="Number of the elite size of ensemble members for the prediction (default: 5)")
-    parser.add_argument(
-        "--dynamics-type", type=str, default="probabilistic",
-        help="Type of dynamics model deterministic or probabilistic (default: probabilistic)")
-    parser.add_argument(
-        "--validation_percentage", type=float, default=0.2,
-        help="Percentage of the data in the buffer used for validation of the dynamics model training (default: 0.2)")
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

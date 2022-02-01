@@ -6,7 +6,7 @@ import math
 """
 
 
-def pendulum_reward_function(state: torch.Tensor, action: torch.Tensor)-> torch.Tensor:
+def pendulum(state: torch.Tensor, action: torch.Tensor)-> torch.Tensor:
     max_torque = 2.0
     th = torch.arccos(state[:, 0][:, None])
     thdot = state[:, 2][:, None]
@@ -18,3 +18,15 @@ def pendulum_reward_function(state: torch.Tensor, action: torch.Tensor)-> torch.
 def angle_normalize(x: torch.Tensor):
     return ((x + math.pi) % (2 * math.pi)) - math.pi
 
+
+def halfcheetah_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
+    """
+    First 8 values in the state are position data
+    other 9 are position velocities (x,y,z) and rest angular
+    -> idx 8 is x_velocitiy
+    """
+    x_velocities = state[:, 8]
+    action_penalty = - 0.1 * (torch.sum(action**2, axis=1))
+    reward = (x_velocities + action_penalty)[:, None]
+    assert reward.shape == (state.shape[0], 1)
+    return reward

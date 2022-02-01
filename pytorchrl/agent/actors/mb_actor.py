@@ -21,10 +21,13 @@ from pytorchrl.agent.actors.base import Actor
 
 class StandardScaler(object):
     def __init__(self, device):
-        self.mu = torch.zeros(1).to(device)
-        self.std = torch.ones(1).to(device)
+        self.input_mu = torch.zeros(1).to(device)
+        self.input_std = torch.ones(1).to(device)
+        self.target_mu = torch.zeros(1).to(device)
+        self.target_std = torch.ones(1).to(device)
+        self.device = device
 
-    def fit(self, data):
+    def fit(self, inputs, targets):
         """Runs two ops, one for assigning the mean of the data to the internal mean, and
         another for assigning the standard deviation of the data to the internal standard deviation.
         This function must be called within a 'with <session>.as_default()' block.
@@ -32,25 +35,32 @@ class StandardScaler(object):
         data (torch.Tensor): A torch Tensor containing the input
         Returns: None.
         """
-        self.mu = torch.mean(data, dim=0, keepdims=True)
-        self.std = torch.std(data, dim=0, keepdims=True)
-        self.std[self.std < 1e-12] = 1.0
+        self.input_mu = torch.mean(inputs, dim=0, keepdims=True).to(self.device)
+        self.input_std = torch.std(inputs, dim=0, keepdims=True).to(self.device)
+        self.input_std[self.input_std < 1e-8] = 1.0
+        self.target_mu = torch.mean(targets, dim=0, keepdims=True).to(self.device)
+        self.target_std = torch.std(targets, dim=0, keepdims=True).to(self.device)
+        self.target_std[self.target_std < 1e-8] = 1.0
 
-    def transform(self, data):
+    def transform(self, inputs, targets=None):
         """Transforms the input matrix data using the parameters of this scaler.
         Arguments:
         data (torch.Tensor): A torch Tensor containing the points to be transformed.
         Returns: (torch.Tensor) The transformed dataset.
         """
-        return (data - self.mu) / self.std
+        norm_inputs = (inputs - self.input_mu) / self.input_std
+        norm_targets = None
+        if targets != None:
+            norm_targets = (targets - self.target_mu) / self.target_std
+        return norm_inputs, norm_targets
 
-    def inverse_transform(self, data):
+    def inverse_transform(self, targets):
         """Undoes the transformation performed by this scaler.
         Arguments:
         data (torch.Tensor): A torch Tensor containing the points to be transformed.
         Returns: (torch.Tensor) The transformed dataset.
         """
-        return self.std * data + self.mu
+        return self.target_std * targets + self.target_mu
 
 
 class MBActor(Actor):
@@ -69,16 +79,8 @@ class MBActor(Actor):
         Environment action space.
     hidden_size: int
         Hidden size number.
-    hidden_layer: int
-        Number of hidden layers.
     batch_size: int
         Batch size.
-    ensemble_size: int
-        Number of models in the ensemble.
-    elite_size: int
-        Number of the elite members of the ensemble.
-    dynamics_type: str
-        Type of the dynamics module. Can be probabilistic or deterministic.
     learn_reward_function: int
         Either 0 or 1 if the reward function should be learned (1) or will be provided (0).
     device: torch.device
@@ -91,11 +93,7 @@ class MBActor(Actor):
                  input_space,
                  action_space,
                  hidden_size,
-                 hidden_layer,
                  batch_size,
-                 ensemble_size,
-                 elite_size,
-                 dynamics_type,
                  learn_reward_function,
                  device,
                  checkpoint)-> None:
@@ -112,18 +110,12 @@ class MBActor(Actor):
             self.predict = self.predict_given_reward
         else:
             self.predict = self.predict_learned_reward
-        self.ensemble_size = ensemble_size
-        self.elite_size = elite_size
-        self.elite_idxs = [i for i in range(self.elite_size)]
 
         # Scaler for scaling training inputs
-        self.standard_scaler = StandardScaler()
+        self.standard_scaler = StandardScaler(device)
         
         self.batch_size = batch_size
         self.hidden_size = hidden_size
-        self.hidden_layer = hidden_layer
-        self.dynamics_type = dynamics_type
-        assert dynamics_type in ["probabilistic", "deterministic"]
 
         self.create_dynamics()
         print(self.dynamics_model)
@@ -135,11 +127,7 @@ class MBActor(Actor):
             input_space,
             action_space,
             hidden_size,
-            hidden_layer,
             batch_size,
-            ensemble_size,
-            elite_size,
-            dynamics_type="probabilistic",
             learn_reward_function=False,
             checkpoint=None):
         """[summary]
@@ -155,16 +143,8 @@ class MBActor(Actor):
             Environment action space.
         hidden_size: int
             Hidden size number.
-        hidden_layer: int
-            Number of hidden layers.
         batch_size: int
             Batch size.
-        ensemble_size: int
-            Number of models in the ensemble.
-        elite_size: int
-            Number of the elite members of the ensemble.
-        dynamics_type: str
-            Type of the dynamics module. Can be probabilistic or deterministic.
         learn_reward_function: int
             Either 0 or 1 if the reward function should be learned (1) or will be provided (0).
         checkpoint : str
@@ -182,11 +162,7 @@ class MBActor(Actor):
                          input_space=input_space,
                          action_space=action_space,
                          hidden_size=hidden_size,
-                         hidden_layer=hidden_layer,
                          batch_size=batch_size,
-                         ensemble_size=ensemble_size,
-                         elite_size=elite_size,
-                         dynamics_type=dynamics_type,
                          learn_reward_function=learn_reward_function,
                          checkpoint=checkpoint,
                          device=device)
@@ -255,34 +231,26 @@ class MBActor(Actor):
             dynamics model name.
         """
         if type(self.action_space) == gym.spaces.discrete.Discrete:
-            input_layer = EnsembleFC(self.input_space + self.action_space.n, out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+            input_layer = nn.Linear(self.input_space + self.action_space.n, out_features=self.hidden_size)
         else:
-            input_layer = EnsembleFC(self.input_space + self.action_space.shape[0], out_features=self.hidden_size, ensemble_size=self.ensemble_size)
+            input_layer = nn.Linear(self.input_space + self.action_space.shape[0], out_features=self.hidden_size)
 
-        dynamics_layers = []
-        dynamics_layers.append(input_layer)
-        dynamics_layers.append(nn.SiLU())
-
-        for _ in range(self.hidden_layer):
-            dynamics_layers.append(EnsembleFC(self.hidden_size, self.hidden_size, self.ensemble_size))
-            dynamics_layers.append(nn.SiLU())
+        hidden_layer = nn.linear(self.hidden_size, self.hidden_size)
         
         if self.reward_function is None:
             num_outputs = self.input_space + 1
         else:
             num_outputs = self.input_space
 
-        if self.dynamics_type == "deterministic":
-            output_layer = get_dist("DeterministicEnsemble")(num_inputs=self.hidden_size,
-                                                       num_outputs=num_outputs,
-                                                       ensemble_size=self.ensemble_size)
-        elif self.dynamics_type == "probabilistic":
-            output_layer = get_dist("DiagGaussianEnsemble")(num_inputs=self.hidden_size,
-                                                      num_outputs=num_outputs,
-                                                      ensemble_size=self.ensemble_size)
-        else:
-            raise ValueError
-        dynamics_layers.append(output_layer)
+        output_layer = get_dist("DeterministicMB")(num_inputs=self.hidden_size, um_outputs=num_outputs)
+            
+        self.activation = nn.ReLU()
+
+        dynamics_layers = [input_layer,
+                           self.activation,
+                           hidden_layer,
+                           self.activation,
+                           output_layer]
         
         if type(self.action_space) == gym.spaces.box.Box:
             self.scale = Scale(self.action_space)
@@ -302,6 +270,9 @@ class MBActor(Actor):
         return True
 
     def reinitialize_dynamics_model(self, ):
+        """Reinitializes the dynamics model, can be done before each new Model learning run.
+           Might help in some environments to overcome overfitting of the model!
+        """
         old_weights = self.dynamics_model.parameters()
         self.create_dynamics()
         self.dynamics_model.to(self.device)
@@ -323,25 +294,15 @@ class MBActor(Actor):
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
 
         inputs = torch.cat((states, actions), dim=-1)
-        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
+
         # scale inputs based on recent batch scalings
-        inputs = self.standard_scaler.transform(inputs)
-        ensemble_means = self.dynamics_model(inputs)
-        ensemble_means[:, :, :-1] += states.to(self.device)
-        elite_mean = ensemble_means[self.elite_idxs]
-        
-        assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1]+1)
+        norm_inputs, _ = self.standard_scaler.transform(inputs)
+        norm_predictions = self.dynamics_model(norm_inputs)
 
-        if self.dynamics_type == "probabilistic":
-            mean_predictions = torch.normal(mean=elite_mean, std=0.01)
-            predictions = mean_predictions.mean(0)
-        else:
-            predictions = elite_mean.mean(0)
+        # inverse transform outputs
+        predictions = self.standard_scaler.inverse_transform(norm_predictions)
+        predictions[:, :-1] += states.to(self.device)
 
-        assert predictions.shape == (states.shape[0], states.shape[1] + 1)
-
-        # inverse transform inputs
-        predictions = self.standard_scaler.inverse_transform(predictions)
         next_states = predictions[:, :-1]
         rewards = predictions[:, -1].unsqueeze(-1)
         # TODO: add Termination function?
@@ -363,54 +324,22 @@ class MBActor(Actor):
             actions = one_hot(actions, num_classes=self.action_space.n).squeeze(1)
 
         inputs = torch.cat((states, actions), dim=-1)
-        inputs = inputs[None, :, :].repeat(self.ensemble_size, 1, 1).float() # [ensemble size, batch size, input size]
+
         # scale inputs based on recent batch scalings
-        inputs = self.standard_scaler.transform(inputs)
+        norm_inputs = self.standard_scaler.transform(inputs)
 
-        ensemble_means = self.dynamics_model(inputs)
-        ensemble_means += states.to(self.device)
-        elite_mean = ensemble_means[self.elite_idxs]
-        
-        assert elite_mean.shape == (self.elite_size, states.shape[0], states.shape[1])
-
-        if self.dynamics_type == "probabilistic":
-            mean_predictions = torch.normal(mean=elite_mean, std=0.01)
-            predictions = mean_predictions.mean(0)
-        else:
-            predictions = elite_mean.mean(0)
-
-        assert predictions.shape == (states.shape[0], states.shape[1])
-        # inverse transform inputs
-        predictions = self.standard_scaler.inverse_transform(predictions)
+        norm_predictions = self.dynamics_model(norm_inputs)
+        # inverse transform outputs
+        predictions = self.standard_scaler.inverse_transform(norm_predictions)
+        predictions += states.to(self.device)
         next_states = predictions
 
-        rewards = self.reward_function(states, actions)
+        rewards = self.reward_function(states, actions, next_states)
         # TODO: add Termination function?
-        return next_states, rewards
+        return next_states.cpu, rewards
 
 
     def do_rollout(self, state, action):
         raise NotImplementedError
 
-
-    def calculate_loss(self, mean: torch.Tensor,
-                             labels: torch.Tensor,
-                             validate: bool=False
-                             )-> torch.Tensor:
-        """Calculate the MSE loss.
-
-        Args:
-            mean (torch.Tensor): Mean prediction of the next state
-            labels (torch.Tensor): Training labels
-            validate (bool, optional): Set to True if calculating the mse errors for each ensemble member. Defaults to False.
-
-        Returns:
-            torch.Tensor: MSE loss
-        """
-
-        if not validate:
-            return ((mean - labels)**2).mean(-1).mean(-1).sum()
-        else:
-            mse_loss = ((mean - labels)**2).mean(-1).mean(-1)
-            return mse_loss
 

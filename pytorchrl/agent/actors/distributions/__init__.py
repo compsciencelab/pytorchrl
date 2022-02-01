@@ -1,7 +1,7 @@
 from .gaussian import DiagGaussian, DiagGaussianEnsemble
 from .categorical import Categorical
 from .squashed_gaussian import SquashedGaussian
-from .deterministic import Deterministic, DeterministicEnsemble
+from .deterministic import Deterministic, DeterministicMB
 
 
 def get_dist(name):
@@ -14,8 +14,8 @@ def get_dist(name):
         return SquashedGaussian
     elif name == "Deterministic":
         return Deterministic
-    elif name == "DeterministicEnsemble":
-        return DeterministicEnsemble
+    elif name == "DeterministicMB":
+        return DeterministicMB
     elif name == "DiagGaussianEnsemble":
         return DiagGaussianEnsemble
     else:

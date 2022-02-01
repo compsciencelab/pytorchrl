@@ -46,7 +46,7 @@ class MB_MPC(Algorithm):
         self._start_steps = int(config.start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(1)  # Default to 1 for off-policy algorithms
+        self._num_epochs = int(60)  # Default to 1 for off-policy algorithms
 
         # Size of update mini batches
         self._mini_batch_size = int(config.mini_batch_size)
@@ -79,17 +79,11 @@ class MB_MPC(Algorithm):
         self.max_grad_norm = 0.5
         self._update_every = config.update_every
         self.reuse_data = False
-        
-        # training break conditions
-        self.mb_train_epochs = 0
-        self.max_not_improvements = min(round((self._start_steps + self._update_every) / self._mini_batch_size, 0), 5)
-        self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
-        self.improvement_threshold = 0.01
-        self.break_counter = 0
 
         # ----- Optimizers ----------------------------------------------------
         self.lr = config.lr
         self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
+        self.loss_func = torch.nn.MSELoss()
 
     @classmethod
     def create_factory(cls,
@@ -208,70 +202,10 @@ class MB_MPC(Algorithm):
         train_labels = batch["train_label"]
 
         self.actor.train()
-        mean = self.actor.dynamics_model(train_inputs)
-        loss = self.actor.calculate_loss(mean=mean,
-                                         labels=train_labels)
+        prediction = self.actor.dynamics_model(train_inputs)
+        loss = self.loss_func(prediction, train_labels)
         return loss
-    
-    def validation(self, batch)-> Tuple[torch.Tensor, bool]:
-        """Does the validation on the holout dataset.
 
-        Parameters
-        ----------
-        batch: dict
-            Holdout / validation data
-
-        Returns
-        -------
-            Tuple[torch.Tensor, bool]: Returns the validation loss and the break condition
-        """
-        holdout_inputs = batch["holdout_inputs"]
-        holdout_labels = batch["holdout_labels"]
-        self.actor.eval()
-        with torch.no_grad():
-            val_mean = self.actor.dynamics_model(holdout_inputs)
-            validation_loss = self.actor.calculate_loss(mean=val_mean,
-                                                        labels=holdout_labels,
-                                                        validate=True)
-
-            validation_loss = validation_loss.cpu().numpy()
-            assert validation_loss.shape == (self.actor.ensemble_size, )
-            sorted_loss_idx = np.argsort(validation_loss)
-            self.actor.elite_idxs = sorted_loss_idx[:self.actor.elite_size].tolist()
-            break_condition = self.test_break_condition(validation_loss)
-        
-        return validation_loss.mean(), break_condition
-    
-    def test_break_condition(self, current_losses):
-        """Checks if breaking condition is reached to stop training and mitigate overfitting.
-
-        Parameters
-        ----------
-        current_losses: np.array
-            Current validation loss
-
-        Returns
-        -------
-            [bool]: Returns a bool value to indicate if training should stop or continue.
-        """
-        keep_train = False
-        for i in range(len(current_losses)):
-            current_loss = current_losses[i]
-            best_loss = self._current_best[i]
-            improvement = (best_loss - current_loss) / best_loss
-            if improvement > self.improvement_threshold:
-                self._current_best[i] = current_loss
-                keep_train = True
-    
-        if keep_train:
-            self.break_counter = 0
-        else:
-            self.break_counter += 1
-        if self.break_counter >= self.max_not_improvements:
-            return True
-        else:
-            return False
-    
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -294,14 +228,12 @@ class MB_MPC(Algorithm):
         """
         if batch["batch_number"] == 0:
             # reinitializes model for new training
-            if self.iter != 0 and self.mb_train_epochs == 0:
-                self.actor.reinitialize_dynamics_model()
-                self.actor.to(self.device)
-                self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
-                # reset current best for break condition
-                self._current_best = [1e10 for i in range(self.actor.ensemble_size)]
+            # if self.iter != 0 and self.mb_train_epochs == 0:
+            #     self.actor.reinitialize_dynamics_model()
+            #     self.actor.to(self.device)
+            #     self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
             self.reuse_data = True
-            self.mb_train_epochs += 1
+            # self.mb_train_epochs += 1
 
         train_loss = self.training_step(batch)
 
@@ -311,20 +243,9 @@ class MB_MPC(Algorithm):
         dyna_grads = get_gradients(self.actor.dynamics_model, grads_to_cpu=grads_to_cpu)
 
         info = {"train_loss": train_loss.item()}
-
-        # Validation run 
-        if batch["batch_number"] == batch["max_batches"]:
-            validation_loss, break_condition = self.validation(batch)
-            info.update({"validation_loss": validation_loss.item()})
-
-            if break_condition:
-                self.reuse_data = False
-                info.update({"Training Epoch": self.mb_train_epochs})
-                self.mb_train_epochs = 0
-                self.break_counter = 0
-
         grads = {"dyna_grads": dyna_grads}
 
+        # once break condition is used set reuse_data to False
         return grads, info
 
     def apply_gradients(self, gradients=None):
