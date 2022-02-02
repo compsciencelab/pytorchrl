@@ -47,7 +47,7 @@ class MB_MPC(Algorithm):
 
         # Times data in the buffer is re-used before data collection proceeds
         self._num_epochs = int(60)  # Default to 1 for off-policy algorithms
-        self.mb_train_epochs = 0
+
         # Size of update mini batches
         self._mini_batch_size = int(config.mini_batch_size)
         self._num_mini_batch = 1
@@ -178,7 +178,6 @@ class MB_MPC(Algorithm):
         """
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
-
             clipped_action = torch.clamp(action, -1, 1)
             
         if self.actor.unscale:
@@ -234,12 +233,7 @@ class MB_MPC(Algorithm):
             #     self.actor.to(self.device)
             #     self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
             self.reuse_data = True
-            self.mb_train_epochs += 1
-            
-        if self.mb_train_epochs == self.num_epochs:
-            #print("Finished MB training, ran for {} epochs".format(self.mb_train_epochs))
-            self.reuse_data = False
-            self.mb_train_epochs = 0
+            # self.mb_train_epochs += 1
 
         train_loss = self.training_step(batch)
 

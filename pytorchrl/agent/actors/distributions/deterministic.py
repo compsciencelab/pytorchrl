@@ -100,10 +100,11 @@ class DeterministicMB(nn.Module):
         ensemble_size: int
             Ensemble size in the output layer.
     """
-    def __init__(self, num_inputs: int, num_outputs: int)-> None:
+    def __init__(self, num_inputs: int, num_outputs: int, ensemble_size: int=7)-> None:
         super(DeterministicMB, self).__init__()
 
         self.num_outputs = num_outputs
+        self.ensemble_size = ensemble_size
         self.output = nn.Linear(in_features=num_inputs, out_features=num_outputs)
         
     def forward(self, x: torch.Tensor)-> torch.Tensor:

@@ -1,5 +1,5 @@
 from pytorchrl.agent.actors.reward_functions.gym_reward_functions import pendulum, halfcheetah_mujoco
-from pytorchrl.agent.actors.reward_functions.pybullet_reward_functions import halfcheetah_bullet
+from pytorchrl.agent.actors.reward_functions.pybullet_reward_functions import halfcheetah_reward_function
 """Good Resource of reward functions: https://arxiv.org/pdf/1907.02057.pdf 
     including gym envrionemnts as well as pybullet environments
 """
@@ -13,5 +13,5 @@ def get_reward_function(env_id):
     
     # pybullet env
     elif env_id == "HalfCheetahBulletEnv-v0":
-        return halfcheetah_bullet
+        return halfcheetah_reward_function
     

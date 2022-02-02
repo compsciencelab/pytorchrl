@@ -73,6 +73,7 @@ def main():
 
         # 5. Define rollouts storage
         storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size,
+                                                        validation_percentage=args.validation_percentage,
                                                         learn_reward_function=args.learn_reward_function)
 
         # 6. Define scheme
@@ -215,7 +216,7 @@ def get_args():
 
     # Feature dynamics model specs
     parser.add_argument(
-        "--hidden-size", type=int, default=500,
+        "--hidden-size", type=int, default=256,
         help="Number of hidden nodes for the dynamics model (default: 256)")
     parser.add_argument(
         '--restart-model', default=None,

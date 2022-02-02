@@ -138,7 +138,7 @@ class CWorker(W):
 
             # Collect initial samples
             print("Collecting initial samples...")
-            self.collect_train_data(self.algo.start_steps)
+            self.collect_random_train_data(self.algo.start_steps)
 
         # Print worker information
         self.print_worker_info()
