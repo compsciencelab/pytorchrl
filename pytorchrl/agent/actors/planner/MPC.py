@@ -62,7 +62,7 @@ class RandomShooting(MPC):
         actions = np.random.uniform(low=self.action_low,
                                     high=self.action_high,
                                     size=(self.n_planner, self.horizon, self.action_space))
-        return torch.from_numpy(actions).to(self.device)
+        return torch.from_numpy(actions).to(self.device).float()
     
     def get_action(self, state: torch.Tensor, model: torch.nn.Module, noise: bool=False)-> torch.Tensor:
         """Random shooting action planning process

@@ -1,0 +1,54 @@
+2022-02-02 12:39:13,248 INFO    MainThread:11305 [internal.py:wandb_internal():91] W&B internal server running at pid: 11305, started at: 2022-02-02 12:39:13.247797
+2022-02-02 12:39:13,249 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: check_version
+2022-02-02 12:39:13,249 INFO    WriterThread:11305 [datastore.py:open_for_write():77] open: /home/sebastian/Desktop/pytorchrl/wandb/run-20220202_123912-toid2mzh/run-toid2mzh.wandb
+2022-02-02 12:39:13,250 DEBUG   SenderThread:11305 [sender.py:send():122] send: header
+2022-02-02 12:39:13,250 DEBUG   SenderThread:11305 [sender.py:send():122] send: request
+2022-02-02 12:39:13,251 DEBUG   SenderThread:11305 [sender.py:send_request():131] send_request: check_version
+2022-02-02 12:39:13,344 DEBUG   SenderThread:11305 [sender.py:send():122] send: run
+2022-02-02 12:39:13,622 INFO    SenderThread:11305 [sender.py:_start_run_threads():599] run started: toid2mzh with start time 1643801952
+2022-02-02 12:39:13,627 DEBUG   SenderThread:11305 [sender.py:send():122] send: summary
+2022-02-02 12:39:13,628 INFO    SenderThread:11305 [sender.py:_save_file():730] saving file wandb-summary.json with policy end
+2022-02-02 12:39:13,630 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: run_start
+2022-02-02 12:39:15,014 DEBUG   HandlerThread:11305 [meta.py:__init__():34] meta init
+2022-02-02 12:39:15,014 DEBUG   HandlerThread:11305 [meta.py:__init__():48] meta init done
+2022-02-02 12:39:15,014 DEBUG   HandlerThread:11305 [meta.py:probe():190] probe
+2022-02-02 12:39:15,021 DEBUG   HandlerThread:11305 [meta.py:_setup_git():180] setup git
+2022-02-02 12:39:15,047 DEBUG   HandlerThread:11305 [meta.py:_setup_git():187] setup git done
+2022-02-02 12:39:15,047 DEBUG   HandlerThread:11305 [meta.py:_save_pip():52] save pip
+2022-02-02 12:39:15,048 DEBUG   HandlerThread:11305 [meta.py:_save_pip():66] save pip done
+2022-02-02 12:39:15,048 DEBUG   HandlerThread:11305 [meta.py:probe():231] probe done
+2022-02-02 12:39:15,051 DEBUG   SenderThread:11305 [sender.py:send():122] send: files
+2022-02-02 12:39:15,051 INFO    SenderThread:11305 [sender.py:_save_file():730] saving file wandb-metadata.json with policy now
+2022-02-02 12:39:15,056 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:39:15,057 DEBUG   SenderThread:11305 [sender.py:send():122] send: request
+2022-02-02 12:39:15,057 DEBUG   SenderThread:11305 [sender.py:send_request():131] send_request: status
+2022-02-02 12:39:18,387 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:22,835 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:27,283 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:30,261 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:39:30,261 DEBUG   SenderThread:11305 [sender.py:send():122] send: request
+2022-02-02 12:39:30,261 DEBUG   SenderThread:11305 [sender.py:send_request():131] send_request: status
+2022-02-02 12:39:31,735 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:36,182 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:40,657 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:45,115 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:45,473 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:39:45,473 DEBUG   SenderThread:11305 [sender.py:send():122] send: request
+2022-02-02 12:39:45,475 DEBUG   SenderThread:11305 [sender.py:send_request():131] send_request: status
+2022-02-02 12:39:49,566 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:53,792 DEBUG   SenderThread:11305 [sender.py:send():122] send: history
+2022-02-02 12:39:53,793 DEBUG   SenderThread:11305 [sender.py:send():122] send: summary
+2022-02-02 12:39:53,793 INFO    SenderThread:11305 [sender.py:_save_file():730] saving file wandb-summary.json with policy end
+2022-02-02 12:39:54,027 DEBUG   SenderThread:11305 [sender.py:send():122] send: stats
+2022-02-02 12:39:55,612 WARNING MainThread:11305 [internal.py:wandb_internal():146] Internal process interrupt: 1
+2022-02-02 12:39:55,613 DEBUG   SenderThread:11305 [sender.py:send():122] send: history
+2022-02-02 12:39:55,614 DEBUG   SenderThread:11305 [sender.py:send():122] send: summary
+2022-02-02 12:39:55,614 DEBUG   HandlerThread:11305 [handler.py:handle_request():101] handle_request: poll_exit
+2022-02-02 12:39:55,614 INFO    SenderThread:11305 [sender.py:_save_file():730] saving file wandb-summary.json with policy end
+2022-02-02 12:39:55,615 DEBUG   SenderThread:11305 [sender.py:send():122] send: telemetry
+2022-02-02 12:39:55,813 WARNING MainThread:11305 [internal.py:wandb_internal():146] Internal process interrupt: 2
+2022-02-02 12:39:55,813 ERROR   MainThread:11305 [internal.py:wandb_internal():149] Internal process interrupted.
+2022-02-02 12:39:55,861 INFO    SenderThread:11305 [sender.py:finish():833] shutting down sender
+2022-02-02 12:39:56,614 INFO    WriterThread:11305 [datastore.py:close():258] close: /home/sebastian/Desktop/pytorchrl/wandb/run-20220202_123912-toid2mzh/run-toid2mzh.wandb
+2022-02-02 12:39:56,615 INFO    HandlerThread:11305 [handler.py:finish():535] shutting down handler
+2022-02-02 12:39:58,305 INFO    MainThread:11305 [internal.py:handle_exit():78] Internal process exited

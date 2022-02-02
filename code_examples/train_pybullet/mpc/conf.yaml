@@ -1,7 +1,7 @@
-env_id: Pendulum-v1
+env_id: HalfCheetah-v2
 num_env_steps : 20_000
 log_dir: /tmp/pybullet_mpc
-experiment_name: MPC
+experiment_name: MPC-pend-givenreward
 agent_name: RS-MPC
 wandb_key: 16d18880bf755b96f6114e4fa2d0a7a5a00a3570
 frame_skip: 0
@@ -10,11 +10,7 @@ lr: 1.0e-3
 mpc_type: RS
 n_planner: 500
 horizon: 30
-ensemble_size: 5
-elite_size: 3
-dynamics_type: deterministic # probabilistic
-learn_reward_function: 1
-validation_percentage: 0.2
+learn_reward_function: 0
 max_time: 86400
 num_env_processes: 1
 mini_batch_size: 256 

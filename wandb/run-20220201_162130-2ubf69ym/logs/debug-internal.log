@@ -1,0 +1,34 @@
+2022-02-01 16:21:30,586 INFO    MainThread:12833 [internal.py:wandb_internal():91] W&B internal server running at pid: 12833, started at: 2022-02-01 16:21:30.585714
+2022-02-01 16:21:30,587 DEBUG   HandlerThread:12833 [handler.py:handle_request():101] handle_request: check_version
+2022-02-01 16:21:30,587 INFO    WriterThread:12833 [datastore.py:open_for_write():77] open: /home/sebastian/Desktop/pytorchrl/wandb/run-20220201_162130-2ubf69ym/run-2ubf69ym.wandb
+2022-02-01 16:21:30,588 DEBUG   SenderThread:12833 [sender.py:send():122] send: header
+2022-02-01 16:21:30,588 DEBUG   SenderThread:12833 [sender.py:send():122] send: request
+2022-02-01 16:21:30,589 DEBUG   SenderThread:12833 [sender.py:send_request():131] send_request: check_version
+2022-02-01 16:21:30,733 DEBUG   SenderThread:12833 [sender.py:send():122] send: run
+2022-02-01 16:21:31,031 INFO    SenderThread:12833 [sender.py:_start_run_threads():599] run started: 2ubf69ym with start time 1643728890
+2022-02-01 16:21:31,034 DEBUG   SenderThread:12833 [sender.py:send():122] send: summary
+2022-02-01 16:21:31,035 INFO    SenderThread:12833 [sender.py:_save_file():730] saving file wandb-summary.json with policy end
+2022-02-01 16:21:31,039 DEBUG   HandlerThread:12833 [handler.py:handle_request():101] handle_request: run_start
+2022-02-01 16:21:32,590 DEBUG   HandlerThread:12833 [meta.py:__init__():34] meta init
+2022-02-01 16:21:32,590 DEBUG   HandlerThread:12833 [meta.py:__init__():48] meta init done
+2022-02-01 16:21:32,590 DEBUG   HandlerThread:12833 [meta.py:probe():190] probe
+2022-02-01 16:21:32,596 DEBUG   HandlerThread:12833 [meta.py:_setup_git():180] setup git
+2022-02-01 16:21:32,617 DEBUG   HandlerThread:12833 [meta.py:_setup_git():187] setup git done
+2022-02-01 16:21:32,618 DEBUG   HandlerThread:12833 [meta.py:_save_pip():52] save pip
+2022-02-01 16:21:32,618 DEBUG   HandlerThread:12833 [meta.py:_save_pip():66] save pip done
+2022-02-01 16:21:32,618 DEBUG   HandlerThread:12833 [meta.py:probe():231] probe done
+2022-02-01 16:21:32,624 DEBUG   SenderThread:12833 [sender.py:send():122] send: files
+2022-02-01 16:21:32,625 INFO    SenderThread:12833 [sender.py:_save_file():730] saving file wandb-metadata.json with policy now
+2022-02-01 16:21:32,634 DEBUG   HandlerThread:12833 [handler.py:handle_request():101] handle_request: status
+2022-02-01 16:21:32,634 DEBUG   SenderThread:12833 [sender.py:send():122] send: request
+2022-02-01 16:21:32,635 DEBUG   SenderThread:12833 [sender.py:send_request():131] send_request: status
+2022-02-01 16:21:35,992 DEBUG   SenderThread:12833 [sender.py:send():122] send: stats
+2022-02-01 16:21:37,376 WARNING MainThread:12833 [internal.py:wandb_internal():146] Internal process interrupt: 1
+2022-02-01 16:21:37,378 DEBUG   HandlerThread:12833 [handler.py:handle_request():101] handle_request: poll_exit
+2022-02-01 16:21:37,379 DEBUG   SenderThread:12833 [sender.py:send():122] send: telemetry
+2022-02-01 16:21:37,625 WARNING MainThread:12833 [internal.py:wandb_internal():146] Internal process interrupt: 2
+2022-02-01 16:21:37,625 ERROR   MainThread:12833 [internal.py:wandb_internal():149] Internal process interrupted.
+2022-02-01 16:21:37,664 INFO    SenderThread:12833 [sender.py:finish():833] shutting down sender
+2022-02-01 16:21:38,387 INFO    WriterThread:12833 [datastore.py:close():258] close: /home/sebastian/Desktop/pytorchrl/wandb/run-20220201_162130-2ubf69ym/run-2ubf69ym.wandb
+2022-02-01 16:21:38,388 INFO    HandlerThread:12833 [handler.py:finish():535] shutting down handler
+2022-02-01 16:21:40,276 INFO    MainThread:12833 [internal.py:handle_exit():78] Internal process exited

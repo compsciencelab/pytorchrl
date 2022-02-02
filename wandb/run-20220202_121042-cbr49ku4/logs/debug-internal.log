@@ -1,0 +1,115 @@
+2022-02-02 12:10:42,686 INFO    MainThread:8252 [internal.py:wandb_internal():91] W&B internal server running at pid: 8252, started at: 2022-02-02 12:10:42.685712
+2022-02-02 12:10:42,687 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: check_version
+2022-02-02 12:10:42,687 INFO    WriterThread:8252 [datastore.py:open_for_write():77] open: /home/sebastian/Desktop/pytorchrl/wandb/run-20220202_121042-cbr49ku4/run-cbr49ku4.wandb
+2022-02-02 12:10:42,688 DEBUG   SenderThread:8252 [sender.py:send():122] send: header
+2022-02-02 12:10:42,688 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:10:42,688 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: check_version
+2022-02-02 12:10:42,779 DEBUG   SenderThread:8252 [sender.py:send():122] send: run
+2022-02-02 12:10:43,037 INFO    SenderThread:8252 [sender.py:_start_run_threads():599] run started: cbr49ku4 with start time 1643800242
+2022-02-02 12:10:43,044 DEBUG   SenderThread:8252 [sender.py:send():122] send: summary
+2022-02-02 12:10:43,044 INFO    SenderThread:8252 [sender.py:_save_file():730] saving file wandb-summary.json with policy end
+2022-02-02 12:10:43,046 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: run_start
+2022-02-02 12:10:44,217 DEBUG   HandlerThread:8252 [meta.py:__init__():34] meta init
+2022-02-02 12:10:44,217 DEBUG   HandlerThread:8252 [meta.py:__init__():48] meta init done
+2022-02-02 12:10:44,217 DEBUG   HandlerThread:8252 [meta.py:probe():190] probe
+2022-02-02 12:10:44,224 DEBUG   HandlerThread:8252 [meta.py:_setup_git():180] setup git
+2022-02-02 12:10:44,246 DEBUG   HandlerThread:8252 [meta.py:_setup_git():187] setup git done
+2022-02-02 12:10:44,246 DEBUG   HandlerThread:8252 [meta.py:_save_pip():52] save pip
+2022-02-02 12:10:44,247 DEBUG   HandlerThread:8252 [meta.py:_save_pip():66] save pip done
+2022-02-02 12:10:44,247 DEBUG   HandlerThread:8252 [meta.py:probe():231] probe done
+2022-02-02 12:10:44,250 DEBUG   SenderThread:8252 [sender.py:send():122] send: files
+2022-02-02 12:10:44,251 INFO    SenderThread:8252 [sender.py:_save_file():730] saving file wandb-metadata.json with policy now
+2022-02-02 12:10:44,258 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:10:44,259 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:10:44,260 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:10:47,735 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:10:52,355 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:10:56,952 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:10:59,467 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:10:59,467 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:10:59,467 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:11:01,596 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:06,238 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:11,034 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:14,716 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:11:14,716 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:11:14,716 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:11:15,702 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:20,407 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:25,036 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:29,657 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:29,925 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:11:29,925 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:11:29,926 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:11:34,340 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:39,014 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:43,701 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:45,145 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:11:45,145 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:11:45,145 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:11:48,393 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:53,053 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:11:57,740 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:00,373 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:12:00,373 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:12:00,373 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:12:02,388 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:07,099 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:11,767 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:15,606 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:12:15,606 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:12:15,606 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:12:16,420 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:21,205 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:25,861 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:30,521 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:30,825 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:12:30,825 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:12:30,825 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:12:35,210 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:39,946 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:44,567 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:46,125 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:12:46,125 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:12:46,125 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:12:49,266 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:53,905 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:12:58,617 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:01,339 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:13:01,339 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:13:01,340 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:13:03,303 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:08,132 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:12,811 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:16,592 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:13:16,592 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:13:16,592 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:13:17,539 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:22,254 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:26,998 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:31,643 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:31,803 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:13:31,804 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:13:31,804 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:13:36,303 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:41,007 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:45,656 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:47,088 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:13:47,089 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:13:47,089 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:13:50,377 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:55,075 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:13:59,798 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:14:02,306 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: status
+2022-02-02 12:14:02,306 DEBUG   SenderThread:8252 [sender.py:send():122] send: request
+2022-02-02 12:14:02,306 DEBUG   SenderThread:8252 [sender.py:send_request():131] send_request: status
+2022-02-02 12:14:04,449 DEBUG   SenderThread:8252 [sender.py:send():122] send: stats
+2022-02-02 12:14:06,908 WARNING MainThread:8252 [internal.py:wandb_internal():146] Internal process interrupt: 1
+2022-02-02 12:14:06,910 DEBUG   SenderThread:8252 [sender.py:send():122] send: telemetry
+2022-02-02 12:14:06,982 DEBUG   HandlerThread:8252 [handler.py:handle_request():101] handle_request: poll_exit
+2022-02-02 12:14:07,201 WARNING MainThread:8252 [internal.py:wandb_internal():146] Internal process interrupt: 2
+2022-02-02 12:14:07,202 ERROR   MainThread:8252 [internal.py:wandb_internal():149] Internal process interrupted.
+2022-02-02 12:14:07,348 INFO    SenderThread:8252 [sender.py:finish():833] shutting down sender
+2022-02-02 12:14:07,982 INFO    WriterThread:8252 [datastore.py:close():258] close: /home/sebastian/Desktop/pytorchrl/wandb/run-20220202_121042-cbr49ku4/run-cbr49ku4.wandb
+2022-02-02 12:14:07,983 INFO    HandlerThread:8252 [handler.py:finish():535] shutting down handler
+2022-02-02 12:14:53,483 INFO    MainThread:8252 [internal.py:handle_exit():78] Internal process exited

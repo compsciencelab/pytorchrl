@@ -1,0 +1,1036 @@
+Sequential(
+  (0): Linear(in_features=4, out_features=500, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=500, out_features=500, bias=True)
+  (3): ReLU()
+  (4): DeterministicMB(
+    (output): Linear(in_features=500, out_features=3, bias=True)
+  )
+)
+Training model from scratch
+Training model from scratch
+Collecting initial samples...
+Created CWorker with worker_index 0
+Created GWorker with worker_index 0
+New EPOCH! 0
+Update 1, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.9635
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 2, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.6975
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 2
+Update 3, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.4029
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 4, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.3076
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 4
+Update 5, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.1713
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 6, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.2605
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 6
+Update 7, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.1962
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 8, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0879
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 8
+Update 9, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.1238
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 10, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0317
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 10
+Update 11, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0624
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 12, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0576
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 12
+Update 13, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0554
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 14, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0771
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 14
+Update 15, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0370
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 16, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0948
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 16
+Update 17, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0447
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 18, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0545
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 18
+Update 19, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0649
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 20, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0131
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 20
+Update 21, num samples collected 450, FPS 28
+  Algorithm: train_loss 0.0462
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 22, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0460
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 22
+Update 23, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0157
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 24, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0821
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 24
+Update 25, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0444
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 26, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0385
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 26
+Update 27, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0305
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 28, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0489
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 28
+Update 29, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0283
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 30, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0452
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 30
+Update 31, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0076
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 32, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0728
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 32
+Update 33, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0563
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 34, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0073
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 34
+Update 35, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0065
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 36, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0707
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 36
+Update 37, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0539
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 38, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0071
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 38
+Update 39, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0255
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 40, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0419
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 40
+Update 41, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0530
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 42, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0059
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 42
+Update 43, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0523
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 44, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0049
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 44
+Update 45, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0044
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 46, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0670
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 46
+Update 47, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0309
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 48, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0303
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 48
+Update 49, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0308
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 50, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0309
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 50
+Update 51, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0241
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 52, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0389
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 52
+Update 53, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0496
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 54, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0043
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 54
+Update 55, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0238
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 56, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0378
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 56
+Update 57, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0490
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 58, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0045
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 58
+Update 59, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0483
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 60, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0034
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 60
+Update 61, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0229
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 62, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0371
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 62
+Update 63, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0024
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 64, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0631
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 64
+Update 65, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0283
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 66, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0290
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 66
+Update 67, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0278
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 68, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0287
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 68
+Update 69, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0280
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 70, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0281
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 70
+Update 71, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0213
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 72, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0367
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 72
+Update 73, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0222
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 74, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0352
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 74
+Update 75, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0467
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 76, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0034
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 76
+Update 77, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0222
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 78, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0349
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 78
+Update 79, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0026
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 80, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0597
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 80
+Update 81, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0039
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 82, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0591
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 82
+Update 83, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0456
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 84, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0029
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 84
+Update 85, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0213
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 86, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0342
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 86
+Update 87, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0265
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 88, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0274
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 88
+Update 89, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0256
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 90, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0283
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 90
+Update 91, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0438
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 92, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0041
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 92
+Update 93, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0260
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 94, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0277
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 94
+Update 95, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0209
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 96, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0342
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 96
+Update 97, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0016
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 98, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0593
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 98
+Update 99, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0027
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 100, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0568
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 100
+Update 101, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0444
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 102, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0028
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 102
+Update 103, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0446
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 104, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0026
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 104
+Update 105, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0031
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 106, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0566
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 106
+Update 107, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0428
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 108, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0043
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 108
+Update 109, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0258
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 110, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0273
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 110
+Update 111, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0248
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 112, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0280
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 112
+Update 113, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0203
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 114, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0331
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 114
+Update 115, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0017
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 116, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0571
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 116
+Update 117, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0251
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 118, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0271
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 118
+Finished MB training, ran for 60 epochs
+Update 119, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0024
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+Update 120, num samples collected 450, FPS 27
+  Algorithm: train_loss 0.0565
+  Episodes: TrainReward -1070.4482, l 200.0000, t 9.2895, TestReward -1406.9206
+New EPOCH! 120
+Update 121, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1949
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 122, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0419
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 123, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0111
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 123
+Update 124, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0352
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 125, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0297
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 126, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.2334
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 126
+Update 127, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0335
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 128, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1699
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 129, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0391
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 129
+Update 130, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0283
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 131, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1937
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 132, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0078
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 132
+Update 133, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0311
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 134, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1623
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 135, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0377
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 135
+Update 136, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0320
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 137, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1810
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 138, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0058
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 138
+Update 139, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0523
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 140, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0076
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 141, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.2179
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 141
+Update 142, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0063
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 143, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1807
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 144, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0357
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 144
+Update 145, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0263
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 146, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1553
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 147, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0410
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 147
+Update 148, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1955
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 149, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0089
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 150, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0061
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 150
+Update 151, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0062
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 152, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1963
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 153, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0068
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 153
+Update 154, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0279
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 155, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1534
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 156, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0381
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 156
+Update 157, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.1696
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 158, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0324
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 159, num samples collected 700, FPS 21
+  Algorithm: train_loss 0.0064
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 159
+Update 160, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1756
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 161, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0259
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 162, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0073
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 162
+Update 163, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1706
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 164, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0070
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 165, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0335
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 165
+Update 166, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0252
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 167, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0076
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 168, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.2330
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 168
+Update 169, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0080
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 170, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0504
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 171, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.2000
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 171
+Update 172, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0087
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 173, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0266
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 174, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.2228
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 174
+Update 175, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1597
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 176, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0071
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 177, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0478
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 177
+Update 178, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1593
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 179, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0125
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 180, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0369
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 180
+Update 181, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0290
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 182, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1645
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 183, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0054
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 183
+Update 184, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0473
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 185, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0068
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 186, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1943
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 186
+Update 187, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0262
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 188, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1412
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 189, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0345
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 189
+Update 190, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0261
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 191, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1606
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 192, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0077
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 192
+Update 193, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1595
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 194, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0246
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 195, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0089
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 195
+Update 196, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0075
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 197, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1544
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 198, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0375
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 198
+Update 199, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1520
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 200, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0283
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 201, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0103
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 201
+Update 202, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0272
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 203, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1351
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 204, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0348
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 204
+Update 205, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0068
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 206, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1542
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 207, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0388
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 207
+Update 208, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1540
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 209, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0260
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 210, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0045
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 210
+Update 211, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1322
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 212, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0240
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 213, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0383
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 213
+Update 214, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1253
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 215, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0320
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 216, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0306
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 216
+Update 217, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0083
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 218, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0070
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 219, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.2269
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 219
+Update 220, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1509
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 221, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0069
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 222, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0314
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 222
+Update 223, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1415
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 224, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0293
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 225, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0146
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 225
+Update 226, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0270
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 227, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1274
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 228, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0376
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 228
+Update 229, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0258
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 230, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1412
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 231, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0150
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 231
+Update 232, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0114
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 233, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1383
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 234, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0359
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 234
+Update 235, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0102
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 236, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0227
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 237, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1932
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 237
+Update 238, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0069
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 239, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1340
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 240, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0442
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 240
+Update 241, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0356
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 242, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1313
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 243, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0076
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 243
+Update 244, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0253
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 245, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0090
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 246, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1844
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 246
+Update 247, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1103
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 248, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0534
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 249, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0144
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 249
+Update 250, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0085
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 251, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1299
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 252, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0442
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 252
+Update 253, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0094
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 254, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0449
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 255, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1571
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 255
+Update 256, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1065
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 257, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0513
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 258, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0257
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 258
+Update 259, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1318
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 260, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0246
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 261, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0120
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 261
+Update 262, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1230
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 263, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0377
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 264, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0039
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 264
+Update 265, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0279
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 266, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0236
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 267, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1486
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 267
+Update 268, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0148
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 269, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0253
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 270, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1683
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 270
+Update 271, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0331
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 272, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1035
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 273, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0338
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 273
+Update 274, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0089
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 275, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0450
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 276, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1472
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 276
+Update 277, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1177
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 278, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0186
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 279, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0442
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 279
+Update 280, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1341
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 281, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0071
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 282, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0337
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 282
+Update 283, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0406
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 284, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0106
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 285, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1604
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 285
+Update 286, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0310
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 287, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1117
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 288, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0289
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 288
+Update 289, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0298
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 290, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1022
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 291, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0429
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 291
+Update 292, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0075
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 293, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.1373
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 294, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0107
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 294
+Update 295, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0993
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 296, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0252
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 297, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0397
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+New EPOCH! 297
+Finished MB training, ran for 60 epochs
+Update 298, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0887
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 299, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0054
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887
+Update 300, num samples collected 700, FPS 20
+  Algorithm: train_loss 0.0729
+  Episodes: TrainReward -992.9486, l 200.0000, t 24.9909, TestReward -1227.8887

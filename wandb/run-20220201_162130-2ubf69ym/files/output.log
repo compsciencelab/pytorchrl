@@ -1,0 +1,408 @@
+Sequential(
+  (0): Linear(in_features=4, out_features=500, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=500, out_features=500, bias=True)
+  (3): ReLU()
+  (4): DeterministicMB(
+    (output): Linear(in_features=500, out_features=3, bias=True)
+  )
+)
+Training model from scratch
+Training model from scratch
+Collecting initial samples...
+tensor([1.2843], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.8679], device='cuda:0')
+c worker --  tensor([[-1.7357]], device='cuda:0')
+am i here?
+tensor([0.5232], device='cuda:0')
+c worker --  tensor([[1.0463]], device='cuda:0')
+am i here?
+tensor([1.1211], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.0808], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-0.8270], device='cuda:0')
+c worker --  tensor([[-1.6539]], device='cuda:0')
+am i here?
+tensor([-1.9640], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-1.6549], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.5629], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.1357], device='cuda:0')
+c worker --  tensor([[0.2713]], device='cuda:0')
+am i here?
+tensor([1.0923], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.7034], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.8266], device='cuda:0')
+c worker --  tensor([[1.6531]], device='cuda:0')
+am i here?
+tensor([1.3249], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.0765], device='cuda:0')
+c worker --  tensor([[-0.1531]], device='cuda:0')
+am i here?
+tensor([0.2704], device='cuda:0')
+c worker --  tensor([[0.5409]], device='cuda:0')
+am i here?
+tensor([-0.5095], device='cuda:0')
+c worker --  tensor([[-1.0189]], device='cuda:0')
+am i here?
+tensor([0.3037], device='cuda:0')
+c worker --  tensor([[0.6073]], device='cuda:0')
+am i here?
+tensor([-0.7850], device='cuda:0')
+c worker --  tensor([[-1.5699]], device='cuda:0')
+am i here?
+tensor([1.1983], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.0066], device='cuda:0')
+c worker --  tensor([[0.0132]], device='cuda:0')
+am i here?
+tensor([-0.4255], device='cuda:0')
+c worker --  tensor([[-0.8510]], device='cuda:0')
+am i here?
+tensor([0.4155], device='cuda:0')
+c worker --  tensor([[0.8310]], device='cuda:0')
+am i here?
+tensor([-1.0450], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([0.3162], device='cuda:0')
+c worker --  tensor([[0.6325]], device='cuda:0')
+am i here?
+tensor([0.9408], device='cuda:0')
+c worker --  tensor([[1.8816]], device='cuda:0')
+am i here?
+tensor([-0.1053], device='cuda:0')
+c worker --  tensor([[-0.2106]], device='cuda:0')
+am i here?
+tensor([0.5632], device='cuda:0')
+c worker --  tensor([[1.1263]], device='cuda:0')
+am i here?
+tensor([-0.2466], device='cuda:0')
+c worker --  tensor([[-0.4931]], device='cuda:0')
+am i here?
+tensor([1.7387], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.8075], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.9180], device='cuda:0')
+c worker --  tensor([[-1.8360]], device='cuda:0')
+am i here?
+tensor([0.0368], device='cuda:0')
+c worker --  tensor([[0.0737]], device='cuda:0')
+am i here?
+tensor([1.0000], device='cuda:0')
+c worker --  tensor([[2.0000]], device='cuda:0')
+am i here?
+tensor([1.3776], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.1521], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.1266], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.8971], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.8872], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.5382], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.8000], device='cuda:0')
+c worker --  tensor([[1.6001]], device='cuda:0')
+am i here?
+tensor([0.0934], device='cuda:0')
+c worker --  tensor([[0.1867]], device='cuda:0')
+am i here?
+tensor([-0.8606], device='cuda:0')
+c worker --  tensor([[-1.7212]], device='cuda:0')
+am i here?
+tensor([-0.5600], device='cuda:0')
+c worker --  tensor([[-1.1200]], device='cuda:0')
+am i here?
+tensor([0.7268], device='cuda:0')
+c worker --  tensor([[1.4535]], device='cuda:0')
+am i here?
+tensor([0.4615], device='cuda:0')
+c worker --  tensor([[0.9231]], device='cuda:0')
+am i here?
+tensor([1.5665], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.7142], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.9333], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-1.1112], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.2691], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.4208], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.3084], device='cuda:0')
+c worker --  tensor([[0.6167]], device='cuda:0')
+am i here?
+tensor([1.3051], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.0941], device='cuda:0')
+c worker --  tensor([[0.1883]], device='cuda:0')
+am i here?
+tensor([-0.8223], device='cuda:0')
+c worker --  tensor([[-1.6446]], device='cuda:0')
+am i here?
+tensor([1.4224], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.8840], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.2669], device='cuda:0')
+c worker --  tensor([[-0.5339]], device='cuda:0')
+am i here?
+tensor([0.9146], device='cuda:0')
+c worker --  tensor([[1.8291]], device='cuda:0')
+am i here?
+tensor([1.9927], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.1576], device='cuda:0')
+c worker --  tensor([[-0.3153]], device='cuda:0')
+am i here?
+tensor([1.7891], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.8994], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-0.4326], device='cuda:0')
+c worker --  tensor([[-0.8652]], device='cuda:0')
+am i here?
+tensor([-1.4569], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.1645], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.5334], device='cuda:0')
+c worker --  tensor([[-1.0668]], device='cuda:0')
+am i here?
+tensor([-1.6423], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.0253], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.3054], device='cuda:0')
+c worker --  tensor([[-0.6108]], device='cuda:0')
+am i here?
+tensor([-0.8491], device='cuda:0')
+c worker --  tensor([[-1.6983]], device='cuda:0')
+am i here?
+tensor([1.1509], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.2389], device='cuda:0')
+c worker --  tensor([[0.4778]], device='cuda:0')
+am i here?
+tensor([0.2791], device='cuda:0')
+c worker --  tensor([[0.5582]], device='cuda:0')
+am i here?
+tensor([-1.9043], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.4692], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.5626], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.6130], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.8133], device='cuda:0')
+c worker --  tensor([[1.6265]], device='cuda:0')
+am i here?
+tensor([0.6976], device='cuda:0')
+c worker --  tensor([[1.3951]], device='cuda:0')
+am i here?
+tensor([1.8325], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.8536], device='cuda:0')
+c worker --  tensor([[-1.7072]], device='cuda:0')
+am i here?
+tensor([0.2868], device='cuda:0')
+c worker --  tensor([[0.5736]], device='cuda:0')
+am i here?
+tensor([1.5753], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.0834], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.0077], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-0.2145], device='cuda:0')
+c worker --  tensor([[-0.4291]], device='cuda:0')
+am i here?
+tensor([1.4118], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.1357], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([0.5619], device='cuda:0')
+c worker --  tensor([[1.1237]], device='cuda:0')
+am i here?
+tensor([-0.1282], device='cuda:0')
+c worker --  tensor([[-0.2565]], device='cuda:0')
+am i here?
+tensor([-1.9871], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-1.2926], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-0.8647], device='cuda:0')
+c worker --  tensor([[-1.7295]], device='cuda:0')
+am i here?
+tensor([-0.6849], device='cuda:0')
+c worker --  tensor([[-1.3699]], device='cuda:0')
+am i here?
+tensor([0.5817], device='cuda:0')
+c worker --  tensor([[1.1633]], device='cuda:0')
+am i here?
+tensor([-1.8713], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([1.3106], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([1.0470], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.9384], device='cuda:0')
+c worker --  tensor([[-1.8768]], device='cuda:0')
+am i here?
+tensor([-0.6284], device='cuda:0')
+c worker --  tensor([[-1.2567]], device='cuda:0')
+am i here?
+tensor([1.0802], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([0.0213], device='cuda:0')
+c worker --  tensor([[0.0425]], device='cuda:0')
+am i here?
+tensor([1.8509], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.7180], device='cuda:0')
+c worker --  tensor([[-1.4359]], device='cuda:0')
+am i here?
+tensor([-0.2161], device='cuda:0')
+c worker --  tensor([[-0.4322]], device='cuda:0')
+am i here?
+tensor([-1.2713], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([0.7163], device='cuda:0')
+c worker --  tensor([[1.4325]], device='cuda:0')
+am i here?
+tensor([-0.9612], device='cuda:0')
+c worker --  tensor([[-1.9225]], device='cuda:0')
+am i here?
+tensor([-0.8617], device='cuda:0')
+c worker --  tensor([[-1.7233]], device='cuda:0')
+am i here?
+tensor([0.6166], device='cuda:0')
+c worker --  tensor([[1.2331]], device='cuda:0')
+am i here?
+tensor([0.8755], device='cuda:0')
+c worker --  tensor([[1.7509]], device='cuda:0')
+am i here?
+tensor([-1.6261], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([0.4544], device='cuda:0')
+c worker --  tensor([[0.9088]], device='cuda:0')
+am i here?
+tensor([-0.8852], device='cuda:0')
+c worker --  tensor([[-1.7704]], device='cuda:0')
+am i here?
+tensor([0.1237], device='cuda:0')
+c worker --  tensor([[0.2475]], device='cuda:0')
+am i here?
+tensor([-0.3173], device='cuda:0')
+c worker --  tensor([[-0.6345]], device='cuda:0')
+am i here?
+tensor([-1.1834], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([-0.5790], device='cuda:0')
+c worker --  tensor([[-1.1579]], device='cuda:0')
+am i here?
+tensor([1.2206], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-1.5057], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?
+tensor([0.4737], device='cuda:0')
+c worker --  tensor([[0.9474]], device='cuda:0')
+am i here?
+tensor([1.2641], device='cuda:0')
+c worker --  tensor([[2.]], device='cuda:0')
+am i here?
+tensor([-0.6257], device='cuda:0')
+c worker --  tensor([[-1.2513]], device='cuda:0')
+am i here?
+tensor([-0.2398], device='cuda:0')
+c worker --  tensor([[-0.4796]], device='cuda:0')
+am i here?
+tensor([0.6382], device='cuda:0')
+c worker --  tensor([[1.2764]], device='cuda:0')
+am i here?
+tensor([0.8853], device='cuda:0')
+c worker --  tensor([[1.7706]], device='cuda:0')
+am i here?
+tensor([-0.6725], device='cuda:0')
+c worker --  tensor([[-1.3450]], device='cuda:0')
+am i here?
+tensor([0.9512], device='cuda:0')
+c worker --  tensor([[1.9025]], device='cuda:0')
+am i here?
+tensor([0.3652], device='cuda:0')
+c worker --  tensor([[0.7304]], device='cuda:0')
+am i here?
+tensor([-1.2772], device='cuda:0')
+c worker --  tensor([[-2.]], device='cuda:0')
+am i here?

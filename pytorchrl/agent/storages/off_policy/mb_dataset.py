@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch.utils.data import TensorDataset, DataLoader
 import pytorchrl as prl
 from pytorchrl.agent.storages.base import Storage as S
 import gym
@@ -40,14 +39,11 @@ class MBReplayBuffer(S):
     # Data fields to store in buffer and contained in the generated batches
     storage_tensors = prl.DataTransitionKeys
 
-    def __init__(self, size, validation_percentage, learn_reward_function, device, actor, algorithm, envs):
+    def __init__(self, size, learn_reward_function, device, actor, algorithm, envs):
 
         self.actor = actor
-        self.ensemble_size = actor.ensemble_size
         self.scaler = actor.standard_scaler
-        self.validation_percentage = validation_percentage
         self.learn_reward_function = learn_reward_function
-        self.ensemble_size = actor.ensemble_size
         self.device = device
         self.algo = algorithm
         self.max_size, self.size, self.step = size, 0, 0
@@ -56,7 +52,7 @@ class MBReplayBuffer(S):
         self.reset()
 
     @classmethod
-    def create_factory(cls, size, validation_percentage, learn_reward_function):
+    def create_factory(cls, size, learn_reward_function):
         """
         Returns a function that creates ReplayBuffer instances.
 
@@ -73,7 +69,7 @@ class MBReplayBuffer(S):
 
         def create_buffer(device, actor, algorithm, envs):
             """Create and return a ReplayBuffer instance."""
-            return cls(size, validation_percentage, learn_reward_function, device, actor, algorithm, envs)
+            return cls(size, learn_reward_function, device, actor, algorithm, envs)
 
         return create_buffer
 
@@ -322,6 +318,9 @@ class MBReplayBuffer(S):
             targets = np.concatenate((delta_state, rewards), axis=-1)
         else:
             targets = delta_state
+        # watch out inputs have shape (all data, 1, dim) not sure why this extra dim
+        inputs = torch.from_numpy(inputs).float().to(self.device).squeeze(1)
+        targets = torch.from_numpy(targets).float().to(self.device).squeeze(1)
 
         self.scaler.fit(inputs=inputs, targets=targets)
         norm_inputs, norm_targets = self.scaler.transform(inputs=inputs, targets=targets)
@@ -332,8 +331,8 @@ class MBReplayBuffer(S):
             start_index = j * mini_batch_size
             indices_shuffled = train_indices[start_index:start_index + mini_batch_size]
             
-            input_batch = torch.from_numpy(norm_inputs[indices_shuffled, :]).float().to(self.device)
-            target_batch = torch.from_numpy(norm_targets[indices_shuffled, :]).float().to(self.device)
+            input_batch = norm_inputs[indices_shuffled, :]
+            target_batch = norm_targets[indices_shuffled, :]
             batch = {"train_input": input_batch,
                      "train_label": target_batch,
                      "batch_number": batch_number}

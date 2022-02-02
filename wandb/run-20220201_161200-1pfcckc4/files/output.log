@@ -1,0 +1,14 @@
+Sequential(
+  (0): Linear(in_features=4, out_features=500, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=500, out_features=500, bias=True)
+  (3): ReLU()
+  (4): DeterministicMB(
+    (output): Linear(in_features=500, out_features=3, bias=True)
+  )
+)
+Training model from scratch
+Training model from scratch
+Collecting initial samples...
+tensor([1.7341], device='cuda:0')
+env wrapper 
