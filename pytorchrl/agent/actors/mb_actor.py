@@ -235,14 +235,14 @@ class MBActor(Actor):
         else:
             input_layer = nn.Linear(self.input_space + self.action_space.shape[0], out_features=self.hidden_size)
 
-        hidden_layer = nn.linear(self.hidden_size, self.hidden_size)
+        hidden_layer = nn.Linear(self.hidden_size, self.hidden_size)
         
         if self.reward_function is None:
             num_outputs = self.input_space + 1
         else:
             num_outputs = self.input_space
 
-        output_layer = get_dist("DeterministicMB")(num_inputs=self.hidden_size, um_outputs=num_outputs)
+        output_layer = get_dist("DeterministicMB")(num_inputs=self.hidden_size, num_outputs=num_outputs)
             
         self.activation = nn.ReLU()
 
@@ -326,9 +326,10 @@ class MBActor(Actor):
         inputs = torch.cat((states, actions), dim=-1)
 
         # scale inputs based on recent batch scalings
-        norm_inputs = self.standard_scaler.transform(inputs)
+        norm_inputs, _ = self.standard_scaler.transform(inputs)
 
         norm_predictions = self.dynamics_model(norm_inputs)
+
         # inverse transform outputs
         predictions = self.standard_scaler.inverse_transform(norm_predictions)
         predictions += states.to(self.device)
@@ -336,7 +337,7 @@ class MBActor(Actor):
 
         rewards = self.reward_function(states, actions, next_states)
         # TODO: add Termination function?
-        return next_states.cpu, rewards
+        return next_states, rewards
 
 
     def do_rollout(self, state, action):

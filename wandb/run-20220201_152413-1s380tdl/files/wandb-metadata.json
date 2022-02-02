@@ -1,0 +1,27 @@
+{
+    "os": "Linux-5.4.0-96-generic-x86_64-with-debian-bullseye-sid",
+    "python": "3.7.9",
+    "heartbeatAt": "2022-02-01T14:24:17.260423",
+    "startedAt": "2022-02-01T14:24:13.422254",
+    "docker": null,
+    "gpu": "GeForce MX150",
+    "gpu_count": 1,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [
+        "-c",
+        "code_examples/train_pybullet/mpc/conf.yaml"
+    ],
+    "state": "running",
+    "program": "code_examples/train_pybullet/mpc/train.py",
+    "codePath": "code_examples/train_pybullet/mpc/train.py",
+    "git": {
+        "remote": "https://github.com/PyTorchRL/pytorchrl",
+        "commit": "a476ff1f190a843e22843305930be41fded4d989"
+    },
+    "email": "sebastian.dittert@gmx.de",
+    "root": "/home/sebastian/Desktop/pytorchrl",
+    "host": "sebastian-VLT-WX0",
+    "username": "sebastian",
+    "executable": "/home/sebastian/anaconda3/envs/rrc_simulation/bin/python"
+}

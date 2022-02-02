@@ -1,0 +1,14 @@
+Sequential(
+  (0): Linear(in_features=4, out_features=500, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=500, out_features=500, bias=True)
+  (3): ReLU()
+  (4): DeterministicMB(
+    (output): Linear(in_features=500, out_features=3, bias=True)
+  )
+)
+Training model from scratch
+Training model from scratch
+Collecting initial samples...
+Created CWorker with worker_index 0
+Created GWorker with worker_index 0
