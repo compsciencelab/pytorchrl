@@ -18,7 +18,7 @@ test_every: 4
 num_updates: 1
 start_steps: 5000
 buffer_size: 1000000
-save_interval: 20_000
+save_interval: 5
 num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
