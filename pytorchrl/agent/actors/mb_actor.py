@@ -32,7 +32,8 @@ class StandardScaler(object):
         another for assigning the standard deviation of the data to the internal standard deviation.
         This function must be called within a 'with <session>.as_default()' block.
         Arguments:
-        data (torch.Tensor): A torch Tensor containing the input
+        inputs (torch.Tensor): A torch Tensor containing the input
+        targets (torch.Tensor): A torch Tensor containing the input
         Returns: None.
         """
         self.input_mu = torch.mean(inputs, dim=0, keepdims=True).to(self.device)
@@ -45,8 +46,9 @@ class StandardScaler(object):
     def transform(self, inputs, targets=None):
         """Transforms the input matrix data using the parameters of this scaler.
         Arguments:
-        data (torch.Tensor): A torch Tensor containing the points to be transformed.
-        Returns: (torch.Tensor) The transformed dataset.
+        inputs (torch.Tensor): A torch Tensor containing the points to be transformed.
+        targets (torch.Tensor): A torch Tensor containing the points to be transformed.
+        Returns: (torch.Tensor, torch.Tensor) The transformed datasets.
         """
         norm_inputs = (inputs - self.input_mu) / self.input_std
         norm_targets = None
@@ -57,7 +59,7 @@ class StandardScaler(object):
     def inverse_transform(self, targets):
         """Undoes the transformation performed by this scaler.
         Arguments:
-        data (torch.Tensor): A torch Tensor containing the points to be transformed.
+        targets (torch.Tensor): A torch Tensor containing the points to be transformed.
         Returns: (torch.Tensor) The transformed dataset.
         """
         return self.target_std * targets + self.target_mu
@@ -81,7 +83,7 @@ class MBActor(Actor):
         Hidden size number.
     batch_size: int
         Batch size.
-    learn_reward_function: int
+    learn_reward_function: bool
         Either 0 or 1 if the reward function should be learned (1) or will be provided (0).
     device: torch.device
         CPU or specific GPU where class computations will take place.

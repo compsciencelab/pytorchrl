@@ -141,7 +141,7 @@ class CEM(MPC):
         self.lb = -1
         self.ub = 1
         
-    def get_action(self, state, model, noise=False):
+    def get_action(self, state: torch.Tensor, model: torch.nn.Module, noise:bool=False):
         """CEM action planning process
 
         Parameters
@@ -172,7 +172,7 @@ class CEM(MPC):
             constrained_var = np.minimum(np.minimum(np.square(lb_dist / 2), np.square(ub_dist / 2)), var)
             
             actions = X.rvs(size=[self.n_planner, self.horizon*self.action_space]) * np.sqrt(constrained_var) + mu
-            actions = np.clip(actions, self.action_low, self.action_high)
+            actions = np.clip(actions, self.lb, self.ub)
             actions_t = torch.from_numpy(actions.reshape(self.n_planner,
                                                          self.horizon,
                                                          self.action_space)).float().to(self.device)
@@ -314,13 +314,15 @@ class PDDM(MPC):
         assert action_hist.shape == (self.n_planner, self.horizon, self.action_space)
         assert returns.shape == (self.n_planner, 1)
 
-        c = np.exp(self.gamma * (returns) -np.max(returns))
+        c = np.exp(self.gamma * (returns -np.max(returns)))
         d = np.sum(c) + 1e-10
         assert c.shape == (self.n_planner, 1)
         assert d.shape == (), "Has shape {}".format(d.shape)
         c_expanded = c[:, :, None]
         assert c_expanded.shape == (self.n_planner, 1, 1)
         weighted_actions = c_expanded * action_hist
+        #print("D", d)
+        #print("weighted_actions", weighted_actions.sum(0))
         self.mu = weighted_actions.sum(0) / d
         assert self.mu.shape == (self.horizon, self.action_space)       
         

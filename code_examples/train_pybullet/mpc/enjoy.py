@@ -5,6 +5,7 @@ import torch
 import argparse
 from pytorchrl.envs.pybullet import pybullet_test_env_factory
 from pytorchrl.agent.actors import MBActor
+from pytorchrl.agent.algorithms import MB_MPC
 from pytorchrl.utils import LoadFromFile
 
 
@@ -23,17 +24,19 @@ def enjoy():
                                                   env.observation_space,
                                                   env.action_space,
                                                   hidden_size=args.hidden_size,
-                                                  hidden_layer=args.hidden_layer,
                                                   batch_size=args.mini_batch_size,
-                                                  ensemble_size=args.ensemble_size,
-                                                  elite_size=args.elite_size,
-                                                  dynamics_type=args.dynamics_type,
                                                   learn_reward_function=args.learn_reward_function,
                                                   checkpoint=os.path.join(args.log_dir, "model.state_dict"))(device)
 
+    algo_factory, algo = MB_MPC.create_factory(args)
+    
+    mpc = algo_factory(device=device,
+                       actor=dynamics_model,
+                       envs=env)
+    
     # Define initial Tensors
     obs, done = env.reset(), False
-    _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
+    _, rhs, _ = dynamics_model.actor_initial_states(torch.tensor(obs))
     episode_reward = 0
 
     # Execute episodes
@@ -43,7 +46,7 @@ def enjoy():
         obs = torch.Tensor(obs).view(1, -1).to(device)
         done = torch.Tensor([done]).view(1, -1).to(device)
         with torch.no_grad():
-            _, clipped_action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=True)
+            _, clipped_action, rhs, _ = mpc.acting_step(obs, rhs, done, deterministic=True)
         obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
         episode_reward += reward
 
@@ -81,9 +84,12 @@ def get_args():
 
     # MPC specs
     parser.add_argument(
-        "--learn-reward-function", type=int, default=1, choices=[0,1], help="")
+        "--learn-reward-function", default=False, action='store_true', help="")
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+    parser.add_argument(
+        '--mb_epochs', type=int, default=60,
+        help='Number of epochs to train the dynamics model, (default: 60)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
@@ -107,7 +113,7 @@ def get_args():
         help='Rollouts storage size (default: 10000 transitions)')
     parser.add_argument(
         '--update-every', type=int, default=50,
-        help='Num env collected steps between SAC network update stages (default: 50)')
+        help='Num env collected steps between dynamics network update stages (default: 50)')
     parser.add_argument(
         '--num-updates', type=int, default=50,
         help='Num network updates per dynamics network update stage (default 50)')
@@ -139,21 +145,6 @@ def get_args():
     parser.add_argument(
         "--hidden-size", type=int, default=256,
         help="Number of hidden nodes for the dynamics model (default: 256)")
-    parser.add_argument(
-        "--hidden-layer", type=int, default=2,
-        help="Number of hidden layers in the dynamics model (default: 2)")
-    parser.add_argument(
-        "--ensemble-size", type=int, default=7,
-        help="Number of ensemble size for the dynamics models (default: 7)")
-    parser.add_argument(
-        "--elite-size", type=int, default=5,
-        help="Number of the elite size of ensemble members for the prediction (default: 5)")
-    parser.add_argument(
-        "--dynamics-type", type=str, default="probabilistic",
-        help="Type of dynamics model deterministic or probabilistic (default: probabilistic)")
-    parser.add_argument(
-        "--validation_percentage", type=float, default=0.2,
-        help="Percentage of the data in the buffer used for validation of the dynamics model training (default: 0.2)")
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

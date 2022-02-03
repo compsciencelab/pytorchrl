@@ -41,12 +41,11 @@ class MB_MPC(Algorithm):
                  ):
 
         # ---- General algo attributes ----------------------------------------
-
         # Number of steps collected with initial random policy
         self._start_steps = int(config.start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(60)  # Default to 1 for off-policy algorithms
+        self._num_epochs = int(config.mb_epochs)  # Default to 1 for off-policy algorithms
         self.mb_train_epochs = 0
         # Size of update mini batches
         self._mini_batch_size = int(config.mini_batch_size)
@@ -89,6 +88,21 @@ class MB_MPC(Algorithm):
     def create_factory(cls,
                        config,
                        ):
+        """
+        Returns a function to create a new Model-Based MPC instance.
+        
+        Parameters
+        ----------
+        config: Namespace
+           Includes algorithm parameter and also MPC specific parameter.
+
+        Returns
+        -------
+        create_algo_instance : func
+            Function that creates a new DDPG class instance.
+        algo_name : str
+            Name of the algorithm.
+        """
 
         def create_algo_instance(device, actor, envs):
             return cls(actor=actor,
@@ -174,7 +188,7 @@ class MB_MPC(Algorithm):
         rhs: batch
             Actor recurrent hidden state.
         other: dict
-            Additional DDQN predictions, which are not used in other algorithms.
+            Additional MPC predictions, which are not used in other algorithms.
         """
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
@@ -184,7 +198,7 @@ class MB_MPC(Algorithm):
         if self.actor.unscale:
             action = self.actor.unscale(action)
             clipped_action = self.actor.unscale(clipped_action)
-        return clipped_action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
+        return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
     
     
     def training_step(self, batch)-> torch.Tensor:
@@ -228,6 +242,7 @@ class MB_MPC(Algorithm):
             Dict containing current dynamics model iteration information.
         """
         if batch["batch_number"] == 0:
+            # TODO: add reinitialization
             # reinitializes model for new training
             # if self.iter != 0 and self.mb_train_epochs == 0:
             #     self.actor.reinitialize_dynamics_model()
@@ -237,7 +252,6 @@ class MB_MPC(Algorithm):
             self.mb_train_epochs += 1
             
         if self.mb_train_epochs == self.num_epochs:
-            #print("Finished MB training, ran for {} epochs".format(self.mb_train_epochs))
             self.reuse_data = False
             self.mb_train_epochs = 0
 

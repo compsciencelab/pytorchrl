@@ -292,7 +292,21 @@ class MBReplayBuffer(S):
 
     def generate_batches(self, num_mini_batch, mini_batch_size=256, num_epochs=1):
         """
+        Returns a batch iterator to update dynamics model.
 
+        Parameters
+        ----------
+        num_mini_batch : int
+           Number mini batches per epoch. (not used since MB training)
+        mini_batch_size : int
+            Number of samples contained in each mini batch.
+        num_epochs : int
+            Number of epochs. (not used since MB training)
+
+        Yields
+        ------
+        batch : dict
+            Generated data batches.
         """
        
         for k, v in self.data.items():

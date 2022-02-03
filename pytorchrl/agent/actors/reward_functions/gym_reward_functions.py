@@ -23,6 +23,16 @@ def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor
 def angle_normalize(x: torch.Tensor):
     return ((x + math.pi) % (2 * math.pi)) - math.pi
 
+def inverted_pendulum_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
+    """
+    Env info: https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_pendulum.py
+    Reward function based on: https://arxiv.org/pdf/1907.02057.pdf
+    
+    reward = - theta², where theta = state[1]
+    
+    """
+    reward = - state[:, 1][:, None] ** 2
+    return reward
 
 def halfcheetah_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
     """

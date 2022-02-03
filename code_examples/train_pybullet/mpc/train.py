@@ -159,24 +159,28 @@ def get_args():
 
     # MPC specs
     parser.add_argument(
-        "--learn-reward-function", type=int, default=1, choices=[0,1], help="")
+    '--learn-reward-function', default=False, action='store_true',
+        help='Learns the reward function if set, (default: False)')
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        '--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
+    parser.add_argument(
+        '--mb_epochs', type=int, default=60,
+        help='Number of epochs to train the dynamics model, (default: 60)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
     parser.add_argument(
-        "--n-planner", type=int, default=1000,
-        help="Number of parallel planner for each actor (default: 500)")
+        '--n-planner', type=int, default=500,
+        help='Number of parallel planner for each actor (default: 500)')
     parser.add_argument(
-        "--horizon", type=int, default=12,
-        help="The horizon of online planning (default: 12)")
+        '--horizon', type=int, default=12,
+        help='The horizon of online planning (default: 12)')
     parser.add_argument(
-        "--mpc-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
-        help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
+        '--mpc-type', type=str, choices=["RS", "CEM", "PDDM"], default="RS",
+        help='Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)')
     parser.add_argument(
-        "--action-noise", default=False, action='store_true',
-        help="Adding noise to the actions, (default: False)")
+        '--action-noise', default=False, action='store_true',
+        help='Adding noise to the actions, (default: False)')
     parser.add_argument(
         '--start-steps', type=int, default=5000,
         help='Number of initial random steps (default: 5000)')
@@ -196,27 +200,27 @@ def get_args():
     
     # CEM parameter
     parser.add_argument(
-        "--iter-update-steps", type=int, default=3,
-        help="Iterative update steps for CEM (default: 3)")
+        '--iter-update-steps', type=int, default=3,
+        help='Iterative update steps for CEM (default: 3)')
     parser.add_argument(
-        "--k-best", type=int, default=5, 
-        help="K-Best members of the mean prediction forming the next mean distribution")
+        '--k-best', type=int, default=5, 
+        help='K-Best members of the mean prediction forming the next mean distribution')
     parser.add_argument(
-        "--update-alpha", type=float, default=0.0,
-        help="Soft update alpha for each iteration (default: 0.0)")
+        '--update-alpha', type=float, default=0.0,
+        help='Soft update alpha for each iteration (default: 0.0)')
 
     # PDDM parameter
     parser.add_argument(
-        "--gamma", type=float, default=1.0,
-        help="PDDM gamma value (default: 1.0)")
+        '--gamma', type=float, default=1.0,
+        help='PDDM gamma value (default: 1.0)')
     parser.add_argument(
         "--beta", type=float, default=0.5,
-        help="PDDM beta value (default: 0.5)")
+        help='PDDM beta value (default: 0.5)')
 
     # Feature dynamics model specs
     parser.add_argument(
-        "--hidden-size", type=int, default=500,
-        help="Number of hidden nodes for the dynamics model (default: 256)")
+        '--hidden-size', type=int, default=500,
+        help='Number of hidden nodes for the dynamics model (default: 500)')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

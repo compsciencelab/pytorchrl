@@ -16,7 +16,5 @@ def get_dist(name):
         return Deterministic
     elif name == "DeterministicMB":
         return DeterministicMB
-    elif name == "DiagGaussianEnsemble":
-        return DiagGaussianEnsemble
     else:
         raise ValueError("Specified model not found!")
