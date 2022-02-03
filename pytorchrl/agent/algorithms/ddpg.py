@@ -288,7 +288,7 @@ class DDPG(Algorithm):
 
     def acting_step(self, obs, rhs, done, deterministic=False):
         """
-        SAC acting function.
+        DDPG acting function.
 
         Parameters
         ----------
@@ -310,7 +310,7 @@ class DDPG(Algorithm):
         rhs : torch.tensor
             Policy recurrent hidden state (if policy is not a RNN, rhs will contain zeroes).
         other : dict
-            Additional SAC predictions, which are not used in other algorithms.
+            Additional DDPG predictions, which are not used in other algorithms.
         """
 
         with torch.no_grad():

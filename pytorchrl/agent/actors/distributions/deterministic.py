@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from pytorchrl.agent.actors.utils import init
 from pytorchrl.agent.actors.noise import get_noise
+from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
 
 
 class Deterministic(nn.Module):
@@ -86,3 +87,26 @@ class Deterministic(nn.Module):
         pred = torch.clamp(pred, min=-1, max=1)
 
         return None, None, pred
+
+class DeterministicMB(nn.Module):
+    """Deterministic ensemble output layer 
+    
+        Parameters
+        ----------
+        num_inputs: int
+            Size of input feature maps.
+        num_outputs: int
+            Output size of the gaussian layer.
+        ensemble_size: int
+            Ensemble size in the output layer.
+    """
+    def __init__(self, num_inputs: int, num_outputs: int)-> None:
+        super(DeterministicMB, self).__init__()
+
+        self.num_outputs = num_outputs
+        self.output = nn.Linear(in_features=num_inputs, out_features=num_outputs)
+        
+    def forward(self, x: torch.Tensor)-> torch.Tensor:
+        """Forward pass"""
+        mean = self.output(x)
+        return mean
