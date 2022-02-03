@@ -2,7 +2,6 @@ import os
 import ray
 import torch
 import logging
-from shutil import copy2
 from ray.services import get_node_ip_address
 from .utils import find_free_port
 
@@ -35,7 +34,8 @@ class Worker:
 
     def __init__(self, index_worker):
         self.index_worker = index_worker
-        self.actor = None # Initialize in inherited class
+        self.actor = None  # Initialize in inherited class
+        self.is_remote = False
 
     @classmethod
     def as_remote(cls,
@@ -65,13 +65,14 @@ class Worker:
         W : Worker
             A ray remote actor Worker class.
         """
-        W = ray.remote(
+        w = ray.remote(
             num_cpus=num_cpus,
             num_gpus=num_gpus,
             memory=memory,
             object_store_memory=object_store_memory,
             resources=resources)(cls)
-        return W
+        w.is_remote = True
+        return w
 
     def print_worker_info(self):
         """Print information about this worker, including index and resources assigned"""

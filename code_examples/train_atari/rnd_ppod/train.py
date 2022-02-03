@@ -91,7 +91,7 @@ def main():
             predictor_proportion=args.predictor_proportion, gamma=args.gamma,
             pre_normalization_steps=args.pre_normalization_steps,
             pre_normalization_length=args.num_steps,
-            intrinsic_rewards_network=get_feature_extractor(args.nn),
+            intrinsic_rewards_network=get_feature_extractor("CNN"),
             intrinsic_rewards_target_network_kwargs={
                 "output_sizes": [512],
                  "activation": nn.LeakyReLU,
@@ -116,8 +116,8 @@ def main():
         # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            feature_extractor_network=get_feature_extractor("CNN"),
-            restart_model=checkpoint, recurrent_nets=False)
+            feature_extractor_network=get_feature_extractor(args.nn),
+            restart_model=checkpoint, recurrent_nets=args.recurrent_nets)
 
         # Define rollouts storage
         storage_factory = PPODBuffer.create_factory(

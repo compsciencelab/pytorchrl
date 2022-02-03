@@ -163,7 +163,7 @@ class RND_PPO(Algorithm):
             frame_stack = self.envs.env_kwargs["frame_stack"]
 
         # Get number of obs channels
-        obs_channels = int(obs_space[0] / frame_stack)
+        self.obs_channels = int(obs_space[0] / frame_stack)
 
         # Define network type
         int_net = intrinsic_rewards_network or default_feature_extractor(self.envs.observation_space)
@@ -171,7 +171,7 @@ class RND_PPO(Algorithm):
         # Create target model
         setattr(
             self.actor, "target_model",
-            int_net((obs_channels,) + obs_space[1:],
+            int_net((self.obs_channels,) + obs_space[1:],
                     **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
@@ -181,7 +181,7 @@ class RND_PPO(Algorithm):
         # Create predictor model
         setattr(
             self.actor, "predictor_model",
-            int_net((obs_channels,) + obs_space[1:],
+            int_net((self.obs_channels,) + obs_space[1:],
                     **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
         # Define running means for int reward and obs
@@ -190,11 +190,11 @@ class RND_PPO(Algorithm):
         print("---Pre_normalization started.---")
         obs, rhs, done = self.actor.actor_initial_states(envs.reset())
         total_obs = torch.zeros(
-            (self.pre_normalization_length,  obs.shape[0], obs_channels) + obs.shape[2:]).to(self.device)
+            (self.pre_normalization_length,  obs.shape[0], self.obs_channels) + obs.shape[2:]).to(self.device)
         for i in range(self.pre_normalization_steps * self.pre_normalization_length):
             _, clipped_action, rhs, _ = self.acting_step(obs, rhs, done)
             obs, _, _, _ = envs.step(clipped_action)
-            total_obs[i % self.pre_normalization_length].copy_(obs[:, -obs_channels:, ...])
+            total_obs[i % self.pre_normalization_length].copy_(obs[:, -self.obs_channels:, ...])
             if i % self.pre_normalization_length == 0 and i != 0:
                 self.state_rms.update(total_obs.reshape(-1, *total_obs.shape[2:]))
                 print("{}/{}".format(i//self.pre_normalization_length, self.pre_normalization_steps))
@@ -426,7 +426,7 @@ class RND_PPO(Algorithm):
             rhs = value_dict.pop("rhs")
 
             # predict intrinsic reward
-            obs = obs[:, -1:, ...]
+            obs = obs[:, -self.obs_channels:, ...]
             obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
             # obs = torch.clamp((obs - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5).float()
             predictor_encoded_features = self.actor.predictor_model(obs)
@@ -498,7 +498,7 @@ class RND_PPO(Algorithm):
 
         total_value_loss = value_loss + ivalue_loss
 
-        o = o[:, -1:, ...]
+        o = o[:, -self.obs_channels:, ...]
         o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
         # Rnd loss

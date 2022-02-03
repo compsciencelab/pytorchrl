@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler, SequentialSampler
@@ -66,9 +65,11 @@ class VanillaOnPolicyBuffer(S):
         create_buffer_instance : func
             creates a new VanillaOnPolicyBuffer class instance.
         """
+
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a VanillaOnPolicyBuffer instance."""
             return cls(size, device, actor, algorithm, envs)
+
         return create_buffer_instance
 
     def init_tensors(self, sample):
@@ -109,6 +110,8 @@ class VanillaOnPolicyBuffer(S):
             self.data[prl.IRET] = deepcopy(self.data[prl.IREW])
             self.data[prl.IADV] = deepcopy(self.data[prl.IVAL])
             self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
+            self.data[prl.MASK] = deepcopy(self.data[prl.DONE])
+            self.storage_tensors += (prl.MASK,)
 
     def get_num_channels_obs(self, sample):
         """
@@ -242,7 +245,8 @@ class VanillaOnPolicyBuffer(S):
             for x in self.data[prl.VAL]:
                 self.data[prl.VAL][x][step].copy_(value_dict.get(x))
                 self.compute_returns(
-                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
+                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE],
+                    self.algo.gamma)
                 self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
         else:
             # If single critic
@@ -316,19 +320,6 @@ class VanillaOnPolicyBuffer(S):
         adv = returns[:-1] - values[:-1]
         adv = (adv - adv.mean()) / (adv.std() + 1e-5)
         return adv
-
-    def compute_returns_old(self):
-        """Compute return values."""
-        gamma = self.algo.gamma
-        len = self.step - 1 if self.step != 0 else self.max_size
-        for step in reversed(range(len)):
-            self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * gamma * (
-                1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
-
-    def compute_advantages_old(self):
-        """Compute transition advantage values."""
-        adv = self.data[prl.RET][:-1] - self.data[prl.VAL][:-1]
-        self.data[prl.ADV] = (adv - adv.mean()) / (adv.std() + 1e-5)
 
     def normalize_int_rewards(self):
         """

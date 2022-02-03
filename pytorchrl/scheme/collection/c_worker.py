@@ -295,9 +295,10 @@ class CWorker(W):
             self.samples_collected += self.envs_train.num_envs
 
             # Check if stop message sent
-            for l in listen_to:
-                if check_message(l) == b"stop" and step >= min_steps:
-                    break
+            if self.is_remote:
+                for l in listen_to:
+                    if check_message(l) == b"stop" and step >= min_steps:
+                        break
 
         # Average episodes infos
         info = {} if len(info) == 0 else {k: np.mean(v) for k, v in info.items()}

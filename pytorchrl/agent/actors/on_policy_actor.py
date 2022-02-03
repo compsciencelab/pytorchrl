@@ -94,6 +94,7 @@ class OnPolicyActor(Actor):
             algorithm_name,
             restart_model=None,
             recurrent_nets=False,
+            recurrent_nets_kwargs={},
             feature_extractor_kwargs={},
             feature_extractor_network=None,
             shared_policy_value_network=True):
@@ -116,6 +117,8 @@ class OnPolicyActor(Actor):
             Keyword arguments for the feature extractor network.
         recurrent_nets : bool
             Whether to use a RNNs as feature extractors.
+        recurrent_nets_kwargs:
+            Keyword arguments for the memory network.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
 
@@ -133,6 +136,7 @@ class OnPolicyActor(Actor):
                          algorithm_name=algorithm_name,
                          recurrent_nets=recurrent_nets,
                          checkpoint=restart_model,
+                         recurrent_nets_kwargs=recurrent_nets_kwargs,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
