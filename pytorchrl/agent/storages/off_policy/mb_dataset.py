@@ -329,10 +329,10 @@ class MBReplayBuffer(S):
 
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
-        if self.learn_reward_function:
-            targets = np.concatenate((delta_state, rewards), axis=-1)
-        else:
+        if self.learn_reward_function is not None:
             targets = delta_state
+        else:
+            targets = np.concatenate((delta_state, rewards), axis=-1)
         # watch out inputs have shape (all data, 1, dim) not sure why this extra dim
         inputs = torch.from_numpy(inputs).float().to(self.device).squeeze(1)
         targets = torch.from_numpy(targets).float().to(self.device).squeeze(1)
