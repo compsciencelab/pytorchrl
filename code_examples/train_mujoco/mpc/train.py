@@ -13,7 +13,7 @@ from pytorchrl.agent.algorithms import MB_MPC
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import MBReplayBuffer
 from pytorchrl.agent.actors import MBActor
-from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
+from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 def main():
@@ -46,7 +46,7 @@ def main():
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
                                                                             log_dir=args.log_dir,
-                                                                            env_fn=pybullet_train_env_factory,
+                                                                            env_fn=mujoco_train_env_factory,
                                                                             env_kwargs={"env_id": args.env_id,
                                                                                         "frame_skip": args.frame_skip,
                                                                                         "frame_stack": args.frame_stack})
@@ -54,7 +54,7 @@ def main():
         # 2. Define Test Vector of Envs (Optional)
         test_envs_factory, _, _ = VecEnv.create_factory(vec_env_size=args.num_env_processes,
                                                         log_dir=args.log_dir,
-                                                        env_fn=pybullet_test_env_factory,
+                                                        env_fn=mujoco_test_env_factory,
                                                         env_kwargs={"env_id": args.env_id,
                                                                     "frame_skip": args.frame_skip,
                                                                     "frame_stack": args.frame_stack})

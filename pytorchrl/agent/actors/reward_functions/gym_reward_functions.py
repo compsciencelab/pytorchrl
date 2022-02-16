@@ -13,7 +13,7 @@ def cartpole(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor
     """
     x, x_dot, theta, theta_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3]
     
-    reward = torch.cos(theta)[:, None] - 0.01 * x**2
+    reward = torch.cos(theta)[:, None] - 0.01 * x[:, None]**2
     return reward
 
 def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor)-> torch.Tensor:

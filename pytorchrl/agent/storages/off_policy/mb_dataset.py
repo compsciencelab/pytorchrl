@@ -322,6 +322,7 @@ class MBReplayBuffer(S):
                 pass
 
         if type(self.actor.action_space) == gym.spaces.discrete.Discrete:
+
             actions = actions.astype(np.int64)
             actions = np.eye(actions.max()+1)[actions].squeeze(1)
             assert actions.shape == (observations.shape[0], 1, self.actor.action_space.n)
