@@ -21,16 +21,6 @@ def main():
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
 
-    if args.cluster:
-        ray.init(address="auto")
-    else:
-        ray.init(num_cpus=0)
-
-    resources = ""
-    for k, v in ray.cluster_resources().items():
-        resources += "{} {}, ".format(k, v)
-    print(resources[:-2], flush=True)
-
     # Handle wandb init
     if args.wandb_key:
         mode = "online"
@@ -85,20 +75,6 @@ def main():
             "storage_factory": storage_factory,
             "train_envs_factory": train_envs_factory,
             "test_envs_factory": test_envs_factory,
-        })
-
-        # add collection specs
-        params.update({
-            "num_col_workers": args.num_col_workers,
-            "col_workers_communication": args.com_col_workers,
-            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
-        })
-
-        # add gradient specs
-        params.update({
-            "num_grad_workers": args.num_grad_workers,
-            "grad_workers_communication": args.com_grad_workers,
-            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
         })
 
         scheme = Scheme(**params)
