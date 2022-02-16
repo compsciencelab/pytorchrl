@@ -120,7 +120,6 @@ class MBActor(Actor):
         self.hidden_size = hidden_size
 
         self.create_dynamics()
-        print(self.dynamics_model)
 
     @classmethod
     def create_factory(
