@@ -6,6 +6,16 @@ import math
 """
 
 
+def cartpole(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor)-> torch.Tensor:
+    """
+    Based on https://arxiv.org/pdf/1907.02057.pdf
+    reward = cos(θ_t) - 0.01x²
+    """
+    x, x_dot, theta, theta_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3]
+    
+    reward = torch.cos(theta)[:, None] - 0.01 * x**2
+    return reward
+
 def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor)-> torch.Tensor:
     # Original env reward function seems not to work!
     # max_torque = 2.0
