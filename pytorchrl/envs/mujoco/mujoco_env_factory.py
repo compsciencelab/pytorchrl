@@ -1,5 +1,5 @@
 import gym
-from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
+from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward, CartPoleActionWrapper
 
 
 def mujoco_train_env_factory(env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_skip=0, frame_stack=1, reward_delay=1):
@@ -42,6 +42,9 @@ def mujoco_train_env_factory(env_id, index_col_worker, index_grad_worker, index_
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
+    
+    if env_id == "CartPole-v0" or env_id == "CartPole-v1":
+        env = CartPoleActionWrapper(env)
 
     return env
 
@@ -85,5 +88,8 @@ def mujoco_test_env_factory(env_id, index_col_worker, index_grad_worker, index_e
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
+
+    if env_id == "CartPole-v0" or env_id == "CartPole-v1":
+        env = CartPoleActionWrapper(env)
 
     return env

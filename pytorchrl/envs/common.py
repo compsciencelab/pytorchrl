@@ -4,6 +4,16 @@ from collections import deque
 import numpy as np
 
 
+class CartPoleActionWrapper(gym.Wrapper):
+    def __init__(self, env):
+        """CartPole expects scalar integer inputs and not numpy array """
+        gym.Wrapper.__init__(self, env)
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action[0])
+        return obs, reward, done, info
+
+
 class FrameSkip(gym.Wrapper):
     def __init__(self, env, skip=1):
         """Return only every `skip`-th frame"""

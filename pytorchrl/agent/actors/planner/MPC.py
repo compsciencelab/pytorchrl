@@ -10,7 +10,7 @@ class MPC():
     """
     def __init__(self, action_space, config, device)-> None:
         if type(action_space) == gym.spaces.discrete.Discrete:
-            self.action_space = 1
+            self.action_space = action_space.n
             self.action_type = "discrete"
             self.action_low = None
             self.action_high = None

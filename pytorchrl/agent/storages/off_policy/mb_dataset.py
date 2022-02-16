@@ -322,16 +322,17 @@ class MBReplayBuffer(S):
                 pass
 
         if type(self.actor.action_space) == gym.spaces.discrete.Discrete:
+
             actions = actions.astype(np.int64)
             actions = np.eye(actions.max()+1)[actions].squeeze(1)
             assert actions.shape == (observations.shape[0], 1, self.actor.action_space.n)
 
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
-        if self.learn_reward_function:
-            targets = np.concatenate((delta_state, rewards), axis=-1)
-        else:
+        if self.learn_reward_function is not None:
             targets = delta_state
+        else:
+            targets = np.concatenate((delta_state, rewards), axis=-1)
         # watch out inputs have shape (all data, 1, dim) not sure why this extra dim
         inputs = torch.from_numpy(inputs).float().to(self.device).squeeze(1)
         targets = torch.from_numpy(targets).float().to(self.device).squeeze(1)
