@@ -16,7 +16,9 @@ from pytorchrl.agent.actors import MBActor
 from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
+
 def main():
+
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
@@ -27,7 +29,6 @@ def main():
         wandb.login(key=str(args.wandb_key))
     else:
         mode = "disabled"
-
 
     with wandb.init(project=args.experiment_name, name=args.agent_name, config=args, mode=mode):
 

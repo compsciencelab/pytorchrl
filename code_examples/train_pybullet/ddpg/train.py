@@ -22,11 +22,6 @@ def main():
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
 
-    if args.cluster:
-        ray.init(address="auto")
-    else:
-        ray.init(num_cpus=0)
-
     resources = ""
     for k, v in ray.cluster_resources().items():
         resources += "{} {}, ".format(k, v)

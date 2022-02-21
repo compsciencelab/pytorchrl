@@ -5,7 +5,10 @@ import ray
 import sys
 import time
 import wandb
+import random
 import argparse
+import torch
+import numpy as np
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
@@ -19,12 +22,6 @@ from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_tr
 
 def main():
 
-    ####################################################################################################################
-
-    import torch
-    import numpy as np
-    import random
-
     seed = 0
     random.seed(seed)
     np.random.seed(seed)
@@ -32,21 +29,9 @@ def main():
     torch.cuda.manual_seed_all(seed)
     torch.set_num_threads(1)
 
-    ####################################################################################################################
-
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
-
-    if args.cluster:
-        ray.init(address="auto")
-    else:
-        ray.init(num_cpus=0)
-
-    resources = ""
-    for k, v in ray.cluster_resources().items():
-        resources += "{} {}, ".format(k, v)
-    print(resources[:-2], flush=True)
 
     # Handle wandb init
     if args.wandb_key:

@@ -38,17 +38,6 @@ def main():
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    # Handle Ray init
-    if args.cluster:
-        ray.init(address="auto")
-    else:
-        ray.init(
-            num_cpus=0,
-            object_store_memory=1024 ** 3 * 3,
-            _redis_max_memory=1024 ** 3 * 1,
-            _memory=1024 ** 3 * 1,
-            _driver_object_store_memory=1024 ** 3 * 1)
-
     # Handle wandb init
     if args.wandb_key:
         mode = "online"
