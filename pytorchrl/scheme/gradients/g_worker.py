@@ -365,7 +365,7 @@ class GWorker(W):
         """
 
         torch.save(self.local_worker.actor.state_dict(), fname + ".tmp")
-        os.rename(fname + '.tmp', fname)
+        os.replace(fname + '.tmp', fname)
         save_name = fname + ".{}".format(self.local_worker.actor_version)
         copy2(fname, save_name)
         return save_name
