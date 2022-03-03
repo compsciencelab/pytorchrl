@@ -105,12 +105,17 @@ class ResultsWriter(object):
                 filename = osp.join(filename, Monitor.EXT)
             else:
                 filename = filename + "." + Monitor.EXT
-        self.f = open(filename, "wt")
-        if isinstance(header, dict):
-            header = '# {} \n'.format(json.dumps(header))
-        self.f.write(header)
+
+        already_exists = osp.isfile(filename)
+        self.f = open(filename, "a+")
+        if not already_exists:
+            if isinstance(header, dict):
+                header = '# {} \n'.format(json.dumps(header))
+            self.f.write(header)
+        self.f.flush()
         self.logger = csv.DictWriter(self.f, fieldnames=('r', 'l', 't')+tuple(extra_keys))
-        self.logger.writeheader()
+        if not already_exists:
+            self.logger.writeheader()
         self.f.flush()
 
     def write_row(self, epinfo):
@@ -122,11 +127,12 @@ class ResultsWriter(object):
 def get_monitor_files(dir):
     return glob(osp.join(dir, "*" + Monitor.EXT))
 
+
 def load_results(dir):
     import pandas
     monitor_files = (
         glob(osp.join(dir, "*monitor.json")) +
-        glob(osp.join(dir, "*monitor.csv"))) # get both csv and (old) json files
+        glob(osp.join(dir, "*monitor.csv")))  # get both csv and (old) json files
     if not monitor_files:
         raise LoadMonitorResultsError("no monitor files of the form *%s found in %s" % (Monitor.EXT, dir))
     dfs = []
@@ -141,7 +147,7 @@ def load_results(dir):
                 header = json.loads(firstline[1:])
                 df = pandas.read_csv(fh, index_col=None)
                 headers.append(header)
-            elif fname.endswith('json'): # Deprecated json format
+            elif fname.endswith('json'):  # Deprecated json format
                 episodes = []
                 lines = fh.readlines()
                 header = json.loads(lines[0])
@@ -158,5 +164,5 @@ def load_results(dir):
     df.sort_values('t', inplace=True)
     df.reset_index(inplace=True)
     df['t'] -= min(header['t_start'] for header in headers)
-    df.headers = headers # HACK to preserve backwards compatibility
+    df.headers = headers  # HACK to preserve backwards compatibility
     return df
