@@ -1,7 +1,7 @@
 import time
 import torch
 import numpy as np
-from collections import deque, defaultdict
+from collections import defaultdict
 
 import pytorchrl as prl
 from pytorchrl.scheme.utils import check_message, pack

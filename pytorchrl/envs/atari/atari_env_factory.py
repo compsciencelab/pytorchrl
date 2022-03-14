@@ -1,4 +1,5 @@
-from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari, MontezumaVisitedRoomEnv
+from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari, MontezumaVisitedRoomEnv,\
+    MontezumaEmbeddingsEnv,ScaleRewardEnv
 from pytorchrl.envs.common import DelayedReward
 
 
@@ -7,7 +8,6 @@ def atari_train_env_factory(
         episodic_life=True, clip_rewards=False, max_episode_steps=4500, sticky_actions=False):
     """
     Create train Atari environment.
-
     Parameters
     ----------
     env_id : str
@@ -32,7 +32,6 @@ def atari_train_env_factory(
         Maximum number of steps per episode.
     sticky_actions : bool
         Randomly repeat last action with probability 0.25.
-
     Returns
     -------
     env : gym.Env
@@ -40,6 +39,7 @@ def atari_train_env_factory(
     """
     env = make_atari(env_id, max_episode_steps=max_episode_steps, sticky_actions=sticky_actions)
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
+
     env = wrap_deepmind(
         env, episode_life=episodic_life,
         clip_rewards=clip_rewards,
@@ -48,6 +48,9 @@ def atari_train_env_factory(
 
     if env_id == "MontezumaRevengeNoFrameskip-v4":
         env = MontezumaVisitedRoomEnv(env, 3)
+        env = MontezumaEmbeddingsEnv(env)
+    elif env_id == "PitfallNoFrameskip-v4":
+        env = ScaleRewardEnv(env, 0.001)
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
@@ -60,7 +63,6 @@ def atari_test_env_factory(
         reward_delay=1, max_episode_steps=4500, sticky_actions=False):
     """
     Create test Atari environment.
-
     Parameters
     ----------
     env_id : str
@@ -81,7 +83,6 @@ def atari_test_env_factory(
         Maximum number of steps per episode.
     sticky_actions : bool
         Randomly repeat last action with probability 0.25.
-
     Returns
     -------
     env : gym.Env

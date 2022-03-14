@@ -10,6 +10,7 @@ import numpy as np
 
 cv2.ocl.setUseOpenCL(False)
 from pytorchrl.envs.common import FrameStack
+from pytorchrl.envs.atari.utils import imdownscale
 
 
 class StickyActionEnv(gym.Wrapper):
@@ -163,6 +164,24 @@ class ClipRewardEnv(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class ScaleRewardEnv(gym.Wrapper):
+    def __init__(self, env, scaling=0.001):
+        gym.Wrapper.__init__(self, env)
+        self.scaling = scaling
+        self.total_reward = 0.0
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        self.total_reward += reward
+        info['UnscaledReward'] = self.total_reward
+        reward = self.scaling * reward
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        self.total_reward = 0.0
+        return self.env.reset(**kwargs)
+
+
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
@@ -211,6 +230,57 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
     def reset(self):
         self.visited_rooms.clear()
         return self.env.reset()
+
+
+class MontezumaEmbeddingsEnv(gym.Wrapper):
+    def __init__(self, env, use_domain_knowledge=False):
+        gym.Wrapper.__init__(self, env)
+
+        # pos 0: The current frame of the episode.
+        # pos 3: The current screen. Room?
+        # pod 57: room level?
+        # pos 19, 20, 21: The score, represented in Binary Coded Decimal. This is, every nibble represents a decimal digit
+        # pos 42: joe_x, from 0 to 153
+        # pos 43: joe_y, from 0 to 122
+        # pos 52: agent orientation, 76 or 128
+        # pos 65: inventory
+        #       mallet +1
+        #       key +2
+        #       key +4
+        #       key +8
+        #       key +16
+        #       sword +32
+        #       sword +64
+        #       torch +128
+
+        self.room_address = 3
+        self.room_level = 57
+        self.joe_x = 42
+        self.joe_y = 43
+        self.joe_inventory = 65
+        self.use_domain_knowledge = use_domain_knowledge
+
+    def step(self, action):
+        state, reward, done, info = self.env.step(action)
+
+        if self.use_domain_knowledge:
+            ram = self.unwrapped.ale.getRAM()
+            assert len(ram) == 128
+            embed_state = np.array(
+                [
+                    ram[self.joe_x],
+                    ram[self.joe_y],
+                    ram[self.room_address] + 24 * ram[self.room_level],
+                    ram[self.joe_inventory],
+                ]
+            )
+            print(embed_state)
+        else:
+            embed_state = imdownscale(state[:, :, -1])
+
+        info.update({"StateEmbeddings": embed_state})
+
+        return state, reward, done, info
 
 
 class WarpFrame(gym.ObservationWrapper):
