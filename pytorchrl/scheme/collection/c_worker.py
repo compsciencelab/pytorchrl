@@ -1,5 +1,3 @@
-import os
-import ray
 import time
 import torch
 import numpy as np
@@ -13,11 +11,9 @@ from pytorchrl.scheme.base.worker import Worker as W
 class CWorker(W):
     """
      Worker class handling data collection.
-
     This class wraps an actor instance, a storage class instance and a
     train and a test vector environments. It collects data samples, sends
     them and and evaluates network versions.
-
     Parameters
     ----------
     index_worker : int
@@ -44,7 +40,6 @@ class CWorker(W):
         Initial model weights.
     device : str
         "cpu" or specific GPU "cuda:number`" to use for computation.
-
     Attributes
     ----------
     index_worker : int
@@ -147,13 +142,11 @@ class CWorker(W):
         """
         Perform a data collection operation, returning rollouts and
         other relevant information about the process.
-
         Parameters
         ----------
         listen_to : list
             List of keywords to listen to trigger early stopping during
             collection.
-
         Returns
         -------
         data : dict
@@ -207,43 +200,14 @@ class CWorker(W):
 
         return data_to_send
 
-    def collect_random_train_data(self, num_steps=None):
-        """Collect random transition data at the beginning of training.
-
-        """
-        act, clip_act, rhs2, algo_data = self.algo.acting_step(
-                        self.obs, self.rhs, self.done)
-        for step in range(num_steps):
-            action = self.envs_train.action_space.sample()
-
-        obs2, reward, done2, episode_infos = self.envs_train.step(action)
-
-        # Define transition sample
-        transition = prl.DataTransition(
-            self.obs, self.rhs, self.done, action, reward,
-            obs2, rhs2, done2)._asdict()
-        transition.update(algo_data)
-
-        # Store transition in buffer
-        self.storage.insert_transition(transition)
-
-        # Update current world state
-        self.obs, self.rhs, self.done = obs2, rhs2, done2
-
-        # Keep track of num collected samples
-        self.samples_collected += self.envs_train.num_envs
-            
-
     def collect_train_data(self, num_steps=None, listen_to=[]):
         """
         Collect train data from interactions with the environments.
-
         Parameters
         ----------
         num_steps : int
             Target number of train environment steps to take.
         listen_to : list
-
         Returns
         -------
         col_time : float
@@ -262,7 +226,6 @@ class CWorker(W):
 
             # Predict next action, next rnn hidden state and
             # algo-specific outputs
-
             act, clip_act, rhs2, algo_data = self.algo.acting_step(
                 self.obs, self.rhs, self.done)
 
@@ -273,8 +236,9 @@ class CWorker(W):
             # Define transition sample
             transition = prl.DataTransition(
                 self.obs, self.rhs, self.done, act, reward,
-                obs2, rhs2, done2)._asdict()
+                obs2, rhs2, done2, episode_infos)._asdict()
             transition.update(algo_data)
+
             # Store transition in buffer
             self.storage.insert_transition(transition)
 
@@ -308,7 +272,6 @@ class CWorker(W):
     def evaluate(self):
         """
         Test current actor version in self.envs_test.
-
         Returns
         -------
         mean_test_perf : float
@@ -343,7 +306,6 @@ class CWorker(W):
     def set_weights(self, actor_weights):
         """
         Update the worker actor version with provided weights.
-
         actor_weights : dict of tensors
             Dict containing actor weights to be set.
         """
@@ -354,7 +316,6 @@ class CWorker(W):
         """
         If `parameter_name` is an attribute of self.algo, change its value to
         `new_parameter_value value`.
-
         Parameters
         ----------
         parameter_name : str
@@ -368,7 +329,6 @@ class CWorker(W):
         """
         If `parameter_name` is an attribute of self.storage, change its value to
         `new_parameter_value value`.
-
         Parameters
         ----------
         parameter_name : str
@@ -382,7 +342,6 @@ class CWorker(W):
         """
         If `component_name` is an attribute of c_worker, replaces it with
         the component created by `new_component_factory`.
-
         Parameters
         ----------
         component_name : str
@@ -406,4 +365,3 @@ class CWorker(W):
             else:
                 new_component_component = new_component_factory(self.device)
             setattr(self, component_name, new_component_component)
-

@@ -1,4 +1,4 @@
-__version__ = "2.1.50"
+__version__ = "2.1.60"
 
 from collections import namedtuple
 
@@ -68,7 +68,8 @@ IADV = "IntrinsicAdvantage"
 RET = "ExternalReturn"
 IRET = "IntrinsicReturn"
 MASK = "MaskedSamples"
-DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
+INFO = "EnvironmentInformation"
+DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, INFO)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
@@ -106,6 +107,3 @@ MPO = "MPO"
 TD3 = "TD3"
 DDPG = "DDPG"
 DDQN = "DDQN"
-MPC = "MPC"
-
-# -----------------------------------------------------------------------------
