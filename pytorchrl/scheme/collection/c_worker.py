@@ -14,6 +14,7 @@ class CWorker(W):
     This class wraps an actor instance, a storage class instance and a
     train and a test vector environments. It collects data samples, sends
     them and and evaluates network versions.
+
     Parameters
     ----------
     index_worker : int
@@ -40,6 +41,7 @@ class CWorker(W):
         Initial model weights.
     device : str
         "cpu" or specific GPU "cuda:number`" to use for computation.
+        
     Attributes
     ----------
     index_worker : int
@@ -142,11 +144,13 @@ class CWorker(W):
         """
         Perform a data collection operation, returning rollouts and
         other relevant information about the process.
+
         Parameters
         ----------
         listen_to : list
             List of keywords to listen to trigger early stopping during
             collection.
+
         Returns
         -------
         data : dict
@@ -203,11 +207,13 @@ class CWorker(W):
     def collect_train_data(self, num_steps=None, listen_to=[]):
         """
         Collect train data from interactions with the environments.
+
         Parameters
         ----------
         num_steps : int
             Target number of train environment steps to take.
         listen_to : list
+
         Returns
         -------
         col_time : float
@@ -272,6 +278,7 @@ class CWorker(W):
     def evaluate(self):
         """
         Test current actor version in self.envs_test.
+
         Returns
         -------
         mean_test_perf : float
@@ -306,6 +313,9 @@ class CWorker(W):
     def set_weights(self, actor_weights):
         """
         Update the worker actor version with provided weights.
+
+        Parameters
+        ----------
         actor_weights : dict of tensors
             Dict containing actor weights to be set.
         """
@@ -316,6 +326,7 @@ class CWorker(W):
         """
         If `parameter_name` is an attribute of self.algo, change its value to
         `new_parameter_value value`.
+
         Parameters
         ----------
         parameter_name : str
@@ -329,6 +340,7 @@ class CWorker(W):
         """
         If `parameter_name` is an attribute of self.storage, change its value to
         `new_parameter_value value`.
+
         Parameters
         ----------
         parameter_name : str
@@ -342,6 +354,7 @@ class CWorker(W):
         """
         If `component_name` is an attribute of c_worker, replaces it with
         the component created by `new_component_factory`.
+
         Parameters
         ----------
         component_name : str

@@ -82,7 +82,6 @@ class Learner:
         m = {}
 
         def include_info(key):
-            m[key] = {}
             for k, v in self.metrics[key].items():
                 m[os.path.join(key, k)] = sum(v) / len(v)
 
