@@ -1,6 +1,5 @@
 import ray
 import time
-from collections import deque
 import base64
 import lz4.frame
 from ray import cloudpickle as pickle

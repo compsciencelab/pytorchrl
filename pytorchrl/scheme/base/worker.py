@@ -2,7 +2,7 @@ import os
 import ray
 import torch
 import logging
-from ray.services import get_node_ip_address
+from ray._private.services import get_node_ip_address
 from .utils import find_free_port
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class Worker:
             str(type(self).__name__), self.index_worker)
         if self.index_worker != 0:
             s += ", in machine {} using gpus {}".format(
-                ray._private.services.get_node_ip_address(),
+                get_node_ip_address(),
                 ray.get_gpu_ids())
         logger.warning(s)
 
