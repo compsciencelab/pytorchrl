@@ -101,8 +101,7 @@ class UWorker(W):
         )
 
         # Print worker information
-        if index_worker > 0:
-            self.print_worker_info()
+        self.print_worker_info()
 
     @property
     def actor_version(self):
