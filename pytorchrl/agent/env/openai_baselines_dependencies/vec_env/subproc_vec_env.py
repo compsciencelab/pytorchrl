@@ -124,7 +124,11 @@ class SubprocVecEnv(VecEnv):
 
     def __del__(self):
         if not self.closed:
-            self.close()
+            try:
+                self.close()
+            except Exception:
+                pass
+
 
 def _flatten_obs(obs):
     assert isinstance(obs, (list, tuple))
@@ -135,6 +139,7 @@ def _flatten_obs(obs):
         return {k: np.stack([o[k] for o in obs]) for k in keys}
     else:
         return np.stack(obs)
+
 
 def _flatten_list(l):
     assert isinstance(l, (list, tuple))
