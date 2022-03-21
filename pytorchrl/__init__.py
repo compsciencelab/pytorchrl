@@ -1,4 +1,4 @@
-__version__ = "2.1.66"
+__version__ = "2.1.67"
 
 from collections import namedtuple
 
