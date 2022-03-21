@@ -1,8 +1,11 @@
 import os
 import time
+import logging
 from functools import partial
 from collections import defaultdict, deque
 import pytorchrl as prl
+
+logger = logging.getLogger(__name__)
 
 
 class Learner:
@@ -35,6 +38,8 @@ class Learner:
 
         # Record starting time
         self.start = time.time()
+
+        logger.warning("Created Learner.")
 
     def step(self):
         """Takes a logical synchronous optimization step."""
