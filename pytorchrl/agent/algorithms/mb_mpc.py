@@ -200,8 +200,7 @@ class MB_MPC(Algorithm):
             clipped_action = self.actor.unscale(clipped_action)
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
     
-    
-    def training_step(self, batch)-> torch.Tensor:
+    def training_step(self, batch) -> torch.Tensor:
         """Does the forward pass and loss calculation of the dynamics model given the training data.
 
         Parameters
@@ -220,7 +219,6 @@ class MB_MPC(Algorithm):
         prediction = self.actor.dynamics_model(train_inputs)
         loss = self.loss_func(prediction, train_labels)
         return loss
-
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """

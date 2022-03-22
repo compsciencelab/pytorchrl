@@ -12,7 +12,7 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import MB_MPC
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import MBReplayBuffer
-from pytorchrl.agent.actors import MBActor
+from pytorchrl.agent.world_models import WorldModel
 from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -51,13 +51,13 @@ def main():
                                                                     "frame_stack": args.frame_stack})
 
         # 3. Define RL Dynamics Model
-        dynamics_factory = MBActor.create_factory(args.env_id,
-                                                  obs_space,
-                                                  action_space,
-                                                  hidden_size=args.hidden_size,
-                                                  batch_size=args.mini_batch_size,
-                                                  learn_reward_function=args.learn_reward_function,
-                                                  checkpoint=args.restart_model)
+        dynamics_factory = WorldModel.create_factory(args.env_id,
+                                                     obs_space,
+                                                     action_space,
+                                                     hidden_size=args.hidden_size,
+                                                     batch_size=args.mini_batch_size,
+                                                     learn_reward_function=args.learn_reward_function,
+                                                     checkpoint=args.restart_model)
 
         # 4. Define RL training algorithm
         algo_factory, algo = MB_MPC.create_factory(args)

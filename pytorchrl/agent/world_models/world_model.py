@@ -1,21 +1,13 @@
-from numpy.lib.mixins import NDArrayOperatorsMixin
 from typing import Tuple
 
 import gym
 import torch
-import time
 import torch.nn as nn
-import numpy as np
-from collections import OrderedDict
-import random
 from torch.nn.functional import one_hot
 
-
-import pytorchrl as prl
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.reward_functions import get_reward_function
-from pytorchrl.agent.actors.utils import Scale, Unscale, init, partially_load_checkpoint
-from pytorchrl.agent.actors.feature_extractors.ensemble_layer import EnsembleFC
+from pytorchrl.agent.actors.utils import Scale, Unscale
 from pytorchrl.agent.actors.base import Actor
 
 
@@ -65,7 +57,7 @@ class StandardScaler(object):
         return self.target_std * targets + self.target_mu
 
 
-class MBActor(Actor):
+class WorldModel(Actor):
     """
     Model-Based Actor class for Model-Based algorithms.
 
@@ -98,11 +90,11 @@ class MBActor(Actor):
                  batch_size,
                  learn_reward_function,
                  device,
-                 checkpoint)-> None:
-        super(MBActor, self).__init__(device=device,
-                                      checkpoint=checkpoint,
-                                      input_space=input_space,
-                                      action_space=action_space)
+                 checkpoint) -> None:
+        super(WorldModel, self).__init__(device=device,
+                                         checkpoint=checkpoint,
+                                         input_space=input_space,
+                                         action_space=action_space)
         self.device = device
         self.input_space = input_space.shape[0]
         self.reward_function = None
@@ -178,7 +170,7 @@ class MBActor(Actor):
 
         return create_dynamics_instance
 
-    def get_action(self,):
+    def get_action(self):
         pass
     
     def is_recurrent(self,):
@@ -220,7 +212,6 @@ class MBActor(Actor):
         rhs.update({"rhs_q{}".format(i + 1): rhs_act.clone() for i in range(1)})
 
         return obs, rhs, done
-
 
     def create_dynamics(self, name="dynamics_model"):
         """
@@ -339,7 +330,6 @@ class MBActor(Actor):
         rewards = self.reward_function(states, actions, next_states)
         # TODO: add Termination function?
         return next_states, rewards
-
 
     def do_rollout(self, state, action):
         raise NotImplementedError
