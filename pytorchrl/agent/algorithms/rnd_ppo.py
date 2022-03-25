@@ -463,7 +463,7 @@ class RND_PPO(Algorithm):
 
         # RDN PPO
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
-        mask = data[prl.MASK] if prl.Mask in data.keys() else None
+        mask = data[prl.MASK] if prl.MASK in data.keys() else None
 
         advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
 
