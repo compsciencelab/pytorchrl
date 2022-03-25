@@ -463,6 +463,7 @@ class RND_PPO(Algorithm):
 
         # RDN PPO
         ir, old_iv, iadv = data[prl.IRET], data[prl.IVAL], data[prl.IADV]
+        mask = data[prl.MASK] if prl.Mask in data.keys() else None
 
         advs = adv * self.ext_adv_coeff + iadv * self.int_adv_coeff
 
@@ -505,8 +506,9 @@ class RND_PPO(Algorithm):
         encoded_target_features = self.actor.target_model(o)
         encoded_predictor_features = self.actor.predictor_model(o)
         loss = (encoded_predictor_features - encoded_target_features).pow(2).mean(-1)
-        mask = torch.rand(loss.size(), device=self.device)
-        mask = (mask < self.predictor_proportion).float()
+        mask2 = torch.rand(loss.size(), device=self.device)
+        mask2 = (mask2 <= self.predictor_proportion).float()
+        mask = mask.squeeze() * mask2 if mask is not None else mask2
         rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
 
         loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy + rnd_loss
@@ -558,7 +560,9 @@ class RND_PPO(Algorithm):
             "rnd_loss": rnd_loss.item(),
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item(),
-            "intrinsic_rewards": batch[prl.IREW].mean().cpu().item(),
+            "mean_intrinsic_rewards": batch[prl.IREW].mean().cpu().item(),
+            "min_intrinsic_rewards": batch[prl.IREW].min().cpu().item(),
+            "max_intrinsic_rewards": batch[prl.IREW].max().cpu().item(),
         }
 
         return grads, info
