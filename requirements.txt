@@ -1,4 +1,4 @@
-ray
+ray[default]
 gym[atari]
 gym[accept-rom-license]
 pandas
