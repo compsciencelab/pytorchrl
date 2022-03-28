@@ -5,3 +5,4 @@ pandas
 scipy
 lz4
 opencv-python
+wandb
