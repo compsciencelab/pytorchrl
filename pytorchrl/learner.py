@@ -158,3 +158,7 @@ class Learner:
         fname = os.path.join(self.log_dir, fname)
         save_name = self.update_worker.save_model(fname)
         return save_name
+
+    def stop(self):
+        """Stop all threads."""
+        self.update_worker.stop()
