@@ -378,3 +378,11 @@ class CWorker(W):
             else:
                 new_component_component = new_component_factory(self.device)
             setattr(self, component_name, new_component_component)
+
+    def stop(self):
+        """Stop all processes"""
+        self.envs_train.close()
+        try:
+            self.envs_test.close()
+        except Exception:
+            pass
