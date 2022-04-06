@@ -110,7 +110,7 @@ class VanillaOnPolicyBuffer(S):
             self.data[prl.IRET] = deepcopy(self.data[prl.IREW])
             self.data[prl.IADV] = deepcopy(self.data[prl.IVAL])
             self.int_reward_rms = RunningMeanStd(shape=(1,), device=self.device)
-            self.data[prl.MASK] = deepcopy(self.data[prl.DONE])
+            self.data[prl.MASK] = torch.ones_like(self.data[prl.DONE])
             self.storage_tensors += (prl.MASK,)
 
     def get_num_channels_obs(self, sample):
