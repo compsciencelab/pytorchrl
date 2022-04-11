@@ -35,7 +35,7 @@ class MLP(nn.Module):
         sizes = [np.prod(input_shape)] + hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
             layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
-            if not (j == len(sizes) - 2 and final_activation):
+            if j < len(sizes) - 2 or final_activation:
                 layers += [activation()]
         self.feature_extractor = nn.Sequential(*layers)
 

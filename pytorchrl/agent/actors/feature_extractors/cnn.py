@@ -72,9 +72,9 @@ class CNN(nn.Module):
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_shape)).shape))
         layers = []
         sizes = [feature_size] + output_sizes
-        for jj in range(len(sizes) - 1):
-            layers += [init_(nn.Linear(sizes[jj], sizes[jj + 1]))]
-            if jj < len(sizes) - 2 or final_activation:
+        for j in range(len(sizes) - 1):
+            layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
+            if j < len(sizes) - 2 or final_activation:
                 layers += [activation()]
         self.head = nn.Sequential(*layers)
 
