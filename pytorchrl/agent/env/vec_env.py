@@ -1,4 +1,3 @@
-import torch
 from pytorchrl.agent.env.make_env import make_env
 from pytorchrl.agent.env.vector_wrappers import VecPyTorch
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.dummy_vec_env import DummyVecEnv
@@ -37,7 +36,7 @@ class VecEnv:
             Environments observation space.
         """
 
-        def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
+        def make_vec_env(device, index_col_worker=1, index_grad_worker=1, mode="train"):
             """Create and return a vector environment"""
 
             if mode == "train":
