@@ -53,27 +53,21 @@ class CNN(nn.Module):
         if len(input_shape) != 3:
             raise ValueError("Trying to extract features with a CNN for an obs space with len(shape) != 3")
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), get_gain(activation))
-
         # Define CNN feature extractor
         layers = []
         filters = [input_shape[0]] + filters
         for j in range(len(filters) - 1):
-            layers += [init_(nn.Conv2d(
+            layers += [nn.Conv2d(
                 filters[j], filters[j + 1], stride=strides[j],
-                kernel_size=kernel_sizes[j])), activation()]
+                kernel_size=kernel_sizes[j]), activation()]
         self.feature_extractor = nn.Sequential(*layers)
-
-        # TODO. Final activation always ReLU
-        activation = nn.ReLU
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), get_gain(activation))
 
         # Define final MLP layers
         feature_size = int(np.prod(self.feature_extractor(torch.randn(1, *input_shape)).shape))
         layers = []
         sizes = [feature_size] + output_sizes
         for j in range(len(sizes) - 1):
-            layers += [init_(nn.Linear(sizes[j], sizes[j + 1]))]
+            layers += [nn.Linear(sizes[j], sizes[j + 1])]
             if j < len(sizes) - 2 or final_activation:
                 layers += [activation()]
         self.head = nn.Sequential(*layers)
