@@ -259,9 +259,9 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
         self.joe_y = 43
         self.joe_inventory = 65
         self.use_domain_knowledge = use_domain_knowledge
+        self.last_state = None
 
     def step(self, action):
-        state, reward, done, info = self.env.step(action)
 
         if self.use_domain_knowledge:
             ram = self.unwrapped.ale.getRAM()
@@ -275,12 +275,20 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
                 ]
             )
             print(embed_state)
+            state, reward, done, info = self.env.step(action)
+
         else:
-            embed_state = imdownscale(state[:, :, -1])
+            state, reward, done, info = self.env.step(action)
+            embed_state = imdownscale(self.last_state[:, :, -1])
 
         info.update({"StateEmbeddings": embed_state})
+        self.last_state = state
 
         return state, reward, done, info
+
+    def reset(self):
+        self.last_state = self.env.reset()
+        return self.last_state
 
 
 class WarpFrame(gym.ObservationWrapper):
