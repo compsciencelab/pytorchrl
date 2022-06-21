@@ -11,7 +11,7 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.algorithms import MPC_RS
 from pytorchrl.agent.storages import MBReplayBuffer
-from pytorchrl.agent.world_models import WorldModel
+from pytorchrl.agent.actors.world_models import WorldModel
 from pytorchrl.agent.actors import ModelBasedPlannerActor
 from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir

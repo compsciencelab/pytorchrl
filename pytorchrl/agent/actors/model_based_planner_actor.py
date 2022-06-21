@@ -2,8 +2,8 @@ import gym
 import torch
 
 from pytorchrl.agent.actors.base import Actor
-from pytorchrl.agent.world_models import WorldModel
-from pytorchrl.agent.world_models.utils import StandardScaler
+from pytorchrl.agent.actors.world_models import WorldModel
+from pytorchrl.agent.actors.world_models.utils import StandardScaler
 
 
 class ModelBasedPlannerActor(Actor):
