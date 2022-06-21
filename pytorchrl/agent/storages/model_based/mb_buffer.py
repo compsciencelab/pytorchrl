@@ -42,7 +42,7 @@ class MBReplayBuffer(S):
     def __init__(self, size, learn_reward_function, device, actor, algorithm, envs):
 
         self.actor = actor
-        self.scaler = actor.standard_scaler
+        self.scaler = actor.world_model.standard_scaler
         self.learn_reward_function = learn_reward_function
         self.device = device
         self.algo = algorithm

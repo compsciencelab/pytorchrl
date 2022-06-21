@@ -10,10 +10,11 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
-from pytorchrl.agent.actors.planner import MPC
+from pytorchrl.agent.actors.model_based.RS_planner import Planner
 
 
-class MB_MPC(Algorithm):
+class MPC(Algorithm):
+
     """Model-Based MPC class.
     Trains a model of the environment and uses MPC to select actions. 
     User can choose between different MPC methods:
@@ -57,6 +58,7 @@ class MB_MPC(Algorithm):
         self._num_test_episodes = int(3)
         self.actor = actor
         self.action_noise = config.action_noise
+
         # ---- MB MPC-specific attributes ----------------------------------------
         if config.mpc_type == "RS":
             self.mpc = MPC.RandomShooting(action_space=self.actor.action_space,
@@ -192,12 +194,12 @@ class MB_MPC(Algorithm):
         """
         with torch.no_grad():
             action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
-
             clipped_action = torch.clamp(action, -1, 1)
             
         if self.actor.unscale:
             action = self.actor.unscale(action)
             clipped_action = self.actor.unscale(clipped_action)
+
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
     
     def training_step(self, batch) -> torch.Tensor:

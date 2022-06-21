@@ -107,3 +107,5 @@ MPO = "MPO"
 TD3 = "TD3"
 DDPG = "DDPG"
 DDQN = "DDQN"
+MPC_RS = "ModelPredictiveControl_RandomShooting"
+

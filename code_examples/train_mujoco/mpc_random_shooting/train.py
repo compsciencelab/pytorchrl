@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import ray
 import sys
 import time
 import wandb
@@ -9,10 +8,11 @@ import argparse
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import MB_MPC
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.algorithms import MPC_RS
 from pytorchrl.agent.storages import MBReplayBuffer
 from pytorchrl.agent.world_models import WorldModel
+from pytorchrl.agent.actors import ModelBasedPlannerActor
 from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -21,7 +21,7 @@ def main():
 
     args = get_args()
     cleanup_log_dir(args.log_dir)
-    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
+    save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init
     if args.wandb_key:
@@ -34,37 +34,41 @@ def main():
 
         # Sanity check, make sure that logging matches execution
         args = wandb.config
+
         # 1. Define Train Vector of Envs
-        train_envs_factory, action_space, obs_space = VecEnv.create_factory(vec_env_size=args.num_env_processes,
-                                                                            log_dir=args.log_dir,
-                                                                            env_fn=mujoco_train_env_factory,
-                                                                            env_kwargs={"env_id": args.env_id,
-                                                                                        "frame_skip": args.frame_skip,
-                                                                                        "frame_stack": args.frame_stack})
+        train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+            vec_env_size=args.num_env_processes,
+            log_dir=args.log_dir,
+            env_fn=mujoco_train_env_factory,
+            env_kwargs={"env_id": args.env_id,
+                        "frame_skip": args.frame_skip,
+                        "frame_stack": args.frame_stack})
 
         # 2. Define Test Vector of Envs (Optional)
-        test_envs_factory, _, _ = VecEnv.create_factory(vec_env_size=args.num_env_processes,
-                                                        log_dir=args.log_dir,
-                                                        env_fn=mujoco_test_env_factory,
-                                                        env_kwargs={"env_id": args.env_id,
-                                                                    "frame_skip": args.frame_skip,
-                                                                    "frame_stack": args.frame_stack})
+        test_envs_factory, _, _ = VecEnv.create_factory(
+            vec_env_size=args.num_env_processes,
+            log_dir=args.log_dir,
+            env_fn=mujoco_test_env_factory,
+            env_kwargs={"env_id": args.env_id,
+                        "frame_skip": args.frame_skip,
+                        "frame_stack": args.frame_stack})
 
-        # 3. Define RL Dynamics Model
-        dynamics_factory = WorldModel.create_factory(args.env_id,
-                                                     obs_space,
-                                                     action_space,
-                                                     hidden_size=args.hidden_size,
-                                                     batch_size=args.mini_batch_size,
-                                                     learn_reward_function=args.learn_reward_function,
-                                                     checkpoint=args.restart_model)
+        # 3. Define RL training algorithm
+        algo_factory, algo_name = MPC_RS.create_factory(
+            lr=args.lr, start_steps=args.start_steps,
+            update_every=args.update_every, mb_epochs=args.mb_epochs,
+            action_noise=args.action_noise, mini_batch_size=args.mini_batch_size,
+            test_every=args.test_every)
 
-        # 4. Define RL training algorithm
-        algo_factory, algo = MB_MPC.create_factory(args)
+        # 4. Define Actor
+        actor_factory = ModelBasedPlannerActor.create_factory(
+            obs_space, action_space, algo_name, horizon=args.horizon,
+            n_planner=args.n_planner, restart_model=args.restart_model, world_model_class=WorldModel,
+            world_model_kwargs={"hidden_size": args.hidden_size})
 
         # 5. Define rollouts storage
-        storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size,
-                                                        learn_reward_function=args.learn_reward_function)
+        storage_factory = MBReplayBuffer.create_factory(
+            size=args.buffer_size, learn_reward_function=args.learn_reward_function)
 
         # 6. Define scheme
         params = {}
@@ -72,7 +76,7 @@ def main():
         # add core modules
         params.update({
             "algo_factory": algo_factory,
-            "actor_factory": dynamics_factory,
+            "actor_factory": actor_factory,
             "storage_factory": storage_factory,
             "train_envs_factory": train_envs_factory,
             "test_envs_factory": test_envs_factory,
@@ -112,16 +116,16 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
-    
+    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+
     # Wandb
     parser.add_argument(
-        '--experiment_name', default=None,
+        '--experiment-name', default=None,
         help='Name of the wandb experiment the agent belongs to')
     parser.add_argument(
-        '--agent_name', default=None, help='Name of the wandb run')
+        '--agent-name', default=None, help='Name of the wandb run')
     parser.add_argument(
-        '--wandb_key', default=None, help='Init key from wandb account')
+        '--wandb-key', default=None, help='Init key from wandb account')
 
     # Environment specs
     parser.add_argument(
@@ -136,12 +140,12 @@ def get_args():
 
     # MPC specs
     parser.add_argument(
-    '--learn-reward-function', default=False, action='store_true',
+        '--learn-reward-function', default=False, action='store_true',
         help='Learns the reward function if set, (default: False)')
     parser.add_argument(
         '--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
     parser.add_argument(
-        '--mb_epochs', type=int, default=60,
+        '--mb-epochs', type=int, default=60,
         help='Number of epochs to train the dynamics model, (default: 60)')
     parser.add_argument(
         '--eps', type=float, default=1e-8,
@@ -173,14 +177,14 @@ def get_args():
     parser.add_argument(
         '--mini-batch-size', type=int, default=32,
         help='Mini batch size for network updates (default: 32)')
-    parser.add_argument("--test_every", type=int, default=1, help="")
-    
+    parser.add_argument("--test-every", type=int, default=1, help="")
+
     # CEM parameter
     parser.add_argument(
         '--iter-update-steps', type=int, default=3,
         help='Iterative update steps for CEM (default: 3)')
     parser.add_argument(
-        '--k-best', type=int, default=5, 
+        '--k-best', type=int, default=5,
         help='K-Best members of the mean prediction forming the next mean distribution')
     parser.add_argument(
         '--update-alpha', type=float, default=0.0,
@@ -245,7 +249,6 @@ def get_args():
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
     return args
-
 
 if __name__ == "__main__":
     main()
