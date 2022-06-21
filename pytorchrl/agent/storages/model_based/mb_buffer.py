@@ -37,12 +37,12 @@ class MBReplayBuffer(S):
     """
 
     # Data fields to store in buffer and contained in the generated batches
-    storage_tensors = prl.DataTransitionKeys
+    storage_tensors = prl.MBDataKeys
 
     def __init__(self, size, learn_reward_function, device, actor, algorithm, envs):
 
         self.actor = actor
-        self.scaler = actor.world_model.standard_scaler
+        self.scaler = actor.dynamics_model.standard_scaler
         self.learn_reward_function = learn_reward_function
         self.device = device
         self.algo = algorithm

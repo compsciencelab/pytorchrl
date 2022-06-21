@@ -73,6 +73,7 @@ DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, INFO)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
+MBDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DemosDataKeys = (OBS, ACT, REW)
 
 # DATA TYPES

@@ -47,7 +47,7 @@ class ModelBasedPlannerActor(Actor):
 
         # ----- World Model ---------------------------------------------------
 
-        self.create_world_model(world_model_class, world_model_kwargs)
+        self.create_world_dynamics_model(world_model_class, world_model_kwargs)
 
     @classmethod
     def create_factory(
@@ -148,7 +148,7 @@ class ModelBasedPlannerActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-        rhs = torch.zeros(num_proc, self.recurrent_size).to(dev)
+        rhs = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
 
         rhs = {"world_model_rhs": rhs}
         return obs, rhs, done
@@ -178,11 +178,11 @@ class ModelBasedPlannerActor(Actor):
             Reward prediction.
         """
 
-        next_states, rewards = self.world_model.predict(obs, act)
+        next_states, rewards = self.dynamics_model.predict(obs, act)
 
         return next_states, rewards
 
-    def create_world_model(self, world_model_class, world_model_kwargs):
+    def create_world_dynamics_model(self, world_model_class, world_model_kwargs):
         """
         Create a world model instance and define it as class attribute under the name `world_wodel`.
 
@@ -194,12 +194,12 @@ class ModelBasedPlannerActor(Actor):
             WorldModel class arguments
         """
 
-        if self.world_model_class is None:
+        if world_model_class is None:
             world_model_class = WorldModel
 
         data_scaler = StandardScaler(self.device)
-        world_model = world_model_class(
+        dynamics_model = world_model_class(
             self.device, self.input_space, self.action_space,
             data_scaler, **world_model_kwargs).to(self.device)
 
-        setattr(self, "world_model", world_model)
+        setattr(self, "dynamics_model", dynamics_model)

@@ -38,6 +38,8 @@ class WorldModel(nn.Module):
                  reward_function=None,
                  ) -> None:
 
+        super(WorldModel, self).__init__()
+
         self.device = device
         self.input_space = input_space.shape[0]
         self.action_space = action_space
@@ -52,10 +54,9 @@ class WorldModel(nn.Module):
         # Scaler for scaling training inputs
         self.standard_scaler = standard_scaler
         self.hidden_size = hidden_size
+        self.dynamics_model = self.create_dynamics()
 
-        self.create_dynamics()
-
-    def create_dynamics(self, name="dynamics_model"):
+    def create_dynamics(self):
         """
         Create a dynamics model and define it as class attribute under the name `name`.
 
@@ -77,14 +78,8 @@ class WorldModel(nn.Module):
             num_outputs = self.input_space
 
         output_layer = get_dist("DeterministicMB")(num_inputs=self.hidden_size, num_outputs=num_outputs)
-
-        self.activation = nn.ReLU()
-
-        dynamics_layers = [input_layer,
-                           self.activation,
-                           hidden_layer,
-                           self.activation,
-                           output_layer]
+        self.activation = nn.ReLU
+        dynamics_layers = [input_layer, self.activation(), hidden_layer, self.activation(), output_layer]
 
         if type(self.action_space) == gym.spaces.box.Box:
             self.scale = Scale(self.action_space)
@@ -95,7 +90,7 @@ class WorldModel(nn.Module):
 
         dynamics_net = nn.Sequential(*dynamics_layers)
 
-        setattr(self, name, dynamics_net)
+        return dynamics_net
 
     @staticmethod
     def check_dynamics_weights(parameter1, parameter2):

@@ -182,7 +182,7 @@ class MPC_RS(Algorithm):
 
     def _get_discrete_actions(self, ) -> torch.Tensor:
         """Samples random discrete actions"""
-        return torch.randint(self.actor.action_space, size=(
+        return torch.randint(self.actor.action_space.n, size=(
             self.actor.n_planner, self.actor.horizon, 1)).to(self.device)
 
     def _get_continuous_actions(self, ) -> torch.Tensor:
@@ -192,33 +192,6 @@ class MPC_RS(Algorithm):
             high=self.actor.action_high,
             size=(self.actor.n_planner, self.actor.horizon, self.actor.action_space))
         return torch.from_numpy(actions).to(self.device).float()
-
-    def get_action(self, state: torch.Tensor, model: torch.nn.Module, noise: bool = False):
-        """Random shooting action planning process
-
-        Parameters
-        ----------
-        state: torch.Tensor
-            Current state in the environment which is used to start the trajectories for planning
-        model: torch.nn.Module
-            Dynamics model
-        noise: bool
-            Adding noise to the optimal action if set to True
-
-        Returns
-        -------
-        action: torch.Tensor:
-            First action in the trajectory that achieves the highest reward
-        """
-        initial_states = state.repeat((self.actor.n_planner, 1)).to(self.device)
-        rollout_actions = self.get_rollout_actions()
-        returns = self.compute_returns(initial_states, rollout_actions, model)
-        optimal_action = rollout_actions[:, 0, :][returns.argmax()]
-
-        if noise and self.actor.action_type == "continuous":
-            optimal_action += torch.normal(torch.zeros(optimal_action.shape),
-                                           torch.ones(optimal_action.shape) * 0.005).to(self.device)
-        return optimal_action
 
     def compute_returns(self, states: torch.Tensor, actions: torch.Tensor, model: torch.nn.Module):
         """
@@ -277,7 +250,7 @@ class MPC_RS(Algorithm):
 
             initial_states = obs.repeat((self.actor.n_planner, 1)).to(self.device)
             rollout_actions = self.get_rollout_actions()
-            returns = self.compute_returns(initial_states, rollout_actions, self.actor)
+            returns = self.compute_returns(initial_states, rollout_actions, self.actor.dynamics_model)
             action = rollout_actions[:, 0, :][returns.argmax()]
 
             if self.action_noise and self.actor.action_type == "continuous":
@@ -287,9 +260,9 @@ class MPC_RS(Algorithm):
 
             clipped_action = torch.clamp(action, -1, 1)
 
-        if self.actor.unscale:
-            action = self.actor.unscale(action)
-            clipped_action = self.actor.unscale(clipped_action)
+        if self.actor.dynamics_model.unscale:
+            action = self.actor.dynamics_model.unscale(action)
+            clipped_action = self.actor.dynamics_model.unscale(clipped_action)
 
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
 
