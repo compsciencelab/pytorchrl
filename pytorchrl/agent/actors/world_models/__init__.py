@@ -1,1 +1,1 @@
-
+from pytorchrl.agent.actors.world_models.world_model import WorldModel
