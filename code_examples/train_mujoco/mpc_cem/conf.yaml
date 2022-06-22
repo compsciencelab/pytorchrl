@@ -6,6 +6,7 @@ agent_name: MB-MPC
 frame_skip: 0
 frame_stack: 1
 lr: 1.0e-3
+mpc_type: RS
 n_planner: 500
 horizon: 30
 max_time: 86400

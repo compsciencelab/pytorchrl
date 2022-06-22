@@ -9,7 +9,7 @@ import argparse
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.algorithms import MPC_RS
+from pytorchrl.agent.algorithms import MPC_CEM
 from pytorchrl.agent.storages import MBReplayBuffer
 from pytorchrl.agent.actors.world_models import WorldModel
 from pytorchrl.agent.actors import ModelBasedPlannerActor
@@ -54,7 +54,7 @@ def main():
                         "frame_stack": args.frame_stack})
 
         # 3. Define RL training algorithm
-        algo_factory, algo_name = MPC_RS.create_factory(
+        algo_factory, algo_name = MPC_CEM.create_factory(
             lr=args.lr, start_steps=args.start_steps,
             update_every=args.update_every, mb_epochs=args.mb_epochs,
             action_noise=args.action_noise, mini_batch_size=args.mini_batch_size,
@@ -156,6 +156,9 @@ def get_args():
         '--horizon', type=int, default=12,
         help='The horizon of online planning (default: 12)')
     parser.add_argument(
+        '--mpc-type', type=str, choices=["RS", "CEM", "PDDM"], default="RS",
+        help='Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)')
+    parser.add_argument(
         '--action-noise', default=False, action='store_true',
         help='Adding noise to the actions, (default: False)')
     parser.add_argument(
@@ -174,6 +177,17 @@ def get_args():
         '--mini-batch-size', type=int, default=32,
         help='Mini batch size for network updates (default: 32)')
     parser.add_argument("--test-every", type=int, default=1, help="")
+
+    # CEM parameter
+    parser.add_argument(
+        '--iter-update-steps', type=int, default=3,
+        help='Iterative update steps for CEM (default: 3)')
+    parser.add_argument(
+        '--k-best', type=int, default=5,
+        help='K-Best members of the mean prediction forming the next mean distribution')
+    parser.add_argument(
+        '--update-alpha', type=float, default=0.0,
+        help='Soft update alpha for each iteration (default: 0.0)')
 
     # PDDM parameter
     parser.add_argument(

@@ -258,8 +258,7 @@ class MPC_RS(Algorithm):
                     torch.zeros(action.shape),
                     torch.ones(action.shape) * 0.005).to(self.device)
 
-            # TODO: this should depend on the type of action space!
-            clipped_action = torch.clamp(action, -1, 1)
+            clipped_action = action
 
         if self.actor.dynamics_model.unscale:
             action = self.actor.dynamics_model.unscale(action)

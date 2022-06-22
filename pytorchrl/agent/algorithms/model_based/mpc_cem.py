@@ -300,7 +300,7 @@ class MPC_CEM(Algorithm):
             X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
             i = 0
 
-            while ((i < self.iter_update_steps) and (np.max(var) > self.epsilon)):
+            while i < self.iter_update_steps and np.max(var) > self.epsilon:
                 states = initial_state
                 returns = np.zeros((self.actor.n_planner, 1))
                 # variables
@@ -327,9 +327,7 @@ class MPC_CEM(Algorithm):
             best_action = np.copy(best_action_sequence[0])
             assert best_action.shape == (self.action_space,)
             action = torch.from_numpy(best_action).float().to(self.device)
-
-            # TODO: this should depend on the type of action space!
-            clipped_action = torch.clamp(action, -1, 1)
+            clipped_action = action
 
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
 
