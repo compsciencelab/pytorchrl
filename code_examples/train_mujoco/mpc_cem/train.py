@@ -190,14 +190,6 @@ def get_args():
         '--update-alpha', type=float, default=0.0,
         help='Soft update alpha for each iteration (default: 0.0)')
 
-    # PDDM parameter
-    parser.add_argument(
-        '--gamma', type=float, default=1.0,
-        help='PDDM gamma value (default: 1.0)')
-    parser.add_argument(
-        "--beta", type=float, default=0.5,
-        help='PDDM beta value (default: 0.5)')
-
     # Feature dynamics model specs
     parser.add_argument(
         '--hidden-size', type=int, default=500,
@@ -249,6 +241,7 @@ def get_args():
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
     return args
+
 
 if __name__ == "__main__":
     main()

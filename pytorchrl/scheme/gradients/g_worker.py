@@ -61,8 +61,6 @@ class GWorker(W):
         col_workers local worker.
     remote_workers : List of CWorker's
         col_workers remote data collection workers.
-    num_workers : int
-        Number of collection remote workers.
     actor : Actor
         An actor class instance.
     algo : Algo

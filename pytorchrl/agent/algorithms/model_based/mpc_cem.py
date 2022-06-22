@@ -1,3 +1,4 @@
+import gym
 import numpy as np
 import scipy.stats as stats
 import torch
@@ -16,12 +17,42 @@ class MPC_CEM(Algorithm):
 
     Parameters
     ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
+    lr: float
+        Dynamics model learning rate.
     envs : VecEnv
         Vector of environments instance.
     actor : class instance
         actor class instance.
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
+    mb_epochs : int
+        Training epochs for the dynamics model.
+    start_steps: int
+        Number of steps collected with initial random policy.
+    update_every : int
+         Amount of data collected in between dynamics model updates.
+    action_noise :
+        Exploration noise.
+    mini_batch_size : int
+        Size of actor update batches.
+    ub : float
+        Actions upper bound.
+    lb : float
+        Actions lower bound.
+    k_best : int
+        Number of best action proposals per iteration.
+    epsilon : float
+
+    update_alpha :
+
+    iter_update_steps :
+
+    max_grad_norm : float
+        Gradient clipping parameter.
+    test_every : int
+        Regularity of test evaluations.
+    num_test_episodes : int
+        Number of episodes to complete in each test phase.
     """
 
     def __init__(self,
@@ -34,20 +65,15 @@ class MPC_CEM(Algorithm):
                  mb_epochs,
                  action_noise,
                  mini_batch_size,
-                 test_every,
-
-                 k_best,
-                 update_alpha,
-                 iter_update_steps,
-
-
-                 lb=-1,
                  ub=1,
+                 lb=-1,
+                 k_best=5,
                  epsilon=0.001,
+                 update_alpha=0.0,
                  max_grad_norm=0.5,
-
-
-                 ):
+                 iter_update_steps=3,
+                 test_every=10,
+                 num_test_episodes=3):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -73,7 +99,7 @@ class MPC_CEM(Algorithm):
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(3)
+        self._num_test_episodes = num_test_episodes
 
         # ---- RS-specific attributes ----------------------------------------
 
@@ -86,20 +112,16 @@ class MPC_CEM(Algorithm):
         self.reuse_data = False
         self.action_noise = action_noise
 
-        self.iter_update_steps = iter_update_steps
-        self.k_best = k_best
-        self.update_alpha = update_alpha
-        self.epsilon = epsilon
-        self.device = device
+        import ipdb; ipdb.set_trace()
+        assert isinstance(self.actor.dynamics_model.action_space, gym.spaces.Box),\
+            "CEM requires a continuous action space!"
+
         self.lb = lb
         self.ub = ub
-
-        if self.actor.action_type == "discrete":
-            self.get_rollout_actions = self._get_discrete_actions
-        elif self.actor.action_type == "continuous":
-            self.get_rollout_actions = self._get_continuous_actions
-        else:
-            raise ValueError("Selected action type does not exist!")
+        self.k_best = k_best
+        self.epsilon = epsilon
+        self.update_alpha = update_alpha
+        self.iter_update_steps = iter_update_steps
 
         # ----- Optimizers ----------------------------------------------------
 
@@ -114,34 +136,48 @@ class MPC_CEM(Algorithm):
                        mb_epochs,
                        action_noise,
                        mini_batch_size,
-                       test_every,
-
-                       k_best=5,
-                       update_alpha=0.0,
-                       iter_update_steps=3,
-
-                       lb=-1,
                        ub=1,
+                       lb=-1,
+                       k_best=5,
                        epsilon=0.001,
-                       max_grad_norm=0.5):
+                       update_alpha=0.0,
+                       max_grad_norm=0.5,
+                       iter_update_steps=3,
+                       test_every=10,
+                       num_test_episodes=3):
         """
         Returns a function to create a new Model-Based MPC instance.
 
-        Parameters
-        ----------
         lr: float
-
-        start_steps: int
-
-        update_every : int
-
+            Dynamics model learning rate.
         mb_epochs : int
-
+            Training epochs for the dynamics model.
+        start_steps: int
+            Number of steps collected with initial random policy.
+        update_every : int
+             Amount of data collected in between dynamics model updates.
         action_noise :
-
+            Exploration noise.
         mini_batch_size : int
+            Size of actor update batches.
+        ub : float
+            Actions upper bound.
+        lb : float
+            Actions lower bound.
+        k_best : int
+            Number of best action proposals per iteration.
+        epsilon : float
 
+        update_alpha :
+
+        iter_update_steps :
+
+        max_grad_norm : float
+            Gradient clipping parameter.
         test_every : int
+            Regularity of test evaluations.
+        num_test_episodes : int
+            Number of episodes to complete in each test phase.
 
         Returns
         -------
@@ -228,19 +264,6 @@ class MPC_CEM(Algorithm):
         """
         return self._num_test_episodes
 
-    def _get_discrete_actions(self, ) -> torch.Tensor:
-        """Samples random discrete actions"""
-        return torch.randint(self.actor.action_dims, size=(
-            self.actor.n_planner, self.actor.horizon, 1)).to(self.device)
-
-    def _get_continuous_actions(self, ) -> torch.Tensor:
-        """Samples random continuous actions"""
-        actions = np.random.uniform(
-            low=self.actor.action_low,
-            high=self.actor.action_high,
-            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_dims))
-        return torch.from_numpy(actions).to(self.device).float()
-
     def select_k_best(self, rewards, action_hist):
         """Selects k action trajectories that led to the highest reward.
 
@@ -301,7 +324,8 @@ class MPC_CEM(Algorithm):
         return mu, var
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        """Does the MPC search.
+        """
+        Does the MPC search with CEM action planning process.
 
         Parameters
         ----------

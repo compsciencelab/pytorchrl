@@ -10,3 +10,4 @@ from pytorchrl.agent.algorithms.off_policy.td3 import TD3
 
 from pytorchrl.agent.algorithms.model_based.mpc_rs import MPC_RS
 from pytorchrl.agent.algorithms.model_based.mpc_cem import MPC_CEM
+from pytorchrl.agent.algorithms.model_based.mpc_pddm import MPC_PDDM

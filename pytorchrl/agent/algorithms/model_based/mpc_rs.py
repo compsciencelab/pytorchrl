@@ -15,12 +15,28 @@ class MPC_RS(Algorithm):
 
     Parameters
     ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
+    lr: float
+        Dynamics model learning rate.
     envs : VecEnv
         Vector of environments instance.
     actor : class instance
         actor class instance.
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
+    mb_epochs : int
+        Training epochs for the dynamics model.
+    start_steps: int
+        Number of steps collected with initial random policy.
+    update_every : int
+         Amount of data collected in between dynamics model updates.
+    action_noise :
+        Exploration noise.
+    mini_batch_size : int
+        Size of actor update batches.
+    num_test_episodes : int
+        Number of episodes to complete in each test phase.
+    test_every : int
+        Regularity of test evaluations.
     """
 
     def __init__(self,
@@ -28,11 +44,12 @@ class MPC_RS(Algorithm):
                  envs,
                  actor,
                  device,
+                 mb_epochs,
                  start_steps,
                  update_every,
-                 mb_epochs,
                  action_noise,
                  mini_batch_size,
+                 num_test_episodes,
                  test_every):
 
         # ---- General algo attributes ----------------------------------------
@@ -50,7 +67,7 @@ class MPC_RS(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = int(1)
+        self._num_mini_batch = None  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -59,7 +76,7 @@ class MPC_RS(Algorithm):
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(3)
+        self._num_test_episodes = num_test_episodes
 
         # ---- RS-specific attributes ----------------------------------------
 
@@ -85,25 +102,37 @@ class MPC_RS(Algorithm):
         self.loss_func = torch.nn.MSELoss()
 
     @classmethod
-    def create_factory(cls, lr, start_steps, update_every, mb_epochs, action_noise, mini_batch_size, test_every):
+    def create_factory(
+            cls,
+            lr,
+            start_steps,
+            update_every,
+            mb_epochs,
+            action_noise,
+            mini_batch_size,
+            test_every=10,
+            num_test_episodes=3):
         """
         Returns a function to create a new Model-Based MPC instance.
 
         Parameters
         ----------
         lr: float
-
+            Dynamics model learning rate.
         start_steps: int
-
+            Number of steps collected with initial random policy.
         update_every : int
-
+             Amount of data collected in between dynamics model updates.
         mb_epochs : int
-
+            Training epochs for the dynamics model.
         action_noise :
-
+            Exploration noise.
         mini_batch_size : int
-
+            Size of actor update batches.
         test_every : int
+            Regularity of test evaluations.
+        num_test_episodes : int
+            Number of episodes to complete in each test phase.
 
         Returns
         -------
@@ -123,6 +152,7 @@ class MPC_RS(Algorithm):
                        update_every=update_every,
                        action_noise=action_noise,
                        mini_batch_size=mini_batch_size,
+                       num_test_episodes=num_test_episodes,
                        test_every=test_every)
 
         return create_algo_instance, prl.MPC_RS
@@ -221,7 +251,8 @@ class MPC_RS(Algorithm):
         return returns
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        """Does the MPC search.
+        """
+        Does the MPC search with random shooting action planning process.
 
         Parameters
         ----------
