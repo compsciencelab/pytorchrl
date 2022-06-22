@@ -182,7 +182,7 @@ class MPC_RS(Algorithm):
 
     def _get_discrete_actions(self, ) -> torch.Tensor:
         """Samples random discrete actions"""
-        return torch.randint(self.actor.action_space.n, size=(
+        return torch.randint(self.actor.action_dims, size=(
             self.actor.n_planner, self.actor.horizon, 1)).to(self.device)
 
     def _get_continuous_actions(self, ) -> torch.Tensor:
@@ -190,7 +190,7 @@ class MPC_RS(Algorithm):
         actions = np.random.uniform(
             low=self.actor.action_low,
             high=self.actor.action_high,
-            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_space))
+            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_dims))
         return torch.from_numpy(actions).to(self.device).float()
 
     def compute_returns(self, states: torch.Tensor, actions: torch.Tensor, model: torch.nn.Module):

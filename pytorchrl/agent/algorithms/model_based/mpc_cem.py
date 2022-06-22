@@ -107,7 +107,23 @@ class MPC_CEM(Algorithm):
         self.loss_func = torch.nn.MSELoss()
 
     @classmethod
-    def create_factory(cls, lr, start_steps, update_every, mb_epochs, action_noise, mini_batch_size, test_every):
+    def create_factory(cls,
+                       lr,
+                       start_steps,
+                       update_every,
+                       mb_epochs,
+                       action_noise,
+                       mini_batch_size,
+                       test_every,
+
+                       k_best=5,
+                       update_alpha=0.0,
+                       iter_update_steps=3,
+
+                       lb=-1,
+                       ub=1,
+                       epsilon=0.001,
+                       max_grad_norm=0.5):
         """
         Returns a function to create a new Model-Based MPC instance.
 
@@ -145,7 +161,17 @@ class MPC_CEM(Algorithm):
                        update_every=update_every,
                        action_noise=action_noise,
                        mini_batch_size=mini_batch_size,
-                       test_every=test_every)
+                       test_every=test_every,
+
+                       k_best=k_best,
+                       update_alpha=update_alpha,
+                       iter_update_steps=iter_update_steps,
+
+                       lb=lb,
+                       ub=ub,
+                       epsilon=epsilon,
+                       max_grad_norm=max_grad_norm,
+                       )
 
         return create_algo_instance, prl.MPC_RS
 
@@ -204,7 +230,7 @@ class MPC_CEM(Algorithm):
 
     def _get_discrete_actions(self, ) -> torch.Tensor:
         """Samples random discrete actions"""
-        return torch.randint(self.actor.action_space.n, size=(
+        return torch.randint(self.actor.action_dims, size=(
             self.actor.n_planner, self.actor.horizon, 1)).to(self.device)
 
     def _get_continuous_actions(self, ) -> torch.Tensor:
@@ -212,7 +238,7 @@ class MPC_CEM(Algorithm):
         actions = np.random.uniform(
             low=self.actor.action_low,
             high=self.actor.action_high,
-            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_space))
+            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_dims))
         return torch.from_numpy(actions).to(self.device).float()
 
     def select_k_best(self, rewards, action_hist):
@@ -235,11 +261,11 @@ class MPC_CEM(Algorithm):
         assert rewards.shape == (self.actor.n_planner, 1)
         idxs = np.argsort(rewards, axis=0)
 
-        elite_actions = action_hist[idxs][-self.k_best:, :].squeeze(1)  # sorted (elite, horizon x action_space)
+        elite_actions = action_hist[idxs][-self.k_best:, :].squeeze(1)  # sorted (elite, horizon x action_dims)
         k_best_rewards = rewards[idxs][-self.k_best:, :].squeeze(-1)
 
         assert k_best_rewards.shape == (self.k_best, 1)
-        assert elite_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_space)
+        assert elite_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_dims)
         return k_best_rewards, elite_actions
 
     def update_gaussians(self, old_mu, old_var, best_actions):
@@ -262,7 +288,7 @@ class MPC_CEM(Algorithm):
             Updated variance values
 
         """
-        assert best_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_space)
+        assert best_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_dims)
 
         new_mu = best_actions.mean(0)
         new_var = best_actions.var(0)
@@ -270,8 +296,8 @@ class MPC_CEM(Algorithm):
         # Softupdate
         mu = (self.update_alpha * old_mu + (1.0 - self.update_alpha) * new_mu)
         var = (self.update_alpha * old_var + (1.0 - self.update_alpha) * new_var)
-        assert mu.shape == (self.actor.horizon * self.actor.action_space,)
-        assert var.shape == (self.actor.horizon * self.actor.action_space,)
+        assert mu.shape == (self.actor.horizon * self.actor.action_dims,)
+        assert var.shape == (self.actor.horizon * self.actor.action_dims,)
         return mu, var
 
     def acting_step(self, obs, rhs, done, deterministic=False):
@@ -303,8 +329,8 @@ class MPC_CEM(Algorithm):
         with torch.no_grad():
 
             initial_state = obs.repeat(self.actor.n_planner, 1).to(self.device)
-            mu = np.zeros(self.actor.horizon * self.actor.action_space)
-            var = 5 * np.ones(self.actor.horizon * self.actor.action_space)
+            mu = np.zeros(self.actor.horizon * self.actor.action_dims)
+            var = 5 * np.ones(self.actor.horizon * self.actor.action_dims)
             X = stats.truncnorm(self.lb, self.ub, loc=np.zeros_like(mu), scale=np.ones_like(mu))
             i = 0
 
@@ -316,11 +342,11 @@ class MPC_CEM(Algorithm):
                 ub_dist = self.ub - mu
                 constrained_var = np.minimum(np.minimum(np.square(lb_dist / 2), np.square(ub_dist / 2)), var)
 
-                actions = X.rvs(size=[self.actor.n_planner, self.actor.horizon * self.actor.action_space]) * np.sqrt(
+                actions = X.rvs(size=[self.actor.n_planner, self.actor.horizon * self.actor.action_dims]) * np.sqrt(
                     constrained_var) + mu
                 actions = np.clip(actions, self.lb, self.ub)
                 actions_t = torch.from_numpy(actions.reshape(
-                    self.actor.n_planner, self.actor.horizon, self.actor.action_space)).float().to(self.device)
+                    self.actor.n_planner, self.actor.horizon, self.actor.action_dims)).float().to(self.device)
 
                 for t in range(self.actor.horizon):
                     with torch.no_grad():
@@ -333,7 +359,7 @@ class MPC_CEM(Algorithm):
 
             best_action_sequence = mu.reshape(self.actor.horizon, -1)
             best_action = np.copy(best_action_sequence[0])
-            assert best_action.shape == (self.actor.action_space,)
+            assert best_action.shape == (self.actor.action_dims,)
             action = torch.from_numpy(best_action).float().to(self.device)
             clipped_action = action
 

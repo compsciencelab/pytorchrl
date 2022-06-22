@@ -27,12 +27,12 @@ class ModelBasedPlannerActor(Actor):
             action_space=action_space)
 
         if type(action_space) == gym.spaces.discrete.Discrete:
-            self.action_space = action_space.n
+            self.action_dims = action_space.n
             self.action_type = "discrete"
             self.action_low = None
             self.action_high = None
         elif type(action_space) == gym.spaces.box.Box:
-            self.action_space = action_space.shape[0]
+            self.action_dims = action_space.shape[0]
             self.action_type = "continuous"
             self.action_low = action_space.low
             self.action_high = action_space.high
@@ -41,8 +41,6 @@ class ModelBasedPlannerActor(Actor):
 
         self.horizon = horizon
         self.n_planner = n_planner
-        self.input_space = input_space
-        self.action_space = action_space
         self.algorithm_name = algorithm_name
 
         # ----- World Model ---------------------------------------------------

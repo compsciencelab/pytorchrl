@@ -43,7 +43,7 @@ class WorldModel(nn.Module):
         super(WorldModel, self).__init__()
 
         self.device = device
-        self.input_space = input_space.shape[0]
+        self.input_space = input_space
         self.action_space = action_space
         self.reward_function = reward_function
 
@@ -67,16 +67,16 @@ class WorldModel(nn.Module):
             dynamics model name.
         """
         if type(self.action_space) == gym.spaces.discrete.Discrete:
-            input_layer = nn.Linear(self.input_space + self.action_space.n, out_features=self.hidden_size)
+            input_layer = nn.Linear(self.input_space.shape[0] + self.action_space.n, out_features=self.hidden_size)
         else:
-            input_layer = nn.Linear(self.input_space + self.action_space.shape[0], out_features=self.hidden_size)
+            input_layer = nn.Linear(self.input_space.shape[0] + self.action_space.shape[0], out_features=self.hidden_size)
 
         hidden_layer = nn.Linear(self.hidden_size, self.hidden_size)
 
         if self.reward_function is None:
-            num_outputs = self.input_space + 1
+            num_outputs = self.input_space.shape[0] + 1
         else:
-            num_outputs = self.input_space
+            num_outputs = self.input_space.shape[0]
 
         output_layer = get_dist("DeterministicMB")(num_inputs=self.hidden_size, num_outputs=num_outputs)
         self.activation = nn.ReLU
