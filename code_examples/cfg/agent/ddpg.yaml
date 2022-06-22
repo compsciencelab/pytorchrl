@@ -1,0 +1,6 @@
+name: DDPG
+
+ddpg_config:
+  - learning_rate: 1
+
+buffer: ${.. storage.replay_buffer}
