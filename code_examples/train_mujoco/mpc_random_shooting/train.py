@@ -64,11 +64,10 @@ def main():
         actor_factory = ModelBasedPlannerActor.create_factory(
             obs_space, action_space, algo_name, horizon=args.horizon,
             n_planner=args.n_planner, restart_model=args.restart_model, world_model_class=WorldModel,
-            world_model_kwargs={"hidden_size": args.hidden_size})
+            world_model_kwargs={"hidden_size": args.hidden_size, "reward_function": None})
 
         # 5. Define rollouts storage
-        storage_factory = MBReplayBuffer.create_factory(
-            size=args.buffer_size, learn_reward_function=args.learn_reward_function)
+        storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size)
 
         # 6. Define scheme
         params = {}

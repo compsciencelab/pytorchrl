@@ -258,6 +258,7 @@ class MPC_RS(Algorithm):
                     torch.zeros(action.shape),
                     torch.ones(action.shape) * 0.005).to(self.device)
 
+            # TODO: this should depend on the type of action space!
             clipped_action = torch.clamp(action, -1, 1)
 
         if self.actor.dynamics_model.unscale:
@@ -282,7 +283,7 @@ class MPC_RS(Algorithm):
         train_labels = batch["train_label"]
 
         self.actor.train()
-        prediction = self.actor.dynamics_model(train_inputs)
+        prediction = self.actor.dynamics_model.model(train_inputs)
         loss = self.loss_func(prediction, train_labels)
         return loss
 

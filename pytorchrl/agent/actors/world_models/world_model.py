@@ -9,6 +9,8 @@ from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale
 
 
+# TODO: review prediction sizes when reward is and is not predicted!
+
 class WorldModel(nn.Module):
     """
     Model-Based Actor class for Model-Based algorithms.
@@ -43,10 +45,9 @@ class WorldModel(nn.Module):
         self.device = device
         self.input_space = input_space.shape[0]
         self.action_space = action_space
-        self.reward_function = None
+        self.reward_function = reward_function
 
         if reward_function is not None:
-            self.reward_function = reward_function
             self.predict = self.predict_given_reward
         else:
             self.predict = self.predict_learned_reward
@@ -54,7 +55,7 @@ class WorldModel(nn.Module):
         # Scaler for scaling training inputs
         self.standard_scaler = standard_scaler
         self.hidden_size = hidden_size
-        self.dynamics_model = self.create_dynamics()
+        self.model = self.create_dynamics()
 
     def create_dynamics(self):
         """
@@ -104,10 +105,10 @@ class WorldModel(nn.Module):
         Re-initializes the dynamics model, can be done before each new Model learning run.
         Might help in some environments to overcome over-fitting of the model!
         """
-        old_weights = self.dynamics_model.parameters()
+        old_weights = self.model.parameters()
         self.create_dynamics()
-        self.dynamics_model.to(self.device)
-        new_weights = self.dynamics_model.parameters()
+        self.model.to(self.device)
+        new_weights = self.model.parameters()
         assert not self.check_dynamics_weights(old_weights, new_weights)
 
     def predict_learned_reward(self, states: torch.Tensor, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -135,7 +136,7 @@ class WorldModel(nn.Module):
 
         # scale inputs based on recent batch scalings
         norm_inputs, _ = self.standard_scaler.transform(inputs)
-        norm_predictions = self.dynamics_model(norm_inputs)
+        norm_predictions = self.model(norm_inputs)
 
         # inverse transform outputs
         predictions = self.standard_scaler.inverse_transform(norm_predictions)
@@ -173,7 +174,7 @@ class WorldModel(nn.Module):
         # scale inputs based on recent batch scalings
         norm_inputs, _ = self.standard_scaler.transform(inputs)
 
-        norm_predictions = self.dynamics_model(norm_inputs)
+        norm_predictions = self.model(norm_inputs)
 
         # inverse transform outputs
         predictions = self.standard_scaler.inverse_transform(norm_predictions)

@@ -10,7 +10,7 @@ class CartPoleActionWrapper(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action[0])
+        obs, reward, done, info = self.env.step(action)
         return obs, reward, done, info
 
 
