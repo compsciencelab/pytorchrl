@@ -1,0 +1,24 @@
+experiment_name: Causal_World
+agent_name: SAC
+wandb_key: 16d18880bf755b96f6114e4fa2d0a7a5a00a3570
+num_env_steps : 10_000_000
+log_dir: /tmp/causal_world_sac
+frame_skip: 0
+frame_stack: 1
+nn: MLP
+lr: 3.0e-4
+gamma: 0.99
+polyak: 0.995
+max_time: 86400
+num_env_processes: 1
+mini_batch_size: 256 
+update_every: 1 
+num_updates: 1
+start_steps: 1000
+buffer_size: 10000
+save_interval: 50000
+num_grad_workers: 1
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous
+

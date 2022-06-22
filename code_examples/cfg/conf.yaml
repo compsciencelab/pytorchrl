@@ -1,0 +1,21 @@
+
+
+experiment_name: Causal_World
+agent_name: ${agent.name}
+wandb_key: null
+
+num_env_steps : 10_000_000
+log_dir: /tmp/causal_world_ppo
+gamma: 0.99
+save_interval: 10000
+max_time: 86400
+num_env_processes: 8
+num_steps: 128
+
+defaults:
+  - _self_
+  - task: pybullet # maybe rename to env?
+  - task_name: ${task.task_name}
+  - scheme: Default_scheme
+  - agent: ddpg
+  - storage: replay_buffer
