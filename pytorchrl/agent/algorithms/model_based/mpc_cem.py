@@ -34,12 +34,20 @@ class MPC_CEM(Algorithm):
                  mb_epochs,
                  action_noise,
                  mini_batch_size,
+                 test_every,
 
                  k_best,
                  update_alpha,
                  iter_update_steps,
 
-                 test_every):
+
+                 lb=-1,
+                 ub=1,
+                 epsilon=0.001,
+                 max_grad_norm=0.5,
+
+
+                 ):
 
         # ---- General algo attributes ----------------------------------------
 
@@ -74,17 +82,17 @@ class MPC_CEM(Algorithm):
         self.envs = envs
         self.actor = actor
         self.device = device
-        self.max_grad_norm = 0.5
+        self.max_grad_norm = max_grad_norm
         self.reuse_data = False
         self.action_noise = action_noise
 
         self.iter_update_steps = iter_update_steps
         self.k_best = k_best
         self.update_alpha = update_alpha
-        self.epsilon = 0.001
+        self.epsilon = epsilon
         self.device = device
-        self.lb = -1
-        self.ub = 1
+        self.lb = lb
+        self.ub = ub
 
         if self.actor.action_type == "discrete":
             self.get_rollout_actions = self._get_discrete_actions
@@ -224,14 +232,14 @@ class MPC_CEM(Algorithm):
         elite_actions: np.array
             Best action histories
         """
-        assert rewards.shape == (self.n_planner, 1)
+        assert rewards.shape == (self.actor.n_planner, 1)
         idxs = np.argsort(rewards, axis=0)
 
         elite_actions = action_hist[idxs][-self.k_best:, :].squeeze(1)  # sorted (elite, horizon x action_space)
         k_best_rewards = rewards[idxs][-self.k_best:, :].squeeze(-1)
 
         assert k_best_rewards.shape == (self.k_best, 1)
-        assert elite_actions.shape == (self.k_best, self.horizon * self.action_space)
+        assert elite_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_space)
         return k_best_rewards, elite_actions
 
     def update_gaussians(self, old_mu, old_var, best_actions):
@@ -254,7 +262,7 @@ class MPC_CEM(Algorithm):
             Updated variance values
 
         """
-        assert best_actions.shape == (self.k_best, self.horizon * self.action_space)
+        assert best_actions.shape == (self.k_best, self.actor.horizon * self.actor.action_space)
 
         new_mu = best_actions.mean(0)
         new_var = best_actions.var(0)
@@ -262,8 +270,8 @@ class MPC_CEM(Algorithm):
         # Softupdate
         mu = (self.update_alpha * old_mu + (1.0 - self.update_alpha) * new_mu)
         var = (self.update_alpha * old_var + (1.0 - self.update_alpha) * new_var)
-        assert mu.shape == (self.horizon * self.action_space,)
-        assert var.shape == (self.horizon * self.action_space,)
+        assert mu.shape == (self.actor.horizon * self.actor.action_space,)
+        assert var.shape == (self.actor.horizon * self.actor.action_space,)
         return mu, var
 
     def acting_step(self, obs, rhs, done, deterministic=False):
@@ -323,9 +331,9 @@ class MPC_CEM(Algorithm):
                 mu, var = self.update_gaussians(mu, var, k_best_actions)
                 i += 1
 
-            best_action_sequence = mu.reshape(self.horizon, -1)
+            best_action_sequence = mu.reshape(self.actor.horizon, -1)
             best_action = np.copy(best_action_sequence[0])
-            assert best_action.shape == (self.action_space,)
+            assert best_action.shape == (self.actor.action_space,)
             action = torch.from_numpy(best_action).float().to(self.device)
             clipped_action = action
 
