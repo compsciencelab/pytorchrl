@@ -13,6 +13,7 @@ from pytorchrl.agent.algorithms import MPC_CEM
 from pytorchrl.agent.storages import MBReplayBuffer
 from pytorchrl.agent.actors.world_models import WorldModel
 from pytorchrl.agent.actors import ModelBasedPlannerActor
+from pytorchrl.agent.actors.reward_functions import get_reward_function
 from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -64,7 +65,7 @@ def main():
         actor_factory = ModelBasedPlannerActor.create_factory(
             obs_space, action_space, algo_name, horizon=args.horizon,
             n_planner=args.n_planner, restart_model=args.restart_model, world_model_class=WorldModel,
-            world_model_kwargs={"hidden_size": args.hidden_size, "reward_function": None})
+            world_model_kwargs={"hidden_size": args.hidden_size, "reward_function": get_reward_function(args.env_id)})
 
         # 5. Define rollouts storage
         storage_factory = MBReplayBuffer.create_factory(size=args.buffer_size)
