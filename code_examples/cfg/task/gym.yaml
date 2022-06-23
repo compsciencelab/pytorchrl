@@ -1,0 +1,7 @@
+env_id: Pendulum-v0
+frame_skip: 0
+frame_stack: 1
+index_worker: 0
+index_env: 0
+seed: 0
+reward_delay: 1
