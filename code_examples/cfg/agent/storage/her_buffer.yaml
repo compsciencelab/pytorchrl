@@ -1,5 +1,5 @@
 name: her_buffer
-size: 100_000
+size: 1_000_000
 n_step: 1
 epsilon: 0.0
 alpha: 0.0

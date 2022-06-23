@@ -1,2 +1,2 @@
 name: replay_buffer
-size: 100_000
+size: 1_000_000

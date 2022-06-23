@@ -1,0 +1,22 @@
+# default off policy architecture config:
+recurrent_nets_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+recurrent_nets: False
+obs_feature_extractor: null
+obs_feature_extractor_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+act_feature_extractor: null
+act_feature_extractor_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+common_feature_extractor: MLP
+common_feature_extractor_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+num_critics: 2
