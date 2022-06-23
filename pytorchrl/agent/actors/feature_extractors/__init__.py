@@ -15,6 +15,8 @@ def get_feature_extractor(name):
         return FixupCNN
     elif name == "DictNet":
         return DictNet
+    elif name is None:
+        return None
     else:
         raise ValueError("Specified model not found!")
 
