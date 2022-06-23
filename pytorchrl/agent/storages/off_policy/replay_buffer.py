@@ -47,7 +47,7 @@ class ReplayBuffer(S):
         self.algo = algorithm
         self.recurrent_actor = actor.is_recurrent
         self.max_size, self.size, self.step = size, 0, 0
-        self.data = {k: None for k in self.storage_tensors}  # lazy init
+        self.data = {}  # lazy init
 
         if self.recurrent_actor:
             self.sequence_length = algorithm.update_every
