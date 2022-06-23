@@ -68,7 +68,7 @@ class MPC_RS(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = None  # Depends on how much data is available
+        self._num_mini_batch = int(1)  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)

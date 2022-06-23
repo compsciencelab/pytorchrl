@@ -34,11 +34,10 @@ class MPC_PDDM(Algorithm):
         Exploration noise.
     mini_batch_size : int
         Size of actor update batches.
-
     gamma : float
-
+        Reward-weighting factor.
     beta : float
-
+        Action filtering coefficient.
     max_grad_norm : float
         Gradient clipping parameter.
     test_every : int
@@ -81,7 +80,7 @@ class MPC_PDDM(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = None  # Depends on how much data is available
+        self._num_mini_batch = int(1)  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -92,7 +91,7 @@ class MPC_PDDM(Algorithm):
         # Number of episodes to complete when testing
         self._num_test_episodes = num_test_episodes
 
-        # ---- RS-specific attributes ----------------------------------------
+        # ---- PDDM-specific attributes ----------------------------------------
 
         # Number of episodes to complete when testing
         self.iter = 0
@@ -104,7 +103,7 @@ class MPC_PDDM(Algorithm):
         self.max_grad_norm = max_grad_norm
 
         assert isinstance(self.actor.dynamics_model.action_space, gym.spaces.Box),\
-            "CEM requires a continuous action space!"
+            "PDDM requires a continuous action space!"
 
         self.beta = beta
         self._gamma = gamma  # Reward-weighting factor
@@ -122,11 +121,9 @@ class MPC_PDDM(Algorithm):
                        mb_epochs,
                        action_noise,
                        mini_batch_size,
-
                        gamma=1.0,
                        beta=0.5,
                        max_grad_norm=0.5,
-
                        test_every=10,
                        num_test_episodes=3):
         """
@@ -146,11 +143,10 @@ class MPC_PDDM(Algorithm):
             Exploration noise.
         mini_batch_size : int
             Size of actor update batches.
-
         gamma : float
-
+            Reward-weighting factor.
         beta : float
-
+            Action filtering coefficient.
         max_grad_norm : float
             Gradient clipping parameter.
         test_every : int

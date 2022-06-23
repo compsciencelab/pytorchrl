@@ -19,12 +19,6 @@ class MPC_CEM(Algorithm):
     ----------
     lr: float
         Dynamics model learning rate.
-    envs : VecEnv
-        Vector of environments instance.
-    actor : class instance
-        actor class instance.
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
     mb_epochs : int
         Training epochs for the dynamics model.
     start_steps: int
@@ -42,11 +36,11 @@ class MPC_CEM(Algorithm):
     k_best : int
         Number of best action proposals per iteration.
     epsilon : float
-
+        Threshold to stop the training iteration earlier if the action variance is very low.
     update_alpha :
-
+        Action distribution mean soft update parameter.
     iter_update_steps :
-
+        Number of optimizing action sampling iterations.
     max_grad_norm : float
         Gradient clipping parameter.
     test_every : int
@@ -90,7 +84,7 @@ class MPC_CEM(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = None  # Depends on how much data is available
+        self._num_mini_batch = int(1)  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -101,7 +95,7 @@ class MPC_CEM(Algorithm):
         # Number of episodes to complete when testing
         self._num_test_episodes = num_test_episodes
 
-        # ---- RS-specific attributes ----------------------------------------
+        # ---- CEM-specific attributes ----------------------------------------
 
         # Number of episodes to complete when testing
         self.iter = 0
@@ -166,11 +160,11 @@ class MPC_CEM(Algorithm):
         k_best : int
             Number of best action proposals per iteration.
         epsilon : float
-
+            Threshold to stop the training iteration earlier if the action variance is very low.
         update_alpha :
-
+            Action distribution mean soft update parameter.
         iter_update_steps :
-
+            Number of optimizing action sampling iterations.
         max_grad_norm : float
             Gradient clipping parameter.
         test_every : int
