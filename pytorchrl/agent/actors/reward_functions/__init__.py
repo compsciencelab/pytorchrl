@@ -4,6 +4,7 @@ from pytorchrl.agent.actors.reward_functions.pybullet_reward_functions import ha
     including gym envrionemnts as well as pybullet environments
 """
 
+
 def get_reward_function(env_id):
     # gym envs
     if env_id == "CartPole-v0" or env_id == "CartPole-v1":
@@ -17,4 +18,3 @@ def get_reward_function(env_id):
     # pybullet envs
     elif env_id == "HalfCheetahBulletEnv-v0":
         return halfcheetah_bullet
-    

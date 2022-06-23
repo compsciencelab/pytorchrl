@@ -1,4 +1,4 @@
-__version__ = "2.3.11"
+__version__ = "2.4.10"
 
 from collections import namedtuple
 
@@ -73,6 +73,7 @@ DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, INFO)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
 OffPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, OBS2, RHS2, DONE2, ACTPROBS)
 OnPolicyDataKeys = (OBS, RHS, DONE, ACT, REW, IREW, RET, IRET, VAL, IVAL, LOGP, ADV, IADV)
+MBDataKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2)
 DemosDataKeys = (OBS, ACT, REW)
 
 # DATA TYPES
@@ -107,3 +108,5 @@ MPO = "MPO"
 TD3 = "TD3"
 DDPG = "DDPG"
 DDQN = "DDQN"
+MPC_RS = "ModelPredictiveControl_RandomShooting"
+

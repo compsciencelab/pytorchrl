@@ -1,17 +1,16 @@
-env_id: Pendulum-v0
+env_id: HalfCheetah-v2
 num_env_steps : 20_000
 log_dir: /tmp/mujoco_mpc
 experiment_name: MB-MPC
-agent_name: MB-MPC
+agent_name: MPC-CEM
 frame_skip: 0
 frame_stack: 1
 lr: 1.0e-3
-mpc_type: RS
-n_planner: 1000
+n_planner: 500
 horizon: 30
 max_time: 86400
 num_env_processes: 1
-mini_batch_size: 512 
+mini_batch_size: 256 
 update_every: 250
 test_every: 4
 num_updates: 1
@@ -22,3 +21,4 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
+wandb_key: null

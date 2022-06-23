@@ -94,13 +94,13 @@ def get_args():
         '--eps', type=float, default=1e-8,
         help='Adam optimizer epsilon (default: 1e-8)')
     parser.add_argument(
-        "--n-planner", type=int, default=1000,
-        help="Number of parallel planner for each actor (default: 500)")
+        "--n-model_based", type=int, default=1000,
+        help="Number of parallel model_based for each actor (default: 500)")
     parser.add_argument(
         "--horizon", type=int, default=12,
         help="The horizon of online planning (default: 12)")
     parser.add_argument(
-        "--mpc-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
+        "--mpc_random_shooting-type", type=str, choices=["RS", "CEM", "PDDM"], default="RS",
         help="Type of MPC optimizer, RS: Random Shooting, CEM: Cross Entropy Method (default: RS)")
     parser.add_argument(
         "--action-noise", default=False, action='store_true',

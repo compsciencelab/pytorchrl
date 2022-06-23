@@ -37,13 +37,12 @@ class MBReplayBuffer(S):
     """
 
     # Data fields to store in buffer and contained in the generated batches
-    storage_tensors = prl.DataTransitionKeys
+    storage_tensors = prl.MBDataKeys
 
-    def __init__(self, size, learn_reward_function, device, actor, algorithm, envs):
+    def __init__(self, size, device, actor, algorithm, envs):
 
         self.actor = actor
-        self.scaler = actor.standard_scaler
-        self.learn_reward_function = learn_reward_function
+        self.scaler = actor.dynamics_model.standard_scaler
         self.device = device
         self.algo = algorithm
         self.max_size, self.size, self.step = size, 0, 0
@@ -52,7 +51,7 @@ class MBReplayBuffer(S):
         self.reset()
 
     @classmethod
-    def create_factory(cls, size, learn_reward_function):
+    def create_factory(cls, size):
         """
         Returns a function that creates ReplayBuffer instances.
 
@@ -64,12 +63,12 @@ class MBReplayBuffer(S):
         Returns
         -------
         create_buffer_instance : func
-            creates a new ReplayBuffer class instance.
+            creates a new MBReplayBuffer class instance.
         """
 
         def create_buffer(device, actor, algorithm, envs):
             """Create and return a ReplayBuffer instance."""
-            return cls(size, learn_reward_function, device, actor, algorithm, envs)
+            return cls(size, device, actor, algorithm, envs)
 
         return create_buffer
 
@@ -97,7 +96,7 @@ class MBReplayBuffer(S):
 
     def get_data_slice(self, start_pos, end_pos):
         """
-        Makes a copy of all tensors in the bufer between steps `start_pos`
+        Makes a copy of all tensors in the buffer between steps `start_pos`
         and `end_pos`.
 
         Parameters
@@ -257,11 +256,12 @@ class MBReplayBuffer(S):
 
         # Insert
         for k, v in sample.items():
-            if isinstance(sample[k], dict):
-                for x, y in sample[k].items():
-                    self.data[k][x][self.step] = y.cpu()
-            else:
-                self.data[k][self.step] = v.cpu()
+            if k in self.data.keys():
+                if isinstance(sample[k], dict):
+                    for x, y in sample[k].items():
+                        self.data[k][x][self.step] = y.cpu()
+                else:
+                    self.data[k][self.step] = v.cpu()
 
         # Update
         self.step = (self.step + 1) % self.max_size
@@ -324,12 +324,12 @@ class MBReplayBuffer(S):
         if type(self.actor.action_space) == gym.spaces.discrete.Discrete:
 
             actions = actions.astype(np.int64)
-            actions = np.eye(actions.max()+1)[actions].squeeze(1)
+            actions = np.eye(actions.max() + 1)[actions].squeeze(1)
             assert actions.shape == (observations.shape[0], 1, self.actor.action_space.n)
 
         inputs = np.concatenate((observations, actions), axis=-1)
         delta_state = next_observations - observations
-        if self.learn_reward_function is not None:
+        if self.actor.dynamics_model.reward_function is not None:
             targets = delta_state
         else:
             targets = np.concatenate((delta_state, rewards), axis=-1)

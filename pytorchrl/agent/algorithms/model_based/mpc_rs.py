@@ -1,8 +1,4 @@
-import itertools
-from typing import Tuple
 import numpy as np
-from copy import deepcopy
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,112 +6,164 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
-from pytorchrl.agent.actors.planner import MPC
 
 
-class MB_MPC(Algorithm):
-    """Model-Based MPC class.
-    Trains a model of the environment and uses MPC to select actions. 
-    User can choose between different MPC methods:
-    - Random Shooting (RS)
-    - Cross Entropy Method (CEM)
-    - Filtering and Reward-Weighted Refinement (PDDM) 
-        as introduced in the PDDM paper: https://arxiv.org/pdf/1909.11652.pdf
+class MPC_RS(Algorithm):
+    """
+    Model-Based MPC Random Shooting (RS) class.
+    Trains a model of the environment and uses RS to select actions.
 
     Parameters
     ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
+    lr: float
+        Dynamics model learning rate.
     envs : VecEnv
         Vector of environments instance.
-    actor : MBActor
-        MB_actor class instance.
-    config: Namespace
-        Training configuration defined at the beginning of training
+    actor : class instance
+        actor class instance.
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
+    mb_epochs : int
+        Training epochs for the dynamics model.
+    start_steps: int
+        Number of steps collected with initial random policy.
+    update_every : int
+         Amount of data collected in between dynamics model updates.
+    action_noise :
+        Exploration noise.
+    mini_batch_size : int
+        Size of actor update batches.
+    num_test_episodes : int
+        Number of episodes to complete in each test phase.
+    test_every : int
+        Regularity of test evaluations.
     """
+
     def __init__(self,
+                 lr,
+                 envs,
                  actor,
                  device,
-                 envs,
-                 config,
-                 ):
+                 mb_epochs,
+                 start_steps,
+                 update_every,
+                 action_noise,
+                 max_grad_norm,
+                 mini_batch_size,
+                 num_test_episodes,
+                 test_every):
 
         # ---- General algo attributes ----------------------------------------
+
         # Number of steps collected with initial random policy
-        self._start_steps = int(config.start_steps)
+        self._start_steps = int(start_steps)
 
         # Times data in the buffer is re-used before data collection proceeds
-        self._num_epochs = int(config.mb_epochs)  # Default to 1 for off-policy algorithms
+        self._num_epochs = int(mb_epochs)
+
+        # Tracks the number of times data is reused
         self.mb_train_epochs = 0
+
+        # Number of data samples collected between network update stages
+        self._update_every = int(update_every)
+
+        # Number mini batches per epoch
+        self._num_mini_batch = int(1)  # Depends on how much data is available
+
         # Size of update mini batches
-        self._mini_batch_size = int(config.mini_batch_size)
-        self._num_mini_batch = 1
+        self._mini_batch_size = int(mini_batch_size)
+
         # Number of network updates between test evaluations
-        self._test_every = int(config.test_every)
+        self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(3)
-        self.actor = actor
-        self.action_noise = config.action_noise
-        # ---- MB MPC-specific attributes ----------------------------------------
-        if config.mpc_type == "RS":
-            self.mpc = MPC.RandomShooting(action_space=self.actor.action_space,
-                                          config=config,
-                                          device=device)
-        elif config.mpc_type == "CEM":
-            self.mpc = MPC.CEM(action_space=self.actor.action_space,
-                               config=config,
-                               device=device)
-        elif config.mpc_type == "PDDM":
-            self.mpc = MPC.PDDM(action_space=self.actor.action_space,
-                                config=config,
-                                device=device)
-        else:
-            raise ValueError
+        self._num_test_episodes = num_test_episodes
 
+        # ---- RS-specific attributes ----------------------------------------
+
+        # Number of episodes to complete when testing
         self.iter = 0
+        self.envs = envs
+        self.actor = actor
         self.device = device
-        self.max_grad_norm = 0.5
-        self._update_every = config.update_every
         self.reuse_data = False
+        self.action_noise = action_noise
+        self.max_grad_norm = max_grad_norm
+
+        if self.actor.action_type == "discrete":
+            self.get_rollout_actions = self._get_discrete_actions
+        elif self.actor.action_type == "continuous":
+            self.get_rollout_actions = self._get_continuous_actions
+        else:
+            raise ValueError("Selected action type does not exist!")
 
         # ----- Optimizers ----------------------------------------------------
-        self.lr = config.lr
-        self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
+
+        self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=lr)
         self.loss_func = torch.nn.MSELoss()
 
     @classmethod
-    def create_factory(cls,
-                       config,
-                       ):
+    def create_factory(
+            cls,
+            lr,
+            start_steps,
+            update_every,
+            mb_epochs,
+            action_noise,
+            mini_batch_size,
+            test_every=10,
+            max_grad_norm=0.5,
+            num_test_episodes=3):
         """
         Returns a function to create a new Model-Based MPC instance.
-        
+
         Parameters
         ----------
-        config: Namespace
-           Includes algorithm parameter and also MPC specific parameter.
+        lr: float
+            Dynamics model learning rate.
+        start_steps: int
+            Number of steps collected with initial random policy.
+        update_every : int
+             Amount of data collected in between dynamics model updates.
+        mb_epochs : int
+            Training epochs for the dynamics model.
+        action_noise :
+            Exploration noise.
+        mini_batch_size : int
+            Size of actor update batches.
+        test_every : int
+            Regularity of test evaluations.
+        num_test_episodes : int
+            Number of episodes to complete in each test phase.
 
         Returns
         -------
         create_algo_instance : func
-            Function that creates a new DDPG class instance.
+            Function that creates a new MPC_RS class instance.
         algo_name : str
             Name of the algorithm.
         """
 
         def create_algo_instance(device, actor, envs):
-            return cls(actor=actor,
-                       device=device,
+            return cls(lr=lr,
                        envs=envs,
-                       config=config,)
+                       actor=actor,
+                       device=device,
+                       mb_epochs=update_every,
+                       start_steps=start_steps,
+                       update_every=update_every,
+                       action_noise=action_noise,
+                       max_grad_norm=max_grad_norm,
+                       mini_batch_size=mini_batch_size,
+                       num_test_episodes=num_test_episodes,
+                       test_every=test_every)
 
-        return create_algo_instance, prl.MPC
-    
+        return create_algo_instance, prl.MPC_RS
+
     @property
     def gamma(self):
         """Returns discount factor gamma."""
-        return self._gamma
+        return None
 
     @property
     def start_steps(self):
@@ -165,8 +213,49 @@ class MB_MPC(Algorithm):
         """
         return self._num_test_episodes
 
+    def _get_discrete_actions(self, ) -> torch.Tensor:
+        """Samples random discrete actions"""
+        return torch.randint(self.actor.action_dims, size=(
+            self.actor.n_planner, self.actor.horizon, 1)).to(self.device)
+
+    def _get_continuous_actions(self, ) -> torch.Tensor:
+        """Samples random continuous actions"""
+        actions = np.random.uniform(
+            low=self.actor.action_low,
+            high=self.actor.action_high,
+            size=(self.actor.n_planner, self.actor.horizon, self.actor.action_dims))
+        return torch.from_numpy(actions).to(self.device).float()
+
+    def compute_returns(self, states: torch.Tensor, actions: torch.Tensor, model: torch.nn.Module):
+        """
+        Calculates the trajectory returns
+
+        Parameters
+        ----------
+        states: torch.Tensor
+            Trajectory states
+        actions: torch.Tensor
+            Trajectory actions
+        model: dynamics Model
+            Calculates the next states and rewards
+
+        Returns
+        -------
+        returns: torch.Tensor
+            Trajectory returns of the RS MPC
+
+        """
+        returns = torch.zeros((self.actor.n_planner, 1)).to(self.device)
+        for t in range(self.actor.horizon):
+            with torch.no_grad():
+                states, rewards = model.predict(states, actions[:, t, :])
+            returns += rewards
+
+        return returns
+
     def acting_step(self, obs, rhs, done, deterministic=False):
-        """Does the MPC search.
+        """
+        Does the MPC search with random shooting action planning process.
 
         Parameters
         ----------
@@ -190,22 +279,33 @@ class MB_MPC(Algorithm):
         other: dict
             Additional MPC predictions, which are not used in other algorithms.
         """
-        with torch.no_grad():
-            action = self.mpc.get_action(state=obs, model=self.actor, noise=False)
 
-            clipped_action = torch.clamp(action, -1, 1)
-            
-        if self.actor.unscale:
-            action = self.actor.unscale(action)
-            clipped_action = self.actor.unscale(clipped_action)
+        with torch.no_grad():
+
+            initial_states = obs.repeat((self.actor.n_planner, 1)).to(self.device)
+            rollout_actions = self.get_rollout_actions()
+            returns = self.compute_returns(initial_states, rollout_actions, self.actor.dynamics_model)
+            action = rollout_actions[:, 0, :][returns.argmax()]
+
+            if self.action_noise and self.actor.action_type == "continuous":
+                action += torch.normal(
+                    torch.zeros(action.shape),
+                    torch.ones(action.shape) * 0.005).to(self.device)
+
+            clipped_action = action
+
+        if self.actor.dynamics_model.unscale:
+            action = self.actor.dynamics_model.unscale(action)
+            clipped_action = self.actor.dynamics_model.unscale(clipped_action)
+
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
-    
-    def training_step(self, batch) -> torch.Tensor:
+
+    def training_step(self, batch):
         """Does the forward pass and loss calculation of the dynamics model given the training data.
 
         Parameters
         ----------
-        batch: dict 
+        batch: dict
             Training data with inputs and labels
 
         Returns
@@ -216,7 +316,7 @@ class MB_MPC(Algorithm):
         train_labels = batch["train_label"]
 
         self.actor.train()
-        prediction = self.actor.dynamics_model(train_inputs)
+        prediction = self.actor.dynamics_model.model(train_inputs)
         loss = self.loss_func(prediction, train_labels)
         return loss
 
@@ -240,15 +340,17 @@ class MB_MPC(Algorithm):
             Dict containing current dynamics model iteration information.
         """
         if batch["batch_number"] == 0:
+
             # TODO: add reinitialization
             # reinitializes model for new training
             # if self.iter != 0 and self.mb_train_epochs == 0:
             #     self.actor.reinitialize_dynamics_model()
             #     self.actor.to(self.device)
             #     self.dynamics_optimizer = optim.Adam(self.actor.dynamics_model.parameters(), lr=self.lr)
+
             self.reuse_data = True
             self.mb_train_epochs += 1
-            
+
         if self.mb_train_epochs == self.num_epochs:
             self.reuse_data = False
             self.mb_train_epochs = 0
