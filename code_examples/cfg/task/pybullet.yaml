@@ -1,5 +1,9 @@
-task_name: AntPyBulletEnv-v0
+env_id: AntBulletEnv-v0
 frame_skip: 0
 frame_stack: 1
+index_worker: 0
+index_env: 0
+seed: 0
+reward_delay: 1
 
 # possible tasks: https://github.com/benelot/pybullet-gym
