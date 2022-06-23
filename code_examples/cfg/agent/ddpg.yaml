@@ -1,6 +1,19 @@
 name: DDPG
 
 ddpg_config:
-  - learning_rate: 1
+  lr_q: 1.0e-3
+  lr_pi: 1.0e-4
+  gamma: 0.99
+  polyak: 0.995
+  max_grad_norm: 0.5
+  noise: OU
+  start_steps: 5000
+  mini_batch_size: 64
+  update_every: 50
+  test_every: 1000
+  num_test_episodes: 5
+  num_updates: 50
+  target_update_interval: 1
 
-buffer: ${.. storage.replay_buffer}
+defaults:
+  - storage: replay_buffer

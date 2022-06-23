@@ -1,21 +1,24 @@
 
 
-experiment_name: Causal_World
+experiment_name: Debug
 agent_name: ${agent.name}
+environment: "pybullet"
 wandb_key: null
 
 num_env_steps : 10_000_000
-log_dir: /tmp/causal_world_ppo
-gamma: 0.99
+start_steps: 20000
+log_dir: "/tmp/debug"
+log_interval: 1
 save_interval: 10000
 max_time: 86400
 num_env_processes: 8
 num_steps: 128
 
+restart_model: null
+
+
 defaults:
   - _self_
   - task: pybullet # maybe rename to env?
-  - task_name: ${task.task_name}
-  - scheme: Default_scheme
+  - scheme: default
   - agent: ddpg
-  - storage: replay_buffer
