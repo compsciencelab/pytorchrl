@@ -38,7 +38,7 @@ class ReplayBuffer(S):
     """
 
     # Data fields to store in buffer and contained in the generated batches
-    storage_tensors = prl.DataTransitionKeys
+    storage_tensors = prl.OffPolicyDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs):
 

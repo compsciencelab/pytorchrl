@@ -60,7 +60,7 @@ class EREBuffer(B):
     """
 
     # Data fields to store in buffer and contained in the generated batches
-    storage_tensors = prl.DataTransitionKeys
+    storage_tensors = prl.OffPolicyDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, n_step=1, epsilon=0.0, alpha=0.0, beta=1.0, default_error=1000000, eta=1.0, cmin=5000):
 

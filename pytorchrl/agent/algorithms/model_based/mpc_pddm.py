@@ -107,6 +107,7 @@ class MPC_PDDM(Algorithm):
 
         self.beta = beta
         self._gamma = gamma  # Reward-weighting factor
+        self.mu = np.zeros((self.actor.horizon, self.actor.action_dims))
 
         # ----- Optimizers ----------------------------------------------------
 
@@ -252,7 +253,7 @@ class MPC_PDDM(Algorithm):
         assert action_hist.shape == (self.actor.n_planner, self.actor.horizon, self.actor.action_dims)
         assert returns.shape == (self.actor.n_planner, 1)
 
-        c = np.exp(self.actor.gamma * (returns - np.max(returns)))
+        c = np.exp(self.gamma * (returns - np.max(returns)))
         d = np.sum(c) + 1e-10
         assert c.shape == (self.actor.n_planner, 1)
         assert d.shape == (), "Has shape {}".format(d.shape)
@@ -319,7 +320,7 @@ class MPC_PDDM(Algorithm):
         for t in range(self.actor.horizon):
             with torch.no_grad():
                 actions_t = torch_actions[:, t, :]
-                assert actions_t.shape == (self.actor.n_planner, self.actor.action_space)
+                assert actions_t.shape == (self.actor.n_planner, self.actor.action_dims)
                 states, rewards = model.predict(states, actions_t)
             returns += rewards.cpu().numpy()
         return actions, returns

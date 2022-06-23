@@ -1,7 +1,8 @@
 from pytorchrl.agent.actors.reward_functions.gym_reward_functions import cartpole, pendulum, halfcheetah_mujoco, inverted_pendulum_mujoco
 from pytorchrl.agent.actors.reward_functions.pybullet_reward_functions import halfcheetah_bullet
-"""Good Resource of reward functions: https://arxiv.org/pdf/1907.02057.pdf 
-    including gym envrionemnts as well as pybullet environments
+"""
+Good Resource of reward functions: https://arxiv.org/pdf/1907.02057.pdf 
+including gym envrionemnts as well as pybullet environments
 """
 
 
