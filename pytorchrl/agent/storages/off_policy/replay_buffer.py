@@ -93,7 +93,7 @@ class ReplayBuffer(S):
 
         for k, v in sample.items():
 
-            if k not in self.storage_tensors:
+            if k not in self.storage_tensors or v is None:
                 continue
 
             if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
