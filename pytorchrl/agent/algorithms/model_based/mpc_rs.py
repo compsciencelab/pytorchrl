@@ -48,6 +48,7 @@ class MPC_RS(Algorithm):
                  start_steps,
                  update_every,
                  action_noise,
+                 max_grad_norm,
                  mini_batch_size,
                  num_test_episodes,
                  test_every):
@@ -85,9 +86,9 @@ class MPC_RS(Algorithm):
         self.envs = envs
         self.actor = actor
         self.device = device
-        self.max_grad_norm = 0.5
         self.reuse_data = False
         self.action_noise = action_noise
+        self.max_grad_norm = max_grad_norm
 
         if self.actor.action_type == "discrete":
             self.get_rollout_actions = self._get_discrete_actions
@@ -111,6 +112,7 @@ class MPC_RS(Algorithm):
             action_noise,
             mini_batch_size,
             test_every=10,
+            max_grad_norm=0.5,
             num_test_episodes=3):
         """
         Returns a function to create a new Model-Based MPC instance.
@@ -137,7 +139,7 @@ class MPC_RS(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            Function that creates a new DDPG class instance.
+            Function that creates a new MPC_RS class instance.
         algo_name : str
             Name of the algorithm.
         """
@@ -151,6 +153,7 @@ class MPC_RS(Algorithm):
                        start_steps=start_steps,
                        update_every=update_every,
                        action_noise=action_noise,
+                       max_grad_norm=max_grad_norm,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        test_every=test_every)

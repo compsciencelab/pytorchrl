@@ -90,7 +90,7 @@ class MPC_CEM(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = int(1)
+        self._num_mini_batch = None  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -112,7 +112,6 @@ class MPC_CEM(Algorithm):
         self.reuse_data = False
         self.action_noise = action_noise
 
-        import ipdb; ipdb.set_trace()
         assert isinstance(self.actor.dynamics_model.action_space, gym.spaces.Box),\
             "CEM requires a continuous action space!"
 
@@ -182,7 +181,7 @@ class MPC_CEM(Algorithm):
         Returns
         -------
         create_algo_instance : func
-            Function that creates a new DDPG class instance.
+            Function that creates a new MPC_CEM class instance.
         algo_name : str
             Name of the algorithm.
         """

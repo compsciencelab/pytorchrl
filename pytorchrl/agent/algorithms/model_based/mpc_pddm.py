@@ -1,5 +1,5 @@
+import gym
 import numpy as np
-import scipy.stats as stats
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,8 +7,6 @@ import torch.optim as optim
 import pytorchrl as prl
 from pytorchrl.agent.algorithms.base import Algorithm
 from pytorchrl.agent.algorithms.utils import get_gradients, set_gradients
-
-# TODO: raise error if discrete action space
 
 
 class MPC_PDDM(Algorithm):
@@ -18,12 +16,35 @@ class MPC_PDDM(Algorithm):
 
     Parameters
     ----------
-    device : torch.device
-        CPU or specific GPU where class computations will take place.
+    lr: float
+        Dynamics model learning rate.
     envs : VecEnv
         Vector of environments instance.
     actor : class instance
         actor class instance.
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
+    mb_epochs : int
+        Training epochs for the dynamics model.
+    start_steps: int
+        Number of steps collected with initial random policy.
+    update_every : int
+         Amount of data collected in between dynamics model updates.
+    action_noise :
+        Exploration noise.
+    mini_batch_size : int
+        Size of actor update batches.
+
+    gamma : float
+
+    beta : float
+
+    max_grad_norm : float
+        Gradient clipping parameter.
+    test_every : int
+        Regularity of test evaluations.
+    num_test_episodes : int
+        Number of episodes to complete in each test phase.
     """
 
     def __init__(self,
@@ -36,12 +57,12 @@ class MPC_PDDM(Algorithm):
                  mb_epochs,
                  action_noise,
                  mini_batch_size,
-                 test_every,
 
                  gamma=1.0,
                  beta=0.5,
                  max_grad_norm=0.5,
-
+                 test_every=10,
+                 num_test_episodes=3,
 
                  ):
 
@@ -60,7 +81,7 @@ class MPC_PDDM(Algorithm):
         self._update_every = int(update_every)
 
         # Number mini batches per epoch
-        self._num_mini_batch = int(1)
+        self._num_mini_batch = None  # Depends on how much data is available
 
         # Size of update mini batches
         self._mini_batch_size = int(mini_batch_size)
@@ -69,7 +90,7 @@ class MPC_PDDM(Algorithm):
         self._test_every = int(test_every)
 
         # Number of episodes to complete when testing
-        self._num_test_episodes = int(3)
+        self._num_test_episodes = num_test_episodes
 
         # ---- RS-specific attributes ----------------------------------------
 
@@ -78,22 +99,15 @@ class MPC_PDDM(Algorithm):
         self.envs = envs
         self.actor = actor
         self.device = device
-        self.max_grad_norm = max_grad_norm
         self.reuse_data = False
         self.action_noise = action_noise
+        self.max_grad_norm = max_grad_norm
 
-        self.device = device
+        assert isinstance(self.actor.dynamics_model.action_space, gym.spaces.Box),\
+            "CEM requires a continuous action space!"
+
         self.beta = beta
-
-        # Reward-weighting factor
-        self._gamma = gamma
-
-        if self.actor.action_type == "discrete":
-            self.get_rollout_actions = self._get_discrete_actions
-        elif self.actor.action_type == "continuous":
-            self.get_rollout_actions = self._get_continuous_actions
-        else:
-            raise ValueError("Selected action type does not exist!")
+        self._gamma = gamma  # Reward-weighting factor
 
         # ----- Optimizers ----------------------------------------------------
 
@@ -108,53 +122,65 @@ class MPC_PDDM(Algorithm):
                        mb_epochs,
                        action_noise,
                        mini_batch_size,
-                       test_every,
 
                        gamma=1.0,
                        beta=0.5,
-                       max_grad_norm=0.5):
+                       max_grad_norm=0.5,
+
+                       test_every=10,
+                       num_test_episodes=3):
         """
         Returns a function to create a new Model-Based MPC instance.
 
         Parameters
         ----------
         lr: float
-
-        start_steps: int
-
-        update_every : int
-
+            Dynamics model learning rate.
         mb_epochs : int
-
+            Training epochs for the dynamics model.
+        start_steps: int
+            Number of steps collected with initial random policy.
+        update_every : int
+             Amount of data collected in between dynamics model updates.
         action_noise :
-
+            Exploration noise.
         mini_batch_size : int
+            Size of actor update batches.
 
+        gamma : float
+
+        beta : float
+
+        max_grad_norm : float
+            Gradient clipping parameter.
         test_every : int
+            Regularity of test evaluations.
+        num_test_episodes : int
+            Number of episodes to complete in each test phase.
 
         Returns
         -------
         create_algo_instance : func
-            Function that creates a new DDPG class instance.
+            Function that creates a new MPC_PDDM class instance.
         algo_name : str
             Name of the algorithm.
         """
 
         def create_algo_instance(device, actor, envs):
             return cls(lr=lr,
+                       beta=beta,
                        envs=envs,
                        actor=actor,
+                       gamma=gamma,
                        device=device,
                        mb_epochs=update_every,
                        start_steps=start_steps,
                        update_every=update_every,
                        action_noise=action_noise,
                        mini_batch_size=mini_batch_size,
-                       test_every=test_every,
-
-                       beta=beta,
-                       gamma=gamma,
-                       max_grad_norm=max_grad_norm)
+                       num_test_episodes=num_test_episodes,
+                       max_grad_norm=max_grad_norm,
+                       test_every=test_every)
 
         return create_algo_instance, prl.MPC_RS
 
@@ -212,7 +238,8 @@ class MPC_PDDM(Algorithm):
         return self._num_test_episodes
 
     def update_mu(self, action_hist, returns):
-        """Updates the mean value for the action sampling distribution.
+        """
+        Updates the mean value for the action sampling distribution.
 
         Parameters
         ----------
@@ -244,7 +271,8 @@ class MPC_PDDM(Algorithm):
         return self.mu[0]
 
     def sample_actions(self, past_action):
-        """Samples action trajectories.
+        """
+        Samples action trajectories.
 
         Parameters
         ----------
@@ -270,7 +298,8 @@ class MPC_PDDM(Algorithm):
         return actions
 
     def get_pred_trajectories(self, states, model):
-        """Calculates the returns when planning given a state and a model.
+        """
+        Calculates the returns when planning given a state and a model.
 
         Parameters
         ----------
@@ -286,21 +315,22 @@ class MPC_PDDM(Algorithm):
         returns: np.array
             Returns of the action trajectories.
         """
-        returns = np.zeros((self.n_planner, 1))
+        returns = np.zeros((self.actor.n_planner, 1))
         np.random.seed()
         past_action = self.mu[0].copy()
         actions = self.sample_actions(past_action)
         torch_actions = torch.from_numpy(actions).float().to(self.device)
-        for t in range(self.horizon):
+        for t in range(self.actor.horizon):
             with torch.no_grad():
                 actions_t = torch_actions[:, t, :]
-                assert actions_t.shape == (self.n_planner, self.action_space)
+                assert actions_t.shape == (self.actor.n_planner, self.actor.action_space)
                 states, rewards = model.predict(states, actions_t)
             returns += rewards.cpu().numpy()
         return actions, returns
 
     def acting_step(self, obs, rhs, done, deterministic=False):
-        """Does the MPC search with PDDM action planning process.
+        """
+        Does the MPC search with PDDM action planning process.
 
         Parameters
         ----------
@@ -327,7 +357,7 @@ class MPC_PDDM(Algorithm):
 
         with torch.no_grad():
 
-            initial_states = obs.repeat(self.n_planner, 1).to(self.device)
+            initial_states = obs.repeat(self.actor.n_planner, 1).to(self.device)
             actions, returns = self.get_pred_trajectories(initial_states, self.actor.dynamics_model)
             optimal_action = self.update_mu(actions, returns)
 
@@ -340,7 +370,8 @@ class MPC_PDDM(Algorithm):
         return action.unsqueeze(0), clipped_action.unsqueeze(0), rhs, {}
 
     def training_step(self, batch):
-        """Does the forward pass and loss calculation of the dynamics model given the training data.
+        """
+        Does the forward pass and loss calculation of the dynamics model given the training data.
 
         Parameters
         ----------
