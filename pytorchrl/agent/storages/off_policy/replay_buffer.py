@@ -363,7 +363,7 @@ class ReplayBuffer(S):
 
                 # Define batch structure
                 batch = {k: [] if not isinstance(self.data[k], dict) else
-                    {x: [] for x in self.data[k]} for k in self.storage_tensors}
+                    {x: [] for x in self.data[k]} for k in self.data.keys()}
 
                 # Randomly select sequences
                 seq_idxs = np.random.randint(0, num_proc * int(
@@ -388,7 +388,7 @@ class ReplayBuffer(S):
                 yield batch
 
             else:
-                batch = {k: {} for k in self.storage_tensors}
+                batch = {k: {} for k in self.data.keys()}
                 samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                 for k, v in self.data.items():
 

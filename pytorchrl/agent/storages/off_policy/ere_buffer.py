@@ -236,7 +236,7 @@ class EREBuffer(B):
 
                 # Define batch structure
                 batch = {k: {} if not isinstance(self.data[k], dict) else
-                {x: {} for x in self.data[k]} for k in self.storage_tensors}
+                {x: {} for x in self.data[k]} for k in self.data.keys()}
 
                 sequences_x_batch = mini_batch_size // self.sequence_length + 1
                 sequences_x_proc = int(self.size / self.sequence_length)
@@ -324,7 +324,7 @@ class EREBuffer(B):
         else:  # Batches for a feed forward actor
             for k in range(num_mini_batch):
 
-                batch = {k: {} for k in self.storage_tensors}
+                batch = {k: {} for k in self.data.keys()}
                 N = num_proc * self.size
                 per_weigths = None
 

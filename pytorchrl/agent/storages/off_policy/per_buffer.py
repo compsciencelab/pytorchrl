@@ -276,7 +276,7 @@ class PERBuffer(B):
 
                 # Define batch structure
                 batch = {k: {} if not isinstance(self.data[k], dict) else
-                    {x: {} for x in self.data[k]} for k in self.storage_tensors}
+                    {x: {} for x in self.data[k]} for k in self.data.keys()}
 
                 # Select sequences
                 if self.alpha == 0.0:
@@ -332,7 +332,7 @@ class PERBuffer(B):
                 yield batch
 
             else:
-                batch = {k: {} for k in self.storage_tensors}
+                batch = {k: {} for k in self.data.keys()}
 
                 if self.alpha == 0.0:
                     samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
