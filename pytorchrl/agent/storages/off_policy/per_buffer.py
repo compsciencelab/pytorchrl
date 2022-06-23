@@ -119,7 +119,7 @@ class PERBuffer(B):
         """
 
         # Data tensors lazy initialization
-        if self.size == 0 and self.data[prl.OBS] is None:
+        if self.size == 0 and prl.OBS not in self.data.keys():
             self.init_tensors(sample)
 
         # if recurrent, save fixed-length consecutive overlapping sequences

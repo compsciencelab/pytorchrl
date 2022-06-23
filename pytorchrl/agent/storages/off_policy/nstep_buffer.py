@@ -86,7 +86,7 @@ class NStepReplayBuffer(S):
         """
 
         # Data tensors lazy initialization
-        if self.size == 0 and self.data[prl.OBS] is None:
+        if self.size == 0 and prl.OBS not in self.data.keys():
             self.init_tensors(sample)
 
         # If using memory, save fixed length consecutive overlapping sequences
