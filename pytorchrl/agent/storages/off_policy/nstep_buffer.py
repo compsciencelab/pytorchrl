@@ -86,7 +86,7 @@ class NStepReplayBuffer(S):
         """
 
         # Data tensors lazy initialization
-        if self.size == 0 and self.data[prl.OBS] is None:
+        if self.size == 0 and prl.OBS not in self.data.keys():
             self.init_tensors(sample)
 
         # If using memory, save fixed length consecutive overlapping sequences
@@ -192,7 +192,7 @@ class NStepReplayBuffer(S):
 
                 # Define batch structure
                 batch = {k: [] if not isinstance(self.data[k], dict) else
-                    {x: [] for x in self.data[k]} for k in self.storage_tensors}
+                    {x: [] for x in self.data[k]} for k in self.data.keys()}
 
                 # Randomly select sequences
                 seq_idxs = np.random.randint(0, num_proc * int(
@@ -219,7 +219,7 @@ class NStepReplayBuffer(S):
                 yield batch
 
             else:
-                batch = {k: {} for k in self.storage_tensors}
+                batch = {k: {} for k in self.data.keys()}
                 samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                 for k, v in self.data.items():
 

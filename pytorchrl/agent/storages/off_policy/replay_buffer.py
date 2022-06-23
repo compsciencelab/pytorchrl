@@ -47,7 +47,7 @@ class ReplayBuffer(S):
         self.algo = algorithm
         self.recurrent_actor = actor.is_recurrent
         self.max_size, self.size, self.step = size, 0, 0
-        self.data = {k: None for k in self.storage_tensors}  # lazy init
+        self.data = {}  # lazy init
 
         if self.recurrent_actor:
             self.sequence_length = algorithm.update_every
@@ -93,7 +93,7 @@ class ReplayBuffer(S):
 
         for k, v in sample.items():
 
-            if k not in self.storage_tensors:
+            if k not in self.storage_tensors or v is None:
                 continue
 
             if not self.recurrent_actor and k in (prl.RHS, prl.RHS2):
@@ -280,7 +280,7 @@ class ReplayBuffer(S):
         """
 
         # Data tensors lazy initialization
-        if self.size == 0 and self.data[prl.OBS] is None:
+        if self.size == 0 and prl.OBS not in self.data.keys():
             self.init_tensors(sample)
 
         # If using memory, save fixed length consecutive overlapping sequences
@@ -363,7 +363,7 @@ class ReplayBuffer(S):
 
                 # Define batch structure
                 batch = {k: [] if not isinstance(self.data[k], dict) else
-                    {x: [] for x in self.data[k]} for k in self.storage_tensors}
+                    {x: [] for x in self.data[k]} for k in self.data.keys()}
 
                 # Randomly select sequences
                 seq_idxs = np.random.randint(0, num_proc * int(
@@ -388,7 +388,7 @@ class ReplayBuffer(S):
                 yield batch
 
             else:
-                batch = {k: {} for k in self.storage_tensors}
+                batch = {k: {} for k in self.data.keys()}
                 samples = np.random.randint(0, num_proc * self.size, size=mini_batch_size)
                 for k, v in self.data.items():
 

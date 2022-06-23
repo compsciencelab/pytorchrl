@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import ray
 import sys
 import time
 import argparse
@@ -21,11 +20,6 @@ def main():
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
-
-    resources = ""
-    for k, v in ray.cluster_resources().items():
-        resources += "{} {}, ".format(k, v)
-    print(resources[:-2], flush=True)
 
     # 1. Define Train Vector of Envs
     train_envs_factory, action_space, obs_space = VecEnv.create_factory(
