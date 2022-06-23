@@ -24,6 +24,7 @@ class Trainer():
         self.actor_factory = self.setup_algorithm()
         self.storage_factory = self.setup_storage()
         self.scheme = self.setup_scheme()
+        self.learner = self.setup_learner()
 
         
     def train(self, ):
