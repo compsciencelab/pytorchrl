@@ -10,7 +10,7 @@ from pytorchrl.scheme.base.worker import Worker as W
 
 class CWorker(W):
     """
-     Worker class handling data collection.
+    Worker class handling data collection.
     This class wraps an actor instance, a storage class instance and a
     train and a test vector environments. It collects data samples, sends
     them and and evaluates network versions.

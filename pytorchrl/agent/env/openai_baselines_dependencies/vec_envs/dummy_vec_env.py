@@ -1,9 +1,9 @@
 import numpy as np
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.vec_env import VecEnv
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.util import copy_obs_dict, dict_to_obs, obs_space_info
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
 
 
-class DummyVecEnv(VecEnv):
+class DummyVecEnv(VecEnvBase):
     """
     VecEnv that does runs multiple environments sequentially, that is,
     the step and reset commands are send to one environment at a time.
@@ -17,7 +17,7 @@ class DummyVecEnv(VecEnv):
         """
         self.envs = [fn() for fn in env_fns]
         env = self.envs[0]
-        VecEnv.__init__(self, len(env_fns), env.observation_space, env.action_space)
+        VecEnvBase.__init__(self, len(env_fns), env.observation_space, env.action_space)
         obs_space = env.observation_space
         self.keys, shapes, dtypes = obs_space_info(obs_space)
 

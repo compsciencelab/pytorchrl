@@ -1,7 +1,7 @@
 import multiprocessing as mp
 
 import numpy as np
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.vec_env import VecEnv, CloudpickleWrapper,\
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase, CloudpickleWrapper,\
     clear_mpi_env_vars
 
 
@@ -37,7 +37,7 @@ def worker(remote, parent_remote, env_fn_wrappers):
             env.close()
 
 
-class SubprocVecEnv(VecEnv):
+class SubprocVecEnv(VecEnvBase):
     """
     VecEnv that runs multiple environments in parallel in subproceses and communicates with them via pipes.
     Recommended to use when num_envs > 1 and step() can be a bottleneck.
@@ -70,7 +70,7 @@ class SubprocVecEnv(VecEnv):
         self.remotes[0].send(('get_spaces_spec', None))
         observation_space, action_space, self.spec = self.remotes[0].recv().x
         self.viewer = None
-        VecEnv.__init__(self, nenvs, observation_space, action_space)
+        VecEnvBase.__init__(self, nenvs, observation_space, action_space)
 
     def step_async(self, actions):
         self._assert_not_closed()

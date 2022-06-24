@@ -1,10 +1,10 @@
-Env
-===
+Environment
+===========
 
 VecEnv
 ------
 
-.. automodule:: pytorchrl.agent.env.vec_env
+.. automodule:: pytorchrl.agent.env.vec_envs
    :members:
    :undoc-members:
    :show-inheritance:

@@ -2,10 +2,10 @@ import contextlib
 import os
 from abc import ABC, abstractmethod
 
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.util import tile_images
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import tile_images
 
 
-class VecEnv(ABC):
+class VecEnvBase(ABC):
     """
     An abstract asynchronous, vectorized environment.
     Used to batch data from multiple copies of an environment, so that
@@ -112,7 +112,7 @@ class VecEnv(ABC):
             self.viewer = rendering.SimpleImageViewer()
         return self.viewer
 
-class VecEnvWrapper(VecEnv):
+class VecEnvWrapper(VecEnvBase):
     """
     An environment wrapper that applies to an entire batch
     of environments at once.
