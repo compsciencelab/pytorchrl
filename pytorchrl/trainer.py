@@ -8,7 +8,7 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.utils import save_argparse, cleanup_log_dir
 
 # backup checks for possible algos and envs
-ENVS_LIST = ["gym", "pybullet", "mujoco", "causalworld", "crafter"]
+ENVS_LIST = ["gym", "pybullet", "mujoco", "causalworld", "crafter", "atari"]
 ON_POLICY_ALGOS = ["PPO", "PPOD"]
 OFF_POLICY_ALGOS = ["DQN", "DDPG", "TD3", "SAC", "MPO"]
 
@@ -55,9 +55,6 @@ class Trainer():
         else:
             environment_train_factory, environment_test_factory = self.get_enviroment_factory(self.config.environment)
         # 1. Define Train Vector of Envs
-        # env_kwargs = dict(self.config.task)
-        # # delete not needed kwargs from the task config
-        # env_kwargs.pop("env_name")
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=environment_train_factory,
             env_kwargs=self.config.task.train_env_config,
@@ -148,6 +145,9 @@ class Trainer():
         if task == "pybullet":
             from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
             return pybullet_train_env_factory, pybullet_test_env_factory
+        elif task == "mujoco":
+            from pytorchrl.envs.mujoco import mujoco_train_env_factory, mujoco_test_env_factory
+            return mujoco_train_env_factory, mujoco_test_env_factory
         elif task == "gym":
             # TODO: maybe create extra factory for gym.
             from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
@@ -162,7 +162,8 @@ class Trainer():
             from pytorchrl.envs.crafter import crafter_train_env_factory, crafter_test_env_factory
             return crafter_train_env_factory, crafter_test_env_factory
         else:
-            pass
+            assert task in ENVS_LIST, "Selected environment is not in list of possible training environments: {} ".format(ENVS_LIST)
+            
         
     
 def get_algorithm(config):
