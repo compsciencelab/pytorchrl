@@ -7,8 +7,10 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.utils import save_argparse, cleanup_log_dir
 
+# backup checks for possible algos and envs
+ENVS_LIST = ["gym", "pybullet", "mujoco", "causalworld", "crafter"]
 ON_POLICY_ALGOS = ["PPO", "PPOD"]
-OFF_POLICY_ALGOS = ["DQN", "DDPG", "TD3", "SAC"]
+OFF_POLICY_ALGOS = ["DQN", "DDPG", "TD3", "SAC", "MPO"]
 
 class Trainer():
     def __init__(self, config, custom_environment_factory=None):
@@ -53,16 +55,18 @@ class Trainer():
         else:
             environment_train_factory, environment_test_factory = self.get_enviroment_factory(self.config.environment)
         # 1. Define Train Vector of Envs
-
+        # env_kwargs = dict(self.config.task)
+        # # delete not needed kwargs from the task config
+        # env_kwargs.pop("env_name")
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=environment_train_factory,
-            env_kwargs=self.config.task,
+            env_kwargs=self.config.task.train_env_config,
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
 
         # 2. Define Test Vector of Envs (Optional)
         test_envs_factory, _, _ = VecEnv.create_factory(
             env_fn=environment_test_factory,
-            env_kwargs=self.config.task,
+            env_kwargs=self.config.task.test_env_config,
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
         
         return train_envs_factory, test_envs_factory, action_space, obs_space
@@ -148,9 +152,15 @@ class Trainer():
             # TODO: maybe create extra factory for gym.
             from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
             return pybullet_train_env_factory, pybullet_test_env_factory
-            
+        elif task == "causalworld":
+            from pytorchrl.envs.causal_world import causal_world_train_env_factory
+            return causal_world_train_env_factory, causal_world_train_env_factory
         elif task == "atari":
-            pass
+            from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
+            return atari_train_env_factory, atari_test_env_factory
+        elif task == "crafter":
+            from pytorchrl.envs.crafter import crafter_train_env_factory, crafter_test_env_factory
+            return crafter_train_env_factory, crafter_test_env_factory
         else:
             pass
         
@@ -228,6 +238,36 @@ def get_algorithm(config):
                                                      # TODO: check how to set empty list in hydra
                                                      # policy_loss_addons=config.agent.sac_config.policy_loss_addons 
                                                       )
+        return algo_factory, algo_name
+    elif config.agent.name == "MPO":
+        from pytorchrl.agent.algorithms import MPO
+        algo_factory, algo_name = MPO.create_factory(lr_pi=config.agent.mpo_config.lr_pi,
+                                                     lr_q=config.agent.mpo_config.lr_q,
+                                                     gamma=config.agent.mpo_config.gamma,
+                                                     polyak=config.agent.mpo_config.polyak,
+                                                     num_updates=config.agent.mpo_config.num_updates,
+                                                     test_every=config.agent.mpo_config.test_every,
+                                                     update_every=config.agent.mpo_config.update_every,
+                                                     start_steps=config.agent.mpo_config.start_steps,
+                                                     mini_batch_size=config.agent.mpo_config.mini_batch_size,
+                                                     num_test_episodes=config.agent.mpo_config.num_test_episodes,
+                                                     target_update_interval=config.agent.mpo_config.target_update_interval,
+                                                     dual_constraint=config.agent.mpo_config.dual_constraint,
+                                                     kl_mean_constraint=config.agent.mpo_config.kl_mean_constraint,
+                                                     kl_var_constraint=config.agent.mpo_config.kl_var_constraint,
+                                                     kl_constraint=config.agent.mpo_config.kl_constraint,
+                                                     alpha_scale=config.agent.mpo_config.alpha_scale,
+                                                     alpha_mean_scale=config.agent.mpo_config.alpha_mean_scale,
+                                                     alpha_var_scale=config.agent.mpo_config.alpha_var_scale,
+                                                     alpha_mean_max=config.agent.mpo_config.alpha_mean_max,
+                                                     alpha_var_max=config.agent.mpo_config.alpha_var_max,
+                                                     alpha_max=config.agent.mpo_config.alpha_max,
+                                                     mstep_iterations=config.agent.mpo_config.mstep_iterations,
+                                                     sample_action_num=config.agent.mpo_config.sample_action_num,
+                                                     max_grad_norm=config.agent.mpo_config.max_grad_norm,
+                                                     # TODO: check how to set empty list in hydra
+                                                     # policy_loss_addons=config.agent.sac_config.policy_loss_addons 
+                                                     )
         return algo_factory, algo_name
     else:
         pass
