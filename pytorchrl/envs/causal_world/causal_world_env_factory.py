@@ -3,9 +3,11 @@ from causal_world.task_generators import generate_task
 from pytorchrl.envs.common import FrameStack, FrameSkip, DelayedReward
 
 
-def causal_world_train_env_factory(
-        task=generate_task(task_generator_id='general'),
-        frame_skip=0, frame_stack=1, inference=False, reward_delay=1):
+def causal_world_train_env_factory(task_id="general",
+                                   frame_skip=0,
+                                   frame_stack=1,
+                                   inference=False,
+                                   reward_delay=1):
     """
     Create train Animal Olympics Unity3D environment.
 
@@ -27,7 +29,7 @@ def causal_world_train_env_factory(
     env : gym.Env
         Train environment.
     """
-
+    task = generate_task(task_generator_id=task_id)
     env = CausalWorld(task=task, enable_visualization=inference)
 
     if frame_skip > 0:
