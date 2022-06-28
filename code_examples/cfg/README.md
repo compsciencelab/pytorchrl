@@ -85,7 +85,7 @@ cfg
        pybullet.yaml
 ```
 
-## Implented Agents in PyTorchRL
+## Implemented Agents in PyTorchRL
 (either in this doc or different page)
 
 ## Training Environments In PyTorchRL
