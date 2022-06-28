@@ -60,7 +60,7 @@ def atari_train_env_factory(
 
 def atari_test_env_factory(
         env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1,
-        reward_delay=1, max_episode_steps=4500, sticky_actions=False):
+        reward_delay=1, episodic_life=False, clip_rewards=False, max_episode_steps=4500, sticky_actions=False):
     """
     Create test Atari environment.
     Parameters
@@ -91,8 +91,8 @@ def atari_test_env_factory(
     env = make_atari(env_id, max_episode_steps=max_episode_steps, sticky_actions=sticky_actions)
     env.seed(index_grad_worker * 1000 + 100 * index_col_worker + index_env + seed)
     env = wrap_deepmind(
-        env, episode_life=False,
-        clip_rewards=False,
+        env, episode_life=episodic_life,
+        clip_rewards=clip_rewards,
         scale=False,
         frame_stack=frame_stack)
 
