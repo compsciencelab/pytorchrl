@@ -17,6 +17,6 @@ restart_model: null
 
 defaults:
   - _self_
-  - task: pybullet
+  - task: gym
   - scheme: default
-  - agent: ddpg
+  - agent: ppo
