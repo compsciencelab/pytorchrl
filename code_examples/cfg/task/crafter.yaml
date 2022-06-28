@@ -1,19 +1,15 @@
-env_name: pybullet
+env_name: crafter
 train_env_config:
-  env_id: AntBulletEnv-v0
+  env_id: CrafterReward-v1
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
   index_env: 0
   seed: 0
-  reward_delay: 1
 test_env_config:
-  env_id: AntBulletEnv-v0
+  env_id: CrafterReward-v1
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
   index_env: 0
   seed: 0
-  reward_delay: 1
-
-# possible tasks: https://github.com/benelot/pybullet-gym
