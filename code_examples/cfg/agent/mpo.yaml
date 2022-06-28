@@ -1,0 +1,41 @@
+name: MPO
+
+# ddpg specific config:
+mpo_config:
+  lr_q: 1.0e-3
+  lr_pi: 1.0e-4
+  gamma: 0.99
+  polyak: 0.995
+  num_updates: 50
+  test_every: 1000
+  update_every: 50
+  start_steps: 5000
+  mini_batch_size: 64
+  num_test_episodes: 5
+  target_update_interval: 1
+  dual_constraint: 0.1
+  kl_mean_constraint: 0.01
+  kl_var_constraint: 0.0001
+  kl_constraint: 0.01
+  alpha_scale: 10.0
+  alpha_mean_scale: 1.0
+  alpha_var_scale: 100.0
+  alpha_mean_max: 0.1
+  alpha_var_max: 10.0
+  alpha_max: 1.0
+  mstep_iterations: 5
+  sample_action_num: 64
+  max_grad_norm: 0.1
+  policy_loss_addons: null # TODO needs to be empty list as default
+
+
+
+# general config:
+noise: null
+sequence_overlap: 0.5
+# put restart model here? restart_model: null
+
+# default config 
+defaults:
+  - architecture: off_policy
+  - storage: replay_buffer
