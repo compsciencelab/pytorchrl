@@ -1,6 +1,6 @@
 env_name: gym
 train_env_config:
-  env_id: Pendulum-v0
+  env_id: CartPole-v0
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
@@ -8,7 +8,7 @@ train_env_config:
   seed: 0
   reward_delay: 1
 test_env_config:
-  env_id: Pendulum-v0
+  env_id: CartPole-v0
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
