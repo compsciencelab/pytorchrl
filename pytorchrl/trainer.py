@@ -53,7 +53,7 @@ class Trainer():
         if self.custom_environment_factory is not None:
             environment_train_factory = self.custom_environment_factory
         else:
-            environment_train_factory, environment_test_factory = self.get_enviroment_factory(self.config.environment)
+            environment_train_factory, environment_test_factory = self.get_enviroment_factory(self.config.environment_name)
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=environment_train_factory,
@@ -76,11 +76,11 @@ class Trainer():
                                                          action_space=self.action_space,
                                                          algorithm_name=self.algo_name,
                                                          restart_model=self.config.restart_model,
-                                                         recurrent_nets=self.config.agent.architecture.recurrent_nets,
-                                                         recurrent_nets_kwargs=self.config.agent.architecture.recurrent_nets_kwargs,
-                                                         feature_extractor_kwargs=self.config.agent.architecture.feature_extractor_kwargs,
-                                                         feature_extractor_network=self.config.agent.architecture.feature_extractor_network,
-                                                         shared_policy_value_network=self.config.agent.architecture.shared_policy_value_network)
+                                                         recurrent_nets=self.config.agent.actor.recurrent_nets,
+                                                         recurrent_nets_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
+                                                         feature_extractor_kwargs=self.config.agent.actor.feature_extractor_kwargs,
+                                                         feature_extractor_network=self.config.agent.actor.feature_extractor_network,
+                                                         shared_policy_value_network=self.config.agent.actor.shared_policy_value_network)
             return actor_factory
         elif self.config.agent.name in OFF_POLICY_ALGOS:
             from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
@@ -90,16 +90,14 @@ class Trainer():
                                                           noise=self.config.agent.noise,
                                                           restart_model=self.config.restart_model,
                                                           sequence_overlap=self.config.agent.sequence_overlap,
-                                                          recurrent_nets_kwargs=self.config.agent.architecture.recurrent_nets_kwargs,
-                                                          recurrent_nets=self.config.agent.architecture.recurrent_nets,
-                                                          obs_feature_extractor=get_feature_extractor(self.config.agent.architecture.obs_feature_extractor),
-                                                          obs_feature_extractor_kwargs=self.config.agent.architecture.obs_feature_extractor_kwargs,
-                                                          act_feature_extractor=get_feature_extractor(self.config.agent.architecture.act_feature_extractor),
-                                                          common_feature_extractor=get_feature_extractor(self.config.agent.architecture.common_feature_extractor),
-                                                          common_feature_extractor_kwargs=self.config.agent.architecture.common_feature_extractor_kwargs,
-                                                          num_critics=self.config.agent.architecture.num_critics)
-                                                          
-                                                          
+                                                          recurrent_nets_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
+                                                          recurrent_nets=self.config.agent.actor.recurrent_nets,
+                                                          obs_feature_extractor=get_feature_extractor(self.config.agent.actor.obs_feature_extractor),
+                                                          obs_feature_extractor_kwargs=self.config.agent.actor.obs_feature_extractor_kwargs,
+                                                          act_feature_extractor=get_feature_extractor(self.config.agent.actor.act_feature_extractor),
+                                                          common_feature_extractor=get_feature_extractor(self.config.agent.actor.common_feature_extractor),
+                                                          common_feature_extractor_kwargs=self.config.agent.actor.common_feature_extractor_kwargs,
+                                                          num_critics=self.config.agent.actor.num_critics)                                         
             return actor_factory
         else:
             pass
