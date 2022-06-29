@@ -15,8 +15,8 @@ ppo_config:
   num_test_episodes: 5
   use_clipped_value_loss: True
 
-
 # default config 
 defaults:
+  - _self_
   - actor: on_policy
   - storage: gae_buffer
