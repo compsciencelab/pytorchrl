@@ -24,5 +24,5 @@ sequence_overlap: 0.5
 
 # default config:
 defaults:
-  - architecture: off_policy
+  - actor: off_policy
   - storage: replay_buffer

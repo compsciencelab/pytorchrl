@@ -18,5 +18,5 @@ ppo_config:
 
 # default config 
 defaults:
-  - architecture: on_policy
+  - actor: on_policy
   - storage: gae_buffer
