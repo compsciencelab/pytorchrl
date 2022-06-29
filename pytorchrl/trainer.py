@@ -109,10 +109,16 @@ class Trainer():
         elif self.config.agent.storage.name == "her_buffer":
             from pytorchrl.agent.storages import HERBuffer
             return HERBuffer.create_factory(size=self.config.agent.storage.name)
+        elif self.config.agent.storage.name == "vanilla_on_policy":
+            from pytorchrl.agent.storages import VanillaOnPolicyBuffer
+            return VanillaOnPolicyBuffer.create_factory(size=self.config.agent.storage.size)
         elif self.config.agent.storage.name == "gae_buffer":
             from pytorchrl.agent.storages import GAEBuffer
             return GAEBuffer.create_factory(size=self.config.agent.storage.size,
                                             gae_lambda=self.config.agent.storage.gae_lambda)
+        elif self.config.agent.storage.nane == "vtrace":
+            from pytorchrl.agent.storages import VTraceBuffer
+            return VTraceBuffer.create_factory(size=self.config.agent.storage.size)
         else:
             pass
     
