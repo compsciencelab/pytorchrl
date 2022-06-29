@@ -6,3 +6,4 @@ scipy
 lz4
 opencv-python
 wandb
+hydra-core
