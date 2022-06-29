@@ -1,6 +1,6 @@
 experiment_name: Debug
 agent_name: ${agent.name}
-environment_name: ${task.env_name}
+environment_name: ${environment.env_name}
 wandb_key: null
 
 num_env_steps : 10_000_000

@@ -57,13 +57,13 @@ class Trainer():
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=environment_train_factory,
-            env_kwargs=self.config.task.train_env_config,
+            env_kwargs=self.config.environment.train_env_config,
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
 
         # 2. Define Test Vector of Envs (Optional)
         test_envs_factory, _, _ = VecEnv.create_factory(
             env_fn=environment_test_factory,
-            env_kwargs=self.config.task.test_env_config,
+            env_kwargs=self.config.environment.test_env_config,
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
         
         return train_envs_factory, test_envs_factory, action_space, obs_space
