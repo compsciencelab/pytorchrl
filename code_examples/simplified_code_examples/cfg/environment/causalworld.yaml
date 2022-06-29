@@ -1,12 +1,13 @@
 env_name: causalworld
+task: general
 train_env_config:
-  task_id: general
+  task_id: ${environment.task}
   frame_skip: 0
   frame_stack: 1
   inference: False
   reward_delay: 1
 test_env_config:
-  task_id: general
+  task_id: ${environment.task}
   frame_skip: 0
   frame_stack: 1
   inference: False

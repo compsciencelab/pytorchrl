@@ -1,6 +1,7 @@
 env_name: pybullet
+task: AntBulletEnv-v0
 train_env_config:
-  env_id: AntBulletEnv-v0
+  env_id: ${environment.task}
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
@@ -8,7 +9,7 @@ train_env_config:
   seed: 0
   reward_delay: 1
 test_env_config:
-  env_id: AntBulletEnv-v0
+  env_id: ${environment.task}
   frame_skip: 0
   frame_stack: 1
   index_worker: 0
