@@ -116,7 +116,7 @@ class Trainer():
             from pytorchrl.agent.storages import GAEBuffer
             return GAEBuffer.create_factory(size=self.config.agent.storage.size,
                                             gae_lambda=self.config.agent.storage.gae_lambda)
-        elif self.config.agent.storage.nane == "vtrace":
+        elif self.config.agent.storage.name == "vtrace":
             from pytorchrl.agent.storages import VTraceBuffer
             return VTraceBuffer.create_factory(size=self.config.agent.storage.size)
         else:
