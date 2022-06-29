@@ -39,11 +39,28 @@ In this section we show you how you can change the training scheme so that you c
 [Will be updated soon!](TODO)
 
 #### Change Agent Details
-[Will be updated soon!](TODO)
-##### Change Agent Architecture
-[Will be updated soon!](TODO)
+In case you want to change the default parameter of the selected agent you can have a look at your specific agent in the config what hyperparameters exist and how they are set as default. In the case of PPO check:
+
+`code_examples/simplified_code_examples/cfg/agent/ppo.yaml`
+
+If you decide you want to change for example the learning rate for PPO you can do it the following way:
+
+`python code_examples/simplified_code_examples/run.py agent=ppo agent.ppo_config.lr=1.0e-2`
+
+Similar you can change any other hyperparameter in PPO or of other agents in PyTorchRL. 
+
+##### Change Agent Actor Architecture
+Similarly to the agent hyperparameter you can also change the overall architecture of the actors. Meaning, add additional layer to the policy network of PPO or change to a recurrent policy at all. You can see all possible parameters to change at: 
+
+`code_examples/simplified_code_examples/cfg/agent/actor`
+
+Inside here you have a yaml file for off-policy algorithms like DDPG, TD3, SAC and a on-policy file for algorithms like PPO. That said, if you decide to change the PPO policy to be a recurrent neural network you can do so with: 
+
+`python code_examples/simplified_code_examples/run.py agent=ppo agent.actor.recurrent_nets=True`
+
 ##### Change Agent Storage
 [Will be updated soon!](TODO)
+
 ## Config
 This section visualizes the overal config structure in case you want to dont want to adapt your training run parameters via terminal inputs and specify new default parameters. 
 ### Overall Config Structure
