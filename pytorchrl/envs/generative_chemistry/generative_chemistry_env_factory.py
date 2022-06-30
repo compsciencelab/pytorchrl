@@ -44,28 +44,28 @@ if __name__ == "__main__":
         # the "parameters" list holds the individual components
         "parameters": [
 
-            # # add component: an activity model
-            # {
-            #     "component_type": "predictive_property",  # this is a scikit-learn model, returning
-            #     # activity values
-            #     "name": "Regression model",  # arbitrary name for the component
-            #     "weight": 2,  # the weight ("importance") of the component (default: 1)
-            #     "specific_parameters": {
-            #         "model_path": os.path.join(ipynb_path, "models/Aurora_model.pkl"),  # absolute model path
-            #         "scikit": "regression",  # model can be "regression" or "classification"
-            #         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
-            #         "size": 2048,  # parameter of descriptor type
-            #         "radius": 3,  # parameter of descriptor type
-            #         "use_counts": True,  # parameter of descriptor type
-            #         "use_features": True,  # parameter of descriptor type
-            #         "transformation": {
-            #             "transformation_type": "sigmoid",  # see description above
-            #             "high": 9,  # parameter for sigmoid transformation
-            #             "low": 4,  # parameter for sigmoid transformation
-            #             "k": 0.25  # parameter for sigmoid transformation
-            #         }
-            #     }
-            # },
+            # add component: an activity model
+            {
+                "component_type": "predictive_property",  # this is a scikit-learn model, returning
+                # activity values
+                "name": "Regression model",  # arbitrary name for the component
+                "weight": 2,  # the weight ("importance") of the component (default: 1)
+                "specific_parameters": {
+                    "model_path": os.path.join(os.path.dirname(), "models/Aurora_model.pkl"),  # absolute model path
+                    "scikit": "regression",  # model can be "regression" or "classification"
+                    "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
+                    "size": 2048,  # parameter of descriptor type
+                    "radius": 3,  # parameter of descriptor type
+                    "use_counts": True,  # parameter of descriptor type
+                    "use_features": True,  # parameter of descriptor type
+                    "transformation": {
+                        "transformation_type": "sigmoid",  # see description above
+                        "high": 9,  # parameter for sigmoid transformation
+                        "low": 4,  # parameter for sigmoid transformation
+                        "k": 0.25  # parameter for sigmoid transformation
+                    }
+                }
+            },
 
             # add component: enforce the match to a given substructure
             {
