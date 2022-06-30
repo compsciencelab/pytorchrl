@@ -13,6 +13,7 @@ class GenChemEnv(gym.Env):
     def __init__(self, scoring_function, base_molecule, vocabulary, obs_length=50, **kwargs):
         super(GenChemEnv, self).__init__()
 
+        self.num_episodes = 0
         self.obs_length = obs_length
         self.vocabulary = vocabulary
         self.base_molecule = base_molecule
@@ -43,7 +44,7 @@ class GenChemEnv(gym.Env):
         Reset the state of the environment to an initial state.
         Return padded base molecule to match length `obs_length`.
         """
-
+        self.num_episodes += 1
         return self.base_molecule.ljust(self.obs_length, self.vocabulary._tokens[0])
 
     def render(self, mode='human', close=False):
@@ -51,13 +52,18 @@ class GenChemEnv(gym.Env):
 
         print(f'Scaffold: {self.base_molecule}')
         print(f'Decorated Scaffold: {self.new_molecule}')
-        print(f'Vocabulary: {self.vocabulary}')
+        print(f'Vocabulary: {self.vocabulary._tokens}')
 
-    def _scoring(self, molecule):
-        # Return scoring metric
+    def _scoring(self, smiles):
+        """Return scoring metric."""
 
-        # TODO: remove padding
+        # I think the paper uses step/epoch to refer to the number of episodes played
 
-        # TODO: get scoring value
+        if isinstance(smiles, str):
+            score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
+        elif isinstance(smiles, list):
+            score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
+        else:
+            raise ValueError("Scoring error due to wrong dtype")
 
-        return 0
+        return score
