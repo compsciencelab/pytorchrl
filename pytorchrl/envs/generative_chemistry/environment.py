@@ -2,7 +2,7 @@ import gym
 import numpy as np
 from gym import spaces
 
-from pytorchrl.envs.generative_chemistry.space import Char
+from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
 class GenChemEnv(gym.Env):

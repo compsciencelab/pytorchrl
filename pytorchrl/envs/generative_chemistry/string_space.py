@@ -8,13 +8,6 @@ class Char(gym.spaces.MultiDiscrete):
     This space consists of a series of `gym.spaces.Discrete` objects all with
     the same parameters. Each `gym.spaces.Discrete` can take integer values
     between 0 and len(self.vocab).
-
-    Notes
-    -----
-    The following special token will be prepended (if needed) to the vocabulary:
-
-      * '#' : Padding token
-
     """
 
     def __init__(self, vocab, max_length=100):
