@@ -5,6 +5,9 @@ from gym import spaces
 from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
+# TODO: review if smiles have to start and end with special characters!
+
+
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
