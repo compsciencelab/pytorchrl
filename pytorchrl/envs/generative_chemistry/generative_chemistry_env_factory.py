@@ -51,7 +51,7 @@ if __name__ == "__main__":
                 "name": "Regression model",  # arbitrary name for the component
                 "weight": 2,  # the weight ("importance") of the component (default: 1)
                 "specific_parameters": {
-                    "model_path": os.path.join(os.path.dirname(), "models/Aurora_model.pkl"),  # absolute model path
+                    "model_path": os.path.join(os.path.dirname(__file__), "models/Aurora_model.pkl"),  # absolute model path
                     "scikit": "regression",  # model can be "regression" or "classification"
                     "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
                     "size": 2048,  # parameter of descriptor type
