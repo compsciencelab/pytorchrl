@@ -35,7 +35,7 @@ def generative_chemistry_train_env_factory(smiles_list, scoring_function_paramet
 if __name__ == "__main__":
 
     smiles_list = ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
-    scoring_function = {
+    scoring_function_parameters = {
         "name": "custom_product",  # this is our default one (alternative: "custom_sum")
         "parallel": False,  # sets whether components are to be executed
         # in parallel; note, that python uses "False" / "True"
@@ -119,7 +119,7 @@ if __name__ == "__main__":
             }]
     }
 
-    env = generative_chemistry_train_env_factory(smiles_list, scoring_function)
+    env = generative_chemistry_train_env_factory(smiles_list, scoring_function_parameters)
     print(f"observation_space {env.observation_space}")
     print(f"action_space {env.action_space}")
     obs = env.reset()

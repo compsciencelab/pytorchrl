@@ -6,6 +6,7 @@ from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
 # TODO: review if smiles have to start and end with special characters!
+# TODO: accept also tokens instead of a string
 
 
 class GenChemEnv(gym.Env):
@@ -34,6 +35,10 @@ class GenChemEnv(gym.Env):
     def step(self, action):
         """Execute one time step within the environment"""
 
+        if not isinstance(action, str):
+            import ipdb; ipdb.set_trace()
+            # TODO: untokenize
+
         self.new_molecule = action
         reward = self._scoring(self.new_molecule)
         info = {}
@@ -50,7 +55,7 @@ class GenChemEnv(gym.Env):
         self.num_episodes += 1
         return self.base_molecule.ljust(self.obs_length, self.vocabulary._tokens[0])
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='human'):
         """Render the environment to the screen"""
 
         print(f'Scaffold: {self.base_molecule}')
