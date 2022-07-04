@@ -6,7 +6,11 @@ agent_name: MPC-PDDM
 frame_skip: 0
 frame_stack: 1
 lr: 1.0e-3
+<<<<<<< HEAD
 n_planner: 500
+=======
+n_planner: 1000
+>>>>>>> 0734b84bc7820f256ac612a4f2dd1e51e8560b8f
 horizon: 30
 max_time: 86400
 num_env_processes: 1

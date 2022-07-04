@@ -20,7 +20,7 @@ class MPC_PDDM(Algorithm):
         Dynamics model learning rate.
     envs : VecEnv
         Vector of environments instance.
-    actor : class instance
+    actor : Actor
         actor class instance.
     device : torch.device
         CPU or specific GPU where class computations will take place.

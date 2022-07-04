@@ -19,6 +19,12 @@ class MPC_CEM(Algorithm):
     ----------
     lr: float
         Dynamics model learning rate.
+    envs : VecEnv
+        Vector of environments instance.
+    actor : Actor
+        actor class instance.
+    device : torch.device
+        CPU or specific GPU where class computations will take place.
     mb_epochs : int
         Training epochs for the dynamics model.
     start_steps: int
