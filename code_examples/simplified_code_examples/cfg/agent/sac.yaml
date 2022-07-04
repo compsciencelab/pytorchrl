@@ -1,0 +1,29 @@
+name: SAC
+
+sac_config:
+  lr_q: 3.0e-4
+  lr_pi: 3.0e-4
+  lr_alpha: 3.0e-4
+  gamma: 0.99
+  polyak: 0.995
+  num_updates: 50
+  update_every: 50
+  test_every: 5000
+  max_grad_norm: 0.5
+  start_steps: 5000
+  mini_batch_size: 256
+  num_test_episodes: 5
+  initial_alpha: 1.0
+  target_update_interval: 1.0
+  policy_loss_addons: null
+
+
+# general config:
+noise: null
+sequence_overlap: 0.5
+
+# default config:
+defaults:
+  - _self_
+  - actor: off_policy
+  - storage: replay_buffer

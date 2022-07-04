@@ -9,6 +9,12 @@ Replay buffer
    :undoc-members:
    :show-inheritance:
 
+<<<<<<< HEAD
+Hindsight experience replay buffer (HER)
+----------------------------------------
+
+.. automodule:: pytorchrl.agent.storages.off_policy.hindsight_experience_replay_buffer
+=======
 N-Step Replay Buffer
 --------------------
 
@@ -37,6 +43,7 @@ Hindsight experience replay buffer (HER)
 ----------------------------------------
 
 .. automodule:: pytorchrl.agent.storages.off_policy.her_buffer
+>>>>>>> 0734b84bc7820f256ac612a4f2dd1e51e8560b8f
    :members:
    :undoc-members:
    :show-inheritance:

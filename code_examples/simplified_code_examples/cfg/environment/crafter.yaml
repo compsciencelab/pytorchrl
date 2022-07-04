@@ -1,0 +1,16 @@
+env_name: crafter
+task: CrafterReward-v1
+train_env_config:
+  env_id: ${environment.task}
+  frame_skip: 0
+  frame_stack: 1
+  index_worker: 0
+  index_env: 0
+  seed: 0
+test_env_config:
+  env_id: ${environment.task}
+  frame_skip: 0
+  frame_stack: 1
+  index_worker: 0
+  index_env: 0
+  seed: 0

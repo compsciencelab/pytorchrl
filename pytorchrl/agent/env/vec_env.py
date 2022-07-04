@@ -1,8 +1,8 @@
 import torch
 from pytorchrl.agent.env.make_env import make_env
 from pytorchrl.agent.env.vector_wrappers import VecPyTorch
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.dummy_vec_env import DummyVecEnv
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.subproc_vec_env import SubprocVecEnv
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.dummy_vec_env import DummyVecEnv
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.subproc_vec_env import SubprocVecEnv
 
 
 class VecEnv:
