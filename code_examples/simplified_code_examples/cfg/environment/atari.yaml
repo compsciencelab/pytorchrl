@@ -12,6 +12,8 @@ train_env_config:
   clip_rewards: False
   max_episode_steps: 4500
   sticky_actions: False
+  embeddings_shape: [11, 8]
+  embeddings_num_values: 8
 test_env_config:
   env_id: ${environment.task}
   index_env: 0
