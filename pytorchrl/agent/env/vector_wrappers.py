@@ -1,6 +1,10 @@
 import torch
+<<<<<<< HEAD
 import numpy as np
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_env.vec_env import VecEnvWrapper
+=======
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvWrapper
+>>>>>>> 0734b84bc7820f256ac612a4f2dd1e51e8560b8f
 
 
 class VecPyTorch(VecEnvWrapper):

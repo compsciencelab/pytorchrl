@@ -233,7 +233,7 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
 
 
 class MontezumaEmbeddingsEnv(gym.Wrapper):
-    def __init__(self, env, use_domain_knowledge=False):
+    def __init__(self, env, embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False):
         gym.Wrapper.__init__(self, env)
 
         # pos 0: The current frame of the episode.
@@ -253,13 +253,15 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
         #       sword +64
         #       torch +128
 
-        self.room_address = 3
-        self.room_level = 57
         self.joe_x = 42
         self.joe_y = 43
+        self.room_level = 57
+        self.room_address = 3
         self.joe_inventory = 65
-        self.use_domain_knowledge = use_domain_knowledge
         self.last_state = None
+        self.embeddings_shape = embeddings_shape
+        self.embeddings_num_values = embeddings_num_values
+        self.use_domain_knowledge = use_domain_knowledge
 
     def step(self, action):
 
@@ -279,7 +281,11 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
 
         else:
             state, reward, done, info = self.env.step(action)
-            embed_state = imdownscale(self.last_state[:, :, -1])
+            embed_state = imdownscale(
+                state=self.last_state[:, :, -1],
+                target_shape=self.embeddings_shape,
+                max_pix_value=self.embeddings_num_values
+            )
 
         info.update({"StateEmbeddings": embed_state})
         self.last_state = state
