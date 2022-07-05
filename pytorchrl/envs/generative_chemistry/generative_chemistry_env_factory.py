@@ -27,6 +27,7 @@ def generative_chemistry_train_env_factory(smiles_list, scoring_function_paramet
     env = GenChemEnv(
         scoring_function=scoring_function,
         base_molecule=smiles_list[0],
+        tokenizer=tokenizer,
         vocabulary=voc)
 
     return env

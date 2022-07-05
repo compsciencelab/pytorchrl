@@ -16,7 +16,7 @@ class MultiCategorical(nn.Module):
         Number of options in output space.
     """
     def __init__(self, num_inputs, num_outputs):
-        super(Categorical, self).__init__()
+        super(MultiCategorical, self).__init__()
 
         init_ = lambda m: init(
             m,

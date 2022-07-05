@@ -14,10 +14,11 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, base_molecule, vocabulary, obs_length=50, **kwargs):
+    def __init__(self, scoring_function, base_molecule, vocabulary, tokenizer, obs_length=50, **kwargs):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
+        self.tokenizer = tokenizer
         self.obs_length = obs_length
         self.vocabulary = vocabulary
         self.base_molecule = base_molecule
@@ -52,7 +53,7 @@ class GenChemEnv(gym.Env):
         """
         self.num_episodes += 1
         scaffold = self.base_molecule.ljust(self.obs_length, self.vocabulary._tokens[0])
-        return self.untokenize(scaffold)
+        return self.vocabulary.untokenize(scaffold)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""
