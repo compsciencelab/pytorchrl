@@ -49,7 +49,7 @@ class GenChemEnv(gym.Env):
         done = True
         new_obs = np.zeros(1)  # Does not matter
 
-        return new_obs, reward, info, done
+        return new_obs, reward, done, info
 
     def reset(self):
         """
