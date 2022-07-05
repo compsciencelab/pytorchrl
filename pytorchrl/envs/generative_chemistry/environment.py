@@ -6,7 +6,6 @@ from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
 # TODO: review if smiles have to start and end with special characters!
-# TODO: accept also tokens instead of a string
 
 
 class GenChemEnv(gym.Env):

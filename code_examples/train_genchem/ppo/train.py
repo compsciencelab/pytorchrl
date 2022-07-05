@@ -144,7 +144,7 @@ def main():
         voc = create_vocabulary(smiles_list, tokenizer)
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            feature_extractor_network=Seq2Seq,
+            feature_extractor_network=get_feature_extractor(args.nn),
             feature_extractor_kwargs={"vocabulary": voc, "tokenizer": tokenizer},
             restart_model=None, recurrent_nets=False)
 
@@ -199,9 +199,9 @@ def get_args():
     parser.add_argument(
         '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
     parser.add_argument(
-        '--agent_name', default=None, help='Name of the wandb run')
+        '--agent-name', default=None, help='Name of the wandb run')
     parser.add_argument(
-        '--wandb_key', default=None, help='Init key from wandb account')
+        '--wandb-key', default=None, help='Init key from wandb account')
 
     # Environment specs
     parser.add_argument(
