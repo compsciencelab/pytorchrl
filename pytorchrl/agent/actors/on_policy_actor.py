@@ -454,6 +454,12 @@ class OnPolicyActor(Actor):
             self.scale = None
             self.unscale = None
 
+        elif isinstance(self.action_space, gym.spaces.MultiDiscrete):  # Continuous action space
+            import ipdb; ipdb.set_trace()
+            dist = get_dist("MultiCategorical")(self.recurrent_size, self.action_space.shape[0])
+            self.scale = None
+            self.unscale = None
+
         elif isinstance(self.action_space, gym.spaces.Box):  # Continuous action space
             dist = get_dist("Gaussian")(self.recurrent_size, self.action_space.shape[0])
             self.scale = Scale(self.action_space)

@@ -1,18 +1,17 @@
-
 """
 Implementation of the RNN model
 """
 from typing import List, Tuple
 import numpy as np
 import torch
-import torch.nn as tnn
-import torch.nn.functional as tnnf
+import torch.nn as nn
+import torch.nn.functional as nnf
 
 from reinvent_models.model_factory.enums.model_mode_enum import ModelModeEnum
 from reinvent_models.reinvent_core.models import vocabulary as mv
 
 
-class RNN(tnn.Module):
+class RNN(nn.Module):
     """
     Implements a N layer GRU(M) cell including an embedding layer
     and an output linear layer back to the size of the vocabulary
@@ -37,16 +36,16 @@ class RNN(tnn.Module):
         self._dropout = dropout
         self._layer_normalization = layer_normalization
 
-        self._embedding = tnn.Embedding(voc_size, self._embedding_layer_size)
+        self._embedding = nn.Embedding(voc_size, self._embedding_layer_size)
         if self._cell_type == 'gru':
-            self._rnn = tnn.GRU(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                                dropout=self._dropout, batch_first=True)
+            self._rnn = nn.GRU(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
+                               dropout=self._dropout, batch_first=True)
         elif self._cell_type == 'lstm':
-            self._rnn = tnn.LSTM(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                                 dropout=self._dropout, batch_first=True)
+            self._rnn = nn.LSTM(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
+                                dropout=self._dropout, batch_first=True)
         else:
             raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
-        self._linear = tnn.Linear(self._layer_size, voc_size)
+        self._linear = nn.Linear(self._layer_size, voc_size)
 
     def forward(self, input_vector, hidden_state=None):  # pylint: disable=W0221
         """
@@ -65,7 +64,7 @@ class RNN(tnn.Module):
         output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
 
         if self._layer_normalization:
-            output_vector = tnnf.layer_norm(output_vector, output_vector.size()[1:])
+            output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
         output_vector = output_vector.reshape(-1, self._layer_size)
 
         # output_data = self._linear(output_vector).view(batch_size, seq_size, -1)
@@ -92,6 +91,7 @@ class Seq2Seq(nn.Module):
     """
 
     def __init__(self,
+                 input_space,
                  vocabulary: mv.Vocabulary,
                  tokenizer, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256, dropout=0.,
                  layer_normalization=False, max_sequence_length=256):
@@ -102,6 +102,9 @@ class Seq2Seq(nn.Module):
         :param network_params: Dictionary with all parameters required to correctly initialize the RNN class.
         :param max_sequence_length: The max size of SMILES sequence that can be generated.
         """
+
+        super(Seq2Seq, self).__init__()
+
         self.vocabulary = vocabulary
         self.tokenizer = tokenizer
         self.max_sequence_length = max_sequence_length
@@ -116,7 +119,7 @@ class Seq2Seq(nn.Module):
             embedding_layer_size=embedding_layer_size)
 
         # TODO: keep ?
-        self._nll_loss = tnn.NLLLoss(reduction="none")
+        self._nll_loss = nn.NLLLoss(reduction="none")
 
     def set_mode(self, mode: str):
         if mode == self._model_modes.TRAINING:

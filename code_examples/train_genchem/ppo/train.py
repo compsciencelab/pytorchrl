@@ -57,7 +57,7 @@ def main():
                     "name": "Regression model",  # arbitrary name for the component
                     "weight": 2,  # the weight ("importance") of the component (default: 1)
                     "specific_parameters": {
-                        "model_path": os.path.join(os.path.dirname(__file__), "models/Aurora_model.pkl"),
+                        "model_path": os.path.isdir('code_examples/train_genchem/ppo/../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
                         # absolute model path
                         "scikit": "regression",  # model can be "regression" or "classification"
                         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
@@ -152,29 +152,12 @@ def main():
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
 
         # 5. Define scheme
-        params = {}
-
-        # add core modules
-        params.update({
+        params = {
             "algo_factory": algo_factory,
             "actor_factory": actor_factory,
             "storage_factory": storage_factory,
             "train_envs_factory": train_envs_factory,
-        })
-
-        # add collection specs
-        params.update({
-            "num_col_workers": args.num_col_workers,
-            "col_workers_communication": args.com_col_workers,
-            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.5},
-        })
-
-        # add gradient specs
-        params.update({
-            "num_grad_workers": args.num_grad_workers,
-            "grad_workers_communication": args.com_grad_workers,
-            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
-        })
+        }
 
         scheme = Scheme(**params)
 
