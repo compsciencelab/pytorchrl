@@ -53,18 +53,15 @@ class RNN(nn.Module):
         :param input_vector: Input tensor (batch_size, seq_size).
         :param hidden_state: Hidden state tensor.
         """
-
-        import ipdb; ipdb.set_trace()
-
         input_vector = torch.clamp(input_vector, 0.0, self._embedding.num_embeddings).long()
 
         batch_size, seq_size = input_vector.size()
         if hidden_state is None:
             size = (self._num_layers, batch_size, self._layer_size)
             if self._cell_type == "gru":
-                hidden_state = torch.zeros(*size)
+                hidden_state = torch.zeros(*size).to(input_vector.device)
             else:
-                hidden_state = [torch.zeros(*size), torch.zeros(*size)]
+                hidden_state = [torch.zeros(*size).to(input_vector.device), torch.zeros(*size).to(input_vector.device)]
         embedded_data = self._embedding(input_vector)  # (batch,seq,embedding)
         output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
 

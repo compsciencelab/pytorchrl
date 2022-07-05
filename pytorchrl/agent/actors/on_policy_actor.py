@@ -437,8 +437,8 @@ class OnPolicyActor(Actor):
 
         # ---- 2. Define memory network  --------------------------------------
 
-        feature_size = int(np.prod(policy_feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape))
+        features = policy_feature_extractor(torch.randn(1, *self.input_space.shape))
+        feature_size = int(np.prod(features.shape))
 
         if self.recurrent_nets:
             policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
@@ -454,8 +454,8 @@ class OnPolicyActor(Actor):
             self.scale = None
             self.unscale = None
 
-        elif isinstance(self.action_space, gym.spaces.MultiDiscrete):  # Continuous action space
-            import ipdb; ipdb.set_trace()
+        elif isinstance(self.action_space, gym.spaces.MultiDiscrete):
+            self.recurrent_size = int(np.prod(features.shape[2:]))
             dist = get_dist("MultiCategorical")(self.recurrent_size, self.action_space.individual_shape[0])
             self.scale = None
             self.unscale = None

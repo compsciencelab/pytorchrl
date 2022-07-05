@@ -36,7 +36,8 @@ class GenChemEnv(gym.Env):
         """Execute one time step within the environment"""
 
         if not isinstance(action, str):
-            self.tokenize(action)
+            import ipdb; ipdb.set_trace()
+            self.vocabulary.dencode(action.squeeze().tolist())
 
         self.new_molecule = action
         reward = self._scoring(self.new_molecule)
@@ -52,8 +53,9 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-        scaffold = self.base_molecule.ljust(self.obs_length, self.vocabulary._tokens[0])
-        return self.vocabulary.untokenize(scaffold)
+        tokenized_scaffold = self.tokenizer.tokenize(self.base_molecule)
+        tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))
+        return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""

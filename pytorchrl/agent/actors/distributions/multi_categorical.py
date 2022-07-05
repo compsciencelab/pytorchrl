@@ -53,15 +53,13 @@ class MultiCategorical(nn.Module):
             Action probability distribution.
         """
 
-        import ipdb; ipdb.set_trace()
-
         # TODO: make sure shape of x is (bs, seq_size, num_features)
 
         # Get x dims
-        bs, seq_size, vocabulary_size = x.shape  # TODO. review
+        bs, seq_size, num_features = x.shape  # TODO. review
 
         # TODO: unravel
-        x = x.view(bs * seq_size, vocabulary_size)
+        x = x.view(bs * seq_size, num_features)
 
         # Predict distribution parameters
         x = self.linear(x)  # TODO, shape (bs, seq_size, vocabulary_size)
@@ -72,8 +70,6 @@ class MultiCategorical(nn.Module):
             pred = dist.probs.argmax(dim=-1, keepdim=True)
         else:
             pred = dist.sample().unsqueeze(-1)
-
-        import ipdb; ipdb.set_trace()
 
         # Action log probability
         logp = dist.log_prob(pred.squeeze(-1)).view(pred.size(0), -1).sum(-1).unsqueeze(-1)
