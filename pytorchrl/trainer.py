@@ -1,11 +1,10 @@
-import os
 import sys
 import time
 
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.utils import save_argparse, cleanup_log_dir
+from pytorchrl.utils import cleanup_log_dir
 
 # backup checks for possible algos and envs
 ENVS_LIST = ["gym", "pybullet", "mujoco", "causalworld", "crafter", "atari"]
@@ -28,7 +27,7 @@ class Trainer():
         self.learner = self.setup_learner()
 
         
-    def train(self, ):
+    def train(self, wandb):
         iterations = 0
         start_time = time.time()
         while not self.learner.done():
@@ -36,6 +35,9 @@ class Trainer():
             self.learner.step()
 
             if iterations % self.config.log_interval == 0:
+                log_data = self.learner.get_metrics(add_episodes_metrics=True)
+                log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
+                wandb.log(log_data, step=self.learner.num_samples_collected)
                 self.learner.print_info()
 
             if iterations % self.config.save_interval == 0:
