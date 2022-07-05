@@ -56,6 +56,8 @@ class RNN(nn.Module):
 
         import ipdb; ipdb.set_trace()
 
+        input_vector = torch.clamp(input_vector, 0.0, self._embedding.num_embeddings).long()
+
         batch_size, seq_size = input_vector.size()
         if hidden_state is None:
             size = (self._num_layers, batch_size, self._layer_size)

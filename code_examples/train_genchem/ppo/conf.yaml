@@ -6,7 +6,7 @@ log_dir: /tmp/causal_world_ppo
 gamma: 0.99
 save_interval: 10000
 max_time: 86400
-num_env_processes: 8
+num_env_processes: 1
 num_steps: 128
 num_mini_batch: 4
 clip_param: 0.1

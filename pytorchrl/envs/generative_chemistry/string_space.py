@@ -26,10 +26,10 @@ class Char(gym.spaces.MultiDiscrete):
 
         self.vocab = vocab
         self.max_length = max_length
+        self.individual_shape = (len(vocab),)
 
         super().__init__([len(self.vocab) - 1] * self.max_length)
         self.dtype = np.int64  # Overwrite Gym's dtype=int8.
-        # self.shape = (self.max_length, 1)
 
     def filter_unknown(self, text):
         """ Strip out all characters not in the vocabulary. """
