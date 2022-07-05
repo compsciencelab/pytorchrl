@@ -36,14 +36,18 @@ class GenChemEnv(gym.Env):
         """Execute one time step within the environment"""
 
         if not isinstance(action, str):
-            import ipdb; ipdb.set_trace()
-            self.vocabulary.dencode(action.squeeze().tolist())
+            action = self.vocabulary.decode(action.squeeze().tolist())
+            action = self.tokenizer.untokenize(action)
 
         self.new_molecule = action
-        reward = self._scoring(self.new_molecule)
+        try:
+            reward = self._scoring(self.new_molecule)
+        except TypeError:
+            reward = 0.0  # Invalid molecule
+
         info = {}
         done = True
-        new_obs = None  # Does not matter
+        new_obs = np.zeros(1)  # Does not matter
 
         return new_obs, reward, info, done
 
@@ -76,4 +80,4 @@ class GenChemEnv(gym.Env):
         else:
             raise ValueError("Scoring error due to wrong dtype")
 
-        return score
+        return score.total_score[0]

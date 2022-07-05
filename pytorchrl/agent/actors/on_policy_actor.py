@@ -319,6 +319,9 @@ class OnPolicyActor(Actor):
                     value_features, rhs[value_net_name], done)
             value = value_net.predictor(value_features)
 
+        if len(value.shape) == 3:  # To deal with the MultiCategorical case,
+            value = value[:, -1, :]
+
         return value, rhs
 
     def get_value(self, obs, rhs, done):

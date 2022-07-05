@@ -106,14 +106,12 @@ class MultiCategorical(nn.Module):
         dist : torch.Distribution
             Action probability distribution.
         """
-
-        import ipdb; ipdb.set_trace()
-
         # Get x dims
-        bs, seq_size, vocabulary_size = x.shape  # TODO. review
+        bs, seq_size, num_features = x.shape  # TODO. review
 
         # TODO: unravel
-        x = x.view(bs * seq_size, vocabulary_size)
+        x = x.view(bs * seq_size, num_features)
+        reshaped_pred = pred.view(bs * seq_size, -1)
 
         # Predict distribution parameters
         x = self.linear(x)
@@ -122,8 +120,7 @@ class MultiCategorical(nn.Module):
         dist = torch.distributions.Categorical(logits=x)
 
         # Evaluate log prob of under dist
-        logp = dist.log_prob(pred.squeeze(-1)).unsqueeze(-1).sum(-1, keepdim=True)
-        logp = logp.view(bs, seq_size, -1).sum(1)  # TODO. review
+        logp = dist.log_prob(reshaped_pred).view(pred.size(0), -1).sum(-1).unsqueeze(-1)
 
         # Distribution entropy
         entropy_dist = dist.entropy().mean()
