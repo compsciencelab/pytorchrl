@@ -53,6 +53,9 @@ class RNN(nn.Module):
         :param input_vector: Input tensor (batch_size, seq_size).
         :param hidden_state: Hidden state tensor.
         """
+
+        import ipdb; ipdb.set_trace()
+
         batch_size, seq_size = input_vector.size()
         if hidden_state is None:
             size = (self._num_layers, batch_size, self._layer_size)
@@ -120,6 +123,10 @@ class Seq2Seq(nn.Module):
 
         # TODO: keep ?
         self._nll_loss = nn.NLLLoss(reduction="none")
+
+    def forward(self, inputs):
+        out, rhs = self.network(inputs)
+        return out
 
     def set_mode(self, mode: str):
         if mode == self._model_modes.TRAINING:

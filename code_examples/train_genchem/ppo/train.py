@@ -57,7 +57,7 @@ def main():
                     "name": "Regression model",  # arbitrary name for the component
                     "weight": 2,  # the weight ("importance") of the component (default: 1)
                     "specific_parameters": {
-                        "model_path": os.path.isdir('code_examples/train_genchem/ppo/../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
+                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
                         # absolute model path
                         "scikit": "regression",  # model can be "regression" or "classification"
                         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
