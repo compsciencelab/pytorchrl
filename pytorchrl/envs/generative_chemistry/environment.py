@@ -57,7 +57,8 @@ class GenChemEnv(gym.Env):
         """
         self.num_episodes += 1
         tokenized_scaffold = self.tokenizer.tokenize(self.base_molecule)
-        tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))
+        tokenized_scaffold = ["^"] + tokenized_scaffold  # Start token
+        tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # End token
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
