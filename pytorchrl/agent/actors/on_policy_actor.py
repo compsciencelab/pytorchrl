@@ -310,17 +310,22 @@ class OnPolicyActor(Actor):
         if self.shared_policy_value_network:
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
-            value = value_net.predictor(self.last_action_features)
+            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                features = rhs["policy"]
+            else:
+                features = self.last_action_features
+            value = value_net.predictor(features)
 
         else:
             value_features = value_net.feature_extractor(obs)
             if self.recurrent_nets:
                 value_features, rhs[value_net_name] = value_net.memory_net(
                     value_features, rhs[value_net_name], done)
-            value = value_net.predictor(value_features)
-
-        if len(value.shape) == 3:  # To deal with the MultiCategorical case,
-            value = value[:, -1, :]
+                if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                    features = rhs[value_net_name]
+                else:
+                    features = value_features
+            value = value_net.predictor(features)
 
         return value, rhs
 
@@ -396,6 +401,9 @@ class OnPolicyActor(Actor):
 
             feature_size = int(np.prod(value_feature_extractor(
                 torch.randn(1, *self.input_space.shape)).shape))
+
+            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                feature_size = self.recurrent_hidden_state_size
 
             if self.recurrent_nets:
                 value_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
