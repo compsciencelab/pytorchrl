@@ -276,7 +276,6 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
                     ram[self.joe_inventory],
                 ]
             )
-            print(embed_state)
             state, reward, done, info = self.env.step(action)
 
         else:

@@ -21,7 +21,7 @@ copyright = '2020, pytorchrl'
 author = 'abou'
 
 # The full version, including alpha/beta/rc tags
-release = '2.4.16'
+release = '2.4.17'
 
 
 
