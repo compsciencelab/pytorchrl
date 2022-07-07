@@ -61,6 +61,8 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 # html_theme = 'sphinx_rtd_theme'
+
+import sphinx_bernard_theme
 html_theme = 'sphinx_bernard_theme'
 html_theme_path = [sphinx_bernard_theme.get_html_theme_path()]
 
