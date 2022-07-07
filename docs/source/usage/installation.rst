@@ -35,7 +35,6 @@ Installing PyTorchRL library
 
     #!/usr/bin/env python3
 
-    import ray
     import gym
     from pytorchrl import Learner
     from pytorchrl.scheme import Scheme
@@ -50,8 +49,6 @@ Installing PyTorchRL library
         return env
 
     if __name__ == "__main__":
-
-        ray.init()
 
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(

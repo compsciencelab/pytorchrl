@@ -1,7 +1,7 @@
 Learner
 =======
 
-.. toctree::
-   :maxdepth: 3
-
-   learner
+.. automodule:: pytorchrl.learner
+   :members:
+   :undoc-members:
+   :show-inheritance:

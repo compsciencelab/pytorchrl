@@ -1,7 +1,7 @@
 PyTorchRL Documentation
 =======================
 
-.. warning::
+..
     Nowhere in this documentation is the identity of the authors
     disclosed. However github links should not be followed to
     preserve anonymous review. On the other hand, other people
@@ -24,8 +24,7 @@ PyTorchRL Documentation
 
 
    package/agent/agent
-   package/scheme/scheme
-   package/learner
+   package/training/training
 
 .. toctree::
    :maxdepth: 2
