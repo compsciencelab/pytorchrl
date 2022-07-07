@@ -132,10 +132,11 @@ class Scheme:
         logger.warning("Created training scheme.")
 
     def update_worker(self):
-        """Return local worker"""
+        """Returns local worker"""
         return self._update_worker
 
     def get_agent_components(self):
+        """Returns class names for each agent component."""
         return {
             "Actor": self._update_worker.local_worker.local_worker.actor.__class__.__name__,
             "Algorithm": self._update_worker.local_worker.local_worker.algo.__class__.__name__,

@@ -385,7 +385,7 @@ class DDPG(Algorithm):
 
         Returns
         -------
-        loss_pi : torch.tensor
+        loss_pi: torch.tensor
             DDPG policy loss.
         """
 
