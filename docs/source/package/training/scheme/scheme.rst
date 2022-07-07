@@ -1,5 +1,5 @@
-Training Scheme
-===============
+Scheme
+======
 
 .. automodule:: pytorchrl.scheme.scheme
    :members:

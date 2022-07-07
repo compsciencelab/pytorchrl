@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Learner:
     """
-    Task learner class.
-
-    Class to manage the training process. It pushes forward the training
+    Task learner class. Class to manage the training process. It pushes forward the training
     process by calling the update workers and tracks progress.
 
     Parameters
