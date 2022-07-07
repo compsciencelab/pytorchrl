@@ -2,14 +2,14 @@ Actors
 ======
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    off_policy
    on_policy
    model_based
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    distributions
    feature_extractors
