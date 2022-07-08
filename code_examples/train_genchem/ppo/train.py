@@ -22,21 +22,21 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 from pytorchrl.agent.actors.feature_extractors.seq2seq import Seq2Seq
 
 weights_mapping = {
-    "_embedding.weight": policy_net.feature_extractor.network._embedding.weight,
-    "_rnn.weight_ih_l0": policy_net.feature_extractor.network._rnn.weight_ih_l0,
-    "_rnn.weight_hh_l0": policy_net.feature_extractor.network._rnn.weight_hh_l0,
-    "_rnn.bias_ih_l0": policy_net.feature_extractor.network._rnn.bias_ih_l0,
-    "_rnn.bias_hh_l0": policy_net.feature_extractor.network._rnn.bias_hh_l0,
-    "_rnn.weight_ih_l1": policy_net.feature_extractor.network._rnn.weight_ih_l1,
-    "_rnn.weight_hh_l1": policy_net.feature_extractor.network._rnn.weight_hh_l1,
-    "_rnn.bias_ih_l1": policy_net.feature_extractor.network._rnn.bias_ih_l1,
-    "_rnn.bias_hh_l1": policy_net.feature_extractor.network._rnn.bias_hh_l1,
-    "_rnn.weight_ih_l2": policy_net.feature_extractor.network._rnn.weight_ih_l2,
-    "_rnn.weight_hh_l2": policy_net.feature_extractor.network._rnn.weight_hh_l2,
-    "_rnn.bias_ih_l2": policy_net.feature_extractor.network._rnn.bias_ih_l2,
-    "_rnn.bias_hh_l2": policy_net.feature_extractor.network._rnn.bias_hh_l2,
-    "_linear.weight": policy_net.dist.linear.weight,
-    "_linear.bias": policy_net.dist.linear.bias,
+    "_embedding.weight": "policy_net.feature_extractor.network._embedding.weight",
+    "_rnn.weight_ih_l0": "policy_net.feature_extractor.network._rnn.weight_ih_l0",
+    "_rnn.weight_hh_l0": "policy_net.feature_extractor.network._rnn.weight_hh_l0",
+    "_rnn.bias_ih_l0": "policy_net.feature_extractor.network._rnn.bias_ih_l0",
+    "_rnn.bias_hh_l0": "policy_net.feature_extractor.network._rnn.bias_hh_l0",
+    "_rnn.weight_ih_l1": "policy_net.feature_extractor.network._rnn.weight_ih_l1",
+    "_rnn.weight_hh_l1": "policy_net.feature_extractor.network._rnn.weight_hh_l1",
+    "_rnn.bias_ih_l1": "policy_net.feature_extractor.network._rnn.bias_ih_l1",
+    "_rnn.bias_hh_l1": "policy_net.feature_extractor.network._rnn.bias_hh_l1",
+    "_rnn.weight_ih_l2": "policy_net.feature_extractor.network._rnn.weight_ih_l2",
+    "_rnn.weight_hh_l2": "policy_net.feature_extractor.network._rnn.weight_hh_l2",
+    "_rnn.bias_ih_l2": "policy_net.feature_extractor.network._rnn.bias_ih_l2",
+    "_rnn.bias_hh_l2": "policy_net.feature_extractor.network._rnn.bias_hh_l2",
+    "_linear.weight": "policy_net.dist.linear.weight",
+    "_linear.bias": "policy_net.dist.linear.bias",
 }
 
 
