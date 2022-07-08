@@ -13,14 +13,14 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, base_molecule, vocabulary, tokenizer, obs_length=50, **kwargs):
+    def __init__(self, scoring_function, scaffold, vocabulary, tokenizer, obs_length=50, **kwargs):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.tokenizer = tokenizer
         self.obs_length = obs_length
         self.vocabulary = vocabulary
-        self.base_molecule = base_molecule
+        self.scaffold = scaffold
         self.scoring_function = scoring_function
 
         # Define action and observation space
@@ -28,8 +28,8 @@ class GenChemEnv(gym.Env):
         self.action_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
         self.observation_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
 
-        # Make sure base molecule is a string
-        assert isinstance(base_molecule, str), "Base molecule is not a string"
+        # Make sure scaffold is a string
+        assert isinstance(scaffold, str), "Base molecule is not a string"
 
     def step(self, action):
         """Execute one time step within the environment"""
@@ -56,7 +56,7 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-        tokenized_scaffold = self.tokenizer.tokenize(self.base_molecule)
+        tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
         tokenized_scaffold = ["^"] + tokenized_scaffold  # Start token
         tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # End token
         return self.vocabulary.encode(tokenized_scaffold)
@@ -64,7 +64,7 @@ class GenChemEnv(gym.Env):
     def render(self, mode='human'):
         """Render the environment to the screen"""
 
-        print(f'Scaffold: {self.base_molecule}')
+        print(f'Scaffold: {self.scaffold}')
         print(f'Decorated Scaffold: {self.new_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 

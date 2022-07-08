@@ -5,6 +5,7 @@ import ray
 import sys
 import time
 import wandb
+import torch
 import argparse
 
 from pytorchrl.learner import Learner
@@ -19,6 +20,23 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 
 # Testing
 from pytorchrl.agent.actors.feature_extractors.seq2seq import Seq2Seq
+
+
+def adapt_checkpoint(file_path):
+
+    if torch.cuda.is_available():
+        save_dict = torch.load(file_path)
+    else:
+        save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
+
+    # TODO: change network weight names
+
+    # TODO: save network weight to /tmp/network_params
+    import ipdb; ipdb.set_trace()
+    torch.save(save_dict['network'], "/tmp/network_params.tmp")
+
+    return save_dict['vocabulary'], save_dict['tokenizer'], save_dict['max_sequence_length'],\
+           save_dict['network_params'], "/tmp/network_params"
 
 
 def main():
@@ -38,6 +56,13 @@ def main():
 
         # Sanity check, make sure that logging matches execution
         args = wandb.config
+
+        # 0. Load checkpoint
+        try:
+            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
+                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
+        except Exception:
+            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = None, None, None, {}, {}
 
         # 1. Define Train Vector of Envs
         smiles_list = ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
@@ -140,13 +165,16 @@ def main():
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
         # 3. Define RL Policy
-        tokenizer = SMILESTokenizer()
-        voc = create_vocabulary(smiles_list, tokenizer)
+        if tokenizer is None and vocabulary is None:
+            tokenizer = SMILESTokenizer()
+            vocabulary = create_vocabulary(smiles_list, tokenizer)
+            network_weights = None
+
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor(args.nn),
-            feature_extractor_kwargs={"vocabulary": voc, "tokenizer": tokenizer},
-            restart_model=None, recurrent_nets=False)
+            feature_extractor_kwargs={"vocabulary": vocabulary, "tokenizer": tokenizer},
+            restart_model=network_weights, recurrent_nets=False)
 
         # 4. Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
