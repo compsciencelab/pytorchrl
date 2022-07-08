@@ -21,6 +21,24 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # Testing
 from pytorchrl.agent.actors.feature_extractors.seq2seq import Seq2Seq
 
+weights_mapping = {
+    "_embedding.weight": policy_net.feature_extractor.network._embedding.weight,
+    "_rnn.weight_ih_l0": policy_net.feature_extractor.network._rnn.weight_ih_l0,
+    "_rnn.weight_hh_l0": policy_net.feature_extractor.network._rnn.weight_hh_l0,
+    "_rnn.bias_ih_l0": policy_net.feature_extractor.network._rnn.bias_ih_l0,
+    "_rnn.bias_hh_l0": policy_net.feature_extractor.network._rnn.bias_hh_l0,
+    "_rnn.weight_ih_l1": policy_net.feature_extractor.network._rnn.weight_ih_l1,
+    "_rnn.weight_hh_l1": policy_net.feature_extractor.network._rnn.weight_hh_l1,
+    "_rnn.bias_ih_l1": policy_net.feature_extractor.network._rnn.bias_ih_l1,
+    "_rnn.bias_hh_l1": policy_net.feature_extractor.network._rnn.bias_hh_l1,
+    "_rnn.weight_ih_l2": policy_net.feature_extractor.network._rnn.weight_ih_l2,
+    "_rnn.weight_hh_l2": policy_net.feature_extractor.network._rnn.weight_hh_l2,
+    "_rnn.bias_ih_l2": policy_net.feature_extractor.network._rnn.bias_ih_l2,
+    "_rnn.bias_hh_l2": policy_net.feature_extractor.network._rnn.bias_hh_l2,
+    "_linear.weight": policy_net.dist.linear.weight,
+    "_linear.bias": policy_net.dist.linear.bias,
+}
+
 
 def adapt_checkpoint(file_path):
 
@@ -29,14 +47,15 @@ def adapt_checkpoint(file_path):
     else:
         save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
 
-    # TODO: change network weight names
+    # Change network weight names
+    for k in save_dict.keys():
+        save_dict[weights_mapping[k]] = save_dict[k]
 
-    # TODO: save network weight to /tmp/network_params
-    import ipdb; ipdb.set_trace()
+    # Temporarily save network weight to /tmp/network_params
     torch.save(save_dict['network'], "/tmp/network_params.tmp")
 
     return save_dict['vocabulary'], save_dict['tokenizer'], save_dict['max_sequence_length'],\
-           save_dict['network_params'], "/tmp/network_params"
+           save_dict['network_params'], "/tmp/network_params.tmp"
 
 
 def main():

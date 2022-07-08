@@ -45,7 +45,6 @@ class RNN(nn.Module):
                                 dropout=self._dropout, batch_first=True)
         else:
             raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
-        self._linear = nn.Linear(self._layer_size, voc_size)
 
     def forward(self, input_vector, hidden_state=None):  # pylint: disable=W0221
         """
@@ -69,7 +68,6 @@ class RNN(nn.Module):
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
         output_vector = output_vector.reshape(-1, self._layer_size)
 
-        # output_data = self._linear(output_vector).view(batch_size, seq_size, -1)
         output_data = output_vector.view(batch_size, seq_size, -1)
 
         return output_data, hidden_state_out
