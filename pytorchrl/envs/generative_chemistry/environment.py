@@ -33,9 +33,6 @@ class GenChemEnv(gym.Env):
         self.action_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
         self.observation_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
 
-        # Make sure scaffold is a string
-        assert isinstance(scaffold, str), "Base molecule is not a string"
-
     def step(self, action):
         """Execute one time step within the environment"""
 
