@@ -20,8 +20,13 @@ class GenChemEnv(gym.Env):
         self.tokenizer = tokenizer
         self.obs_length = obs_length
         self.vocabulary = vocabulary
-        self.scaffold = scaffold
         self.scoring_function = scoring_function
+
+        if isinstance(scaffold, list):
+            if len(scaffold) > 0:
+                self.scaffold = scaffold[0]
+            else:
+                self.scaffold = None
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -56,9 +61,12 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-        tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
-        tokenized_scaffold = ["^"] + tokenized_scaffold  # Start token
-        tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # End token
+        if self.scaffold is None:
+            tokenized_scaffold = ["^"]
+        else:
+            tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
+            tokenized_scaffold = ["^"] + tokenized_scaffold  # Start token
+            tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # End token
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):

@@ -97,9 +97,6 @@ class Actor(nn.Module, ABC):
 
     def try_load_from_checkpoint(self):
         """Load weights from previously saved checkpoint."""
-
-        import ipdb; ipdb.set_trace()
-
         if isinstance(self.checkpoint, str):
             print("Loading all model weight from {}".format(self.checkpoint))
             self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))

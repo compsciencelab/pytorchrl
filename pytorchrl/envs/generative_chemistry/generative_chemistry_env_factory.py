@@ -5,7 +5,7 @@ from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, crea
 from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
 
 
-def generative_chemistry_train_env_factory(smiles_list, scoring_function_parameters, tokenizer=None, vocabulary=None, obs_length=50):
+def generative_chemistry_train_env_factory(scoring_function_parameters, smiles_list=[], tokenizer=None, vocabulary=None, obs_length=50):
     """
     Create train GenChem environment.
 
@@ -27,7 +27,7 @@ def generative_chemistry_train_env_factory(smiles_list, scoring_function_paramet
 
     env = GenChemEnv(
         scoring_function=scoring_function,
-        scaffold=smiles_list[0],
+        scaffold=smiles_list,
         tokenizer=tokenizer,
         vocabulary=vocabulary,
         obs_length=obs_length)
