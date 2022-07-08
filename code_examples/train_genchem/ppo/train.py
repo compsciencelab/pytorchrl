@@ -47,12 +47,14 @@ def adapt_checkpoint(file_path):
     else:
         save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
 
+    new_save_dict = {}
+
     # Change network weight names
-    for k in save_dict.keys():
-        save_dict[weights_mapping[k]] = save_dict[k]
+    for k in save_dict["network"].keys():
+        new_save_dict[weights_mapping[k]] = save_dict["network"][k]
 
     # Temporarily save network weight to /tmp/network_params
-    torch.save(save_dict['network'], "/tmp/network_params.tmp")
+    torch.save(new_save_dict, "/tmp/network_params.tmp")
 
     return save_dict['vocabulary'], save_dict['tokenizer'], save_dict['max_sequence_length'],\
            save_dict['network_params'], "/tmp/network_params.tmp"
@@ -173,7 +175,10 @@ def main():
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "smiles_list": smiles_list,
-                "scoring_function_parameters": scoring_function_parameters},
+                "scoring_function_parameters": scoring_function_parameters,
+                "tokenizer": tokenizer, "vocabulary": vocabulary,
+                "obs_length": max_sequence_length,
+            },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
         # 2. Define RL training algorithm
@@ -192,8 +197,13 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor(args.nn),
-            feature_extractor_kwargs={"vocabulary": vocabulary, "tokenizer": tokenizer},
-            restart_model=network_weights, recurrent_nets=False)
+            feature_extractor_kwargs={
+                "vocabulary": vocabulary,
+                "tokenizer": tokenizer,
+                **network_params
+            },
+            restart_model={"policy_net": network_weights},
+            recurrent_nets=False)
 
         # 4. Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
