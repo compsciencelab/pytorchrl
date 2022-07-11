@@ -8,6 +8,7 @@ import wandb
 import torch
 import argparse
 
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -191,7 +192,7 @@ def main():
 
         # 2. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name,
+            obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.nn),
             feature_extractor_kwargs={
                 "vocabulary": vocabulary,
