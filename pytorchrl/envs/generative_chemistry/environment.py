@@ -58,11 +58,8 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-        if self.scaffold is None:
-            tokenized_scaffold = ["^"]
-        else:
-            tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
-            # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
+        tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
+        # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
