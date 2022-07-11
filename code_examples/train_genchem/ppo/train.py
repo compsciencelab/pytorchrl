@@ -82,11 +82,18 @@ def main():
         try:
             vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
                 os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
+            restart_model = {"policy_net": network_weights}
+            smiles_list = []
         except Exception:
-            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = None, None, None, {}, {}
+            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = None, None, 100, {}, None
+            restart_model = None
+            smiles_list = ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
 
         # 1. Define Train Vector of Envs
-        smiles_list = ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
+        if tokenizer is None and vocabulary is None:
+            tokenizer = SMILESTokenizer()
+            vocabulary = create_vocabulary(smiles_list, tokenizer)
+            network_weights = None
         scoring_function_parameters = {
             "name": "custom_product",  # this is our default one (alternative: "custom_sum")
             "parallel": False,  # sets whether components are to be executed
@@ -189,11 +196,6 @@ def main():
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
 
         # 3. Define RL Policy
-        if tokenizer is None and vocabulary is None:
-            tokenizer = SMILESTokenizer()
-            vocabulary = create_vocabulary(smiles_list, tokenizer)
-            network_weights = None
-
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor(args.nn),
@@ -202,7 +204,7 @@ def main():
                 "tokenizer": tokenizer,
                 **network_params
             },
-            restart_model={"policy_net": network_weights},
+            restart_model=restart_model,
             recurrent_nets=False)
 
         # 4. Define rollouts storage

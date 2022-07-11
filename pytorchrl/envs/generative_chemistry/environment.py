@@ -26,7 +26,7 @@ class GenChemEnv(gym.Env):
             if len(scaffold) > 0:
                 self.scaffold = scaffold[0]
             else:
-                self.scaffold = None
+                self.scaffold = ""
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -62,8 +62,7 @@ class GenChemEnv(gym.Env):
             tokenized_scaffold = ["^"]
         else:
             tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
-            tokenized_scaffold = ["^"] + tokenized_scaffold  # Start token
-            tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # End token
+            # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
