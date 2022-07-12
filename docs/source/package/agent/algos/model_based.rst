@@ -4,7 +4,7 @@ Model-Based
 Model Predictive Control (MPC) Random Shooting (RS)
 ---------------------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.model_based.mpc_rs
+.. autoclass:: pytorchrl.agent.algorithms.model_based.mpc_rs.MPC_RS
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Model Predictive Control (MPC) Random Shooting (RS)
 Model Predictive Control (MPC) Cross-Entropy Method (CEM)
 ---------------------------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.model_based.mpc_cem
+.. autoclass:: pytorchrl.agent.algorithms.model_based.mpc_cem.MPC_CEM
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ Model Predictive Control (MPC) Cross-Entropy Method (CEM)
 Model Predictive Control (MPC) Deep Dynamics Models (PDDM)
 ----------------------------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.model_based.mpc_pddm
+.. autoclass:: pytorchrl.agent.algorithms.model_based.mpc_pddm.MPC_PDDM
    :members:
    :undoc-members:
    :show-inheritance:

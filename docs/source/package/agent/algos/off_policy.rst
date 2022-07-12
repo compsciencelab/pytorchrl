@@ -4,7 +4,7 @@ Off-policy
 Double Deep Q-Learning (DDQN)
 -----------------------------
 
-.. automodule:: pytorchrl.agent.pytorchrl.agent.algorithms.off_policy.ddqn
+.. autoclass:: pytorchrl.agent.pytorchrl.agent.algorithms.off_policy.ddqn.DDQN
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Double Deep Q-Learning (DDQN)
 Deep Deterministic Policy Gradient (DDPG)
 -----------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.off_policy.ddpg
+.. autoclass:: pytorchrl.agent.algorithms.off_policy.ddpg.DDPG
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ Deep Deterministic Policy Gradient (DDPG)
 Twin Delayed Deep Deterministic (TD3)
 -------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.off_policy.td3
+.. autoclass:: pytorchrl.agent.algorithms.off_policy.td3.TD3
    :members:
    :undoc-members:
    :show-inheritance:
@@ -28,7 +28,7 @@ Twin Delayed Deep Deterministic (TD3)
 Soft Actor Critic (SAC)
 -----------------------
 
-.. automodule:: pytorchrl.agent.algorithms.off_policy.sac
+.. autoclass:: pytorchrl.agent.algorithms.off_policy.sac.SAC
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ Soft Actor Critic (SAC)
 Maximum a Posteriori Policy Optimization (MPO)
 ----------------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.off_policy.mpo
+.. autoclass:: pytorchrl.agent.algorithms.off_policy.mpo.MPO
    :members:
    :undoc-members:
    :show-inheritance:

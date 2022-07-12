@@ -16,7 +16,7 @@ Environment Vectors
 VecEnv
 ------
 
-.. automodule:: pytorchrl.agent.env.vec_env
+.. autoclass:: pytorchrl.agent.env.vec_env.VecEnv
    :members:
    :undoc-members:
    :show-inheritance:

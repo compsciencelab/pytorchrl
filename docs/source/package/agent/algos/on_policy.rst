@@ -4,7 +4,7 @@ On-policy
 Advantage Actor Critic (A2C)
 ----------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.on_policy.a2c
+.. autoclass:: pytorchrl.agent.algorithms.on_policy.a2c.A2C
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Advantage Actor Critic (A2C)
 Proximal Policy Optimization (PPO)
 ----------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.on_policy.ppo
+.. autoclass:: pytorchrl.agent.algorithms.on_policy.ppo.PPO
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ Proximal Policy Optimization (PPO)
 Proximal Policy Optimization (PPO) with Random Network Distillation (RND)
 -------------------------------------------------------------------------
 
-.. automodule:: pytorchrl.agent.algorithms.on_policy.rnd_ppo
+.. autoclass:: pytorchrl.agent.algorithms.on_policy.rnd_ppo.RND_PPO
    :members:
    :undoc-members:
    :show-inheritance:
