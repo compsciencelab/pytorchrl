@@ -33,6 +33,7 @@ PyTorchRL Documentation
 
    tutorials/feature_extractor_tutorial
    tutorials/new_components_tutorial
+   tutorials/custom_environment_tutorial
 
 .. toctree::
    :maxdepth: 2
