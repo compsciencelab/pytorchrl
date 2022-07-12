@@ -344,17 +344,19 @@ class PPO(Algorithm):
             value_losses = (new_v - r).pow(2)
             value_pred_clipped = old_v + (new_v - old_v).clamp(-self.clip_param, self.clip_param)
             value_losses_clipped = (value_pred_clipped - r).pow(2)
-            value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
+            value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean() * self.value_loss_coef
         else:
-            value_loss = 0.5 * (r - new_v).pow(2).mean()
+            value_loss = 0.5 * (r - new_v).pow(2).mean() * self.value_loss_coef
 
-        loss = value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy
+        entropy_loss = self.entropy_coef * dist_entropy
+
+        loss = value_loss + action_loss - entropy_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
             loss += addon.compute_loss_term(self.actor, dist, data)
 
-        return value_loss, action_loss, dist_entropy, loss
+        return value_loss, action_loss, entropy_loss, loss
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """

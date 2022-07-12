@@ -493,9 +493,9 @@ class RND_PPO(Algorithm):
             ivalue_loss = 0.5 * torch.max(ivalue_losses, ivalue_losses_clipped).mean()
         else:
             # Ext value
-            value_loss = 0.5 * (r - new_v).pow(2).mean()
+            value_loss = 0.5 * (r - new_v).pow(2).mean() * self.value_loss_coef
             # Int value
-            ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean()
+            ivalue_loss = 0.5 * (ir - new_iv).pow(2).mean() * self.value_loss_coef
 
         total_value_loss = value_loss + ivalue_loss
 
@@ -511,13 +511,15 @@ class RND_PPO(Algorithm):
         mask = mask.squeeze() * mask2 if mask is not None else mask2
         rnd_loss = (mask * loss).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
 
-        loss = total_value_loss * self.value_loss_coef + action_loss - self.entropy_coef * dist_entropy + rnd_loss
+        entropy_loss = self.entropy_coef * dist_entropy
+
+        loss = total_value_loss + action_loss - entropy_loss + rnd_loss
 
         # Extend policy loss with addons
         for addon in self.policy_loss_addons:
             loss += addon.compute_loss_term(self.actor, dist, data)
 
-        return value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss
+        return value_loss, ivalue_loss, action_loss, rnd_loss, entropy_loss, loss
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
