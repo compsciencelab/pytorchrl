@@ -22,8 +22,8 @@ PyTorchRL also uses multiprocessing, so it is important to define our script as 
 
     if __name__ == "__main__":
 
-        import ray
-        ray.init()
+        import ray  # This line is only required when running in a cluster.
+        ray.init()  # This line is only required when running in a cluster.
 
 2. Defining a vectorized environment
 ------------------------------------
@@ -77,13 +77,17 @@ PyTorchRL distinguishes between 3 types of Agent components: the ``Algo``, which
 
 Our current implementation contains the following components.
 
-.. image:: ../images/on_policy_agent.jpg
-  :width: 700
+.. image:: ../images/on_policy_agent.png
+  :width: 800
   :alt: Agent on-policy components
 
-.. image:: ../images/off_policy_agent.jpg
-  :width: 700
+.. image:: ../images/off_policy_agent.png
+  :width: 800
   :alt: Agent off-policy components
+
+.. image:: ../images/model_based_agent.png
+  :width: 800
+  :alt: Agent model-based components
 
 New components can be created and combined with already existing ones. For more information about how to do it, see :ref:`Create a custom core component`.
 
@@ -167,15 +171,7 @@ Finally, another class, called the ``Learner``, helps us to define the training 
 6. Checking results
 -------------------
 
-During training, saved models and Tensorboard logs are stored in the ``Learner``'s ``log_dir``. Therefore, we can visualize our logs with the following command line::
-
-    tensorboard --logdir=/tmp/train_example/tensorboard_files --port=8888
-
-.. image:: ../images/tb_logs.png
-  :width: 700
-  :alt: Training logs
-
-And enjoy our Agent's performance with running this script:
+Agent's performance can be visualized running the following script:
 
 .. code-block:: python
 
