@@ -42,7 +42,6 @@ extensions = [
     "sphinx.ext.autodoc",  # Core Sphinx library for auto html doc generation from docstrings
     "sphinx.ext.autosummary",  # Create neat summary tables for modules/classes/methods etc
     "sphinx.ext.intersphinx",  # Link to other project's documentation (see mapping below)
-    "sphinx_autodoc_typehints",  # Automatically document param types (less noise in class signature)
 ]
 
 bibtex_bibfiles = ['refs.bib']
