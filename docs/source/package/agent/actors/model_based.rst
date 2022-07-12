@@ -5,4 +5,3 @@ Model-Based Actor
    :members:
    :undoc-members:
    :show-inheritance:
-
