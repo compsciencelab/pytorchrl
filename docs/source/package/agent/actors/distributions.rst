@@ -4,7 +4,7 @@ Action prob. distributions
 Categorical
 -----------
 
-.. automodule:: pytorchrl.agent.actors.distributions.categorical
+.. autoclass:: pytorchrl.agent.actors.distributions.categorical.Categorical
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Categorical
 Gaussian
 --------
 
-.. automodule:: pytorchrl.agent.actors.distributions.gaussian
+.. autoclass:: pytorchrl.agent.actors.distributions.gaussian.DiagGaussian
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,16 +20,8 @@ Gaussian
 Squashed Gaussian
 -----------------
 
-.. automodule:: pytorchrl.agent.actors.distributions.squashed_gaussian
+.. autoclass:: pytorchrl.agent.actors.distributions.squashed_gaussian.SquashedGaussian
    :members:
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: pytorchrl.agent.actors.distributions
-   :members:
-   :undoc-members:
-   :show-inheritance:
