@@ -4,7 +4,7 @@ Off-policy
 Double Deep Q-Learning (DDQN)
 -----------------------------
 
-.. autoclass:: pytorchrl.agent.pytorchrl.agent.algorithms.off_policy.ddqn.DDQN
+.. autoclass:: pytorchrl.agent.algorithms.off_policy.ddqn.DDQN
    :members:
    :undoc-members:
    :show-inheritance:
