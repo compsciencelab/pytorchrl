@@ -1,5 +1,7 @@
 """
-Implementation of the RNN model
+Implementation of the RNN model.
+
+Adapted from https://github.com/MolecularAI/reinvent-models/blob/main/reinvent_models/reinvent_core/models/model.py
 """
 from typing import List, Tuple
 import numpy as np

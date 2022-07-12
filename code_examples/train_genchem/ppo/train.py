@@ -96,6 +96,14 @@ def main():
             tokenizer = SMILESTokenizer()
             vocabulary = create_vocabulary(smiles_list, tokenizer)
             network_weights = None
+
+        diversity_filter_params = {
+            "name": "IdenticalMurckoScaffold",  # other options are: "IdenticalTopologicalScaffold", "NoFilter" and "ScaffoldSimilarity" -> use "NoFilter" to disable this feature
+            "nbmax": 25,  # the bin size; penalization will start once this is exceeded
+            "minscore": 0.4,  # the minimum total score to be considered for binning
+            "minsimilarity": 0.4  # the minimum similarity to be placed into the same bin
+        }
+
         scoring_function_parameters = {
             "name": "custom_product",  # this is our default one (alternative: "custom_sum")
             "parallel": False,  # sets whether components are to be executed
