@@ -21,7 +21,7 @@ copyright = '2020, pytorchrl'
 author = 'abou'
 
 # The full version, including alpha/beta/rc tags
-release = '2.4.17'
+release = '2.4.18'
 
 
 
@@ -32,13 +32,17 @@ release = '2.4.17'
 # ones.
 
 extensions = [
-    'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    "sphinx.ext.intersphinx",
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxcontrib.bibtex',
+    'numpydoc',
+
+    "sphinx.ext.autodoc",  # Core Sphinx library for auto html doc generation from docstrings
+    "sphinx.ext.autosummary",  # Create neat summary tables for modules/classes/methods etc
+    "sphinx.ext.intersphinx",  # Link to other project's documentation (see mapping below)
+    "sphinx_autodoc_typehints",  # Automatically document param types (less noise in class signature)
 ]
 
 bibtex_bibfiles = ['refs.bib']
@@ -60,14 +64,36 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_rtd_theme'
 
-import sphinx_bernard_theme
-html_theme = 'sphinx_bernard_theme'
-html_theme_path = [sphinx_bernard_theme.get_html_theme_path()]
+# import sphinx_bernard_theme
+# html_theme = 'sphinx_bernard_theme'
+# html_theme_path = [sphinx_bernard_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
 html_static_path = []
+
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_preprocess_types = False
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
+
+numpydoc_show_class_members = False
+
+# generate autosummary even if no references
+autosummary_generate = True
+autosummary_imported_members = True

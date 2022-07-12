@@ -19,10 +19,11 @@ def dim0_reshape(tensor, size):
 
 
 class MBReplayBuffer(S):
-    """
-    Storage class for Model Based algorithms.
+    """Storage class for Model Based algorithms.
 
-    Parameters
+    Implements oll necessary functions to handle data storage and processing in model-based RL algorithms.
+
+    Attributes
     ----------
     size : int
         Storage capacity along time axis.
@@ -32,7 +33,7 @@ class MBReplayBuffer(S):
         actor model is located.
     actor : Actor
         Actor class instance.
-    algorithm : Algorithm
+    algo : Algorithm
         Algorithm class instance
     """
 
