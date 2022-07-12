@@ -1,7 +1,7 @@
 Learner
 =======
 
-.. automodule:: pytorchrl.learner
+.. autoclass:: pytorchrl.learner.Learner
    :members:
    :undoc-members:
    :show-inheritance:
