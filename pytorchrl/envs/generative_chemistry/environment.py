@@ -30,8 +30,9 @@ class GenChemEnv(gym.Env):
 
         # Define action and observation space
         # They must be gym.spaces objects
+
         self.action_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
-        self.observation_space = Char(vocab=vocabulary.tokens(), max_length=obs_length)
+        self.observation_space = Char(vocab=vocabulary.tokens(), max_length=len(self.scaffold) + 2)
 
     def step(self, action):
         """Execute one time step within the environment"""
