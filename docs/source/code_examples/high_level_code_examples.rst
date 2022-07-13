@@ -164,13 +164,16 @@ In this section you can see all possible algorithms that can be utilized with th
 
 Off-Policy Algorithms
 ~~~~~~~~~~~~~~~~~~~~~
-- DDPG :footcite:`ddpg` (``ddpg``)
-- TD3 :footcite:`td3` (``td3``)
-- SAC :footcite:`DBLP:journals/corr/abs-1801-01290` (``sac``)
-- MPO :footcite: `mpo` (``mpo``)
+- Deep Deterministic Policy Gradient :footcite:`ddpg` (DDPG) in the config used as ``ddpg``
+- Twin Delayed DDPG :footcite:`td3` (TD3) in the config used as ``td3``
+- Soft Actor-Critic :footcite:`DBLP:journals/corr/abs-1801-01290` (SAC) in the config uses as ``sac``
+- Maximum a Posteriori Policy Optimisation :footcite:`mpo` (MPO) in the config used as ``mpo``
 
 On-Policy Algorithms
 ~~~~~~~~~~~~~~~~~~~~
-- PPO :footcite:`schulman2017proximal` (``ppo``)
+- Proximal Policy Optimisation :footcite:`schulman2017proximal` (PPO) in the config used as ``ppo``
+
+
+----------
 
 .. footbibliography::
