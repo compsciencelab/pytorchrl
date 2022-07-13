@@ -109,7 +109,7 @@ Currently changes regarding the storage types need to be done directly in the co
 Change Training Scheme
 ~~~~~~~~~~~~~~~~~~~~~~
 In this section we show you how you can change the training scheme so that you can scale up your experiments.
-
+Will be updated soon!
 
 Config 
 ------
