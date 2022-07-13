@@ -1,3 +1,5 @@
+.. _available_algorithms:
+
 pytorchrl.agent.algorithms package
 ==================================
 
