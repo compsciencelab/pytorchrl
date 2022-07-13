@@ -1,5 +1,3 @@
-.. _available_environments:
-
 pytorchrl.envs package
 ======================
 
