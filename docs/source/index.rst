@@ -19,8 +19,7 @@ PyTorchRL Documentation
 
    usage/introduction
    usage/installation
-   usage/breaking_down_pytorchrl
-   usage/high_level_code_examples
+
 
 .. toctree::
    :maxdepth: 2
@@ -34,7 +33,7 @@ PyTorchRL Documentation
    :maxdepth: 2
    :caption: Tutorials:
 
-
+   tutorials/breaking_down_pytorchrl
    tutorials/feature_extractor_tutorial
    tutorials/new_components_tutorial
    tutorials/custom_environment_tutorial
@@ -43,7 +42,7 @@ PyTorchRL Documentation
    :maxdepth: 2
    :caption: Code examples:
 
-
+   code_examples/high_level_code_examples
    code_examples/atari
    code_examples/pybullet
    code_examples/obstacle
