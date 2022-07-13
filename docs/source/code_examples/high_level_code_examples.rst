@@ -58,7 +58,7 @@ Here the default task is set to ``AntBulletEnv-v0``. If you want to change that 
 
     python code_examples/simplified_code_examples/run.py agent=sac  environment=pybullet environment.task=HalfCheetahBulletEnv-v0
 
-For the possible environments you can train the PyTorchRL agents visit the section Available Environments :ref:`available_environments` in the documentation.
+For the possible environments you can train the PyTorchRL agents visit the section :ref:`available_environments` in the documentation.
 
 Train On Your Custom Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
