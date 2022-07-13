@@ -4,15 +4,15 @@ Feature Extractors
 Multilayer Perceptron (MLP)
 ---------------------------
 
-.. automodule:: pytorchrl.agent.actors.neural_networks.feature_extractors.mlp
+.. autoclass:: pytorchrl.agent.actors.neural_networks.feature_extractors.mlp.MLP
    :members:
    :undoc-members:
    :show-inheritance:
 
-Convolutional Neural Netwok (CNN)
+Convolutional Neural Network (CNN)
 ---------------------------------
 
-.. automodule:: pytorchrl.agent.actors.neural_networks.feature_extractors.cnn
+.. autoclass:: pytorchrl.agent.actors.neural_networks.feature_extractors.cnn.CNN
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,9 +20,17 @@ Convolutional Neural Netwok (CNN)
 Residual CNN with Fixup initialization (Fixup)
 ----------------------------------------------
 
-.. automodule:: pytorchrl.agent.actors.neural_networks.feature_extractors.fixup_cnn
+.. autoclass:: pytorchrl.agent.actors.neural_networks.feature_extractors.fixup_cnn.FixupCNN
    :members:
    :undoc-members:
    :show-inheritance:
    :exclude-members: FixupResidualModule
 
+Multimodal Neural Network  (DictNet)
+------------------------------------
+
+.. autoclass:: pytorchrl.agent.actors.neural_networks.feature_extractors.dictnet.DictNet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :exclude-members: FixupResidualModule
