@@ -12,7 +12,7 @@ In the following, examples are given to explain how the settings can be adjusted
     - :ref:`Train On Your Custom Environment`
 - :ref:`Advanced Training Config Changes`
     - :ref:`Change Agent Details`
-    - :ref:`Chnage Agent Actor Architecture`
+    - :ref:`Change Agent Actor Architecture`
     - :ref:`Change Agent Storage`
     - :ref:`Change Training Scheme` 
 - :ref:`Config`
