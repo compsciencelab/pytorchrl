@@ -20,7 +20,7 @@ PyTorchRL Documentation
    usage/introduction
    usage/installation
    usage/breaking_down_pytorchrl
-
+   usage/high_level_code_examples
 
 .. toctree::
    :maxdepth: 2
