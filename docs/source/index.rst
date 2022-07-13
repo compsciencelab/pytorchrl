@@ -1,6 +1,10 @@
 PyTorchRL Documentation
 =======================
 
+.. image:: images/logo.png
+  :width: 300
+  :align: right
+
 ..
     Nowhere in this documentation is the identity of the authors
     disclosed. However github links should not be followed to
