@@ -73,7 +73,7 @@ To continue with our example, we use the ``VecEnv.create_factory()`` method to c
 
 PyTorchRL subscribes the idea that composable agents are the best option to enable method experimentation. Individual components are easier to read, understand and modify. They also allow for method flexibility, as they can be combined in different ways.
 
-PyTorchRL distinguishes between 3 types of Agent components: the ``Algo``, which manages loss and gradient computation, the ``Actor``, implementing the deep neural networks used as function approximators, and the ``Storage``, which handles data storage, processing and retrieval. Selecting an instance of each class and combining them we can create an agent.
+PyTorchRL distinguishes between 3 types of Agent components: the ``Algorithm``, which manages loss and gradient computation, the ``Actor``, implementing all deep neural networks used as function approximators, and the ``Storage``, which handles data storage, processing and retrieval. Selecting an instance of each class and combining them we can create an agent.
 
 Our current implementation contains the following components.
 
