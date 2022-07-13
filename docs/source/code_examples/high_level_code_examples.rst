@@ -17,6 +17,7 @@ In the following, examples are given to explain how the settings can be adjusted
     - :ref:`Change Training Scheme` 
 - :ref:`Config`
     - :ref:`Overall Config Structure`
+- :ref:`Available Algorithms`
 
 
 Train Agents
@@ -41,7 +42,7 @@ To change the default code example and train another agent there are two ways to
 
     python code_examples/simplified_code_examples/run.py agent=sac
 
-For the possible agents you can train visit the section Algorithms :ref:`available_algorithms` in the documentation.
+For the possible agents you can train visit the section :ref:`Available Algorithms` in the documentation.
 
 Train On Different Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,6 +158,19 @@ Overall Config Structure
         mujoco.yaml
         pybullet.yaml
 
+Available Algorithms
+--------------------
+In this section you can see all possible algorithms that can be utilized with the simplified code examples. 
 
+Off-Policy Algorithms
+~~~~~~~~~~~~~~~~~~~~~
+- DDPG :footcite:`ddpg` (``ddpg``)
+- TD3 :footcite:`td3` (``td3``)
+- SAC :footcite:`DBLP:journals/corr/abs-1801-01290` (``sac``)
+- MPO :footcite: `mpo` (``mpo``)
+
+On-Policy Algorithms
+~~~~~~~~~~~~~~~~~~~~
+- PPO :footcite:`schulman2017proximal` (``ppo``)
 
 .. footbibliography::
