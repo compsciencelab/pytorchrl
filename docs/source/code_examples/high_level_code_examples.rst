@@ -41,7 +41,7 @@ To change the default code example and train another agent there are two ways to
 
     python code_examples/simplified_code_examples/run.py agent=sac
 
-For the possible agents you can train visit the section Algorithms :ref:`_available_algorithms` in the documentation.
+For the possible agents you can train visit the section Algorithms :ref:`available_algorithms` in the documentation.
 
 Train On Different Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
