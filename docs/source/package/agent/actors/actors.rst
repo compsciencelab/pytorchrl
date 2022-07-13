@@ -9,7 +9,7 @@ Actors
    model_based
 
 Actor Components
-================
+----------------
 
 .. toctree::
    :maxdepth: 3

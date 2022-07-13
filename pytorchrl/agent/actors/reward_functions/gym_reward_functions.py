@@ -6,17 +6,18 @@ import math
 """
 
 
-def cartpole(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor)-> torch.Tensor:
+def cartpole(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
     """
     Based on https://arxiv.org/pdf/1907.02057.pdf
     reward = cos(θ_t) - 0.01x²
     """
     x, x_dot, theta, theta_dot = state[:, 0], state[:, 1], state[:, 2], state[:, 3]
-    
-    reward = torch.cos(theta)[:, None] - 0.01 * x[:, None]**2
+
+    reward = torch.cos(theta)[:, None] - 0.01 * x[:, None] ** 2
     return reward
 
-def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor)-> torch.Tensor:
+
+def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
     # Original env reward function seems not to work!
     # max_torque = 2.0
     # th = torch.acos(state[:, 0][:, None])
@@ -24,14 +25,16 @@ def pendulum(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor
     # action = torch.clamp(action, -max_torque, max_torque)
 
     # reward = angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (action ** 2)
-    
+
     # reward function from Paper: https://arxiv.org/pdf/1907.02057.pdf
     cos_theta, sin_theta, theta_dot = state[:, 0], state[:, 1], state[:, 2]
     reward = - cos_theta[:, None] - 0.1 * sin_theta[:, None] - 0.1 * theta_dot[:, None] ** 2 - 0.001 * action ** 2
     return reward
 
+
 def angle_normalize(x: torch.Tensor):
     return ((x + math.pi) % (2 * math.pi)) - math.pi
+
 
 def inverted_pendulum_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
     """
@@ -44,6 +47,7 @@ def inverted_pendulum_mujoco(state: torch.Tensor, action: torch.Tensor, next_sta
     reward = - state[:, 1][:, None] ** 2
     return reward
 
+
 def halfcheetah_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: torch.Tensor) -> torch.Tensor:
     """
     First 8 values in the state are position data
@@ -51,7 +55,7 @@ def halfcheetah_mujoco(state: torch.Tensor, action: torch.Tensor, next_state: to
     -> idx 8 is x_velocitiy
     """
     x_velocities = state[:, 8]
-    action_penalty = - 0.1 * (torch.sum(action**2, axis=1))
+    action_penalty = - 0.1 * (torch.sum(action ** 2, axis=1))
     reward = (x_velocities + action_penalty)[:, None]
     assert reward.shape == (state.shape[0], 1)
     return reward
