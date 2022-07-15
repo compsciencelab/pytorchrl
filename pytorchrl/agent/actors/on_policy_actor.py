@@ -93,7 +93,7 @@ class OnPolicyActor(Actor):
             action_space,
             algorithm_name,
             restart_model=None,
-            recurrent_nets=False,
+            recurrent_nets=None,
             recurrent_nets_kwargs={},
             feature_extractor_kwargs={},
             feature_extractor_network=None,
@@ -115,8 +115,8 @@ class OnPolicyActor(Actor):
             PyTorch nn.Module used as the features extraction block in all networks.
         feature_extractor_kwargs : dict
             Keyword arguments for the feature extractor network.
-        recurrent_nets : bool
-            Whether to use a RNNs as feature extractors.
+        recurrent_nets : nn.Module
+             PyTorch nn.Module to use after the feature extractors.
         recurrent_nets_kwargs:
             Keyword arguments for the memory network.
         shared_policy_value_network : bool
@@ -410,7 +410,7 @@ class OnPolicyActor(Actor):
                 feature_size = self.recurrent_hidden_state_size
 
             if self.recurrent_nets:
-                value_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+                value_memory_net = self.recurrent_nets(feature_size, **self.recurrent_nets_kwargs)
             else:
                 value_memory_net = nn.Identity()
 

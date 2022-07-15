@@ -15,8 +15,8 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry2.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
@@ -204,7 +204,7 @@ def main():
             feature_extractor_kwargs={},
             recurrent_nets_kwargs={"vocabulary": vocabulary, "tokenizer": tokenizer,  **network_params},
             restart_model=restart_model,
-            recurrent_nets=True,
+            recurrent_nets=get_memory_network("Seq2Seq"),
         )
 
         # 2. Define RL training algorithm

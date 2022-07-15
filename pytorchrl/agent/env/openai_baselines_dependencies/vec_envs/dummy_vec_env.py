@@ -28,8 +28,6 @@ class DummyVecEnv(VecEnvBase):
         self.actions = None
         self.spec = self.envs[0].spec
 
-        import ipdb; ipdb.set_trace()
-
     def step_async(self, actions):
         listify = True
         try:
