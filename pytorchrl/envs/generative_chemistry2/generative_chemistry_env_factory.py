@@ -1,7 +1,7 @@
 import os
 from reinvent_scoring.scoring import ScoringFunctionFactory
-from pytorchrl.envs.generative_chemistry.environment import GenChemEnv
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
+from pytorchrl.envs.generative_chemistry2.environment import GenChemEnv
+from pytorchrl.envs.generative_chemistry2.vocabulary import SMILESTokenizer, create_vocabulary
 from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
 
 

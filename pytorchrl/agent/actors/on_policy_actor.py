@@ -8,7 +8,6 @@ import pytorchrl as prl
 from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init
-from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
 
@@ -187,6 +186,8 @@ class OnPolicyActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
+
+        # TODO: fix
         rhs_policy = torch.zeros(num_proc, self.recurrent_size).to(dev)
 
         rhs = {"policy": rhs_policy}
@@ -456,7 +457,7 @@ class OnPolicyActor(Actor):
         feature_size = int(np.prod(features.shape))
 
         if self.recurrent_nets:
-            policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+            policy_memory_net = self.recurrent_nets(feature_size, **self.recurrent_nets_kwargs)
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()

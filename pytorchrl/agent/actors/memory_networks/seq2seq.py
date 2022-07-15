@@ -57,21 +57,29 @@ class RNN(nn.Module):
         :param hidden_state: Hidden state tensor.
         """
         input_vector = torch.clamp(input_vector, 0.0, self._embedding.num_embeddings).long()
-
         batch_size, seq_size = input_vector.size()
-        if hidden_state is None:
-            size = (self._num_layers, batch_size, self._layer_size)
-            if self._cell_type == "gru":
-                hidden_state = torch.zeros(*size).to(input_vector.device)
-            else:
-                hidden_state = [torch.zeros(*size).to(input_vector.device), torch.zeros(*size).to(input_vector.device)]
         embedded_data = self._embedding(input_vector)  # (batch, seq, embedding)
-        output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+        size = (self._num_layers, batch_size, self._layer_size)
+
+        if self._cell_type == "gru":
+
+            if hidden_state.sum() == 0.0:
+                hidden_state = torch.zeros(*size).to(input_vector.device)
+            output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+
+        else:
+
+            if hidden_state.sum() == 0.0:
+                hidden_state = [torch.zeros(*size).to(input_vector.device), torch.zeros(*size).to(input_vector.device)]
+                hidden_state = torch.cat(hidden_state)
+            hidden_state = torch.chunk(hidden_state, 2)
+            output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+            hidden_state_out = torch.cat(hidden_state_out)
 
         if self._layer_normalization:
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
-        output_vector = output_vector.reshape(-1, self._layer_size)
 
+        output_vector = output_vector.reshape(-1, self._layer_size)
         output_data = output_vector.view(batch_size, seq_size, -1)
 
         return output_data, hidden_state_out
@@ -87,6 +95,18 @@ class RNN(nn.Module):
             'cell_type': self._cell_type,
             'embedding_layer_size': self._embedding_layer_size
         }
+
+    def get_initial_recurrent_state(self):
+        if self._cell_type == 'gru':
+            self._rnn = nn.GRU(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
+                               dropout=self._dropout, batch_first=True)
+        elif self._cell_type == 'lstm':
+            self._rnn = nn.LSTM(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
+                                dropout=self._dropout, batch_first=True)
+        else:
+            raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
+        return
+
 
 
 class Seq2Seq(nn.Module):
