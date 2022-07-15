@@ -470,7 +470,6 @@ class OnPolicyActor(Actor):
             self.unscale = None
 
         elif isinstance(self.action_space, gym.spaces.MultiDiscrete):
-            self.recurrent_size = int(np.prod(features.shape[2:]))
             dist = get_dist("MultiCategorical")(self.recurrent_size, self.action_space.individual_shape[0])
             self.scale = None
             self.unscale = None
