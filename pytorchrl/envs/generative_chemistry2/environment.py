@@ -30,7 +30,7 @@ class GenChemEnv(gym.Env):
         # Define action and observation space
         # They must be gym.spaces objects
 
-        self.action_space = gym.spaces.Discrete(len(self.vocabulary) - 1)
+        self.action_space = gym.spaces.Discrete(len(self.vocabulary))
         self.observation_space = Char(vocab=vocabulary.tokens(), max_length=len(self.scaffold) + 2)
 
         self.current_molecule = ""
