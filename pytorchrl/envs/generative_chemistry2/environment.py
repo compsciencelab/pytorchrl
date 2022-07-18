@@ -18,17 +18,9 @@ class GenChemEnv(gym.Env):
         self.vocabulary = vocabulary
         self.scoring_function = scoring_function
 
-        if isinstance(scaffold, list):
-            if len(scaffold) > 0:
-                self.scaffold = scaffold[0]
-            else:
-                self.scaffold = ""
-
         # Define action and observation space
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
         self.observation_space = Char(vocab=vocabulary.tokens(), max_length=1)
-
-        self.current_molecule = ""
 
     def step(self, action):
         """Execute one time step within the environment"""
@@ -68,18 +60,13 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-
-        # tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
-        # # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
-
-        tokenized_scaffold = "^"
-        return self.vocabulary.encode(tokenized_scaffold)
+        self.current_molecule = "^"
+        return self.vocabulary.encode(self.current_molecule)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""
 
-        print(f'Scaffold: {self.scaffold}')
-        print(f'Decorated Scaffold: {self.current_molecule}')
+        print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 
     def _scoring(self, smiles):
