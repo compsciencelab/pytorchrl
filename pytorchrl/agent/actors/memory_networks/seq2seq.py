@@ -80,8 +80,7 @@ class RNN(nn.Module):
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
 
         # output_vector = output_vector.reshape(-1, self._layer_size)
-        import ipdb; ipdb.set_trace()
-        output_vector = output_vector.reshape(-1, self._layer_size)[-1]
+        output_vector = output_vector[:, -1, :]
 
         return output_vector, hidden_state_out
 

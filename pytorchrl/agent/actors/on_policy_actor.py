@@ -312,6 +312,7 @@ class OnPolicyActor(Actor):
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
 
+            import ipdb; ipdb.set_trace()
             if isinstance(self.action_space, gym.spaces.MultiDiscrete):
                 features = rhs["policy"]
             else:

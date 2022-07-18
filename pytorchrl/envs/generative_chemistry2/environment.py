@@ -38,29 +38,32 @@ class GenChemEnv(gym.Env):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        import ipdb; ipdb.set_trace()
-
         if not isinstance(action, str):
-            action = self.vocabulary.decode(action.squeeze().tolist())
-            action = self.tokenizer.untokenize(action)
+            action = self.vocabulary.decode([action])[0]
 
         # TODO: action should be a single character
 
         # TODO: add character to current molecule
+        self.current_molecule += action
 
-        # TODO: if character is not $, add to current molecule and return 0.0
+        # TODO: if character is not $, return 0.0 reward
+        if action != "$":
+            reward = 0.0
+            done = False
 
-        # TODO: if character is $, evaluate reward and return done
-
-        self.new_molecule = action
-        try:
-            reward = self._scoring(self.new_molecule)
-        except TypeError:
-            reward = 0.0  # Invalid molecule
+        # TODO: if character is $, evaluate molecule
+        else:
+            try:
+                import ipdb; ipdb.set_trace()
+                reward = self._scoring(self.tokenizer.untokenize(self.current_molecule))
+            except TypeError:
+                reward = 0.0  # Invalid molecule
+            done = True
 
         info = {}
-        done = True
-        new_obs = np.zeros(1)  # Does not matter
+
+        import ipdb; ipdb.set_trace()
+        new_obs = self.vocabulary.encode([action])
 
         return new_obs, reward, done, info
 
@@ -72,13 +75,16 @@ class GenChemEnv(gym.Env):
         self.num_episodes += 1
         tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
         # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
+
+        import ipdb;
+        ipdb.set_trace()
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""
 
         print(f'Scaffold: {self.scaffold}')
-        print(f'Decorated Scaffold: {self.new_molecule}')
+        print(f'Decorated Scaffold: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 
     def _scoring(self, smiles):

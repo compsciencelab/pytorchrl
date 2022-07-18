@@ -249,7 +249,9 @@ class CWorker(W):
             self.storage.insert_transition(transition)
 
             # Handle end of episode - collect episode info
-            done_positions = done2.nonzero()[:, 0].tolist()
+            # done_positions = done2.nonzero()[:, 0].tolist()
+            done_positions = torch.nonzero(done2, as_tuple=False)[:, 0].tolist()
+
             for i in done_positions:
                 if "episode" in episode_infos[i]:  # gym envs should have it
                     for k, v in episode_infos[i]["episode"].items():
