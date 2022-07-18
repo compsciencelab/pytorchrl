@@ -79,10 +79,11 @@ class RNN(nn.Module):
         if self._layer_normalization:
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
 
-        output_vector = output_vector.reshape(-1, self._layer_size)
-        # output_data = output_vector.view(batch_size, seq_size, -1)
+        # output_vector = output_vector.reshape(-1, self._layer_size)
+        import ipdb; ipdb.set_trace()
+        output_vector = output_vector.reshape(-1, self._layer_size)[-1]
 
-        return output_data, hidden_state_out
+        return output_vector, hidden_state_out
 
     def get_params(self):
         """
@@ -106,7 +107,6 @@ class RNN(nn.Module):
         else:
             raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
         return
-
 
 
 class Seq2Seq(nn.Module):
