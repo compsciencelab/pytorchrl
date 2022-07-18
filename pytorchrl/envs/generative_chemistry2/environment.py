@@ -4,9 +4,6 @@ from gym import spaces
 from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
-# TODO: review if smiles have to start and end with special characters!
-
-
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
@@ -54,7 +51,6 @@ class GenChemEnv(gym.Env):
         # TODO: if character is $, evaluate molecule
         else:
             try:
-                import ipdb; ipdb.set_trace()
                 reward = self._scoring(self.tokenizer.untokenize(self.current_molecule))
             except TypeError:
                 reward = 0.0  # Invalid molecule
@@ -62,7 +58,6 @@ class GenChemEnv(gym.Env):
 
         info = {}
 
-        import ipdb; ipdb.set_trace()
         new_obs = self.vocabulary.encode([action])
 
         return new_obs, reward, done, info
@@ -75,9 +70,6 @@ class GenChemEnv(gym.Env):
         self.num_episodes += 1
         tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
         # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
-
-        import ipdb;
-        ipdb.set_trace()
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):
