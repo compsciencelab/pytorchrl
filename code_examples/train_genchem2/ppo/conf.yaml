@@ -5,8 +5,8 @@ log_dir: /tmp/genchem_ppo
 gamma: 0.99
 save_interval: 10000
 max_time: 86400
-num_env_processes: 1
-num_steps: 48
+num_env_processes: 32
+num_steps: 400
 num_mini_batch: 4
 clip_param: 0.1
 ppo_epoch: 3
@@ -14,7 +14,7 @@ gae_lambda: 0.95
 value_loss_coef: 1.0
 entropy_coef: 0.01
 max_grad_norm: 0.5
-lr: 0.00025
+lr: 0.001
 nn: Seq2Seq
 frame_skip: 0
 frame_stack: 4

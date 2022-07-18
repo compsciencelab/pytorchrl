@@ -29,7 +29,7 @@ class GenChemEnv(gym.Env):
 
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
         # self.observation_space = Char(vocab=vocabulary.tokens(), max_length=len(self.scaffold) + 2)
-        self.observation_space = gym.spaces.Discrete(len(self.vocabulary))
+        self.observation_space = Char(vocab=vocabulary.tokens(), max_length=1)
 
         self.current_molecule = ""
 
@@ -73,7 +73,7 @@ class GenChemEnv(gym.Env):
         # tokenized_scaffold = self.tokenizer.tokenize(self.scaffold)
         # # tokenized_scaffold += ["$"] * (self.obs_length - len(tokenized_scaffold))  # Pad with end token
 
-        tokenized_scaffold = "$"
+        tokenized_scaffold = "^"
         return self.vocabulary.encode(tokenized_scaffold)
 
     def render(self, mode='human'):

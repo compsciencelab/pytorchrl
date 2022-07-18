@@ -211,7 +211,7 @@ def main():
         prior_similarity_addon = AttractionKL(
             behavior_factories=[actor_factory],
             behavior_weights=[1.0],
-            loss_term_weight=1.0,
+            loss_term_weight=0.05,
         )
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,

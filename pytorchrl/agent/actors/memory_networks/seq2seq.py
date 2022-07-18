@@ -43,10 +43,10 @@ class RNN(nn.Module):
         self._embedding = nn.Embedding(voc_size, self._embedding_layer_size)
         if self._cell_type == 'gru':
             self._rnn = nn.GRU(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                               dropout=self._dropout, batch_first=True)
+                               dropout=self._dropout, batch_first=False)
         elif self._cell_type == 'lstm':
             self._rnn = nn.LSTM(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                                dropout=self._dropout, batch_first=True)
+                                dropout=self._dropout, batch_first=False)
         else:
             raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
 
@@ -58,31 +58,110 @@ class RNN(nn.Module):
         """
         input_vector = torch.clamp(input_vector, 0.0, self._embedding.num_embeddings).long()
         batch_size, seq_size = input_vector.size()
-        embedded_data = self._embedding(input_vector)  # (batch, seq, embedding)
-        size = (self._num_layers, batch_size, self._layer_size)
-
-        if self._cell_type == "gru":
-
-            if hidden_state.sum() == 0.0:
-                hidden_state = torch.zeros(*size).to(input_vector.device)
-            output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
-
-        else:
-
-            if hidden_state.sum() == 0.0:
-                hidden_state = [torch.zeros(*size).to(input_vector.device), torch.zeros(*size).to(input_vector.device)]
-                hidden_state = torch.cat(hidden_state)
-            hidden_state = torch.chunk(hidden_state, 2)
-            output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
-            hidden_state_out = torch.cat(hidden_state_out)
+        embedded_data = self._embedding(input_vector).squeeze(1)  # (batch, seq, embedding)
+        output_vector, hidden_state_out = self._forward_memory_net(embedded_data, hidden_state, done)
 
         if self._layer_normalization:
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
 
         # output_vector = output_vector.reshape(-1, self._layer_size)
-        output_vector = output_vector[:, -1, :]
 
         return output_vector, hidden_state_out
+
+    def _forward_memory_net(self, x, hxs, done):
+        """
+        Fast forward pass memory network.
+
+        Parameters
+        ----------
+        x : torch.tensor
+            Feature map obtained from environment observation.
+        hxs : torch.tensor
+            Current recurrent hidden state.
+        done : torch.tensor
+            Current done tensor, indicating if episode has finished.
+        Returns
+        -------
+        x : torch.tensor
+            Feature map obtained after GRU.
+        hxs : torch.tensor
+            Updated recurrent hidden state.
+        """
+
+        masks = 1 - done
+        if x.size(0) == hxs.size(0):
+
+            self._rnn.flatten_parameters()
+            if self._cell_type == "gru":
+                x, hxs = self._rnn(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
+                x = x.squeeze(0)
+                hxs = hxs.squeeze(0)
+            else:
+                x, hxs = self._rnn(x.unsqueeze(0), torch.chunk((torch.transpose(hxs, 0, 1) * masks).contiguous(), 2))
+                hxs = torch.transpose(torch.cat(hxs), 0, 1)
+                x = x.squeeze(0)
+        else:
+
+            # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
+            N = hxs.size(0)
+            T = int(x.size(0) / N)
+
+            # unflatten
+            x = x.view(T, N, -1)
+
+            # Same deal with masks
+            masks = masks.view(T, N)
+
+            # Let's figure out which steps in the sequence have a zero for any agent
+            # We will always assume t=0 has a zero in it as that makes the logic cleaner
+            has_zeros = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+
+            # +1 to correct the masks[1:]
+            if has_zeros.dim() == 0:
+                # Deal with scalar
+                has_zeros = [has_zeros.item() + 1]
+            else:
+                has_zeros = (has_zeros + 1).numpy().tolist()
+
+            # add t=0 and t=T to the list
+            has_zeros = [0] + has_zeros + [T]
+
+            outputs = []
+
+            if self._cell_type == "gru":
+                hxs = hxs.unsqueeze(0)
+
+            for i in range(len(has_zeros) - 1):
+                # We can now process steps that don't have any zeros in masks together!
+                # This is much faster
+                start_idx = has_zeros[i]
+                end_idx = has_zeros[i + 1]
+                self._rnn.flatten_parameters()
+
+                if self._cell_type == "gru":
+                    rnn_scores, hxs = self._rnn(
+                        x[start_idx:end_idx],
+                        hxs * masks[start_idx].view(1, -1, 1))
+                else:
+
+                    rnn_scores, hxs = self._rnn(
+                        x[start_idx:end_idx],
+                        torch.chunk(
+                            (torch.transpose(hxs, 0, 1) * masks[start_idx].view(1, -1, 1)).contiguous(),
+                            2))
+                    hxs = torch.transpose(torch.cat(hxs), 0, 1)
+
+                outputs.append(rnn_scores)
+
+            # x is a (T, N, -1) tensor
+            x = torch.cat(outputs, dim=0)
+            # flatten
+            x = x.view(T * N, -1)
+
+            if self._cell_type == "gru":
+                hxs = hxs.squeeze(0)
+
+        return x, hxs
 
     def get_params(self):
         """
