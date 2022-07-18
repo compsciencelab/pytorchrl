@@ -25,10 +25,7 @@ class GenChemEnv(gym.Env):
                 self.scaffold = ""
 
         # Define action and observation space
-        # They must be gym.spaces objects
-
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
-        # self.observation_space = Char(vocab=vocabulary.tokens(), max_length=len(self.scaffold) + 2)
         self.observation_space = Char(vocab=vocabulary.tokens(), max_length=1)
 
         self.current_molecule = ""
@@ -44,6 +41,8 @@ class GenChemEnv(gym.Env):
         # TODO: add character to current molecule
         self.current_molecule += action
 
+        info = {}
+
         # TODO: if character is not $, return 0.0 reward
         if action != "$":
             reward = 0.0
@@ -53,11 +52,11 @@ class GenChemEnv(gym.Env):
         else:
             try:
                 reward = self._scoring(self.tokenizer.untokenize(self.current_molecule))
+                info.update({"molecules": self.tokenizer.untokenize(self.current_molecule)})
             except TypeError:
                 reward = 0.0  # Invalid molecule
+                info.update({"molecules": "invalid"})
             done = True
-
-        info = {}
 
         new_obs = self.vocabulary.encode([action])
 

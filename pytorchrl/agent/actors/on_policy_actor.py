@@ -189,6 +189,7 @@ class OnPolicyActor(Actor):
 
         # TODO: fix
         rhs_policy = torch.zeros(num_proc, 6, self.recurrent_size).to(dev)
+        rhs_policy = self.policy_net.memory_net.get_initial_recurrent_state(num_proc)
 
         rhs = {"policy": rhs_policy}
         rhs.update({"value_net{}".format(i + 1): rhs_policy.clone() for i in range(self.num_critics_ext)})

@@ -194,7 +194,8 @@ def main():
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
                 "obs_length": max_sequence_length,
             },
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir)
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+            info_keywords=("molecules", ))
 
         # 2. Define RL Policy
         # TODO. Actor does not allow to choose alternative memory network
@@ -202,16 +203,16 @@ def main():
             obs_space, action_space, prl.PPO,
             feature_extractor_network=torch.nn.Identity,
             feature_extractor_kwargs={},
-            recurrent_nets_kwargs={"vocabulary": vocabulary, "tokenizer": tokenizer,  **network_params},
+            recurrent_nets_kwargs={"vocabulary": vocabulary,  **network_params},
             restart_model=restart_model,
-            recurrent_nets=get_memory_network("Seq2Seq"),
+            recurrent_nets=get_memory_network("LSTM"),
         )
 
         # 2. Define RL training algorithm
         prior_similarity_addon = AttractionKL(
             behavior_factories=[actor_factory],
             behavior_weights=[1.0],
-            loss_term_weight=0.05,
+            loss_term_weight=0.1,
         )
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
