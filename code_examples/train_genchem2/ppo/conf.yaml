@@ -3,6 +3,7 @@ agent_name: PPO
 num_env_steps : 1000_000_000
 log_dir: /tmp/genchem_ppo
 gamma: 0.99
+kl_coef: 0.5
 save_interval: 10000
 max_time: 86400
 num_env_processes: 32
@@ -15,7 +16,7 @@ value_loss_coef: 1.0
 entropy_coef: 0.01
 max_grad_norm: 0.5
 lr: 0.001
-nn: Seq2Seq
+nn: LSTM
 frame_skip: 0
 frame_stack: 4
 num_grad_workers: 1

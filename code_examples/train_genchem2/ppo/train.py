@@ -205,14 +205,14 @@ def main():
             feature_extractor_kwargs={},
             recurrent_nets_kwargs={"vocabulary": vocabulary,  **network_params},
             restart_model=restart_model,
-            recurrent_nets=get_memory_network("LSTM"),
+            recurrent_nets=get_memory_network(args.recurrent_nets),
         )
 
         # 2. Define RL training algorithm
         prior_similarity_addon = AttractionKL(
             behavior_factories=[actor_factory],
             behavior_weights=[1.0],
-            loss_term_weight=0.5,
+            loss_term_weight=args.kl_coef,
         )
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
@@ -334,6 +334,9 @@ def get_args():
     parser.add_argument(
         '--recurrent-nets', action='store_true', default=False,
         help='Use a recurrent policy')
+    parser.add_argument(
+        '--kl-coef', type=float, default=0.5,
+        help='discount factor for rewards (default: 0.5)')
 
     # Scheme specs
     parser.add_argument(
