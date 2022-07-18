@@ -1,6 +1,6 @@
 experiment_name: GenChem
 agent_name: PPO
-num_env_steps : 10_000_000
+num_env_steps : 1000_000_000
 log_dir: /tmp/genchem_ppo
 gamma: 0.99
 save_interval: 10000
