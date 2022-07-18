@@ -22,19 +22,19 @@ from pytorchrl.envs.generative_chemistry2.generative_chemistry_env_factory impor
 
 # TODO: update this dict
 weights_mapping = {
-    "_embedding.weight": "policy_net.memory_net.network._embedding.weight",
-    "_rnn.weight_ih_l0": "policy_net.memory_net.network._rnn.weight_ih_l0",
-    "_rnn.weight_hh_l0": "policy_net.memory_net.network._rnn.weight_hh_l0",
-    "_rnn.bias_ih_l0": "policy_net.memory_net.network._rnn.bias_ih_l0",
-    "_rnn.bias_hh_l0": "policy_net.memory_net.network._rnn.bias_hh_l0",
-    "_rnn.weight_ih_l1": "policy_net.memory_net.network._rnn.weight_ih_l1",
-    "_rnn.weight_hh_l1": "policy_net.memory_net.network._rnn.weight_hh_l1",
-    "_rnn.bias_ih_l1": "policy_net.memory_net.network._rnn.bias_ih_l1",
-    "_rnn.bias_hh_l1": "policy_net.memory_net.network._rnn.bias_hh_l1",
-    "_rnn.weight_ih_l2": "policy_net.memory_net.network._rnn.weight_ih_l2",
-    "_rnn.weight_hh_l2": "policy_net.memory_net.network._rnn.weight_hh_l2",
-    "_rnn.bias_ih_l2": "policy_net.memory_net.network._rnn.bias_ih_l2",
-    "_rnn.bias_hh_l2": "policy_net.memory_net.network._rnn.bias_hh_l2",
+    "_embedding.weight": "policy_net.memory_net._embedding.weight",
+    "_rnn.weight_ih_l0": "policy_net.memory_net._rnn.weight_ih_l0",
+    "_rnn.weight_hh_l0": "policy_net.memory_net._rnn.weight_hh_l0",
+    "_rnn.bias_ih_l0": "policy_net.memory_net._rnn.bias_ih_l0",
+    "_rnn.bias_hh_l0": "policy_net.memory_net._rnn.bias_hh_l0",
+    "_rnn.weight_ih_l1": "policy_net.memory_net._rnn.weight_ih_l1",
+    "_rnn.weight_hh_l1": "policy_net.memory_net._rnn.weight_hh_l1",
+    "_rnn.bias_ih_l1": "policy_net.memory_net._rnn.bias_ih_l1",
+    "_rnn.bias_hh_l1": "policy_net.memory_net._rnn.bias_hh_l1",
+    "_rnn.weight_ih_l2": "policy_net.memory_net._rnn.weight_ih_l2",
+    "_rnn.weight_hh_l2": "policy_net.memory_net._rnn.weight_hh_l2",
+    "_rnn.bias_ih_l2": "policy_net.memory_net._rnn.bias_ih_l2",
+    "_rnn.bias_hh_l2": "policy_net.memory_net._rnn.bias_hh_l2",
     "_linear.weight": "policy_net.dist.linear.weight",
     "_linear.bias": "policy_net.dist.linear.bias",
 }
@@ -118,7 +118,7 @@ def main():
                     "name": "Regression model",  # arbitrary name for the component
                     "weight": 2,  # the weight ("importance") of the component (default: 1)
                     "specific_parameters": {
-                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
+                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry2/models/Aurora_model.pkl'),
                         # absolute model path
                         "scikit": "regression",  # model can be "regression" or "classification"
                         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model

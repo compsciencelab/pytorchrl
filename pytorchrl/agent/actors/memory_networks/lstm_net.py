@@ -12,7 +12,7 @@ class LstmNet(nn.Module):
     and an output linear layer back to the size of the vocabulary
     """
 
-    def __init__(self, vocabulary, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256,
+    def __init__(self, input_size, vocabulary, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256,
                  dropout=0., layer_normalization=False):
         """
         Implements a N layer GRU|LSTM cell including an embedding layer and an output linear layer back to the size of the
