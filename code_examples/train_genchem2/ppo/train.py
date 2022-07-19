@@ -195,7 +195,14 @@ def main():
                 "obs_length": max_sequence_length,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=("molecules", ))
+            info_keywords=(
+                "molecules",
+                "regression model",
+                "matching substructure",
+                "custom alerts",
+                "QED score",
+                "raw regression model",
+            ))
 
         # 2. Define RL Policy
         # TODO. Actor does not allow to choose alternative memory network
