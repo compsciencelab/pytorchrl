@@ -5,6 +5,9 @@ from collections import defaultdict, deque
 from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
+# TODO: track most promising SMILES
+
+
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
@@ -49,28 +52,29 @@ class GenChemEnv(gym.Env):
                 reward = score.total_score[0]
                 info.update({
                     "molecules": self.tokenizer.untokenize(self.current_molecule),
-                    "regression model": self.scoring_function.get_final_score([smiles]).__dict__["profile"][0].score[0],
-                    "matching substructure": self.scoring_function.get_final_score([smiles]).__dict__["profile"][1].score[0],
-                    "custom alerts": self.scoring_function.get_final_score([smiles]).__dict__["profile"][2].score[0],
-                    "QED score": self.scoring_function.get_final_score([smiles]).__dict__["profile"][3].score[0],
-                    "raw regression model": self.scoring_function.get_final_score([smiles]).__dict__["profile"][4].score[0],
+                    "regression model": float(score.profile[0].score[0]),
+                    "matching substructure": float(score.profile[1].score[0]),
+                    "custom alerts": float(score.profile[2].score[0]),
+                    "QED score": float(score.profile[3].score[0]),
+                    "raw regression model": float(score.profile[4].score[0]),
                 })
                 self.running_mean_valid_smiles.append(1.0)
             except TypeError:
                 reward = 0.0  # Invalid molecule
                 info.update({
                     "molecules": "invalid",
-                    "regression model": 0.0,
-                    "matching substructure": 0.0,
-                    "custom alerts": 0.0,
-                    "QED score": 0.0,
-                    "raw regression model": 0.0,
+                    "regression_model": 0.0,
+                    "matching_substructure": 0.0,
+                    "custom_alerts": 0.0,
+                    "QED_score": 0.0,
+                    "raw_regression_model": 0.0,
                 })
                 self.running_mean_valid_smiles.append(0.0)
             done = True
 
         info.update({
-            "valid smiles": sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles)
+            "valid_smiles": float((sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles))
+                                  if len(self.running_mean_valid_smiles) != 0.0 else 0.0)
         })
 
         new_obs = self.vocabulary.encode([action])
@@ -99,10 +103,10 @@ class GenChemEnv(gym.Env):
 
         if isinstance(smiles, str):
             # score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
-            score = self.scoring_function.get_final_score([smiles], self.num_episodes)
+            score = self.scoring_function.get_final_score([smiles])
         elif isinstance(smiles, list):
             # score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
-            score = self.scoring_function.get_final_score(smiles, self.num_episodes)
+            score = self.scoring_function.get_final_score(smiles)
         else:
             raise ValueError("Scoring error due to wrong dtype")
 

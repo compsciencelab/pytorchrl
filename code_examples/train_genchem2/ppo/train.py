@@ -197,11 +197,12 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=(
                 "molecules",
-                "regression model",
-                "matching substructure",
-                "custom alerts",
-                "QED score",
-                "raw regression model",
+                "regression_model",
+                "matching_substructure",
+                "custom_alerts",
+                "QED_score",
+                "raw_regression_model",
+                "valid_smiles"
             ))
 
         # 2. Define RL Policy
