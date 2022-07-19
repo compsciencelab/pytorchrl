@@ -52,11 +52,11 @@ class GenChemEnv(gym.Env):
                 reward = score.total_score[0]
                 info.update({
                     "molecules": self.tokenizer.untokenize(self.current_molecule),
-                    "regression model": float(score.profile[0].score[0]),
-                    "matching substructure": float(score.profile[1].score[0]),
-                    "custom alerts": float(score.profile[2].score[0]),
-                    "QED score": float(score.profile[3].score[0]),
-                    "raw regression model": float(score.profile[4].score[0]),
+                    "regression_model": float(score.profile[0].score[0]),
+                    "matching_substructure": float(score.profile[1].score[0]),
+                    "custom_alerts": float(score.profile[2].score[0]),
+                    "QED_score": float(score.profile[3].score[0]),
+                    "raw_regression_model": float(score.profile[4].score[0]),
                 })
                 self.running_mean_valid_smiles.append(1.0)
             except TypeError:
