@@ -51,7 +51,7 @@ class GenChemEnv(gym.Env):
                 score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
                 reward = score.total_score[0]
                 info.update({
-                    "molecules": self.tokenizer.untokenize(self.current_molecule),
+                    "molecule": self.tokenizer.untokenize(self.current_molecule),
                     "regression_model": float(score.profile[0].score[0]),
                     "matching_substructure": float(score.profile[1].score[0]),
                     "custom_alerts": float(score.profile[2].score[0]),
@@ -62,7 +62,7 @@ class GenChemEnv(gym.Env):
             except TypeError:
                 reward = 0.0  # Invalid molecule
                 info.update({
-                    "molecules": "invalid",
+                    "molecule": "invalid",
                     "regression_model": 0.0,
                     "matching_substructure": 0.0,
                     "custom_alerts": 0.0,

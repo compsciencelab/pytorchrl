@@ -196,7 +196,7 @@ def main():
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=(
-                "molecules",
+                "molecule",
                 "regression_model",
                 "matching_substructure",
                 "custom_alerts",
