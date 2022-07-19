@@ -16,7 +16,8 @@ value_loss_coef: 1.0
 entropy_coef: 0.01
 max_grad_norm: 0.5
 lr: 0.001
-nn: LSTM
+nn: null
+recurrent_nets: LSTM
 frame_skip: 0
 frame_stack: 4
 num_grad_workers: 1

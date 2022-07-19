@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 from gym import spaces
+from collections import defaultdict, deque
 from pytorchrl.envs.generative_chemistry.string_space import Char
 
 
@@ -17,6 +18,7 @@ class GenChemEnv(gym.Env):
         self.obs_length = obs_length
         self.vocabulary = vocabulary
         self.scoring_function = scoring_function
+        self.running_mean_valid_smiles = deque(maxlen=100)
 
         # Define action and observation space
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
@@ -43,12 +45,33 @@ class GenChemEnv(gym.Env):
         # TODO: if character is $, evaluate molecule
         else:
             try:
-                reward = self._scoring(self.tokenizer.untokenize(self.current_molecule))
-                info.update({"molecules": self.tokenizer.untokenize(self.current_molecule)})
+                score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
+                reward = score.total_score[0]
+                info.update({
+                    "molecules": self.tokenizer.untokenize(self.current_molecule),
+                    "regression model": self.scoring_function.get_final_score([smiles]).__dict__["profile"][0].score[0],
+                    "matching substructure": self.scoring_function.get_final_score([smiles]).__dict__["profile"][1].score[0],
+                    "custom alerts": self.scoring_function.get_final_score([smiles]).__dict__["profile"][2].score[0],
+                    "QED score": self.scoring_function.get_final_score([smiles]).__dict__["profile"][3].score[0],
+                    "raw regression model": self.scoring_function.get_final_score([smiles]).__dict__["profile"][4].score[0],
+                })
+                self.running_mean_valid_smiles.append(1.0)
             except TypeError:
                 reward = 0.0  # Invalid molecule
-                info.update({"molecules": "invalid"})
+                info.update({
+                    "molecules": "invalid",
+                    "regression model": 0.0,
+                    "matching substructure": 0.0,
+                    "custom alerts": 0.0,
+                    "QED score": 0.0,
+                    "raw regression model": 0.0,
+                })
+                self.running_mean_valid_smiles.append(0.0)
             done = True
+
+        info.update({
+            "valid smiles": sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles)
+        })
 
         new_obs = self.vocabulary.encode([action])
 
@@ -75,10 +98,12 @@ class GenChemEnv(gym.Env):
         # I think the paper uses step/epoch to refer to the number of episodes played
 
         if isinstance(smiles, str):
-            score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
+            # score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
+            score = self.scoring_function.get_final_score([smiles], self.num_episodes)
         elif isinstance(smiles, list):
-            score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
+            # score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
+            score = self.scoring_function.get_final_score(smiles, self.num_episodes)
         else:
             raise ValueError("Scoring error due to wrong dtype")
 
-        return score.total_score[0]
+        return score
