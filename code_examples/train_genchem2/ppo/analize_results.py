@@ -29,7 +29,7 @@ def analize_results(num_top_molecules=10):
     image = Draw.MolsToGridImage(mols)
     save_name = os.path.join(args.log_dir, "2d_smiles.png")
     image.save(save_name)
-    print(f"Saved images as {save_name}")
+    print(f"Saved 2d smile image as {save_name}")
 
 
 if __name__ == "__main__":
