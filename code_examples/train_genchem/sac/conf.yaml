@@ -14,10 +14,6 @@ buffer_size: 300000
 target_update_interval: 8000
 lr: 0.0003
 nn: CNN
-clip_rewards: False
-episodic_life: True
-frame_skip: 4
-frame_stack: 4
 num_grad_workers: 1
 num_col_workers: 1
 com_grad_workers: synchronous
