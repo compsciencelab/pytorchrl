@@ -15,9 +15,8 @@ from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
-from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 

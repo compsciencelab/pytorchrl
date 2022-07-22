@@ -2,10 +2,6 @@ import gym
 import numpy as np
 from gym import spaces
 from collections import defaultdict, deque
-from pytorchrl.envs.generative_chemistry.string_space import Char
-
-
-# TODO: track most promising SMILES
 
 
 class GenChemEnv(gym.Env):
