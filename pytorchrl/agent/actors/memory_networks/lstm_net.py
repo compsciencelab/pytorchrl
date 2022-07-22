@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
-from reinvent_models.reinvent_core.models import vocabulary as mv
 
 
 class LstmNet(nn.Module):
