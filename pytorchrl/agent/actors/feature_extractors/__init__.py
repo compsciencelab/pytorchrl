@@ -3,7 +3,6 @@ from pytorchrl.agent.actors.feature_extractors.mlp import MLP
 from pytorchrl.agent.actors.feature_extractors.cnn import CNN
 from pytorchrl.agent.actors.feature_extractors.dictnet import DictNet
 from pytorchrl.agent.actors.feature_extractors.fixup_cnn import FixupCNN
-from pytorchrl.agent.actors.feature_extractors.seq2seq import Seq2Seq
 
 
 def get_feature_extractor(name):
@@ -16,8 +15,6 @@ def get_feature_extractor(name):
         return FixupCNN
     elif name == "DictNet":
         return DictNet
-    elif name == "Seq2Seq":
-        return Seq2Seq
     else:
         raise ValueError("Specified model not found!")
 
