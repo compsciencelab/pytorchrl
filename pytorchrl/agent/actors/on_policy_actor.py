@@ -30,9 +30,9 @@ class OnPolicyActor(Actor):
         Name of the RL algorithm used for learning.
     checkpoint : str
         Path to a previously trained Actor checkpoint to be loaded.
-    recurrent_nets : bool
+    recurrent_net : bool
         Whether to use a RNNs on top of the feature extractors.
-    recurrent_nets_kwargs:
+    recurrent_net_kwargs:
         Keyword arguments for the memory network.
     feature_extractor_network : nn.Module
         PyTorch nn.Module used as the features extraction block in all networks.
@@ -48,8 +48,8 @@ class OnPolicyActor(Actor):
                  action_space,
                  algorithm_name,
                  checkpoint=None,
-                 recurrent_nets=False,
-                 recurrent_nets_kwargs={},
+                 recurrent_net=None,
+                 recurrent_net_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
                  shared_policy_value_network=True):
@@ -60,8 +60,8 @@ class OnPolicyActor(Actor):
             input_space=input_space,
             action_space=action_space)
 
-        self.recurrent_nets = recurrent_nets
-        self.recurrent_nets_kwargs = recurrent_nets_kwargs
+        self.recurrent_net = recurrent_net
+        self.recurrent_net_kwargs = recurrent_net_kwargs
         self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
@@ -92,8 +92,8 @@ class OnPolicyActor(Actor):
             action_space,
             algorithm_name,
             restart_model=None,
-            recurrent_nets=None,
-            recurrent_nets_kwargs={},
+            recurrent_net=None,
+            recurrent_net_kwargs={},
             feature_extractor_kwargs={},
             feature_extractor_network=None,
             shared_policy_value_network=True):
@@ -114,9 +114,9 @@ class OnPolicyActor(Actor):
             PyTorch nn.Module used as the features extraction block in all networks.
         feature_extractor_kwargs : dict
             Keyword arguments for the feature extractor network.
-        recurrent_nets : nn.Module
+        recurrent_net : nn.Module
              PyTorch nn.Module to use after the feature extractors.
-        recurrent_nets_kwargs:
+        recurrent_net_kwargs:
             Keyword arguments for the memory network.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
@@ -133,9 +133,9 @@ class OnPolicyActor(Actor):
                          input_space=input_space,
                          action_space=action_space,
                          algorithm_name=algorithm_name,
-                         recurrent_nets=recurrent_nets,
+                         recurrent_net=recurrent_net,
                          checkpoint=restart_model,
-                         recurrent_nets_kwargs=recurrent_nets_kwargs,
+                         recurrent_net_kwargs=recurrent_net_kwargs,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
@@ -153,7 +153,7 @@ class OnPolicyActor(Actor):
     @property
     def is_recurrent(self):
         """Returns True if the actor network are recurrent."""
-        return self.recurrent_nets
+        return self.recurrent_net
 
     @property
     def recurrent_hidden_state_size(self):
@@ -186,9 +186,10 @@ class OnPolicyActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-
-        # TODO: fix
-        rhs_policy = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
+        try:
+            rhs_policy = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
+        except Exception:
+            rhs_policy = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
 
         rhs = {"policy": rhs_policy}
         rhs.update({"value_net{}".format(i + 1): rhs_policy.clone() for i in range(self.num_critics_ext)})
@@ -228,7 +229,7 @@ class OnPolicyActor(Actor):
         """
 
         features = self.policy_net.feature_extractor(obs)
-        if self.recurrent_nets:
+        if self.recurrent_net:
             features, rhs["policy"] = self.policy_net.memory_net(
                 features, rhs["policy"], done)
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
@@ -275,7 +276,7 @@ class OnPolicyActor(Actor):
 
         features = self.policy_net.feature_extractor(obs)
 
-        if self.recurrent_nets:
+        if self.recurrent_net:
             features, rhs["policy"] = self.policy_net.memory_net(
                 features, rhs["policy"], done)
 
@@ -321,7 +322,7 @@ class OnPolicyActor(Actor):
 
         else:
             value_features = value_net.feature_extractor(obs)
-            if self.recurrent_nets:
+            if self.recurrent_net:
                 value_features, rhs[value_net_name] = value_net.memory_net(
                     value_features, rhs[value_net_name], done)
 
@@ -410,8 +411,8 @@ class OnPolicyActor(Actor):
             if isinstance(self.action_space, gym.spaces.MultiDiscrete):
                 feature_size = self.recurrent_hidden_state_size
 
-            if self.recurrent_nets:
-                value_memory_net = self.recurrent_nets(feature_size, **self.recurrent_nets_kwargs)
+            if self.recurrent_net:
+                value_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             else:
                 value_memory_net = nn.Identity()
 
@@ -456,8 +457,8 @@ class OnPolicyActor(Actor):
         features = policy_feature_extractor(torch.randn(1, *self.input_space.shape))
         feature_size = int(np.prod(features.shape))
 
-        if self.recurrent_nets:
-            policy_memory_net = self.recurrent_nets(feature_size, **self.recurrent_nets_kwargs)
+        if self.recurrent_net:
+            policy_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()

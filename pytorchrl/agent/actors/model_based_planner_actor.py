@@ -117,7 +117,7 @@ class ModelBasedPlannerActor(Actor):
     @property
     def recurrent_hidden_state_size(self):
         """Size of policy recurrent hidden state"""
-        return 0
+        return 1
 
     def actor_initial_states(self, obs):
         """
@@ -146,7 +146,11 @@ class ModelBasedPlannerActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-        rhs = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
+
+        try:
+            rhs = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
+        except Exception:
+            rhs = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
 
         rhs = {"world_model_rhs": rhs}
         return obs, rhs, done

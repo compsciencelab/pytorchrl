@@ -15,28 +15,26 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
-# Testing
-from pytorchrl.agent.actors.feature_extractors.seq2seq import Seq2Seq
-
+# TODO: update this dict
 weights_mapping = {
-    "_embedding.weight": "policy_net.feature_extractor.network._embedding.weight",
-    "_rnn.weight_ih_l0": "policy_net.feature_extractor.network._rnn.weight_ih_l0",
-    "_rnn.weight_hh_l0": "policy_net.feature_extractor.network._rnn.weight_hh_l0",
-    "_rnn.bias_ih_l0": "policy_net.feature_extractor.network._rnn.bias_ih_l0",
-    "_rnn.bias_hh_l0": "policy_net.feature_extractor.network._rnn.bias_hh_l0",
-    "_rnn.weight_ih_l1": "policy_net.feature_extractor.network._rnn.weight_ih_l1",
-    "_rnn.weight_hh_l1": "policy_net.feature_extractor.network._rnn.weight_hh_l1",
-    "_rnn.bias_ih_l1": "policy_net.feature_extractor.network._rnn.bias_ih_l1",
-    "_rnn.bias_hh_l1": "policy_net.feature_extractor.network._rnn.bias_hh_l1",
-    "_rnn.weight_ih_l2": "policy_net.feature_extractor.network._rnn.weight_ih_l2",
-    "_rnn.weight_hh_l2": "policy_net.feature_extractor.network._rnn.weight_hh_l2",
-    "_rnn.bias_ih_l2": "policy_net.feature_extractor.network._rnn.bias_ih_l2",
-    "_rnn.bias_hh_l2": "policy_net.feature_extractor.network._rnn.bias_hh_l2",
+    "_embedding.weight": "policy_net.memory_net._embedding.weight",
+    "_rnn.weight_ih_l0": "policy_net.memory_net._rnn.weight_ih_l0",
+    "_rnn.weight_hh_l0": "policy_net.memory_net._rnn.weight_hh_l0",
+    "_rnn.bias_ih_l0": "policy_net.memory_net._rnn.bias_ih_l0",
+    "_rnn.bias_hh_l0": "policy_net.memory_net._rnn.bias_hh_l0",
+    "_rnn.weight_ih_l1": "policy_net.memory_net._rnn.weight_ih_l1",
+    "_rnn.weight_hh_l1": "policy_net.memory_net._rnn.weight_hh_l1",
+    "_rnn.bias_ih_l1": "policy_net.memory_net._rnn.bias_ih_l1",
+    "_rnn.bias_hh_l1": "policy_net.memory_net._rnn.bias_hh_l1",
+    "_rnn.weight_ih_l2": "policy_net.memory_net._rnn.weight_ih_l2",
+    "_rnn.weight_hh_l2": "policy_net.memory_net._rnn.weight_hh_l2",
+    "_rnn.bias_ih_l2": "policy_net.memory_net._rnn.bias_ih_l2",
+    "_rnn.bias_hh_l2": "policy_net.memory_net._rnn.bias_hh_l2",
     "_linear.weight": "policy_net.dist.linear.weight",
     "_linear.bias": "policy_net.dist.linear.bias",
 }
@@ -83,7 +81,7 @@ def main():
         # 0. Load checkpoint
         try:
             vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
-                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
+                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry2/models/random.prior.new'))
             restart_model = {"policy_net": network_weights}
             smiles_list = []
         except Exception:
@@ -120,7 +118,7 @@ def main():
                     "name": "Regression model",  # arbitrary name for the component
                     "weight": 2,  # the weight ("importance") of the component (default: 1)
                     "specific_parameters": {
-                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
+                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry2/models/Aurora_model.pkl'),
                         # absolute model path
                         "scikit": "regression",  # model can be "regression" or "classification"
                         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
@@ -196,25 +194,32 @@ def main():
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
                 "obs_length": max_sequence_length,
             },
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir)
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+            info_keywords=(
+                "molecule",
+                "regression_model",
+                "matching_substructure",
+                "custom_alerts",
+                "QED_score",
+                "raw_regression_model",
+                "valid_smiles"
+            ))
 
         # 2. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
-            feature_extractor_network=get_feature_extractor(args.nn),
-            feature_extractor_kwargs={
-                "vocabulary": vocabulary,
-                "tokenizer": tokenizer,
-                **network_params
-            },
+            feature_extractor_network=torch.nn.Identity,
+            feature_extractor_kwargs={},
+            recurrent_net=get_memory_network(args.recurrent_nets),
+            recurrent_net_kwargs={"vocabulary": vocabulary,  **network_params},
             restart_model=restart_model,
-            recurrent_nets=False)
+        )
 
-        # 2. Define RL training algorithm
+        # 3. Define RL training algorithm
         prior_similarity_addon = AttractionKL(
             behavior_factories=[actor_factory],
             behavior_weights=[1.0],
-            loss_term_weight=1.0,
+            loss_term_weight=args.kl_coef,
         )
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
@@ -336,6 +341,9 @@ def get_args():
     parser.add_argument(
         '--recurrent-nets', action='store_true', default=False,
         help='Use a recurrent policy')
+    parser.add_argument(
+        '--kl-coef', type=float, default=0.5,
+        help='discount factor for rewards (default: 0.5)')
 
     # Scheme specs
     parser.add_argument(
