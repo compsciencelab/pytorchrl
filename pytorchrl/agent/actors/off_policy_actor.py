@@ -236,6 +236,7 @@ class OffPolicyActor(Actor):
 
         done = torch.zeros(num_proc, 1).to(dev)
         try:
+            import ipdb; ipdb.set_trace()
             rhs_act = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
         except Exception:
             rhs_act = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
