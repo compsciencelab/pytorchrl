@@ -39,6 +39,7 @@ class LstmNet(nn.Module):
         :param input_vector: Input tensor (batch_size, seq_size).
         :param hidden_state: Hidden state tensor.
         """
+        input_vector = input_vector.view(input_vector.size(0), -1)
         output_vector, hidden_state_out = self._forward_lstm(input_vector, hidden_state, done)
 
         if self._layer_normalization:
@@ -120,18 +121,6 @@ class LstmNet(nn.Module):
             x = x.view(T * N, -1)
 
         return x, hxs
-
-    def get_params(self):
-        """
-        Returns the configuration parameters of the model.
-        """
-        return {
-            'dropout': self._dropout,
-            'layer_size': self._layer_size,
-            'num_layers': self._num_layers,
-            'cell_type': self._cell_type,
-            'embedding_layer_size': self._embedding_layer_size
-        }
 
     def get_initial_recurrent_state(self, num_proc):
         return torch.zeros(num_proc, self._num_layers * 2, self._layer_size)
