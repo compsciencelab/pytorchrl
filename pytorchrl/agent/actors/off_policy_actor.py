@@ -236,7 +236,6 @@ class OffPolicyActor(Actor):
 
         done = torch.zeros(num_proc, 1).to(dev)
         try:
-            import ipdb; ipdb.set_trace()
             rhs_act = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
         except Exception:
             rhs_act = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
@@ -396,7 +395,7 @@ class OffPolicyActor(Actor):
         if self.scale:
             action = self.scale(action)
 
-        features = self.policy_net.common_feature_extractor(self.policy_obs_feature_extractor(obs))
+        features = self.policy_net.common_feature_extractor(self.policy_net.obs_feature_extractor(obs))
 
         if self.recurrent_net:
             features, rhs["rhs_act"] = self.policy_net.memory_net(features, rhs["rhs_act"], done)
