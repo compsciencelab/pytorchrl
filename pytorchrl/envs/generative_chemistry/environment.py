@@ -9,17 +9,18 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, scaffold, vocabulary, tokenizer, obs_length=50, **kwargs):
+    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200, **kwargs):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.tokenizer = tokenizer
-        self.obs_length = obs_length
+        self.max_length = max_length
         self.vocabulary = vocabulary
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
         # Define action and observation space
+        self.current_episode_length = 0
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
         self.observation_space = gym.spaces.Discrete(len(self.vocabulary))
 
@@ -29,20 +30,17 @@ class GenChemEnv(gym.Env):
         if not isinstance(action, str):
             action = self.vocabulary.decode([action])[0]
 
-        # TODO: action should be a single character
-
-        # TODO: add character to current molecule
+        info = {}
+        self.current_episode_length += 1
+        if self.current_episode_length == self.max_length:
+            action = "$"
         self.current_molecule += action
 
-        info = {}
-
-        # TODO: if character is not $, return 0.0 reward
-        if action != "$":
+        if action != "$":  # If character is not $, return 0.0 reward
             reward = 0.0
             done = False
 
-        # TODO: if character is $, evaluate molecule
-        else:
+        else:  # if character is $, evaluate molecule
             try:
                 score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
                 reward = score.total_score[0]
@@ -68,10 +66,10 @@ class GenChemEnv(gym.Env):
                 self.running_mean_valid_smiles.append(0.0)
             done = True
 
+        # Update valid smiles tracker
         info.update({
             "valid_smiles": float((sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles))
-                                  if len(self.running_mean_valid_smiles) != 0.0 else 0.0)
-        })
+                                  if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
         new_obs = self.vocabulary.encode([action])
 
@@ -84,6 +82,7 @@ class GenChemEnv(gym.Env):
         """
         self.num_episodes += 1
         self.current_molecule = "^"
+        self.current_episode_length = 0
         return self.vocabulary.encode(self.current_molecule)
 
     def render(self, mode='human'):
