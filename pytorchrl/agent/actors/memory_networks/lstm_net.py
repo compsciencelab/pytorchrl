@@ -11,26 +11,16 @@ class LstmNet(nn.Module):
     and an output linear layer back to the size of the vocabulary
     """
 
-    def __init__(self, input_size, vocabulary, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256,
-                 dropout=0., layer_normalization=False):
-        """
-        Implements a N layer GRU|LSTM cell including an embedding layer and an output linear layer back to the size of the
-        vocabulary
-        :param voc_size: Size of the vocabulary.
-        :param layer_size: Size of each of the RNN layers.
-        :param num_layers: Number of RNN layers.
-        :param embedding_layer_size: Size of the embedding layer.
-        """
+    def __init__(self, input_size, layer_size=512, num_layers=3, dropout=0., layer_normalization=False):
+        """Implements a N layer LSTM cell."""
         super(LstmNet, self).__init__()
+        self._input_size = input_size
         self._layer_size = layer_size
-        self._embedding_layer_size = embedding_layer_size
         self._num_layers = num_layers
-        self._cell_type = cell_type.lower()
         self._dropout = dropout
         self._layer_normalization = layer_normalization
-        self._embedding = nn.Embedding(len(vocabulary), self._embedding_layer_size)
         self._rnn = nn.LSTM(
-            self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
+            self._input_size, self._layer_size, num_layers=self._num_layers,
             dropout=self._dropout, batch_first=False)
 
     @property

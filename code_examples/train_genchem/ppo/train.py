@@ -118,7 +118,7 @@ def main():
                     "name": "Regression model",  # arbitrary name for the component
                     "weight": 2,  # the weight ("importance") of the component (default: 1)
                     "specific_parameters": {
-                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry2/models/Aurora_model.pkl'),
+                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
                         # absolute model path
                         "scikit": "regression",  # model can be "regression" or "classification"
                         "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
@@ -206,12 +206,13 @@ def main():
             ))
 
         # 2. Define RL Policy
+        import ipdb; ipdb.set_trace()
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
-            feature_extractor_network=torch.nn.Identity,
-            feature_extractor_kwargs={},
+            feature_extractor_network=get_feature_extractor(args.nn),
+            feature_extractor_kwargs={vocabulary_size: len(vocabulary)},
             recurrent_net=get_memory_network(args.recurrent_nets),
-            recurrent_net_kwargs={"vocabulary": vocabulary,  **network_params},
+            recurrent_net_kwargs={**network_params},
             restart_model=restart_model,
         )
 

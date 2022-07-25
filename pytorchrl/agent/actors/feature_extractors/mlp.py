@@ -15,6 +15,8 @@ class MLP(nn.Module):
         Environment observation space.
     hidden_sizes : list
         Hidden layers sizes.
+    output_size : int
+        Size of output feature map.
     activation : func
         Non-linear activation function.
     final_activation : bool
