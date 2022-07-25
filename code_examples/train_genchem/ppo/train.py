@@ -208,7 +208,6 @@ def main():
             ))
 
         # 2. Define RL Policy
-        import ipdb; ipdb.set_trace()
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.nn),

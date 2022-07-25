@@ -32,6 +32,5 @@ class Embedding(nn.Module):
             Output feature map.
         """
         input_vector = torch.clamp(inputs, 0.0, self._embedding.num_embeddings).long()
-        import ipdb; ipdb.set_trace()
         out = self._embedding(input_vector).squeeze(1)
         return out
