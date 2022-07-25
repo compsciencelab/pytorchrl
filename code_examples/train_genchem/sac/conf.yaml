@@ -13,7 +13,7 @@ start_steps: 20000
 buffer_size: 300000
 target_update_interval: 8000
 lr: 0.0003
-nn: null
+nn: Embedding
 recurrent_nets: LSTM
 num_grad_workers: 1
 num_col_workers: 1

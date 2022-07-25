@@ -83,6 +83,8 @@ def main():
             vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
                 os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
             restart_model = {"policy_net": network_weights}
+            network_params.pop("cell_type")
+            network_params.pop("embedding_layer_size")
             smiles_list = []
         except Exception:
             vocabulary, tokenizer, max_sequence_length, network_params, network_weights = None, None, 100, {}, None
@@ -208,12 +210,12 @@ def main():
         # 2. Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
             obs_space, action_space, prl.SAC,
-            obs_feature_extractor=torch.nn.Identity,
-            obs_feature_extractor_kwargs={},
-            act_feature_extractor=torch.nn.Identity,
-            act_feature_extractor_kwargs={},
+            obs_feature_extractor=get_feature_extractor(args.nn),
+            obs_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
+            act_feature_extractor=get_feature_extractor(args.nn),
+            act_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
             recurrent_net=get_memory_network(args.recurrent_nets),
-            recurrent_net_kwargs={"vocabulary": vocabulary,  **network_params},
+            recurrent_net_kwargs={**network_params},
             restart_model=restart_model,
         )
 
