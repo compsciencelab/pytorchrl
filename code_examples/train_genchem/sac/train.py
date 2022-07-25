@@ -22,7 +22,7 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 
 # TODO: update this dict
 weights_mapping = {
-    "_embedding.weight": "policy_net.memory_net._embedding.weight",
+    "_embedding.weight": "policy_net.obs_feature_extractor._embedding.weight",
     "_rnn.weight_ih_l0": "policy_net.memory_net._rnn.weight_ih_l0",
     "_rnn.weight_hh_l0": "policy_net.memory_net._rnn.weight_hh_l0",
     "_rnn.bias_ih_l0": "policy_net.memory_net._rnn.bias_ih_l0",
@@ -214,6 +214,8 @@ def main():
             obs_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
             act_feature_extractor=get_feature_extractor(args.nn),
             act_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
+            common_feature_extractor=torch.nn.Identity,
+            common_feature_extractor_kwargs={},
             recurrent_net=get_memory_network(args.recurrent_nets),
             recurrent_net_kwargs={**network_params},
             restart_model=restart_model,
