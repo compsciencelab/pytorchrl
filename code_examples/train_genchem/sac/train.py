@@ -81,7 +81,7 @@ def main():
         # 0. Load checkpoint
         try:
             vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
-                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry2/models/random.prior.new'))
+                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
             restart_model = {"policy_net": network_weights}
             smiles_list = []
         except Exception:

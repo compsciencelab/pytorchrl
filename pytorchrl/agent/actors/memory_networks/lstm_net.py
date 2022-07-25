@@ -39,9 +39,7 @@ class LstmNet(nn.Module):
         :param input_vector: Input tensor (batch_size, seq_size).
         :param hidden_state: Hidden state tensor.
         """
-        input_vector = torch.clamp(input_vector, 0.0, self._embedding.num_embeddings).long()
-        embedded_data = self._embedding(input_vector).squeeze(1)  # (batch, seq, embedding)
-        output_vector, hidden_state_out = self._forward_lstm(embedded_data, hidden_state, done)
+        output_vector, hidden_state_out = self._forward_lstm(input_vector, hidden_state, done)
 
         if self._layer_normalization:
             output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])

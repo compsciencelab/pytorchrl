@@ -1,8 +1,5 @@
-import gym
-import numpy as np
+import torch
 import torch.nn as nn
-from pytorchrl.agent.actors.utils import init
-from pytorchrl.agent.actors.feature_extractors.utils import get_gain
 
 
 class Embedding(nn.Module):
@@ -16,7 +13,7 @@ class Embedding(nn.Module):
     output_size : int
         Embedding layer size.
     """
-    def __init__(self, vocabulary_size, output_size=256):
+    def __init__(self, input_space, vocabulary_size, output_size=256):
         super(Embedding, self).__init__()
         self._embedding = nn.Embedding(vocabulary_size, output_size)
 
