@@ -122,7 +122,10 @@ class VanillaOnPolicyBuffer(S):
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
-        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
+        try:
+            self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
+        except IndexError:
+            self.num_channels_obs = 1
 
     def get_all_buffer_data(self, data_to_cpu=False):
         """
