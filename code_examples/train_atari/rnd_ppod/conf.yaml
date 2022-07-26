@@ -26,7 +26,7 @@ num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128
 ppo_epoch: 4
-recurrent_nets: false
+recurrent_nets: null
 restart_model: null
 save_interval: 100
 start_env_steps: 0

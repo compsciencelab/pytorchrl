@@ -19,7 +19,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.storages import GAEBuffer
@@ -107,7 +107,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor("CNN"),
-            restart_model=checkpoint, recurrent_net=args.recurrent_nets)
+            restart_model=checkpoint, recurrent_net=get_memory_network(args.recurrent_nets))
 
         # Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
@@ -297,8 +297,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', action='store_true', default=False,
-        help='Use a recurrent NN')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

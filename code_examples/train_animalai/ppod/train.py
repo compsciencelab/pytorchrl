@@ -15,8 +15,8 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import PPODBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.animal_olympics.animal_olympics_env_factory import animal_train_env_factory
 
 
@@ -68,7 +68,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model=args.restart_model,
-            recurrent_net=args.recurrent_nets)
+            recurrent_net=get_memory_network(args.recurrent_nets))
 
         # 4. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
@@ -205,8 +205,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', action='store_true', default=False,
-        help='Use a recurrent neural networks')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

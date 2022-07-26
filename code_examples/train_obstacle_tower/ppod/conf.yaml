@@ -17,7 +17,7 @@ gae_lambda: 0.95
 value_loss_coef: 0.2
 max_grad_norm: 0.5
 entropy_coef: 0.01
-recurrent_nets: True
+recurrent_nets: GRU
 reward_shape: False
 reduced_action_space: True
 use_clipped_value_loss: True

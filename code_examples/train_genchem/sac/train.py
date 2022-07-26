@@ -340,8 +340,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
     parser.add_argument(
         '--kl-coef', type=float, default=0.5,
         help='discount factor for rewards (default: 0.5)')

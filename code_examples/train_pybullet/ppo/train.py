@@ -159,8 +159,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(
@@ -178,7 +177,6 @@ def get_args():
     parser.add_argument(
         '--com-col-workers', default='synchronous',
         help='communication patters col workers (default: synchronous)')
-
     parser.add_argument(
         '--cluster', action='store_true', default=False,
         help='script is running in a cluster')

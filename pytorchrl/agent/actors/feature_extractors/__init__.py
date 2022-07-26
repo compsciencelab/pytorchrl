@@ -8,7 +8,10 @@ from pytorchrl.agent.actors.feature_extractors.embedding import Embedding
 
 def get_feature_extractor(name):
     """Returns model class from name."""
-    if name == "MLP":
+
+    if name is None:
+        return None
+    elif name == "MLP":
         return MLP
     elif name == "CNN":
         return CNN
@@ -19,7 +22,7 @@ def get_feature_extractor(name):
     elif name == "Embedding":
         return Embedding
     else:
-        raise ValueError("Specified model not found!")
+        raise ValueError("Specified feature extractor model not found!")
 
 
 def default_feature_extractor(input_space):
