@@ -154,10 +154,10 @@ def get_args():
         help='Number of frame to stack in observation (default no stack)')
     parser.add_argument(
         '--clip_rewards', action='store_true', default=False,
-        help='Use a recurrent policy')
+        help='Clip environment rewards')
     parser.add_argument(
         '--episodic_life', action='store_true', default=False,
-        help='Use a recurrent policy')
+        help='Turn every life into an episode')
 
     # SAC specs
     parser.add_argument(
@@ -200,8 +200,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

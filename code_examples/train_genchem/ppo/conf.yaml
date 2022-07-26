@@ -1,0 +1,25 @@
+experiment_name: GenChem
+agent_name: PPO
+num_env_steps : 1000_000_000
+log_dir: /tmp/genchem_ppo
+gamma: 0.99
+kl_coef: 0.5
+save_interval: 10000
+max_time: 86400
+num_env_processes: 32
+num_steps: 400
+num_mini_batch: 4
+clip_param: 0.1
+ppo_epoch: 3
+gae_lambda: 0.95
+value_loss_coef: 1.0
+entropy_coef: 0.01
+max_grad_norm: 0.5
+lr: 0.001
+nn: Embedding
+recurrent_nets: LSTM
+num_grad_workers: 1
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous
+wandb_key: null

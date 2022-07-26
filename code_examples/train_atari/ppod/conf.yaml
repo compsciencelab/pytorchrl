@@ -18,7 +18,7 @@ gae_lambda: 0.95
 value_loss_coef: 1.0
 entropy_coef: 0.001
 max_grad_norm: 1.0
-recurrent_nets: True
+recurrent_nets: GRU
 lr: 0.00025
 nn: CNN
 clip_rewards: True

@@ -47,8 +47,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space, algo_name, recurrent_nets=False,
-        restart_model=args.restart_model)
+        obs_space, action_space, algo_name, restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
@@ -169,8 +168,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-policy', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

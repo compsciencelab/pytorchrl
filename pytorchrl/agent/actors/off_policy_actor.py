@@ -8,8 +8,7 @@ import pytorchrl as prl
 from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init
-from pytorchrl.agent.actors.memory_networks import GruNet
-from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor, get_feature_extractor
+from pytorchrl.agent.actors.feature_extractors import MLP, default_feature_extractor
 
 
 class OffPolicyActor(Actor):
@@ -46,11 +45,11 @@ class OffPolicyActor(Actor):
         action and observation features.
     common_feature_extractor_kwargs : dict
         Keyword arguments for the common extractor network.
-    recurrent_nets : bool
+    recurrent_net : bool
         Whether to use a RNNs as feature extractors.
     sequence_overlap : float
         From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
-    recurrent_nets_kwargs : dict
+    recurrent_net_kwargs : dict
         Keyword arguments for the memory network.
     num_critics : int
         Number of Q networks to be instantiated.
@@ -66,8 +65,8 @@ class OffPolicyActor(Actor):
                  noise=None,
                  checkpoint=None,
                  sequence_overlap=0.5,
-                 recurrent_nets=False,
-                 recurrent_nets_kwargs={},
+                 recurrent_net=None,
+                 recurrent_net_kwargs={},
                  obs_feature_extractor=None,
                  obs_feature_extractor_kwargs={},
                  act_feature_extractor=None,
@@ -92,8 +91,8 @@ class OffPolicyActor(Actor):
         self.obs_feature_extractor_kwargs = obs_feature_extractor_kwargs
         self.common_feature_extractor = common_feature_extractor
         self.common_feature_extractor_kwargs = common_feature_extractor_kwargs
-        self.recurrent_nets = recurrent_nets
-        self.recurrent_nets_kwargs = recurrent_nets_kwargs
+        self.recurrent_net = recurrent_net
+        self.recurrent_net_kwargs = recurrent_net_kwargs
         self.sequence_overlap = np.clip(sequence_overlap, 0.0, 1.0)
         self.num_critics = num_critics
         self.deterministic = algorithm_name in [prl.DDPG, prl.TD3]
@@ -116,8 +115,8 @@ class OffPolicyActor(Actor):
             noise=None,
             restart_model=None,
             sequence_overlap=0.5,
-            recurrent_nets_kwargs={},
-            recurrent_nets=False,
+            recurrent_net_kwargs={},
+            recurrent_net=None,
             obs_feature_extractor=None,
             obs_feature_extractor_kwargs={},
             act_feature_extractor=None,
@@ -153,11 +152,11 @@ class OffPolicyActor(Actor):
             action and observation features.
         common_feature_extractor_kwargs : dict
             Keyword arguments for the common extractor network.
-        recurrent_nets : bool
+        recurrent_net : bool
             Whether to use a RNNs as feature extractors.
         sequence_overlap : float
             From 0.0 to 1.0, how much consecutive rollout sequences will overlap.
-        recurrent_nets_kwargs : dict
+        recurrent_net_kwargs : dict
             Keyword arguments for the memory network.
         num_critics : int
             Number of Q networks to be instantiated.
@@ -179,8 +178,8 @@ class OffPolicyActor(Actor):
                          algorithm_name=algorithm_name,
                          checkpoint=restart_model,
                          sequence_overlap=sequence_overlap,
-                         recurrent_nets_kwargs=recurrent_nets_kwargs,
-                         recurrent_nets=recurrent_nets,
+                         recurrent_net_kwargs=recurrent_net_kwargs,
+                         recurrent_net=recurrent_net,
                          obs_feature_extractor=obs_feature_extractor,
                          obs_feature_extractor_kwargs=obs_feature_extractor_kwargs,
                          act_feature_extractor=act_feature_extractor,
@@ -202,7 +201,7 @@ class OffPolicyActor(Actor):
     @property
     def is_recurrent(self):
         """Returns True if the actor network are recurrent."""
-        return self.recurrent_nets
+        return self.recurrent_net
 
     @property
     def recurrent_hidden_state_size(self):
@@ -236,7 +235,10 @@ class OffPolicyActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-        rhs_act = torch.zeros(num_proc, self.recurrent_size).to(dev)
+        try:
+            rhs_act = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
+        except Exception:
+            rhs_act = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
 
         rhs = {"rhs_act": rhs_act}
         rhs.update({"rhs_q{}".format(i + 1): rhs_act.clone() for i in range(self.num_critics)})
@@ -350,7 +352,7 @@ class OffPolicyActor(Actor):
 
         x = self.policy_net.common_feature_extractor(self.policy_net.obs_feature_extractor(obs))
 
-        if self.recurrent_nets:
+        if self.recurrent_net:
             x, rhs["rhs_act"] = self.policy_net.memory_net(x, rhs["rhs_act"], done)
 
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
@@ -393,9 +395,9 @@ class OffPolicyActor(Actor):
         if self.scale:
             action = self.scale(action)
 
-        features = self.policy_net.common_feature_extractor(self.policy_obs_feature_extractor(obs))
+        features = self.policy_net.common_feature_extractor(self.policy_net.obs_feature_extractor(obs))
 
-        if self.recurrent_nets:
+        if self.recurrent_net:
             features, rhs["rhs_act"] = self.policy_net.memory_net(features, rhs["rhs_act"], done)
 
         logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
@@ -434,7 +436,7 @@ class OffPolicyActor(Actor):
                 features = torch.cat([features, act_features], -1)
             features = q.common_feature_extractor(features)
 
-            if self.recurrent_nets:
+            if self.recurrent_net:
                 features, rhs["rhs_q{}".format(1 + 1)] = q.memory_net(
                     features, rhs["rhs_q{}".format(i + 1)], done)
 
@@ -496,9 +498,9 @@ class OffPolicyActor(Actor):
 
         feature_size = int(np.prod(q_common_feature_extractor(
             torch.randn(1, feature_size)).shape))
-        q_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs) if\
-            self.recurrent_nets else nn.Identity()
-        feature_size = q_memory_net.recurrent_hidden_state_size if self.recurrent_nets\
+        q_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs) if\
+            self.recurrent_net else nn.Identity()
+        feature_size = q_memory_net.recurrent_hidden_state_size if self.recurrent_net\
             else feature_size
 
         # ---- 5. Define prediction layer -------------------------------------
@@ -534,7 +536,7 @@ class OffPolicyActor(Actor):
         # ---- 1. Define Obs feature extractor --------------------------------
 
         if self.obs_feature_extractor:
-            self.obs_feature_extractor = get_feature_extractor(self.obs_feature_extractor)
+            self.obs_feature_extractor = self.obs_feature_extractor
         else:
             self.obs_feature_extractor = default_feature_extractor(self.input_space)
 
@@ -555,8 +557,8 @@ class OffPolicyActor(Actor):
         feature_size = int(np.prod(policy_common_feature_extractor(
             torch.randn(1, feature_size)).shape))
 
-        if self.recurrent_nets:
-            policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+        if self.recurrent_net:
+            policy_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()

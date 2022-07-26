@@ -8,7 +8,6 @@ import pytorchrl as prl
 from pytorchrl.agent.actors.base import Actor
 from pytorchrl.agent.actors.distributions import get_dist
 from pytorchrl.agent.actors.utils import Scale, Unscale, init
-from pytorchrl.agent.actors.memory_networks import GruNet
 from pytorchrl.agent.actors.feature_extractors import default_feature_extractor
 
 
@@ -31,9 +30,9 @@ class OnPolicyActor(Actor):
         Name of the RL algorithm used for learning.
     checkpoint : str
         Path to a previously trained Actor checkpoint to be loaded.
-    recurrent_nets : bool
+    recurrent_net : bool
         Whether to use a RNNs on top of the feature extractors.
-    recurrent_nets_kwargs:
+    recurrent_net_kwargs:
         Keyword arguments for the memory network.
     feature_extractor_network : nn.Module
         PyTorch nn.Module used as the features extraction block in all networks.
@@ -49,8 +48,8 @@ class OnPolicyActor(Actor):
                  action_space,
                  algorithm_name,
                  checkpoint=None,
-                 recurrent_nets=False,
-                 recurrent_nets_kwargs={},
+                 recurrent_net=None,
+                 recurrent_net_kwargs={},
                  feature_extractor_network=None,
                  feature_extractor_kwargs={},
                  shared_policy_value_network=True):
@@ -61,8 +60,8 @@ class OnPolicyActor(Actor):
             input_space=input_space,
             action_space=action_space)
 
-        self.recurrent_nets = recurrent_nets
-        self.recurrent_nets_kwargs = recurrent_nets_kwargs
+        self.recurrent_net = recurrent_net
+        self.recurrent_net_kwargs = recurrent_net_kwargs
         self.feature_extractor_network = feature_extractor_network
         self.shared_policy_value_network = shared_policy_value_network
         self.feature_extractor_kwargs = feature_extractor_kwargs
@@ -93,8 +92,8 @@ class OnPolicyActor(Actor):
             action_space,
             algorithm_name,
             restart_model=None,
-            recurrent_nets=False,
-            recurrent_nets_kwargs={},
+            recurrent_net=None,
+            recurrent_net_kwargs={},
             feature_extractor_kwargs={},
             feature_extractor_network=None,
             shared_policy_value_network=True):
@@ -115,9 +114,9 @@ class OnPolicyActor(Actor):
             PyTorch nn.Module used as the features extraction block in all networks.
         feature_extractor_kwargs : dict
             Keyword arguments for the feature extractor network.
-        recurrent_nets : bool
-            Whether to use a RNNs as feature extractors.
-        recurrent_nets_kwargs:
+        recurrent_net : nn.Module
+             PyTorch nn.Module to use after the feature extractors.
+        recurrent_net_kwargs:
             Keyword arguments for the memory network.
         shared_policy_value_network : bool
             Whether or not to share weights between policy and value networks.
@@ -134,9 +133,9 @@ class OnPolicyActor(Actor):
                          input_space=input_space,
                          action_space=action_space,
                          algorithm_name=algorithm_name,
-                         recurrent_nets=recurrent_nets,
+                         recurrent_net=recurrent_net,
                          checkpoint=restart_model,
-                         recurrent_nets_kwargs=recurrent_nets_kwargs,
+                         recurrent_net_kwargs=recurrent_net_kwargs,
                          feature_extractor_kwargs=feature_extractor_kwargs,
                          feature_extractor_network=feature_extractor_network,
                          shared_policy_value_network=shared_policy_value_network)
@@ -154,7 +153,7 @@ class OnPolicyActor(Actor):
     @property
     def is_recurrent(self):
         """Returns True if the actor network are recurrent."""
-        return self.recurrent_nets
+        return self.recurrent_net
 
     @property
     def recurrent_hidden_state_size(self):
@@ -187,7 +186,10 @@ class OnPolicyActor(Actor):
             dev = obs.device
 
         done = torch.zeros(num_proc, 1).to(dev)
-        rhs_policy = torch.zeros(num_proc, self.recurrent_size).to(dev)
+        try:
+            rhs_policy = self.policy_net.memory_net.get_initial_recurrent_state(num_proc).to(dev)
+        except Exception:
+            rhs_policy = torch.zeros(num_proc, self.recurrent_hidden_state_size).to(dev)
 
         rhs = {"policy": rhs_policy}
         rhs.update({"value_net{}".format(i + 1): rhs_policy.clone() for i in range(self.num_critics_ext)})
@@ -227,7 +229,7 @@ class OnPolicyActor(Actor):
         """
 
         features = self.policy_net.feature_extractor(obs)
-        if self.recurrent_nets:
+        if self.recurrent_net:
             features, rhs["policy"] = self.policy_net.memory_net(
                 features, rhs["policy"], done)
         (action, clipped_action, logp_action, entropy_dist, dist) = self.policy_net.dist(
@@ -274,7 +276,7 @@ class OnPolicyActor(Actor):
 
         features = self.policy_net.feature_extractor(obs)
 
-        if self.recurrent_nets:
+        if self.recurrent_net:
             features, rhs["policy"] = self.policy_net.memory_net(
                 features, rhs["policy"], done)
 
@@ -310,14 +312,26 @@ class OnPolicyActor(Actor):
         if self.shared_policy_value_network:
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
-            value = value_net.predictor(self.last_action_features)
+
+            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                features = rhs["policy"]
+            else:
+                features = self.last_action_features
+
+            value = value_net.predictor(features)
 
         else:
             value_features = value_net.feature_extractor(obs)
-            if self.recurrent_nets:
+            if self.recurrent_net:
                 value_features, rhs[value_net_name] = value_net.memory_net(
                     value_features, rhs[value_net_name], done)
-            value = value_net.predictor(value_features)
+
+                if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                    features = rhs[value_net_name]
+                else:
+                    features = value_features
+
+            value = value_net.predictor(features)
 
         return value, rhs
 
@@ -394,8 +408,11 @@ class OnPolicyActor(Actor):
             feature_size = int(np.prod(value_feature_extractor(
                 torch.randn(1, *self.input_space.shape)).shape))
 
-            if self.recurrent_nets:
-                value_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
+                feature_size = self.recurrent_hidden_state_size
+
+            if self.recurrent_net:
+                value_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             else:
                 value_memory_net = nn.Identity()
 
@@ -437,11 +454,11 @@ class OnPolicyActor(Actor):
 
         # ---- 2. Define memory network  --------------------------------------
 
-        feature_size = int(np.prod(policy_feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape))
+        features = policy_feature_extractor(torch.randn(1, *self.input_space.shape))
+        feature_size = int(np.prod(features.shape))
 
-        if self.recurrent_nets:
-            policy_memory_net = GruNet(feature_size, **self.recurrent_nets_kwargs)
+        if self.recurrent_net:
+            policy_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             self.recurrent_size = policy_memory_net.recurrent_hidden_state_size
         else:
             policy_memory_net = nn.Identity()
@@ -451,6 +468,11 @@ class OnPolicyActor(Actor):
 
         if isinstance(self.action_space, gym.spaces.Discrete):
             dist = get_dist("Categorical")(self.recurrent_size, self.action_space.n)
+            self.scale = None
+            self.unscale = None
+
+        elif isinstance(self.action_space, gym.spaces.MultiDiscrete):
+            dist = get_dist("MultiCategorical")(self.recurrent_size, self.action_space.individual_shape[0])
             self.scale = None
             self.unscale = None
 

@@ -14,7 +14,7 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import PPODBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -67,7 +67,7 @@ def main():
         # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name, restart_model=args.restart_model,
-            recurrent_nets=args.recurrent_nets)
+            recurrent_net=get_memory_network(args.recurrent_nets))
 
         # 5. Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
@@ -158,10 +158,10 @@ def get_args():
         help='Number of frame to stack in observation (default no stack)')
     parser.add_argument(
         '--clip_rewards', action='store_true', default=False,
-        help='Use a recurrent policy')
+        help='Clip environment rewards')
     parser.add_argument(
         '--episodic_life', action='store_true', default=False,
-        help='Use a recurrent policy')
+        help='Turn every life into an episode')
 
     # PPO specs
     parser.add_argument(
@@ -213,8 +213,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

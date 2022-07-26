@@ -10,11 +10,8 @@ from pytorchrl.scheme.base.worker import Worker as W
 
 class CWorker(W):
     """
-<<<<<<< HEAD
-     Worker class handling data collection.
-=======
     Worker class handling data collection.
->>>>>>> 0734b84bc7820f256ac612a4f2dd1e51e8560b8f
+
     This class wraps an actor instance, a storage class instance and a
     train and a test vector environments. It collects data samples, sends
     them and and evaluates network versions.
@@ -253,7 +250,8 @@ class CWorker(W):
             self.storage.insert_transition(transition)
 
             # Handle end of episode - collect episode info
-            done_positions = done2.nonzero()[:, 0].tolist()
+            done_positions = torch.nonzero(done2, as_tuple=False)[:, 0].tolist()
+
             for i in done_positions:
                 if "episode" in episode_infos[i]:  # gym envs should have it
                     for k, v in episode_infos[i]["episode"].items():

@@ -1,4 +1,0 @@
-Benchmarks
-==========
-
-Coming soon...

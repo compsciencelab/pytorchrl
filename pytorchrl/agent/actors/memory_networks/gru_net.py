@@ -133,9 +133,9 @@ class GruNet(nn.Module):
         x = inputs.view(inputs.size(0), -1)
         x, rhs = self._forward_gru(x, rhs, done)
         # x = self.activation(x)
-
         assert len(x.shape) == 2 and x.shape[1] == self.num_outputs
-
         return x, rhs
 
+    def get_initial_recurrent_state(self, num_proc):
+        return torch.zeros(num_proc, self._layer_size)
 

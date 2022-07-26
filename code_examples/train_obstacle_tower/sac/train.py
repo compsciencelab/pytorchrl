@@ -12,7 +12,7 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import SAC
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import ReplayBuffer, NStepReplayBuffer, PERBuffer, EREBuffer
-from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
+from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.obstacle_tower.obstacle_tower_env_factory import obstacle_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -57,7 +57,7 @@ def main():
 
         # Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
-            obs_space, action_space, algo_name, recurrent_nets=args.recurrent_nets,
+            obs_space, action_space, algo_name, recurrent_net=get_memory_network(args.recurrent_nets),
             restart_model=args.restart_model, obs_feature_extractor=args.nn)
 
         # 5. Define rollouts storage
@@ -193,8 +193,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', action='store_true', default=False,
-        help='Use a recurrent policy')
+        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(
