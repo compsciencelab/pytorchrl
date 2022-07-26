@@ -107,7 +107,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor("CNN"),
-            restart_model=checkpoint, recurrent_nets=args.recurrent_nets)
+            restart_model=checkpoint, recurrent_net=args.recurrent_nets)
 
         # Define rollouts storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)

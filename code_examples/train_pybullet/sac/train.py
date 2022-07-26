@@ -46,8 +46,7 @@ def main():
 
     # 4. Define RL Policy
     actor_factory = OffPolicyActor.create_factory(
-        obs_space, action_space, algo_name, recurrent_nets=False,
-        restart_model=args.restart_model)
+        obs_space, action_space, algo_name, restart_model=args.restart_model)
 
     # 5. Define rollouts storage
     storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)

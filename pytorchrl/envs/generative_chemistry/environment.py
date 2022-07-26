@@ -40,7 +40,7 @@ class GenChemEnv(gym.Env):
             reward = 0.0
             done = False
 
-        else:  # if character is $, evaluate molecule
+        else:  # if action is $, evaluate molecule
             try:
                 score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
                 reward = score.total_score[0]
