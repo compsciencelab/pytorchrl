@@ -1,5 +1,5 @@
 # default on-policy architecture config:
-recurrent_nets: False
+recurrent_nets: null
 recurrent_nets_kwargs: {}
   # empty kwargs
   # if add like

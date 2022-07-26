@@ -3,7 +3,7 @@ recurrent_nets_kwargs: {}
   # empty kwargs
   # if add like
   # - parameter_name: parameter_value
-recurrent_nets: False
+recurrent_nets: null
 obs_feature_extractor: null
 obs_feature_extractor_kwargs: {}
   # empty kwargs

@@ -1,9 +1,9 @@
 env_id: CrafterReward-v1
-experiment_name: MsPacmanNoFrameskip-v4
+experiment_name: SAC-CrafterReward-v1
 agent_name: SAC
 wandb_key: null
 num_env_steps : 1000000
-log_dir: /tmp/atari_sac
+log_dir: /tmp/crafter_sac
 gamma: 0.99
 polyak: 0.995
 save_interval: 50000

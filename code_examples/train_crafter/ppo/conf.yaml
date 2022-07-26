@@ -1,7 +1,7 @@
 env_id: CrafterReward-v1
-experiment_name: SAC-CrafterReward-v4
-agent_name: SAC
-wandb_key: 16d18880bf755b96f6114e4fa2d0a7a5a00a3570
+experiment_name: PPO-CrafterReward-v1
+agent_name: PPO
+wandb_key: null
 num_env_steps : 10000000
 log_dir: /tmp/crafter-ppo
 gamma: 0.99

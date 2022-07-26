@@ -11,14 +11,15 @@ ENVS_LIST = ["gym", "pybullet", "mujoco", "causalworld", "crafter", "atari"]
 ON_POLICY_ALGOS = ["PPO", "PPOD"]
 OFF_POLICY_ALGOS = ["DQN", "DDPG", "TD3", "SAC", "MPO"]
 
-class Trainer():
+
+class Trainer:
     def __init__(self, config, custom_environment_factory=None):
         cleanup_log_dir(config.log_dir)
         # not sure if this is needed anymore since we store it anyway on wandb
         # save_argparse(config, os.path.join(config.log_dir, "conf.yaml"),[])
         self.config = config
         self.custom_environment_factory = custom_environment_factory
-        
+
         self.train_envs_factory, self.test_envs_factory, self.action_space, self.obs_space = self.setup_environment()
         self.algo_factory, self.algo_name = get_algorithm(self.config)
         self.actor_factory = self.setup_algorithm()
@@ -26,7 +27,6 @@ class Trainer():
         self.scheme = self.setup_scheme()
         self.learner = self.setup_learner()
 
-        
     def train(self, wandb):
         iterations = 0
         start_time = time.time()
@@ -51,11 +51,12 @@ class Trainer():
         print("Finished!")
         sys.exit()
 
-    def setup_environment(self,):
+    def setup_environment(self, ):
         if self.custom_environment_factory is not None:
             environment_train_factory = self.custom_environment_factory
         else:
-            environment_train_factory, environment_test_factory = self.get_enviroment_factory(self.config.environment_name)
+            environment_train_factory, environment_test_factory = self.get_enviroment_factory(
+                self.config.environment_name)
         # 1. Define Train Vector of Envs
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=environment_train_factory,
@@ -67,10 +68,9 @@ class Trainer():
             env_fn=environment_test_factory,
             env_kwargs=self.config.environment.test_env_config,
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
-        
+
         return train_envs_factory, test_envs_factory, action_space, obs_space
-        
-    
+
     def setup_algorithm(self, ):
         if self.config.agent.name in ON_POLICY_ALGOS:
             from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
@@ -94,20 +94,23 @@ class Trainer():
                                                           sequence_overlap=self.config.agent.sequence_overlap,
                                                           recurrent_nets_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
                                                           recurrent_nets=self.config.agent.actor.recurrent_nets,
-                                                          obs_feature_extractor=get_feature_extractor(self.config.agent.actor.obs_feature_extractor),
+                                                          obs_feature_extractor=get_feature_extractor(
+                                                              self.config.agent.actor.obs_feature_extractor),
                                                           obs_feature_extractor_kwargs=self.config.agent.actor.obs_feature_extractor_kwargs,
-                                                          act_feature_extractor=get_feature_extractor(self.config.agent.actor.act_feature_extractor),
-                                                          common_feature_extractor=get_feature_extractor(self.config.agent.actor.common_feature_extractor),
+                                                          act_feature_extractor=get_feature_extractor(
+                                                              self.config.agent.actor.act_feature_extractor),
+                                                          common_feature_extractor=get_feature_extractor(
+                                                              self.config.agent.actor.common_feature_extractor),
                                                           common_feature_extractor_kwargs=self.config.agent.actor.common_feature_extractor_kwargs,
-                                                          num_critics=self.config.agent.actor.num_critics)                                         
+                                                          num_critics=self.config.agent.actor.num_critics)
             return actor_factory
         else:
             pass
-        
-    def setup_storage(self,):
+
+    def setup_storage(self, ):
         if self.config.agent.storage.name == "replay_buffer":
             from pytorchrl.agent.storages import ReplayBuffer
-            return  ReplayBuffer.create_factory(size=self.config.agent.storage.size)
+            return ReplayBuffer.create_factory(size=self.config.agent.storage.size)
         elif self.config.agent.storage.name == "her_buffer":
             from pytorchrl.agent.storages import HERBuffer
             return HERBuffer.create_factory(size=self.config.agent.storage.name)
@@ -123,9 +126,8 @@ class Trainer():
             return VTraceBuffer.create_factory(size=self.config.agent.storage.size)
         else:
             pass
-    
-    
-    def setup_scheme(self,):
+
+    def setup_scheme(self, ):
         params = {"algo_factory": self.algo_factory,
                   "actor_factory": self.actor_factory,
                   "storage_factory": self.storage_factory,
@@ -141,11 +143,11 @@ class Trainer():
                                              "num_gpus": self.config.scheme.grad_workers_resources.num_gpus},
                   }
         return Scheme(**params)
-    
+
     def setup_learner(self, ):
-        return  Learner(self.scheme,
-                        target_steps=self.config.num_env_steps, log_dir=self.config.log_dir)
-    
+        return Learner(self.scheme,
+                       target_steps=self.config.num_env_steps, log_dir=self.config.log_dir)
+
     # might get extracted to additional utils file 
     def get_enviroment_factory(self, task):
         if task == "pybullet":
@@ -168,13 +170,11 @@ class Trainer():
             from pytorchrl.envs.crafter import crafter_train_env_factory, crafter_test_env_factory
             return crafter_train_env_factory, crafter_test_env_factory
         else:
-            assert task in ENVS_LIST, "Selected environment is not in list of possible training environments: {} ".format(ENVS_LIST)
-            
-        
-    
+            assert task in ENVS_LIST, "Selected environment is not in list of possible training environments: {} ".format(
+                ENVS_LIST)
+
+
 def get_algorithm(config):
-
-
     if config.agent.name == "PPO":
         from pytorchrl.agent.algorithms import PPO
         algo_factory, algo_name = PPO.create_factory(lr=config.agent.ppo_config.lr,
@@ -190,7 +190,7 @@ def get_algorithm(config):
                                                      num_test_episodes=config.agent.ppo_config.num_test_episodes,
                                                      use_clipped_value_loss=config.agent.ppo_config.use_clipped_value_loss,
                                                      )
-        
+
         return algo_factory, algo_name
     elif config.agent.name == "DDPG":
         from pytorchrl.agent.algorithms import DDPG
@@ -206,8 +206,8 @@ def get_algorithm(config):
                                                       start_steps=config.agent.ddpg_config.start_steps,
                                                       mini_batch_size=config.agent.ddpg_config.mini_batch_size,
                                                       target_update_interval=config.agent.ddpg_config.target_update_interval)
-                                                     # TODO: check how to set empty list in hydra
-                                                     # policy_loss_addons=config.agent.sac_config.policy_loss_addons)
+        # TODO: check how to set empty list in hydra
+        # policy_loss_addons=config.agent.sac_config.policy_loss_addons)
         return algo_factory, algo_name
     elif config.agent.name == "TD3":
         from pytorchrl.agent.algorithms import TD3
@@ -223,8 +223,8 @@ def get_algorithm(config):
                                                      start_steps=config.agent.td3_config.start_steps,
                                                      mini_batch_size=config.agent.td3_config.mini_batch_size,
                                                      target_update_interval=config.agent.td3_config.target_update_interval)
-                                                     # TODO: check how to set empty list in hydra
-                                                     # policy_loss_addons=config.agent.sac_config.policy_loss_addons)
+        # TODO: check how to set empty list in hydra
+        # policy_loss_addons=config.agent.sac_config.policy_loss_addons)
         return algo_factory, algo_name
     elif config.agent.name == "SAC":
         from pytorchrl.agent.algorithms import SAC
@@ -239,12 +239,12 @@ def get_algorithm(config):
                                                      start_steps=config.agent.sac_config.start_steps,
                                                      max_grad_norm=config.agent.sac_config.max_grad_norm,
                                                      initial_alpha=config.agent.sac_config.initial_alpha,
-                                                     mini_batch_size=config.agent.sac_config.mini_batch_size,                                                   
+                                                     mini_batch_size=config.agent.sac_config.mini_batch_size,
                                                      num_test_episodes=config.agent.sac_config.num_test_episodes,
                                                      target_update_interval=config.agent.sac_config.target_update_interval
                                                      # TODO: check how to set empty list in hydra
                                                      # policy_loss_addons=config.agent.sac_config.policy_loss_addons 
-                                                      )
+                                                     )
         return algo_factory, algo_name
     elif config.agent.name == "MPO":
         from pytorchrl.agent.algorithms import MPO
