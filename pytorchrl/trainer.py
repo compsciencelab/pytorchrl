@@ -64,36 +64,38 @@ class Trainer:
             vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
 
         # 2. Define Test Vector of Envs (Optional)
-        test_envs_factory, _, _ = VecEnv.create_factory(
-            env_fn=environment_test_factory,
-            env_kwargs=self.config.environment.test_env_config,
-            vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
-
+        if environment_test_factory is not None:
+            test_envs_factory, _, _ = VecEnv.create_factory(
+                env_fn=environment_test_factory,
+                env_kwargs=self.config.environment.test_env_config,
+                vec_env_size=self.config.num_env_processes, log_dir=self.config.log_dir)
+        else:
+            test_envs_factory = lambda v, x, y, z: None
         return train_envs_factory, test_envs_factory, action_space, obs_space
 
     def setup_algorithm(self, ):
         if self.config.agent.name in ON_POLICY_ALGOS:
-            from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+            from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
             actor_factory = OnPolicyActor.create_factory(input_space=self.obs_space,
                                                          action_space=self.action_space,
                                                          algorithm_name=self.algo_name,
                                                          restart_model=self.config.restart_model,
-                                                         recurrent_nets=self.config.agent.actor.recurrent_nets,
-                                                         recurrent_nets_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
+                                                         recurrent_net=get_memory_network(self.config.agent.actor.recurrent_nets),
+                                                         recurrent_net_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
                                                          feature_extractor_kwargs=self.config.agent.actor.feature_extractor_kwargs,
-                                                         feature_extractor_network=self.config.agent.actor.feature_extractor_network,
+                                                         feature_extractor_network=get_feature_extractor(self.config.agent.actor.feature_extractor_network),
                                                          shared_policy_value_network=self.config.agent.actor.shared_policy_value_network)
             return actor_factory
         elif self.config.agent.name in OFF_POLICY_ALGOS:
-            from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor
+            from pytorchrl.agent.actors import OffPolicyActor, get_feature_extractor, get_memory_network
             actor_factory = OffPolicyActor.create_factory(input_space=self.obs_space,
                                                           action_space=self.action_space,
                                                           algorithm_name=self.algo_name,
                                                           noise=self.config.agent.noise,
                                                           restart_model=self.config.restart_model,
                                                           sequence_overlap=self.config.agent.sequence_overlap,
-                                                          recurrent_nets_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
-                                                          recurrent_nets=self.config.agent.actor.recurrent_nets,
+                                                          recurrent_net_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
+                                                          recurrent_net=get_memory_network(self.config.agent.actor.recurrent_nets),
                                                           obs_feature_extractor=get_feature_extractor(
                                                               self.config.agent.actor.obs_feature_extractor),
                                                           obs_feature_extractor_kwargs=self.config.agent.actor.obs_feature_extractor_kwargs,
@@ -169,6 +171,11 @@ class Trainer:
         elif task == "crafter":
             from pytorchrl.envs.crafter import crafter_train_env_factory, crafter_test_env_factory
             return crafter_train_env_factory, crafter_test_env_factory
+        elif task == "gen_chem":
+            # TODO: 
+            # from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
+            # return generative_chemistry_train_env_factory, None
+            raise NotImplementedError
         else:
             assert task in ENVS_LIST, "Selected environment is not in list of possible training environments: {} ".format(
                 ENVS_LIST)
