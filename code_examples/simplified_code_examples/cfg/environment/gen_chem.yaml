@@ -1,0 +1,7 @@
+env_name: gen_chem
+
+# TODO:
+train_env_config:
+  smiles_lisit: ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
+  scoring_function_parameters: {}  
+
