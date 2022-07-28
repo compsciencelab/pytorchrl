@@ -314,9 +314,10 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
             embed_state = np.concatenate(self._embed_buff)
 
         info.update({"StateEmbeddings": embed_state})
-
         self.last_state = state
 
+        return state, reward, done, info
+    
     def reset(self):
         self.last_state = self.env.reset()
         return self.last_state
