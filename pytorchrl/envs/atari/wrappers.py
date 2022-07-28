@@ -317,7 +317,7 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
         self.last_state = state
 
         return state, reward, done, info
-    
+
     def reset(self):
         self.last_state = self.env.reset()
         return self.last_state
