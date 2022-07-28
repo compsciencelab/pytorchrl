@@ -6,9 +6,11 @@ from pytorchrl.envs.common import DelayedReward
 def atari_train_env_factory(
         env_id, index_col_worker, index_grad_worker, index_env=0, seed=0, frame_stack=1, reward_delay=1,
         episodic_life=True, clip_rewards=False, max_episode_steps=4500, sticky_actions=False,
-        embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False):
+        embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False,
+        domain_knowledge_embedding="default", double_state=False):
     """
     Create train Atari environment.
+
     Parameters
     ----------
     env_id : str
@@ -37,6 +39,12 @@ def atari_train_env_factory(
         Shape of atari embeddings (if embedding wrappers are used).
     embeddings_num_values : int
         Number of values for atari embeddings (if embedding wrappers are used).
+    use_domain_knowledge : bool
+        Whether or not to create embeddings using domain knowledge.
+    domain_knowledge_embedding : str
+        Type of domain knowledge embedding
+    double_state : boo,
+        Whether or not to concatenate last 2 different embeddings.
 
     Returns
     -------
@@ -54,7 +62,9 @@ def atari_train_env_factory(
 
     if env_id == "MontezumaRevengeNoFrameskip-v4":
         env = MontezumaVisitedRoomEnv(env, 3)
-        env = MontezumaEmbeddingsEnv(env, embeddings_shape, embeddings_num_values, use_domain_knowledge)
+        env = MontezumaEmbeddingsEnv(
+            env, embeddings_shape, embeddings_num_values, use_domain_knowledge,
+            domain_knowledge_embedding, double_state)
     elif env_id == "PitfallNoFrameskip-v4":
         env = ScaleRewardEnv(env, 0.001)
 
@@ -69,6 +79,7 @@ def atari_test_env_factory(
         reward_delay=1, episodic_life=False, clip_rewards=False, max_episode_steps=4500, sticky_actions=False):
     """
     Create test Atari environment.
+
     Parameters
     ----------
     env_id : str
@@ -89,6 +100,7 @@ def atari_test_env_factory(
         Maximum number of steps per episode.
     sticky_actions : bool
         Randomly repeat last action with probability 0.25.
+
     Returns
     -------
     env : gym.Env

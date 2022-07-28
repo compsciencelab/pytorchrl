@@ -233,7 +233,8 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
 
 
 class MontezumaEmbeddingsEnv(gym.Wrapper):
-    def __init__(self, env, embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False):
+    def __init__(self, env, embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False,
+                 domain_knowledge_embedding="default", double_state=False):
         gym.Wrapper.__init__(self, env)
 
         # pos 0: The current frame of the episode.
@@ -241,7 +242,7 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
         # pod 57: room level?
         # pos 19, 20, 21: The score, represented in Binary Coded Decimal. This is, every nibble represents a decimal digit
         # pos 42: joe_x, from 0 to 153
-        # pos 43: joe_y, from 0 to 122
+        # pos 43: joe_y, from 0 to 122 0 135 to 253
         # pos 52: agent orientation, 76 or 128
         # pos 65: inventory
         #       mallet +1
@@ -262,38 +263,59 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
         self.embeddings_shape = embeddings_shape
         self.embeddings_num_values = embeddings_num_values
         self.use_domain_knowledge = use_domain_knowledge
+        self.domain_knowledge_embedding = domain_knowledge_embedding
+        self.double_state = double_state
+        if double_state:
+            self._embed_buff = deque(maxlen=2)
 
     def step(self, action):
 
+        # Create ebedding
         if self.use_domain_knowledge:
             ram = self.unwrapped.ale.getRAM()
             assert len(ram) == 128
-            embed_state = np.array(
-                [
-                    ram[self.joe_x],
-                    ram[self.joe_y],
-                    ram[self.room_address] + 24 * ram[self.room_level],
-                    ram[self.joe_inventory],
-                ]
-            )
+            if self.domain_knowledge_embedding == "default":
+                embed_state = np.array(
+                    [
+                        np.clip(ram[self.joe_x], 0, 153),  # range 0 - 153
+                        np.clip(ram[self.joe_y], 135, 253),  # range 135 - 253
+                        ram[self.room_address] + 24 * ram[self.room_level],
+                        ram[self.joe_inventory],
+                    ]
+                )
+            elif self.domain_knowledge_embedding == "room_inventory":
+                embed_state = np.array(
+                    [
+                        ram[self.room_address] + 24 * ram[self.room_level],
+                        ram[self.joe_inventory],
+                    ]
+                )
+            elif self.domain_knowledge_embedding == "room":
+                embed_state = np.array(
+                    [
+                        ram[self.room_address] + 24 * ram[self.room_level],
+                    ]
+                )
             state, reward, done, info = self.env.step(action)
-
         else:
             state, reward, done, info = self.env.step(action)
             embed_state = imdownscale(
                 state=self.last_state[:, :, -1],
                 target_shape=self.embeddings_shape,
-                max_pix_value=self.embeddings_num_values
-            )
+                max_pix_value=self.embeddings_num_values)
+
+        # Concat last 2 embeddings if specified
+        if self.double_state:
+            if len(self._embed_buff) < 2:
+                self._embed_buff.append(embed_state)
+                self._embed_buff.append(embed_state)
+            if (embed_state != self._embed_buff[-1]).any():
+                self._embed_buff.append(embed_state)
+            embed_state = np.concatenate(self._embed_buff)
 
         info.update({"StateEmbeddings": embed_state})
+
         self.last_state = state
-
-        return state, reward, done, info
-
-    def reset(self):
-        self.last_state = self.env.reset()
-        return self.last_state
 
 
 class WarpFrame(gym.ObservationWrapper):
