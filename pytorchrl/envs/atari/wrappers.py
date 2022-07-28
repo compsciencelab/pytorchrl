@@ -7,6 +7,7 @@ os.environ.setdefault('PATH', '')
 import gym
 import cv2
 import numpy as np
+from collections import deque
 
 cv2.ocl.setUseOpenCL(False)
 from pytorchrl.envs.common import FrameStack
