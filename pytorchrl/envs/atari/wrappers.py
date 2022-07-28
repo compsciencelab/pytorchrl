@@ -317,6 +317,10 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
 
         self.last_state = state
 
+    def reset(self):
+        self.last_state = self.env.reset()
+        return self.last_state
+
 
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env, width=84, height=84, grayscale=True, dict_space_key=None):
