@@ -8,7 +8,7 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
     conda create -y -n pytorchrl
     conda activate pytorchrl
 
-    conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
+    conda install pytorch torchvision cudatoolkit -c pytorch
     
     pip install pytorchrl
 ```

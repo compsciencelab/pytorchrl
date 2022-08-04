@@ -16,7 +16,7 @@ Installing PyTorchRL library
 
 2. Install dependencies. ::
 
-    conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
+    conda install pytorch torchvision cudatoolkit -c pytorch
 
 3. Install package. It can be installed either via PyPI or from source. ::
 
