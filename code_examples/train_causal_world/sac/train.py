@@ -62,7 +62,7 @@ def main():
 
         # 4. Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
-            obs_space, action_space, algo_name, recurrent_nets=False,
+            obs_space, action_space, algo_name, recurrent_net=False,
             restart_model=args.restart_model)
 
         # 5. Define rollouts storage

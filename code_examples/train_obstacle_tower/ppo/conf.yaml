@@ -14,7 +14,7 @@ ppo_epoch: 2
 use_gae: True
 gae_lambda: 0.95
 value_loss_coef: 0.2
-recurrent_nets: GRU
+recurrent_net: GRU
 reward_shape: True
 reduced_action_space: True
 use_clipped_value_loss: True

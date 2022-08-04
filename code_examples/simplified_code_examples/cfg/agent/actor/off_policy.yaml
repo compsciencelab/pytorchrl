@@ -1,9 +1,9 @@
 # default off policy architecture config:
-recurrent_nets_kwargs: {}
+recurrent_net_kwargs: {}
   # empty kwargs
   # if add like
   # - parameter_name: parameter_value
-recurrent_nets: null
+recurrent_net: null
 obs_feature_extractor: null
 obs_feature_extractor_kwargs: {}
   # empty kwargs

@@ -62,7 +62,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             feature_extractor_network=get_feature_extractor(args.nn),
-            restart_model=args.restart_model, recurrent_net=get_memory_network(args.recurrent_nets))
+            restart_model=args.restart_model, recurrent_net=get_memory_network(args.recurrent_net))
 
         # Define rollouts storage
         storage_factory = PPODBuffer.create_factory(
@@ -223,7 +223,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
+        '--recurrent-net', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(

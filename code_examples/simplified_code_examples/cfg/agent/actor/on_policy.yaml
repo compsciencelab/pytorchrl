@@ -1,6 +1,6 @@
 # default on-policy architecture config:
-recurrent_nets: null
-recurrent_nets_kwargs: {}
+recurrent_net: null
+recurrent_net_kwargs: {}
   # empty kwargs
   # if add like
   # - parameter_name: parameter_value

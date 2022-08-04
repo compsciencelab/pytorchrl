@@ -10,7 +10,6 @@ from pytorchrl.utils import LoadFromFile
 
 
 def enjoy():
-
     args = get_args()
 
     # Define single copy of the environment
@@ -20,20 +19,21 @@ def enjoy():
     # Define agent device and agent
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    dynamics_model =  MBActor.create_factory(args.env_id,
-                                                  env.observation_space,
-                                                  env.action_space,
-                                                  hidden_size=args.hidden_size,
-                                                  batch_size=args.mini_batch_size,
-                                                  learn_reward_function=args.learn_reward_function,
-                                                  checkpoint=os.path.join(args.log_dir, "model.state_dict"))(device)
+    dynamics_model = MBActor.create_factory(
+        args.env_id,
+        env.observation_space,
+        env.action_space,
+        hidden_size=args.hidden_size,
+        batch_size=args.mini_batch_size,
+        learn_reward_function=args.learn_reward_function,
+        checkpoint=os.path.join(args.log_dir, "model.state_dict"))(device)
 
     algo_factory, algo = MB_MPC.create_factory(args)
-    
+
     mpc = algo_factory(device=device,
                        actor=dynamics_model,
                        envs=env)
-    
+
     # Define initial Tensors
     obs, done = env.reset(), False
     _, rhs, _ = dynamics_model.actor_initial_states(torch.tensor(obs))
@@ -60,8 +60,8 @@ def get_args():
     parser = argparse.ArgumentParser(description='RL')
 
     # Configuration file, keep first
-    parser.add_argument('--conf','-c', type=open, action=LoadFromFile)
-    
+    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+
     # Wandb
     parser.add_argument(
         '--experiment_name', default=None,
@@ -121,13 +121,13 @@ def get_args():
         '--mini-batch-size', type=int, default=32,
         help='Mini batch size for network updates (default: 32)')
     parser.add_argument("--test_every", type=int, default=1, help="")
-    
+
     # CEM parameter
     parser.add_argument(
         "--iter-update-steps", type=int, default=3,
         help="Iterative update steps for CEM (default: 3)")
     parser.add_argument(
-        "--k-best", type=int, default=5, 
+        "--k-best", type=int, default=5,
         help="K-Best members of the mean prediction forming the next mean distribution")
     parser.add_argument(
         "--update-alpha", type=float, default=0.0,
@@ -192,6 +192,7 @@ def get_args():
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)
     return args
+
 
 if __name__ == "__main__":
     enjoy()

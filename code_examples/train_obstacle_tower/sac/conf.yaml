@@ -11,7 +11,7 @@ gamma: 0.99
 polyak: 0.995
 max_time: 86400
 num_env_processes: 3
-recurrent_nets: GRU
+recurrent_net: GRU
 reward_shape: True
 reduced_action_space: True
 num_actions: 6

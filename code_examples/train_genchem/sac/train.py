@@ -216,7 +216,7 @@ def main():
             act_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
             common_feature_extractor=torch.nn.Identity,
             common_feature_extractor_kwargs={},
-            recurrent_net=get_memory_network(args.recurrent_nets),
+            recurrent_net=get_memory_network(args.recurrent_net),
             recurrent_net_kwargs={**network_params},
             restart_model=restart_model,
         )
@@ -340,7 +340,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
+        '--recurrent-net', default=None, help='Recurrent neural networks to use')
     parser.add_argument(
         '--kl-coef', type=float, default=0.5,
         help='discount factor for rewards (default: 0.5)')

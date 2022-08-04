@@ -30,7 +30,7 @@ def enjoy():
     policy = OnPolicyActor.create_factory(
         obs_space, action_space, prl.PPO,
         restart_model=os.path.join(args.log_dir, "model.state_dict"),
-        recurrent_nets=False,
+        recurrent_net=False,
     )(device)
 
     # Define initial Tensors

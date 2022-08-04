@@ -14,7 +14,7 @@ value_loss_coef: 1.0
 entropy_coef: 0.01
 max_grad_norm: 0.5
 lr: 0.00025
-nn: CNN
+feature_extractor_net: CNN
 clip_rewards: False
 episodic_life: True
 frame_skip: 0

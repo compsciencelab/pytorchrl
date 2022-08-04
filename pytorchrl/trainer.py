@@ -80,8 +80,8 @@ class Trainer:
                                                          action_space=self.action_space,
                                                          algorithm_name=self.algo_name,
                                                          restart_model=self.config.restart_model,
-                                                         recurrent_net=get_memory_network(self.config.agent.actor.recurrent_nets),
-                                                         recurrent_net_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
+                                                         recurrent_net=get_memory_network(self.config.agent.actor.recurrent_net),
+                                                         recurrent_net_kwargs=self.config.agent.actor.recurrent_net_kwargs,
                                                          feature_extractor_kwargs=self.config.agent.actor.feature_extractor_kwargs,
                                                          feature_extractor_network=get_feature_extractor(self.config.agent.actor.feature_extractor_network),
                                                          shared_policy_value_network=self.config.agent.actor.shared_policy_value_network)
@@ -94,8 +94,8 @@ class Trainer:
                                                           noise=self.config.agent.noise,
                                                           restart_model=self.config.restart_model,
                                                           sequence_overlap=self.config.agent.sequence_overlap,
-                                                          recurrent_net_kwargs=self.config.agent.actor.recurrent_nets_kwargs,
-                                                          recurrent_net=get_memory_network(self.config.agent.actor.recurrent_nets),
+                                                          recurrent_net_kwargs=self.config.agent.actor.recurrent_net_kwargs,
+                                                          recurrent_net=get_memory_network(self.config.agent.actor.recurrent_net),
                                                           obs_feature_extractor=get_feature_extractor(
                                                               self.config.agent.actor.obs_feature_extractor),
                                                           obs_feature_extractor_kwargs=self.config.agent.actor.obs_feature_extractor_kwargs,

@@ -168,7 +168,7 @@ def get_args():
         '--restart-model', default=None,
         help='Restart training using the model given')
     parser.add_argument(
-        '--recurrent-nets', default=None, help='Recurrent neural networks to use')
+        '--recurrent-net', default=None, help='Recurrent neural networks to use')
 
     # Scheme specs
     parser.add_argument(
