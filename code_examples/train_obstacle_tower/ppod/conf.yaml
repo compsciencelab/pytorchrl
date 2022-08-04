@@ -27,7 +27,7 @@ max_floor: 12
 seed_list: [54]
 eps: 0.00001
 lr: 0.0004
-nn: Fixup
+feature_extractor_net: Fixup
 frame_skip: 2
 frame_stack: 4
 num_grad_workers: 1

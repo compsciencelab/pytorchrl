@@ -16,7 +16,7 @@ start_steps: 20000
 buffer_size: 300000
 target_update_interval: 8000
 lr: 0.0003
-nn: CNN
+feature_extractor_net: CNN
 clip_rewards: False
 episodic_life: True
 frame_skip: 4

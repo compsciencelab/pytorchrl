@@ -33,7 +33,7 @@ def enjoy():
 
     policy = OnPolicyActor.create_factory(
         obs_space, action_space, prl.PPO,
-        feature_extractor_network=get_feature_extractor(args.nn),
+        feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
         recurrent_net=args.recurrent_net,
         restart_model=os.path.join(args.log_dir, "model.state_dict")
     )(device)

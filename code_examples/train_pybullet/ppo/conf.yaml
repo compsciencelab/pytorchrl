@@ -13,7 +13,7 @@ value_loss_coef: 0.5
 max_grad_norm: 0.5
 entropy_coef: 0.0
 lr: 0.0002
-nn: MLP
+feature_extractor_net: MLP
 frame_skip: 0
 frame_stack: 1
 env_id: HalfCheetahBulletEnv-v0

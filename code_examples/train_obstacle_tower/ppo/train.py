@@ -59,7 +59,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model=args.restart_model,
-            feature_extractor_network=get_feature_extractor(args.nn),
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             recurrent_net=get_memory_network(args.recurrent_net))
 
         # 4. Define rollouts storage
@@ -194,7 +194,7 @@ def get_args():
 
     # Feature extractor model specs
     parser.add_argument(
-        '--nn', default='CNN', help='Type of nn. Options are MLP, CNN, Fixup')
+        '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

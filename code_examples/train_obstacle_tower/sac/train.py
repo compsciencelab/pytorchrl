@@ -58,7 +58,7 @@ def main():
         # Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
             obs_space, action_space, algo_name, recurrent_net=get_memory_network(args.recurrent_net),
-            restart_model=args.restart_model, obs_feature_extractor=args.nn)
+            restart_model=args.restart_model, obs_feature_extractor=args.feature_extractor_net)
 
         # 5. Define rollouts storage
         storage_factory = ReplayBuffer.create_factory(size=args.buffer_size)
@@ -188,7 +188,7 @@ def get_args():
 
     # Feature extractor model specs
     parser.add_argument(
-        '--nn', default='MLP', help='Type of nn. Options are MLP, CNN, Fixup')
+        '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

@@ -210,9 +210,9 @@ def main():
         # 2. Define RL Policy
         actor_factory = OffPolicyActor.create_factory(
             obs_space, action_space, prl.SAC,
-            obs_feature_extractor=get_feature_extractor(args.nn),
+            obs_feature_extractor=get_feature_extractor(args.feature_extractor_net),
             obs_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
-            act_feature_extractor=get_feature_extractor(args.nn),
+            act_feature_extractor=get_feature_extractor(args.feature_extractor_net),
             act_feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
             common_feature_extractor=torch.nn.Identity,
             common_feature_extractor_kwargs={},
@@ -335,7 +335,7 @@ def get_args():
 
     # Feature extractor model specs
     parser.add_argument(
-        '--nn', default='CNN', help='Type of nn. Options are MLP, CNN, Fixup')
+        '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')

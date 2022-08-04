@@ -3,7 +3,7 @@ num_env_steps : 1_000_000
 log_dir: /tmp/pybullet_ddpg
 frame_skip: 0
 frame_stack: 1
-nn: MLP
+feature_extractor_net: MLP
 restart_model: null
 lr: 3.0e-4
 gamma: 0.99

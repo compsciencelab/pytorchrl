@@ -14,7 +14,7 @@ start_steps: 20_000
 buffer_size: 300_000
 target_update_interval: 8_000
 lr: 0.0001
-nn: Embedding
+feature_extractor_net: Embedding
 recurrent_net: LSTM
 num_grad_workers: 1
 num_col_workers: 1

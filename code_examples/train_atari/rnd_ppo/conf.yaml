@@ -19,7 +19,7 @@ log_interval: 1
 lr: 0.0001
 max_grad_norm: 1.0
 max_time: 8640000
-nn: CNN
+feature_extractor_net: CNN
 num_col_workers: 1
 num_env_processes: 128
 num_grad_workers: 1
