@@ -51,13 +51,13 @@ class GenChemEnv(gym.Env):
 
             # Get reward
             if "reward" in score.keys():
-                reward = score.pop("reward")
+                reward = score["reward"]
             else:
-                reward = score.pop("score")
+                reward = score["score"]
 
             # If score contain field "Valid", update counter
-            if "valid" in score.keys():
-                valid = score.pop("valid")
+            if "valid_smile" in score.keys():
+                valid = score["valid_smile"]
                 if valid:
                     self.running_mean_valid_smiles.append(1.0)
                 else:
@@ -70,7 +70,7 @@ class GenChemEnv(gym.Env):
             done = True
 
         # Update valid smiles tracker
-        info.update({"valid_smiles": float((sum(self.running_mean_valid_smiles) / len(
+        info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
             self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
         new_obs = self.vocabulary.encode([action])

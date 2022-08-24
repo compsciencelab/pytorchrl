@@ -2,9 +2,10 @@
 
 ### Generative Chemistry environment based on REINVENT (Blaschke et al., 2020)
 
-To be able to run the environment, install conda environment from REINVENT github repository.
+To be able to run the REINVENT score functions, install conda environment from REINVENT github repository.
 
     https://github.com/MolecularAI/Reinvent
+
 
 To test the environment run:
     

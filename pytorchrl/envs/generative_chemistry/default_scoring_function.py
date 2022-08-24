@@ -24,7 +24,7 @@ class WrapperScoringClass:
                 raise ValueError("Scoring error due to wrong dtype")
 
             output.update({
-                "valid": True,
+                "valid_smile": True,
                 "score": float(score.total_score[0]),
                 "regression_model": float(score.profile[0].score[0]),
                 "matching_substructure": float(score.profile[1].score[0]),
@@ -36,7 +36,7 @@ class WrapperScoringClass:
         except TypeError:
 
             output.update({
-                "valid": False,
+                "valid_smile": False,
                 "score": 0.0,
                 "regression_model": 0.0,
                 "matching_substructure": 0.0,

@@ -24,9 +24,6 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
 from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
-# TODO: solve problem of keywords
-# TODO: write a clear README
-
 
 def main():
 
@@ -54,6 +51,16 @@ def main():
         network_params.pop("embedding_layer_size")
 
         # 1. Define Train Vector of Envs
+        info_keywords = ("molecule", )
+        info_keywords += (
+            "regression_model",
+            "matching_substructure",
+            "custom_alerts",
+            "QED_score",
+            "raw_regression_model",
+            "valid_smiles"
+        )
+
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
@@ -62,15 +69,7 @@ def main():
                 "smiles_max_length": max_sequence_length,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=(
-                "molecule",
-                # "regression_model",
-                # "matching_substructure",
-                # "custom_alerts",
-                # "QED_score",
-                # "raw_regression_model",
-                # "valid_smiles"
-            ))
+            info_keywords=info_keywords)
 
         # 2. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
