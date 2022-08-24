@@ -4,18 +4,23 @@ from gym import spaces
 from collections import defaultdict, deque
 
 
+# TODO: scoring function returns a dict
+# keywords score or reward are taken as reward
+# the rest are added to info
+
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200, **kwargs):
+    def __init__(self, scoring_function, info_function, vocabulary, tokenizer, max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.vocabulary = vocabulary
+        self.info_function = info_function
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
@@ -94,14 +99,10 @@ class GenChemEnv(gym.Env):
     def _scoring(self, smiles):
         """Return scoring metric."""
 
-        # I think the paper uses step/epoch to refer to the number of episodes played
-
         if isinstance(smiles, str):
-            # score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
-            score = self.scoring_function.get_final_score([smiles])
+            score = self.scoring_function([smiles])
         elif isinstance(smiles, list):
-            # score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
-            score = self.scoring_function.get_final_score(smiles)
+            score = self.scoring_function(smiles)
         else:
             raise ValueError("Scoring error due to wrong dtype")
 

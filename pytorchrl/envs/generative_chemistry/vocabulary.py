@@ -11,7 +11,7 @@ import numpy as np
 
 # contains the data structure
 class Vocabulary:
-    """Stores the tokens and their conversion to vocabulary indexes."""
+    """Stores the tokens and allows their conversion to vocabulary indexes."""
 
     def __init__(self, tokens=None, starting_id=0):
         self._tokens = {}

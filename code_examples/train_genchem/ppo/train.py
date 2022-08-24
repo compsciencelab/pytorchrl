@@ -17,47 +17,16 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
+from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
-# TODO: update this dict
-weights_mapping = {
-    "_embedding.weight": "policy_net.feature_extractor._embedding.weight",
-    "_rnn.weight_ih_l0": "policy_net.memory_net._rnn.weight_ih_l0",
-    "_rnn.weight_hh_l0": "policy_net.memory_net._rnn.weight_hh_l0",
-    "_rnn.bias_ih_l0": "policy_net.memory_net._rnn.bias_ih_l0",
-    "_rnn.bias_hh_l0": "policy_net.memory_net._rnn.bias_hh_l0",
-    "_rnn.weight_ih_l1": "policy_net.memory_net._rnn.weight_ih_l1",
-    "_rnn.weight_hh_l1": "policy_net.memory_net._rnn.weight_hh_l1",
-    "_rnn.bias_ih_l1": "policy_net.memory_net._rnn.bias_ih_l1",
-    "_rnn.bias_hh_l1": "policy_net.memory_net._rnn.bias_hh_l1",
-    "_rnn.weight_ih_l2": "policy_net.memory_net._rnn.weight_ih_l2",
-    "_rnn.weight_hh_l2": "policy_net.memory_net._rnn.weight_hh_l2",
-    "_rnn.bias_ih_l2": "policy_net.memory_net._rnn.bias_ih_l2",
-    "_rnn.bias_hh_l2": "policy_net.memory_net._rnn.bias_hh_l2",
-    "_linear.weight": "policy_net.dist.linear.weight",
-    "_linear.bias": "policy_net.dist.linear.bias",
-}
+# Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
+from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
-
-def adapt_checkpoint(file_path):
-
-    if torch.cuda.is_available():
-        save_dict = torch.load(file_path)
-    else:
-        save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
-
-    new_save_dict = {}
-
-    # Change network weight names
-    for k in save_dict["network"].keys():
-        new_save_dict[weights_mapping[k]] = save_dict["network"][k]
-
-    # Temporarily save network weight to /tmp/network_params
-    torch.save(new_save_dict, "/tmp/network_params.tmp")
-
-    return save_dict['vocabulary'], save_dict['tokenizer'], save_dict['max_sequence_length'],\
-           save_dict['network_params'], "/tmp/network_params.tmp"
+# TODO: solve problem of env score and info
+# TODO: solve problem of keywords
+# TODO: write a clear README
 
 
 def main():
@@ -78,123 +47,20 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # 0. Load checkpoint
-        try:
-            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(
-                os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
-            restart_model = {"policy_net": network_weights}
-            network_params.pop("cell_type")
-            network_params.pop("embedding_layer_size")
-            smiles_list = []
-        except Exception:
-            vocabulary, tokenizer, max_sequence_length, network_params, network_weights = None, None, 100, {}, None
-            restart_model = None
-            smiles_list = ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
+        # 0. Load REINVENT pretrained checkpoint
+        vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(os.path.join(
+            os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
+        restart_model = {"policy_net": network_weights}
+        network_params.pop("cell_type")
+        network_params.pop("embedding_layer_size")
 
         # 1. Define Train Vector of Envs
-        if tokenizer is None and vocabulary is None:
-            tokenizer = SMILESTokenizer()
-            vocabulary = create_vocabulary(smiles_list, tokenizer)
-            network_weights = None
-
-        diversity_filter_params = {
-            "name": "IdenticalMurckoScaffold",  # other options are: "IdenticalTopologicalScaffold", "NoFilter" and "ScaffoldSimilarity" -> use "NoFilter" to disable this feature
-            "nbmax": 25,  # the bin size; penalization will start once this is exceeded
-            "minscore": 0.4,  # the minimum total score to be considered for binning
-            "minsimilarity": 0.4  # the minimum similarity to be placed into the same bin
-        }
-
-        scoring_function_parameters = {
-            "name": "custom_product",  # this is our default one (alternative: "custom_sum")
-            "parallel": False,  # sets whether components are to be executed
-            # in parallel; note, that python uses "False" / "True"
-            # but the JSON "false" / "true"
-
-            # the "parameters" list holds the individual components
-            "parameters": [
-
-                # add component: an activity model
-                {
-                    "component_type": "predictive_property",  # this is a scikit-learn model, returning
-                    # activity values
-                    "name": "Regression model",  # arbitrary name for the component
-                    "weight": 2,  # the weight ("importance") of the component (default: 1)
-                    "specific_parameters": {
-                        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/Aurora_model.pkl'),
-                        # absolute model path
-                        "scikit": "regression",  # model can be "regression" or "classification"
-                        "descriptor_type": "ecfp_counts",  # sets the input descriptor for this model
-                        "size": 2048,  # parameter of descriptor type
-                        "radius": 3,  # parameter of descriptor type
-                        "use_counts": True,  # parameter of descriptor type
-                        "use_features": True,  # parameter of descriptor type
-                        "transformation": {
-                            "transformation_type": "sigmoid",  # see description above
-                            "high": 9,  # parameter for sigmoid transformation
-                            "low": 4,  # parameter for sigmoid transformation
-                            "k": 0.25  # parameter for sigmoid transformation
-                        }
-                    }
-                },
-
-                # add component: enforce the match to a given substructure
-                {
-                    "component_type": "matching_substructure",
-                    "name": "Matching substructure",  # arbitrary name for the component
-                    "weight": 1,  # the weight of the component (default: 1)
-                    "specific_parameters": {
-                        "smiles": ["c1ccccc1CC"]  # a match with this substructure is required
-                    }
-                },
-
-                # add component: enforce to NOT match a given substructure
-                {
-                    "component_type": "custom_alerts",
-                    "name": "Custom alerts",  # arbitrary name for the component
-                    "weight": 1,  # the weight of the component (default: 1)
-                    "specific_parameters": {
-                        "smiles": [  # specify the substructures (as list) to penalize
-                            "[*;r8]",
-                            "[*;r9]",
-                            "[*;r10]",
-                            "[*;r11]",
-                            "[*;r12]",
-                            "[*;r13]",
-                            "[*;r14]",
-                            "[*;r15]",
-                            "[*;r16]",
-                            "[*;r17]",
-                            "[#8][#8]",
-                            "[#6;+]",
-                            "[#16][#16]",
-                            "[#7;!n][S;!$(S(=O)=O)]",
-                            "[#7;!n][#7;!n]",
-                            "C#C",
-                            "C(=[O,S])[O,S]",
-                            "[#7;!n][C;!$(C(=[O,N])[N,O])][#16;!s]",
-                            "[#7;!n][C;!$(C(=[O,N])[N,O])][#7;!n]",
-                            "[#7;!n][C;!$(C(=[O,N])[N,O])][#8;!o]",
-                            "[#8;!o][C;!$(C(=[O,N])[N,O])][#16;!s]",
-                            "[#8;!o][C;!$(C(=[O,N])[N,O])][#8;!o]",
-                            "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
-                        ]
-                    }
-                },
-
-                # add component: calculate the QED drug-likeness score (using RDkit)
-                {
-                    "component_type": "qed_score",
-                    "name": "QED Score",  # arbitrary name for the component
-                    "weight": 1,  # the weight of the component (default: 1)
-                }]
-        }
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
-                "smiles_list": smiles_list,
-                "scoring_function_parameters": scoring_function_parameters,
+                "scoring_function": scoring_function,
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "obs_length": max_sequence_length,
+                "smiles_max_length": max_sequence_length,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=(
