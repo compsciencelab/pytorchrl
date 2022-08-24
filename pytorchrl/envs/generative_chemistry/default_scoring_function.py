@@ -2,6 +2,8 @@
 Defines the default scoring function to guide the genchem RL agent.
 """
 
+import os
+from reinvent_scoring.scoring import ScoringFunctionFactory
 from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
 
 scoring_function_parameters = {
@@ -97,4 +99,48 @@ scoring_params = ScoringFunctionParameters(
 
 scoring_class = ScoringFunctionFactory(scoring_params)
 
-scoring_function = scoring_class.get_final_score
+
+class WrapperScoringClass:
+
+    def __init__(self, scoring_class):
+        self.scoring_class = scoring_class
+
+    def get_final_score(self, smile):
+
+        output = {}
+
+        try:
+
+            if isinstance(smiles, str):
+                score = self.scoring_function([smile])
+            else:
+                raise ValueError("Scoring error due to wrong dtype")
+
+            output.update({
+                "valid": True,
+                "score": float(score.total_score[0]),
+                "regression_model": float(score.profile[0].score[0]),
+                "matching_substructure": float(score.profile[1].score[0]),
+                "custom_alerts": float(score.profile[2].score[0]),
+                "QED_score": float(score.profile[3].score[0]),
+                "raw_regression_model": float(score.profile[4].score[0]),
+            })
+
+        except TypeError:
+
+            output.update({
+                "valid": False,
+                "score": 0.0,
+                "regression_model": 0.0,
+                "matching_substructure": 0.0,
+                "custom_alerts": 0.0,
+                "QED_score": 0.0,
+                "raw_regression_model": 0.0,
+            })
+
+        return output
+
+
+wrapper_scoring_class = WrapperScoringClass(scoring_class)
+
+scoring_function = wrapper_scoring_class.get_final_score

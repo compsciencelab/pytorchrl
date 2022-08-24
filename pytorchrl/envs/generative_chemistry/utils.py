@@ -1,5 +1,7 @@
 """Utils to map the REINVENT pre-trained network checkpoint to the pytorchrl network."""
 
+import torch
+
 weights_mapping = {
     "_embedding.weight": "policy_net.feature_extractor._embedding.weight",
     "_rnn.weight_ih_l0": "policy_net.memory_net._rnn.weight_ih_l0",

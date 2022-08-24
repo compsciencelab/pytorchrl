@@ -46,30 +46,30 @@ class GenChemEnv(gym.Env):
             done = False
 
         else:  # if action is $, evaluate molecule
-            try:
-                score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
-                reward = score.total_score[0]
-                info.update({
-                    "molecule": self.tokenizer.untokenize(self.current_molecule),
-                    "regression_model": float(score.profile[0].score[0]),
-                    "matching_substructure": float(score.profile[1].score[0]),
-                    "custom_alerts": float(score.profile[2].score[0]),
-                    "QED_score": float(score.profile[3].score[0]),
-                    "raw_regression_model": float(score.profile[4].score[0]),
-                })
-                self.running_mean_valid_smiles.append(1.0)
-            except TypeError:
-                reward = 0.0  # Invalid molecule
-                info.update({
-                    "molecule": "invalid",
-                    "regression_model": 0.0,
-                    "matching_substructure": 0.0,
-                    "custom_alerts": 0.0,
-                    "QED_score": 0.0,
-                    "raw_regression_model": 0.0,
-                })
-                self.running_mean_valid_smiles.append(0.0)
-            done = True
+
+            score = self.scoring_function(self.tokenizer.untokenize(self.current_molecule))
+
+            assert isinstance(score, dict), "scoring_function has to return a dict"
+
+            assert "score" in score.keys() or "reward" in score.keys(), \
+                "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
+
+            # Get reward
+            if "reward" in score.keys():
+                reward = score.pop("reward")
+            else:
+                reward = score.pop("score")
+
+            # If score contain field "Valid", update counter
+            if "valid" in score.keys():
+                valid = score.pop("valid")
+                if valid:
+                    self.running_mean_valid_smiles.append(1.0)
+                else:
+                    self.running_mean_valid_smiles.append(0.0)
+
+            # Update info with remaining values
+            info.update(score)
 
         # Update valid smiles tracker
         info.update({
@@ -96,14 +96,3 @@ class GenChemEnv(gym.Env):
         print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 
-    def _scoring(self, smiles):
-        """Return scoring metric."""
-
-        if isinstance(smiles, str):
-            score = self.scoring_function([smiles])
-        elif isinstance(smiles, list):
-            score = self.scoring_function(smiles)
-        else:
-            raise ValueError("Scoring error due to wrong dtype")
-
-        return score

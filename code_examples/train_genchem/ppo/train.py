@@ -76,7 +76,7 @@ def main():
         # 2. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
-            feature_extractor_network=get_feature_extractor(args.args.feature_extractor_net),
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
             recurrent_net=get_memory_network(args.recurrent_net),
             recurrent_net_kwargs={**network_params},
