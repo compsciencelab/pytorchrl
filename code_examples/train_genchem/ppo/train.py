@@ -58,7 +58,7 @@ def main():
             "custom_alerts",
             "QED_score",
             "raw_regression_model",
-            "valid_smiles"
+            "valid_smile"
         )
 
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
