@@ -4,8 +4,7 @@ from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, crea
 
 
 def generative_chemistry_train_env_factory(
-        scoring_function, info_function=lambda v, x: {}, tokenizer=None,
-        vocabulary=None, smiles_max_length=200, smiles_list=[]):
+        scoring_function, tokenizer=None, vocabulary=None, smiles_max_length=200, smiles_list=[]):
     """
     Create train GenChem environment.
 
@@ -13,9 +12,6 @@ def generative_chemistry_train_env_factory(
     ----------
     scoring_function : func
         Function that given a SMILE, returns a score.
-    info_function : func
-        Function that given a SMILE and the output of the scoring_function, returns a dict with information about the
-        SMILE.
     tokenizer : class
         Class that deals with the tokenization and untokenization of SMILES.
     vocabulary : class
@@ -37,7 +33,6 @@ def generative_chemistry_train_env_factory(
 
     env = GenChemEnv(
         scoring_function=scoring_function,
-        info_function=info_function,
         tokenizer=tokenizer,
         vocabulary=vocabulary,
         max_length=smiles_max_length)

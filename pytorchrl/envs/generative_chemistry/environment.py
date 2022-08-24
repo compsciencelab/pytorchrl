@@ -4,23 +4,18 @@ from gym import spaces
 from collections import defaultdict, deque
 
 
-# TODO: scoring function returns a dict
-# keywords score or reward are taken as reward
-# the rest are added to info
-
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, info_function, vocabulary, tokenizer, max_length=200):
+    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.vocabulary = vocabulary
-        self.info_function = info_function
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
@@ -70,11 +65,11 @@ class GenChemEnv(gym.Env):
 
             # Update info with remaining values
             info.update(score)
+            done = True
 
         # Update valid smiles tracker
-        info.update({
-            "valid_smiles": float((sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles))
-                                  if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
+        info.update({"valid_smiles": float((sum(self.running_mean_valid_smiles) / len(
+            self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
         new_obs = self.vocabulary.encode([action])
 

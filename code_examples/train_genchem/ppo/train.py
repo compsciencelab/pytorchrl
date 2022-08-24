@@ -24,7 +24,6 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
 from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
-# TODO: solve problem of env score and info
 # TODO: solve problem of keywords
 # TODO: write a clear README
 
