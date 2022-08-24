@@ -63,6 +63,8 @@ class GenChemEnv(gym.Env):
                 else:
                     self.running_mean_valid_smiles.append(0.0)
 
+            info.update({"molecule": self.tokenizer.untokenize(self.current_molecule)})
+
             # Update info with remaining values
             info.update(score)
             done = True
