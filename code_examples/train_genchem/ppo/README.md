@@ -14,7 +14,7 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the code_examples/train_genchem/ppo/conf.yaml file. Defaults parameters are reasonable values for the PPO algorithm. To get a description of each one of them run
+Training parameters can be adjusted in the code_examples/train_genchem/ppo/conf.yaml file. Defaults parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
     python code_examples/train_genchem/ppo/train.py --help
 
@@ -26,7 +26,7 @@ To train an agent with the current ´conf.yaml´ configuration run
 
 ## 4. Log in wandb during training
 
-If you have a wandb account, you can visualise you training progress in https://wandb.ai/ by adding you account key to the configuration file.
+If you have a wandb account, you can visualise you training progress in https://wandb.ai/ by adding you account key to the configuration file (line 25).
 
 ## 5. Analize results
 
@@ -42,13 +42,13 @@ By default, the training script will use a default scoring function, which can b
 
 ### 6.1 Define an alternative scoring function
 
-A custom scoring function can be used as long as it fulfills the following requirements:
+Any custom scoring function can be used as long as it fulfills the following requirements:
     
 - The method accepts a SMILE string as input and outputs a dict.
-- The output dict contains at least a 1 key that represents the reward obtained (both keywords,"reward" and "score", are accepted)
-- optionally, the output dict can include more information about the molecules to be logged and tracked. during training
+- The output dict contains at least a 1 key that represents the reward obtained (both keywords,"reward" and "score", are accepted).
+- Optionally, the output dict can include more information about the molecules to be logged and tracked. during training.
 
-An output example for the scoring_function output is the following:
+For example, an output dict for the default_scoring_function looks like that:
 
     output = {
         "reward": 0.85,
@@ -73,9 +73,7 @@ to
 
     from myscript import my_scoring_function as scoring_function
 
-Second, remove all the optional keywords from the default scoring_function output in line 55 and replace them by the optional keywords of the custom scoring function
-
-For example if your scoring function has an output as follows
+Second, remove all the optional keywords from the default scoring_function output in line 55 and replace them by the optional keywords of the custom scoring function. For example, if your scoring function has an output as follows
 
     output = {
         "reward": 0.85,
@@ -100,3 +98,5 @@ to
         "extra_value1",
         "extra_value2",
     )
+
+Now the training script should work just like with the default scoring function!
