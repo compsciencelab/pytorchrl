@@ -46,9 +46,9 @@ Any custom scoring function can be used as long as it fulfills the following req
     
 - The method accepts a SMILE string as input and outputs a dict.
 - The output dict contains at least a 1 key that represents the reward obtained (both keywords,"reward" and "score", are accepted).
-- Optionally, the output dict can include more information about the molecules to be logged and tracked. during training.
+- Optionally, the output dict can include more information about the molecules to be logged and tracked during training.
 
-For example, an output dict for the default_scoring_function looks like that:
+As a reference, an instance output for the default_scoring_function looks like that:
 
     output = {
         "reward": 0.85,
@@ -59,7 +59,7 @@ For example, an output dict for the default_scoring_function looks like that:
         "raw_regression_model": 0.33,
     }
 
-For a dummy example, look at `code_examples/train_genchem/ppo/dummy_custom_scoring_function.py`
+Additionally, for a custom scoring function dummy example look at `code_examples/train_genchem/ppo/dummy_custom_scoring_function.py`
 
 ### 6.2 Code Adjustments
 
