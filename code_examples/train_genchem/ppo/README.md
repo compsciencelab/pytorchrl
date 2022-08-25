@@ -14,7 +14,7 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the code_examples/train_genchem/ppo/conf.yaml file. Defaults parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
+Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. Defaults parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
     python code_examples/train_genchem/ppo/train.py --help
 
@@ -26,7 +26,7 @@ To train an agent with the current ´conf.yaml´ configuration run
 
 ## 4. Log in wandb during training
 
-If you have a wandb account, you can visualise you training progress in https://wandb.ai/ by adding you account key to the configuration file (line 25).
+If you have a `wandb` account, you can visualise you training progress in https://wandb.ai/ by adding you account key to the configuration file in `line 25`.
 
 ## 5. Analize results
 
@@ -59,11 +59,13 @@ For example, an output dict for the default_scoring_function looks like that:
         "raw_regression_model": 0.33,
     }
 
+For a dummy example, look at `code_examples/train_genchem/ppo/dummy_custom_scoring_function.py`
+
 ### 6.2 Code Adjustments
 
 To use a custom scoring function two minor code modifications are required
 
-First, replace line 25 in code_examples/train_genchem/ppo/train.py by importing the custom scoring_function, for example
+First, replace `line 25` in code_examples/train_genchem/ppo/train.py by importing the custom scoring_function, for example
 
 from 
 
@@ -73,7 +75,7 @@ to
 
     from myscript import my_scoring_function as scoring_function
 
-Second, remove all the optional keywords from the default scoring_function output in line 55 and replace them by the optional keywords of the custom scoring function. For example, if your scoring function has an output as follows
+Second, remove all the optional keywords from the default scoring_function output in `line 55` and replace them by the optional keywords of the custom scoring function. For example, if your scoring function has an output as follows
 
     output = {
         "reward": 0.85,
@@ -81,7 +83,7 @@ Second, remove all the optional keywords from the default scoring_function outpu
         "extra_value2": 0.58,
     }
 
-modify the script in line 55 from
+modify the script in `line 55` from
 
     info_keywords += (
         "regression_model",
