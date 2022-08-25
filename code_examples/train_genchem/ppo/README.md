@@ -63,11 +63,9 @@ Additionally, for a custom scoring function dummy example look at `code_examples
 
 ### 6.2 Code Adjustments
 
-To use a custom scoring function two minor code modifications are required
+To use a custom scoring function two minor code modifications are required.
 
-First, replace `line 25` in code_examples/train_genchem/ppo/train.py by importing the custom scoring_function, for example
-
-from 
+First, replace `line 25` in `code_examples/train_genchem/ppo/train.py` by importing the custom scoring_function. For example from 
 
     from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
