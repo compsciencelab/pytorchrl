@@ -14,7 +14,7 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. Defaults parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
+Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
     python code_examples/train_genchem/ppo/train.py --help
 
