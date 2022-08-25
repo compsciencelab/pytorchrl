@@ -13,7 +13,7 @@ def causal_world_train_env_factory(task_id="general",
 
     Parameters
     ----------
-    task:
+    task_id : int
         target causal world task to train the agent.
     frame_skip : int
         Return only every `frame_skip`-th observation.

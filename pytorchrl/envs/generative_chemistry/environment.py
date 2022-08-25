@@ -9,7 +9,7 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200, **kwargs):
+    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
@@ -41,35 +41,37 @@ class GenChemEnv(gym.Env):
             done = False
 
         else:  # if action is $, evaluate molecule
-            try:
-                score = self._scoring(self.tokenizer.untokenize(self.current_molecule))
-                reward = score.total_score[0]
-                info.update({
-                    "molecule": self.tokenizer.untokenize(self.current_molecule),
-                    "regression_model": float(score.profile[0].score[0]),
-                    "matching_substructure": float(score.profile[1].score[0]),
-                    "custom_alerts": float(score.profile[2].score[0]),
-                    "QED_score": float(score.profile[3].score[0]),
-                    "raw_regression_model": float(score.profile[4].score[0]),
-                })
-                self.running_mean_valid_smiles.append(1.0)
-            except TypeError:
-                reward = 0.0  # Invalid molecule
-                info.update({
-                    "molecule": "invalid",
-                    "regression_model": 0.0,
-                    "matching_substructure": 0.0,
-                    "custom_alerts": 0.0,
-                    "QED_score": 0.0,
-                    "raw_regression_model": 0.0,
-                })
-                self.running_mean_valid_smiles.append(0.0)
+
+            score = self.scoring_function(self.tokenizer.untokenize(self.current_molecule))
+
+            assert isinstance(score, dict), "scoring_function has to return a dict"
+
+            assert "score" in score.keys() or "reward" in score.keys(), \
+                "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
+
+            # Get reward
+            if "reward" in score.keys():
+                reward = score["reward"]
+            else:
+                reward = score["score"]
+
+            # If score contain field "Valid", update counter
+            if "valid_smile" in score.keys():
+                valid = score["valid_smile"]
+                if valid:
+                    self.running_mean_valid_smiles.append(1.0)
+                else:
+                    self.running_mean_valid_smiles.append(0.0)
+
+            info.update({"molecule": self.tokenizer.untokenize(self.current_molecule)})
+
+            # Update info with remaining values
+            info.update(score)
             done = True
 
         # Update valid smiles tracker
-        info.update({
-            "valid_smiles": float((sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles))
-                                  if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
+        info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
+            self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
         new_obs = self.vocabulary.encode([action])
 
@@ -91,18 +93,3 @@ class GenChemEnv(gym.Env):
         print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 
-    def _scoring(self, smiles):
-        """Return scoring metric."""
-
-        # I think the paper uses step/epoch to refer to the number of episodes played
-
-        if isinstance(smiles, str):
-            # score = self.scoring_function.get_final_score_for_step([smiles], self.num_episodes)
-            score = self.scoring_function.get_final_score([smiles])
-        elif isinstance(smiles, list):
-            # score = self.scoring_function.get_final_score_for_step(smiles, self.num_episodes)
-            score = self.scoring_function.get_final_score(smiles)
-        else:
-            raise ValueError("Scoring error due to wrong dtype")
-
-        return score
