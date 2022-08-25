@@ -20,13 +20,13 @@ Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf
 
 ## 3. Training
 
-To train an agent with the current ´conf.yaml´ configuration run
+To train an agent with the current `conf.yaml` configuration run
 
     ./code_examples/train_genchem/ppo/train.sh
 
 ## 4. Log in wandb during training
 
-If you have a `wandb` account, you can visualise you training progress in https://wandb.ai/ by adding you account key to the configuration file in `line 25`.
+If you have a `wandb` account, you can visualise you training progress at https://wandb.ai/ by adding you account key to the configuration file in `line 25`.
 
 ## 5. Analize results
 
