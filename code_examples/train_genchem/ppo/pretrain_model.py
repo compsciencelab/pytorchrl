@@ -3,7 +3,6 @@
 import os
 import re
 import sys
-import wget
 import time
 import wandb
 import torch
@@ -335,7 +334,7 @@ if __name__ == "__main__":
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
+                
                 # Wandb logging
                 wandb.log({"pretrain_loss": loss.item()}, step=learner.num_samples_collected)
 
