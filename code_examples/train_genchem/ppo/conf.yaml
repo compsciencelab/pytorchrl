@@ -22,4 +22,5 @@ num_grad_workers: 1
 num_col_workers: 1 
 com_grad_workers: synchronous
 com_col_workers: synchronous
+prior_trainingset_path: ../../../code_examples/train_genchem/ppo/prior_trainingset
 wandb_key: null

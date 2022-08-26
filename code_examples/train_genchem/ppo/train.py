@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import ray
 import sys
 import time
 import wandb
@@ -9,23 +8,22 @@ import torch
 import argparse
 
 import pytorchrl as prl
-from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import PPO
-from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+from pytorchrl.learner import Learner
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
-from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+# from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 
 def main():
@@ -50,8 +48,6 @@ def main():
         vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(os.path.join(
             os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
         restart_model = {"policy_net": network_weights}
-        network_params.pop("cell_type")
-        network_params.pop("embedding_layer_size")
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )
@@ -249,6 +245,8 @@ def get_args():
     parser.add_argument(
         '--log-dir', default='/tmp/obstacle_tower_ppo',
         help='directory to save agent logs (default: /tmp/obstacle_tower_ppo)')
+    parser.add_argument(
+        '--prior-trainingset-path', default=None, help='Path to dataset to train the prior')
 
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)

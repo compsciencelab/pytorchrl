@@ -36,5 +36,9 @@ def adapt_checkpoint(file_path):
     # Temporarily save network weight to /tmp/network_params
     torch.save(new_save_dict, "/tmp/network_params.tmp")
 
+    # Remove unnecessary network parameters
+    network_params.pop("cell_type", None)
+    network_params.pop("embedding_layer_size", None)
+
     return save_dict['vocabulary'], save_dict['tokenizer'], save_dict['max_sequence_length'], \
         save_dict['network_params'], "/tmp/network_params.tmp"

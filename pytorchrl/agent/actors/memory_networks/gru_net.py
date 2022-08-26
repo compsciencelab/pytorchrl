@@ -38,7 +38,7 @@ class GruNet(nn.Module):
     def _forward_gru(self, x, hxs, done):
         """
         Fast forward pass GRU network.
-        from Ilya Kostrikov.PyTorch Implementations of Reinforcement Learning Algorithms.
+        from Ilya Kostrikov. PyTorch Implementations of Reinforcement Learning Algorithms.
         https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail. 2018
         Parameters
         ----------

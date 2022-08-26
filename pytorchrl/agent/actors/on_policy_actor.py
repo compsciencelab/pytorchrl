@@ -277,8 +277,7 @@ class OnPolicyActor(Actor):
         features = self.policy_net.feature_extractor(obs)
 
         if self.recurrent_net:
-            features, rhs["policy"] = self.policy_net.memory_net(
-                features, rhs["policy"], done)
+            features, rhs["policy"] = self.policy_net.memory_net(features, rhs["policy"], done)
 
         logp_action, entropy_dist, dist = self.policy_net.dist.evaluate_pred(features, action)
 
