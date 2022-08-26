@@ -24,6 +24,7 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # TODO: prior_trainingset is just a file with SMILES in it ("valid" SMILES)
 # TODO: review SMILES filtered
 # TODO: add wandb logging
+# TODO: add testing to check how many valid molecules I generate at the end of each epoch and also the diversity, out of 1000 or more
 
 
 def Variable(tensor):
@@ -244,22 +245,22 @@ def get_args():
 if __name__ == "__main__":
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
     pretrained_ckpt = {}
     os.makedirs("data", exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     batch_size = 128
 
-    original_data_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), args.prior_trainingset_path)
+    # original_data_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), args.prior_trainingset_path)
+    original_data_path = args.prior_trainingset_path
 
     if not os.path.exists(original_data_path):
         raise ValueError(f"Missing training set: {original_data_path}")
 
     if not os.path.exists(f"{args.log_dir}/mols_filtered.smi"):
-        print("Reading smiles...")
-        smiles_list = canonicalize_smiles_from_file( original_data_path)
-        print("Saving filtered training data...")
+        print("\nReading smiles...")
+        smiles_list = canonicalize_smiles_from_file(original_data_path)
+        print("\nSaving filtered training data...")
         write_smiles_to_file(smiles_list, f"{args.log_dir}/mols_filtered.smi")
     else:
         fname = f"{args.log_dir}/mols_filtered.smi"
@@ -269,7 +270,7 @@ if __name__ == "__main__":
                 smiles_list.append(line.split()[0])
 
     if not os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
-        print("Constructing vocabulary...")
+        print("\nConstructing vocabulary...")
         tokenizer = SMILESTokenizer()
         vocabulary = create_vocabulary(smiles_list, tokenizer=tokenizer)
         pretrained_ckpt["tokenizer"] = tokenizer
@@ -310,6 +311,8 @@ if __name__ == "__main__":
 
         optimizer = torch.optim.Adam(actor.parameters(), lr=0.001)
 
+        print("\nStarting pretraining...")
+
         for epoch in range(1, 6):
             # When training on a few million compounds, this model converges
             # in a few of epochs or even faster. If model sized is increased
@@ -334,8 +337,25 @@ if __name__ == "__main__":
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                
+
+                info_dict = {}
+                total_steps = step + len(data) * (epoch - 1)
+                if stotal_steps == 0 and total_steps != 0:
+
+                    # Decrease learning rate
+
+                    # Generate a few molecules
+
+                    # Check how many are valid
+
+                    # Check how many are repeated
+
+                    # Add to info dict
+
+                    pass
+
                 # Wandb logging
-                wandb.log({"pretrain_loss": loss.item()}, step=learner.num_samples_collected)
+                info_dict.update({"pretrain_loss": loss.item()})
+                wandb.log(info_dict, step=total_steps)
 
     print("Finished!")
