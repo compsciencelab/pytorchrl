@@ -27,6 +27,18 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # TODO: add testing to check how many valid molecules I generate at the end of each epoch and also the diversity, out of 1000 or more
 
 
+def decrease_learning_rate(optimizer, decrease_by=0.01):
+    """Multiplies the learning rate of the optimizer by 1 - decrease_by"""
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= (1 - decrease_by)
+
+
+def is_valid_smile(smile):
+    """Returns true is smile is syntactically valid."""
+    mol = Chem.MolFromSmiles(smile)
+    return mol is not None
+
+
 def Variable(tensor):
     """Wrapper for torch.autograd.Variable that also accepts
        numpy arrays directly and automatically assigns it to
@@ -295,10 +307,11 @@ if __name__ == "__main__":
         data = DataLoader(moldata, batch_size=batch_size, shuffle=True, drop_last=True, collate_fn=MolData.collate_fn)
 
         # Define env
-        _, action_space, obs_space = VecEnv.create_factory(
+        test_env, action_space, obs_space = VecEnv.create_factory(
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={"scoring_function": lambda a: {"reward": 1.0}, "tokenizer": tokenizer, "vocabulary": vocabulary},
             vec_env_size=1)
+        env = test_env(device)
 
         # Define model
         network_params = {'dropout': 0.0, 'layer_size': 512, 'num_layers': 3}
@@ -343,16 +356,35 @@ if __name__ == "__main__":
                 if stotal_steps == 0 and total_steps != 0:
 
                     # Decrease learning rate
+                    decrease_learning_rate(optimizer, decrease_by=0.03)
 
-                    # Generate a few molecules
-
-                    # Check how many are valid
+                    # Generate a few molecules and check how many are valid
+                    total_molecules = 10
+                    valid_molecules = 0
+                    list_molecules = []
+                    for i in range(total_colecules):
+                        import ipdb; ipdb.set_trace()
+                        obs, rhs, done = actor_initial_states(env.reset())
+                        molecule = [obs]
+                        while not done:
+                            import ipdb; ipdb.set_trace()
+                            with torch.no_grad():
+                                _, action, _, rhs, _ = policy.get_action(obs, rhs, done, deterministic=False)
+                            molecule += [action]
+                        import ipdb; ipdb.set_trace()
+                        if is_valid_smile(molecule):
+                            valid_molecules += 1
+                        list_molecules.append(molecule)
 
                     # Check how many are repeated
+                    import ipdb; ipdb.set_trace()
+                    ratio_repeated = len(set(list_molecules)) / len(list_molecules) if total_molecules > 0 else 0
 
                     # Add to info dict
-
-                    pass
+                    info_dict.update({
+                        "valid_molecules": valid_molecules / total_molecules,
+                        "ratio_repeated": ratio_repeated
+                    })
 
                 # Wandb logging
                 info_dict.update({"pretrain_loss": loss.item()})
