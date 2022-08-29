@@ -40,6 +40,10 @@ class GenChemEnv(gym.Env):
             reward = 0.0
             done = False
 
+        elif len(self.current_molecule) == self.max_length - 2:
+            reward = 0.0
+            done = True
+
         else:  # if action is $, evaluate molecule
 
             score = self.scoring_function(self.tokenizer.untokenize(self.current_molecule))

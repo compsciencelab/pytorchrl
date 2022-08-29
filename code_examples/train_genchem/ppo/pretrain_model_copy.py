@@ -20,11 +20,7 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
-
-# TODO: prior_trainingset is just a file with SMILES in it ("valid" SMILES)
-# TODO: review SMILES filtered
-# TODO: Track avg smile length?
-# TODO: add testing to check how many valid molecules I generate at the end of each epoch and also the diversity, out of 1000 or more
+from code_examples.train_genchem.ppo.prior_copy import RNN
 
 
 def decrease_learning_rate(optimizer, decrease_by=0.01):
@@ -315,12 +311,8 @@ if __name__ == "__main__":
 
         # Define model
         network_params = {'dropout': 0.0, 'layer_size': 512, 'num_layers': 3}
-        actor = OnPolicyActor.create_factory(
-            obs_space, action_space, prl.PPO,
-            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
-            recurrent_net=get_memory_network(args.recurrent_net),
-            recurrent_net_kwargs={**network_params})(device)
+        import ipdb; ipdb.set_trace()
+        actor = RNN(voc)
 
         optimizer = torch.optim.Adam(actor.parameters(), lr=0.001)
 
@@ -337,14 +329,11 @@ if __name__ == "__main__":
                 seqs = batch.long()
 
                 # Transpose seqs because memory net wants seqs = (seq_length, batch_size)
-                seqs = torch.transpose(seqs, dim0=0, dim1=1)
+                # seqs = torch.transpose(seqs, dim0=0, dim1=1)
 
                 # Predict next token log likelihood
-                # TODO. abstract this forward pass
-
-                features = actor.policy_net.feature_extractor(seqs[0:-1])
-                features, _ = actor.policy_net.memory_net._rnn(features)
-                logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:])
+                import ipdb; ipdb.set_trace()
+                logp_action, _ = Prior.likelihood(seqs)
 
                 # Optimization step
                 loss = - logp_action.mean()
@@ -355,6 +344,8 @@ if __name__ == "__main__":
                 info_dict = {}
                 total_steps = step + len(data) * (epoch - 1)
                 if (total_steps % 500) == 0 and total_steps != 0:
+
+                    import ipdb; ipdb.set_trace()
 
                     # Decrease learning rate
                     decrease_learning_rate(optimizer, decrease_by=0.03)
