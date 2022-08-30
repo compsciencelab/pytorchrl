@@ -51,7 +51,7 @@ def filter_mol(mol, max_heavy_atoms=50, min_heavy_atoms=10, element_list=[6, 7, 
             return False
 
 
-def read_and_filter_data(fname, args):
+def read_and_filter_data(fname, max_heavy_atoms, min_heavy_atoms, element_list):
     """Reads a SMILES file and returns a list of RDKIT SMILES"""
     with open(fname, 'r') as f:
         smiles_list = []
@@ -60,12 +60,7 @@ def read_and_filter_data(fname, args):
                 print("{} lines processed.".format(i))
             smiles = line.split(" ")[0]
             mol = Chem.MolFromSmiles(smiles)
-            if filter_mol(
-                    mol,
-                    args.pretrain_max_heavy_atoms,
-                    args.pretrain_min_heavy_atoms,
-                    args.pretrain_element_list,
-            ):
+            if filter_mol(mol, max_heavy_atoms, min_heavy_atoms, element_list):
                 smiles_list.append(Chem.MolToSmiles(mol))
         print("{} SMILES retrieved".format(len(smiles_list)))
         return smiles_list
@@ -120,17 +115,22 @@ class MolData(Dataset):
 if __name__ == "__main__":
 
     args = get_args()
+    os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
     pretrained_ckpt = {}
     os.makedirs("data", exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if not os.path.exists(f"{args.log_dir}/mols_filtered.smi"):
-        original_data_path = args.prior_trainingset_path
-        if not os.path.exists(original_data_path):
-            raise ValueError(f"Missing training set: {original_data_path}")
+        if not os.path.exists(args.pretrainingset_path):
+            raise ValueError(f"Missing training set: {args.pretrainingset_path}")
         print("\nReading smiles...")
-        smiles_list = read_and_filter_data(original_data_path)
+        smiles_list = read_and_filter_data(
+            args.pretrainingset_path,
+            args.pretrain_max_heavy_atoms,
+            args.pretrain_min_heavy_atoms,
+            args.pretrain_element_list,
+        )
         print("\nSaving filtered training data...")
         write_smiles_to_file(smiles_list, f"{args.log_dir}/mols_filtered.smi")
     else:
@@ -146,11 +146,13 @@ if __name__ == "__main__":
         vocabulary = create_vocabulary(smiles_list, tokenizer=tokenizer)
         pretrained_ckpt["tokenizer"] = tokenizer
         pretrained_ckpt["vocabulary"] = vocabulary
+        pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
         torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
     else:
         pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
         tokenizer = pretrained_ckpt_dict["tokenizer"]
         vocabulary = pretrained_ckpt_dict["vocabulary"]
+        pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
 
     # Handle wandb init
     if args.wandb_key:
@@ -169,21 +171,29 @@ if __name__ == "__main__":
         # Define env
         test_env, action_space, obs_space = VecEnv.create_factory(
             env_fn=generative_chemistry_train_env_factory,
-            env_kwargs={"scoring_function": lambda a: {"reward": 1.0}, "tokenizer": tokenizer, "vocabulary": vocabulary},
+            env_kwargs={
+                "scoring_function": lambda a: {"reward": 1.0},
+                "tokenizer": tokenizer, "vocabulary": vocabulary,
+                "smiles_max_length": args.pretrain_max_smile_length},
             vec_env_size=1)
         env = test_env(device)
 
         # Define model
+        feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
+        recurrent_net_kwargs = {}
         actor = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
-            recurrent_net=get_memory_network(args.recurrent_net))(device)
+            feature_extractor_kwargs={**feature_extractor_kwargs},
+            recurrent_net=get_memory_network(args.recurrent_net),
+            recurrent_net_kwargs={**recurrent_net_kwargs})(device)
+        pretrained_ckpt["feature_extractor_kwargs"] = feature_extractor_kwargs
+        pretrained_ckpt["recurrent_net_kwargs"] = recurrent_net_kwargs
 
+        # Define optimizer
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
         print("\nStarting pretraining...")
-
         for epoch in range(1, 10):
             # When training on a few million compounds, this model converges
             # in a few of epochs or even faster. If model sized is increased
@@ -226,7 +236,8 @@ if __name__ == "__main__":
                         tokens = []
                         while not done:
                             with torch.no_grad():
-                                _, action, _, rhs, entropy_dist, dist = actor.get_action(obs, rhs, done, deterministic=False)
+                                _, action, _, rhs, entropy_dist, dist = actor.get_action(
+                                    obs, rhs, done, deterministic=False)
                             obs, _, done, _ = env.step(action)
                             tokens.append(vocabulary.decode([int(action)])[0])
                         molecule = tokenizer.untokenize(tokens)
@@ -241,11 +252,15 @@ if __name__ == "__main__":
 
                     # Add to info dict
                     info_dict.update({
-                        "avg_molecular_length": np.mean([len(s) for s in list_tokens]),
-                        "avg_entropy": np.mean(list_entropy),
-                        "valid_molecules": valid_molecules / total_molecules,
-                        "ratio_repeated": ratio_repeated
+                        "pretrain_avg_molecular_length": np.mean([len(s) for s in list_tokens]),
+                        "pretrain_avg_entropy": np.mean(list_entropy),
+                        "pretrain_valid_molecules": valid_molecules / total_molecules,
+                        "pretrain_ratio_repeated": ratio_repeated
                     })
+
+                    # Save model
+                    pretrained_ckpt["network_weights"] = model.state_dict()
+                    torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
 
                 # Wandb logging
                 info_dict.update({"pretrain_loss": loss.item()})
