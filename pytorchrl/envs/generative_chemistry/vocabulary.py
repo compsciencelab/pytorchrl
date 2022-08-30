@@ -3,6 +3,13 @@
 Vocabulary helper class
 
 from https://github.com/MolecularAI/reinvent-models/blob/main/reinvent_models/reinvent_core/models/vocabulary.py
+
+
+str --> list of str --> np.array
+
+str --> list of str: tokenizer.tokenize
+list of str --> np.array: vocabulary.encode
+
 """
 
 import re

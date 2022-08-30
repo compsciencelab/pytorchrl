@@ -33,20 +33,6 @@ class LstmNet(nn.Module):
         """Recurrent hidden state size"""
         return self._layer_size
 
-    def forward(self, input_vector, hidden_state=None, done=False):
-        """
-        Performs a forward pass on the model. Note: you pass the **whole** sequence.
-        :param input_vector: Input tensor (batch_size, seq_size).
-        :param hidden_state: Hidden state tensor.
-        """
-        input_vector = input_vector.view(input_vector.size(0), -1)
-        output_vector, hidden_state_out = self._forward_lstm(input_vector, hidden_state, done)
-
-        if self._layer_normalization:
-            output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
-
-        return output_vector, hidden_state_out
-
     def _forward_lstm(self, x, hxs, done):
         """
         Fast forward pass memory network.
@@ -121,6 +107,20 @@ class LstmNet(nn.Module):
             x = x.view(T * N, -1)
 
         return x, hxs
+
+    def forward(self, input_vector, hidden_state=None, done=False):
+        """
+        Performs a forward pass on the model. Note: you pass the **whole** sequence.
+        :param input_vector: Input tensor (batch_size, seq_size).
+        :param hidden_state: Hidden state tensor.
+        """
+        input_vector = input_vector.view(input_vector.size(0), -1)
+        output_vector, hidden_state_out = self._forward_lstm(input_vector, hidden_state, done)
+
+        if self._layer_normalization:
+            output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
+
+        return output_vector, hidden_state_out
 
     def get_initial_recurrent_state(self, num_proc):
         return torch.zeros(num_proc, self._num_layers * 2, self._layer_size)

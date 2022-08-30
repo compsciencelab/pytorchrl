@@ -20,10 +20,10 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-# from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 
 def main():
@@ -148,6 +148,21 @@ def get_args():
         '--agent-name', default=None, help='Name of the wandb run')
     parser.add_argument(
         '--wandb-key', default=None, help='Init key from wandb account')
+
+    # Pretrain specs
+    parser.add_argument(
+        '--pretrain-lr', type=float, default=1e-3,
+        help='learning rate used during agent pretraining (default: 1e-3)')
+    parser.add_argument(
+        '--pretrain-lr-decrease-value', type=float, default=0.03,
+        help='How much to decrease lr during pretraining (default: 0.03)')
+    parser.add_argument(
+        '--pretrain-lr-decrease-period', type=int, default=550,
+        help='Number of network updates between lr decreases during pretraining (default 500).')
+    parser.add_argument(
+        'pretrain-batch-size', type=int, default=128,
+        help='Batch size used to pretrain the agent (default 128).')
+
 
     # Environment specs
     parser.add_argument(
