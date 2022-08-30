@@ -4,6 +4,9 @@ pretrain_lr: 0.001
 pretrain_lr_decrease_value: 0.03
 pretrain_lr_decrease_period: 500
 pretrain_batch_size: 128
+pretrain_element_list: [6, 7, 8, 9, 16, 17, 35]
+pretrain_max_heavy_atoms: 50
+pretrain_min_heavy_atoms: 10
 num_env_steps : 1000_000_000
 log_dir: /tmp/genchem_ppo
 gamma: 0.99

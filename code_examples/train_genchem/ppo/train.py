@@ -162,7 +162,15 @@ def get_args():
     parser.add_argument(
         '--pretrain-batch-size', type=int, default=128,
         help='Batch size used to pretrain the agent (default 128).')
-
+    parser.add_argument(
+        '--pretrain-max-heavy-atoms', type=int, default=50,
+        help='Filter out molecules with more heavy atoms (default 50).')
+    parser.add_argument(
+        '--pretrain-min-heavy-atoms', type=int, default=10,
+        help='Filter out molecules with less heavy atoms (default 10).')
+    parser.add_argument(
+        '--pretrain-element-list', nargs='+', default=[6, 7, 8, 9, 16, 17, 35],
+        help='Filter out molecules containing other atoms (default [6, 7, 8, 9, 16, 17, 35]).')
 
     # Environment specs
     parser.add_argument(

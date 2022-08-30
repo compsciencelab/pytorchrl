@@ -51,7 +51,7 @@ def filter_mol(mol, max_heavy_atoms=50, min_heavy_atoms=10, element_list=[6, 7, 
             return False
 
 
-def read_and_filter_data(fname):
+def read_and_filter_data(fname, args):
     """Reads a SMILES file and returns a list of RDKIT SMILES"""
     with open(fname, 'r') as f:
         smiles_list = []
@@ -60,7 +60,12 @@ def read_and_filter_data(fname):
                 print("{} lines processed.".format(i))
             smiles = line.split(" ")[0]
             mol = Chem.MolFromSmiles(smiles)
-            if filter_mol(mol):
+            if filter_mol(
+                    mol,
+                    args.pretrain_max_heavy_atoms,
+                    args.pretrain_min_heavy_atoms,
+                    args.pretrain_element_list,
+            ):
                 smiles_list.append(Chem.MolToSmiles(mol))
         print("{} SMILES retrieved".format(len(smiles_list)))
         return smiles_list
