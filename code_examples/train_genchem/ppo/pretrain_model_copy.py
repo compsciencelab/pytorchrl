@@ -311,10 +311,9 @@ if __name__ == "__main__":
 
         # Define model
         network_params = {'dropout': 0.0, 'layer_size': 512, 'num_layers': 3}
-        import ipdb; ipdb.set_trace()
-        actor = RNN(voc)
+        actor = RNN(vocabulary)
 
-        optimizer = torch.optim.Adam(actor.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(actor.rnn.parameters(), lr=0.001)
 
         print("\nStarting pretraining...")
 
@@ -332,8 +331,7 @@ if __name__ == "__main__":
                 # seqs = torch.transpose(seqs, dim0=0, dim1=1)
 
                 # Predict next token log likelihood
-                import ipdb; ipdb.set_trace()
-                logp_action, _ = Prior.likelihood(seqs)
+                logp_action, _ = actor.likelihood(seqs)
 
                 # Optimization step
                 loss = - logp_action.mean()
@@ -345,41 +343,29 @@ if __name__ == "__main__":
                 total_steps = step + len(data) * (epoch - 1)
                 if (total_steps % 500) == 0 and total_steps != 0:
 
-                    import ipdb; ipdb.set_trace()
-
                     # Decrease learning rate
                     decrease_learning_rate(optimizer, decrease_by=0.03)
 
                     # Generate a few molecules and check how many are valid
-                    total_molecules = 100
-                    valid_molecules = 0
                     list_molecules = []
-                    list_tokens = []
-                    list_entropy = []
-                    for i in range(total_molecules):
-                        obs, rhs, done = actor.actor_initial_states(env.reset())
-                        tokens = []
-                        while not done:
-                            with torch.no_grad():
-                                _, action, _, rhs, entropy_dist, dist = actor.get_action(obs, rhs, done, deterministic=False)
-                            obs, _, done, _ = env.step(obs.unsqueeze(0))
-                            tokens.append(vocabulary.decode([int(action)])[0])
-                        molecule = tokenizer.untokenize(tokens)
-                        if is_valid_smile(molecule):
-                            valid_molecules += 1
-                        list_molecules.append(molecule)
-                        list_tokens.append(tokens)
-                        list_entropy.append(entropy_dist.item())
+                    list_lengths = []
+                    seqs, likelihood, _ = actor.sample(128)
+                    valid = 0
+                    for i, seq in enumerate(seqs.cpu().numpy()):
+                        smile = tokenizer.untokenize(vocabulary.decode(seq))
+                        list_lengths.append(len(vocabulary.decode(seq)))
+                        list_molecules.append(smile)
+                        if Chem.MolFromSmiles(smile):
+                            valid += 1
 
                     # Check how many are repeated
-                    ratio_repeated = len(set(list_molecules)) / len(list_molecules) if total_molecules > 0 else 0
+                    ratio_repeated = len(set(list_molecules)) / len(list_molecules)
 
                     # Add to info dict
                     info_dict.update({
-                        "avg_molecule_length": np.mean([len(s) for s in list_tokens]),
-                        "avg_entropy": np.mean(list_entropy),
-                        "valid_molecules": valid_molecules / total_molecules,
-                        "ratio_repeated": ratio_repeated
+                        "valid_molecules": valid / len(seqs),
+                        "ratio_repeated": ratio_repeated,
+                        "lengths": np.mean(list_lengths)
                     })
 
                 # Wandb logging

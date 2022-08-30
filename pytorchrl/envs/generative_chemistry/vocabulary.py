@@ -16,11 +16,15 @@ class Vocabulary:
     def __init__(self, tokens=None, starting_id=0):
         self._tokens = {}
         self._current_id = starting_id
-
         if tokens:
             for token, idx in tokens.items():
                 self._add(token, idx)
                 self._current_id = max(self._current_id, idx + 1)
+
+    @property
+    def vocab_size(self):
+        """Vocabulary size"""
+        return len(self._tokens) // 2
 
     def __getitem__(self, token_or_id):
         return self._tokens[token_or_id]

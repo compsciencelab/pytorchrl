@@ -5,7 +5,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import Variable
+
+def Variable(tensor):
+    """Wrapper for torch.autograd.Variable that also accepts
+       numpy arrays directly and automatically assigns it to
+       the GPU. Be aware in case some operations are better
+       left to the CPU."""
+    if isinstance(tensor, np.ndarray):
+        tensor = torch.from_numpy(tensor)
+    if torch.cuda.is_available():
+        return torch.autograd.Variable(tensor).cuda()
+    return torch.autograd.Variable(tensor)
 
 
 class MultiGRU(nn.Module):
@@ -57,7 +67,7 @@ class RNN():
         """
         batch_size, seq_length = target.size()
         start_token = Variable(torch.zeros(batch_size, 1).long())
-        start_token[:] = self.voc.vocab['GO']
+        start_token[:] = self.voc._tokens['^']
         x = torch.cat((start_token, target[:, :-1]), 1)
         h = self.rnn.init_h(batch_size)
 
@@ -65,8 +75,8 @@ class RNN():
         entropy = Variable(torch.zeros(batch_size))
         for step in range(seq_length):
             logits, h = self.rnn(x[:, step], h)
-            log_prob = F.log_softmax(logits)
-            prob = F.softmax(logits)
+            log_prob = F.log_softmax(logits, dim=-1)
+            prob = F.softmax(logits, dim=-1)
             log_probs += NLLLoss(log_prob, target[:, step])
             entropy += -torch.sum((log_prob * prob), 1)
         return log_probs, entropy
@@ -84,8 +94,10 @@ class RNN():
             log_probs : (batch_size) Log likelihood for each sequence.
             entropy: (batch_size) The entropies for the sequences. Not currently used.
         """
+
+
         start_token = Variable(torch.zeros(batch_size).long())
-        start_token[:] = self.voc.vocab['GO']
+        start_token[:] = self.voc._tokens['^']
         h = self.rnn.init_h(batch_size)
         x = start_token
 
@@ -98,15 +110,15 @@ class RNN():
 
         for step in range(max_length):
             logits, h = self.rnn(x, h)
-            prob = F.softmax(logits)
-            log_prob = F.log_softmax(logits)
-            x = torch.multinomial(prob).view(-1)
+            prob = F.softmax(logits, dim=1)
+            log_prob = F.log_softmax(logits, dim=1)
+            x = torch.multinomial(prob, num_samples=1).view(-1)
             sequences.append(x.view(-1, 1))
             log_probs += NLLLoss(log_prob, x)
             entropy += -torch.sum((log_prob * prob), 1)
 
             x = Variable(x.data)
-            EOS_sampled = (x == self.voc.vocab['EOS']).data
+            EOS_sampled = (x == self.voc._tokens['$']).data
             finished = torch.ge(finished + EOS_sampled, 1)
             if torch.prod(finished) == 1: break
 
