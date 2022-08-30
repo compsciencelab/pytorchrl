@@ -65,6 +65,7 @@ class RNN():
             log_probs : (batch_size) Log likelihood for each example*
             entropy: (batch_size) The entropies for the sequences. Not currently used.
         """
+        import ipdb; ipdb.set_trace()
         batch_size, seq_length = target.size()
         start_token = Variable(torch.zeros(batch_size, 1).long())
         start_token[:] = self.voc._tokens['^']
@@ -74,6 +75,7 @@ class RNN():
         log_probs = Variable(torch.zeros(batch_size))
         entropy = Variable(torch.zeros(batch_size))
         for step in range(seq_length):
+            import ipdb; ipdb.set_trace()
             logits, h = self.rnn(x[:, step], h)
             log_prob = F.log_softmax(logits, dim=-1)
             prob = F.softmax(logits, dim=-1)
@@ -146,5 +148,5 @@ def NLLLoss(inputs, targets):
 
     target_expanded.scatter_(1, targets.contiguous().view(-1, 1).data, 1.0)
     loss = Variable(target_expanded) * inputs
-    loss = torch.sum(loss, 1)
+    loss = torch.sum(loss, dim=1)
     return loss
