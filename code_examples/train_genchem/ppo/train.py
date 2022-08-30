@@ -160,7 +160,7 @@ def get_args():
         '--pretrain-lr-decrease-period', type=int, default=550,
         help='Number of network updates between lr decreases during pretraining (default 500).')
     parser.add_argument(
-        'pretrain-batch-size', type=int, default=128,
+        '--pretrain-batch-size', type=int, default=128,
         help='Batch size used to pretrain the agent (default 128).')
 
 
