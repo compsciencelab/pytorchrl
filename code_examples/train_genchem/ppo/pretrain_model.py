@@ -259,7 +259,7 @@ if __name__ == "__main__":
                     })
 
                     # Save model
-                    pretrained_ckpt["network_weights"] = model.state_dict()
+                    pretrained_ckpt["network_weights"] = actor.state_dict()
                     torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
 
                 # Wandb logging
