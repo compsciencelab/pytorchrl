@@ -23,8 +23,6 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 
 # TODO: prior_trainingset is just a file with SMILES in it ("valid" SMILES)
 # TODO: review SMILES filtered
-# TODO: Track avg smile length?
-# TODO: add testing to check how many valid molecules I generate at the end of each epoch and also the diversity, out of 1000 or more
 
 
 def decrease_learning_rate(optimizer, decrease_by=0.01):
@@ -341,13 +339,12 @@ if __name__ == "__main__":
 
                 # Predict next token log likelihood
                 # TODO. abstract this forward pass
-
-                features = actor.policy_net.feature_extractor(seqs[0:-1])
+                features = actor.policy_net.feature_extractor(seqs[:-1, :])
                 features, _ = actor.policy_net.memory_net._rnn(features)
-                logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:])
+                logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:, :])
 
                 # Optimization step
-                loss = - logp_action.mean()
+                loss = - logp_action.squeeze(-1).sum(0).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -371,7 +368,7 @@ if __name__ == "__main__":
                         while not done:
                             with torch.no_grad():
                                 _, action, _, rhs, entropy_dist, dist = actor.get_action(obs, rhs, done, deterministic=False)
-                            obs, _, done, _ = env.step(obs.unsqueeze(0))
+                            obs, _, done, _ = env.step(action)
                             tokens.append(vocabulary.decode([int(action)])[0])
                         molecule = tokenizer.untokenize(tokens)
                         if is_valid_smile(molecule):
@@ -385,7 +382,7 @@ if __name__ == "__main__":
 
                     # Add to info dict
                     info_dict.update({
-                        "avg_molecule_length": np.mean([len(s) for s in list_tokens]),
+                        "avg_molecular_length": np.mean([len(s) for s in list_tokens]),
                         "avg_entropy": np.mean(list_entropy),
                         "valid_molecules": valid_molecules / total_molecules,
                         "ratio_repeated": ratio_repeated

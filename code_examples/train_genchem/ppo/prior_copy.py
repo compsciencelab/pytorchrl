@@ -67,9 +67,49 @@ class RNN():
         """
         import ipdb; ipdb.set_trace()
         batch_size, seq_length = target.size()
-        start_token = Variable(torch.zeros(batch_size, 1).long())
-        start_token[:] = self.voc._tokens['^']
-        x = torch.cat((start_token, target[:, :-1]), 1)
+
+        # old
+        # start_token = Variable(torch.zeros(batch_size, 1).long())
+        # start_token[:] = self.voc._tokens['^']
+        # x = torch.cat((start_token, target[:, :-1]), 1)
+
+        # new
+        x = target[:, :-1]
+
+        h = self.rnn.init_h(batch_size)
+
+        log_probs = Variable(torch.zeros(batch_size))
+        entropy = Variable(torch.zeros(batch_size))
+        for step in range(seq_length):
+            import ipdb; ipdb.set_trace()
+            logits, h = self.rnn(x[:, step], h)
+            log_prob = F.log_softmax(logits, dim=-1)
+            prob = F.softmax(logits, dim=-1)
+            log_probs += NLLLoss(log_prob, target[:, step])
+            entropy += -torch.sum((log_prob * prob), 1)
+        return log_probs, entropy
+
+    def likelihood2(self, target):
+        """
+        Retrieves the likelihood of a given sequence
+
+        Args:
+            target: (batch_size * sequence_lenght) A batch of sequences
+
+        Outputs:
+            log_probs : (batch_size) Log likelihood for each example*
+            entropy: (batch_size) The entropies for the sequences. Not currently used.
+        """
+        batch_size, seq_length = target.size()
+
+        # old
+        # start_token = Variable(torch.zeros(batch_size, 1).long())
+        # start_token[:] = self.voc._tokens['^']
+        # x = torch.cat((start_token, target[:, :-1]), 1)
+
+        # new
+        x = target[:, :-1]
+
         h = self.rnn.init_h(batch_size)
 
         log_probs = Variable(torch.zeros(batch_size))
