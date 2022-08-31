@@ -24,7 +24,7 @@ To pretrain an agent with the current `conf.yaml` configuration run
 
     ./code_examples/train_genchem/ppo/pretrain_model.sh
 
-In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on.
+In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on. Additionally,  `conf.yaml` fields `pretrain_element_list`,  `pretrain_min_heavy_atoms` and `pretrain_max_heavy_atoms` allow filtering out molecules from the training set.
 
 ## 3. Training
 
