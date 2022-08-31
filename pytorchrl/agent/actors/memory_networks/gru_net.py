@@ -19,7 +19,7 @@ class GruNet(nn.Module):
 
         super(GruNet, self).__init__()
 
-        self.gru = nn.GRU(input_size, output_size)
+        self._rnn = nn.GRU(input_size, output_size)
         self._num_outputs = output_size
         self.activation = activation()
 
@@ -38,7 +38,7 @@ class GruNet(nn.Module):
     def _forward_gru(self, x, hxs, done):
         """
         Fast forward pass GRU network.
-        from Ilya Kostrikov.PyTorch Implementations of Reinforcement Learning Algorithms.
+        from Ilya Kostrikov. PyTorch Implementations of Reinforcement Learning Algorithms.
         https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail. 2018
         Parameters
         ----------
@@ -59,8 +59,8 @@ class GruNet(nn.Module):
         masks = 1 - done
 
         if x.size(0) == hxs.size(0):
-            self.gru.flatten_parameters()
-            x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
+            self._rnn.flatten_parameters()
+            x, hxs = self._rnn(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
             x = x.squeeze(0)
             hxs = hxs.squeeze(0)
         else:
@@ -96,8 +96,8 @@ class GruNet(nn.Module):
                 start_idx = has_zeros[i]
                 end_idx = has_zeros[i + 1]
 
-                self.gru.flatten_parameters()
-                rnn_scores, hxs = self.gru(
+                self._rnn.flatten_parameters()
+                rnn_scores, hxs = self._rnn(
                     x[start_idx:end_idx],
                     hxs * masks[start_idx].view(1, -1, 1))
 

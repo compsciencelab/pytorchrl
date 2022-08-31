@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import ray
 import sys
 import time
 import wandb
@@ -9,16 +8,15 @@ import torch
 import argparse
 
 import pytorchrl as prl
-from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import PPO
-from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+from pytorchrl.learner import Learner
 from pytorchrl.agent.env import VecEnv
+from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
+from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
-from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
@@ -31,7 +29,6 @@ from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring
 def main():
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init
@@ -46,12 +43,22 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # 0. Load REINVENT pretrained checkpoint
-        vocabulary, tokenizer, max_sequence_length, network_params, network_weights = adapt_checkpoint(os.path.join(
-            os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/random.prior.new'))
+        # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
+        if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
+            pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
+            tokenizer = pretrained_ckpt.get("tokenizer")
+            vocabulary = pretrained_ckpt.get("vocabulary")
+            feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
+            recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
+            max_sequence_length = pretrained_ckpt.get("max_sequence_length", None)
+            torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
+            network_weights = "/tmp/network_params.tmp"
+        else:
+            (vocabulary, tokenizer, max_sequence_length, recurrent_net_kwargs,
+             network_weights) = adapt_checkpoint(os.path.join(os.path.dirname(
+                __file__), "../../../pytorchrl/envs/generative_chemistry/models/random.prior.new"))
+            feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
         restart_model = {"policy_net": network_weights}
-        network_params.pop("cell_type")
-        network_params.pop("embedding_layer_size")
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )
@@ -69,7 +76,7 @@ def main():
             env_kwargs={
                 "scoring_function": scoring_function,
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "smiles_max_length": max_sequence_length,
+                "smiles_max_length": max_sequence_length or 200,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
@@ -78,9 +85,9 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            feature_extractor_kwargs={"vocabulary_size": len(vocabulary)},
+            feature_extractor_kwargs={**feature_extractor_kwargs},
             recurrent_net=get_memory_network(args.recurrent_net),
-            recurrent_net_kwargs={**network_params},
+            recurrent_net_kwargs={**recurrent_net_kwargs},
             restart_model=restart_model,
         )
 
@@ -90,6 +97,7 @@ def main():
             behavior_weights=[1.0],
             loss_term_weight=args.kl_coef,
         )
+
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
@@ -140,115 +148,143 @@ def main():
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='RL')
+    parser = argparse.ArgumentParser(description="RL")
 
     # Configuration file, keep first
-    parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+    parser.add_argument("--conf", "-c", type=open, action=LoadFromFile)
 
     # Wandb
     parser.add_argument(
-        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+        "--experiment_name", default=None, help="Name of the wandb experiment the agent belongs to")
     parser.add_argument(
-        '--agent-name', default=None, help='Name of the wandb run')
+        "--agent-name", default=None, help="Name of the wandb run")
     parser.add_argument(
-        '--wandb-key', default=None, help='Init key from wandb account')
+        "--wandb-key", default=None, help="Init key from wandb account")
+
+    # Pretrain specs
+    parser.add_argument(
+        "--pretrain-lr", type=float, default=1e-3,
+        help="learning rate used during agent pretraining (default: 1e-3)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-value", type=float, default=0.03,
+        help="How much to decrease lr during pretraining (default: 0.03)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-period", type=int, default=550,
+        help="Number of network updates between lr decreases during pretraining (default 500).")
+    parser.add_argument(
+        "--pretrain-batch-size", type=int, default=128,
+        help="Batch size used to pretrain the agent (default 128).")
+    parser.add_argument(
+        "--pretrain-max-smile-length", type=int, default=200,
+        help="Max length allows for SMILES (default 200).")
+    parser.add_argument(
+        "--pretrain-max-heavy-atoms", type=int, default=50,
+        help="Filter out molecules with more heavy atoms (default 50).")
+    parser.add_argument(
+        "--pretrain-min-heavy-atoms", type=int, default=10,
+        help="Filter out molecules with less heavy atoms (default 10).")
+    parser.add_argument(
+        "--pretrain-element-list", nargs="+", default=[6, 7, 8, 9, 16, 17, 35],
+        help="Filter out molecules containing other atoms (default [6, 7, 8, 9, 16, 17, 35]).")
+    parser.add_argument(
+        "--pretrainingset-path", default=None, help="Path to dataset to train the prior")
 
     # Environment specs
     parser.add_argument(
-        '--frame-skip', type=int, default=0,
-        help='Number of frame to skip for each action (default no skip)')
+        "--frame-skip", type=int, default=0,
+        help="Number of frame to skip for each action (default no skip)")
     parser.add_argument(
-        '--frame-stack', type=int, default=0,
-        help='Number of frame to stack in observation (default no stack)')
+        "--frame-stack", type=int, default=0,
+        help="Number of frame to stack in observation (default no stack)")
 
     # PPO specs
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        "--lr", type=float, default=7e-4, help="learning rate (default: 7e-4)")
     parser.add_argument(
-        '--eps', type=float, default=1e-5,
-        help='Adam optimizer epsilon (default: 1e-5)')
+        "--eps", type=float, default=1e-5,
+        help="Adam optimizer epsilon (default: 1e-5)")
     parser.add_argument(
-        '--gamma', type=float, default=0.99,
-        help='discount factor for rewards (default: 0.99)')
+        "--gamma", type=float, default=0.99,
+        help="discount factor for rewards (default: 0.99)")
     parser.add_argument(
-        '--use-gae', action='store_true', default=False,
-        help='use generalized advantage estimation')
+        "--use-gae", action="store_true", default=False,
+        help="use generalized advantage estimation")
     parser.add_argument(
-        '--gae-lambda', type=float, default=0.95,
-        help='gae lambda parameter (default: 0.95)')
+        "--gae-lambda", type=float, default=0.95,
+        help="gae lambda parameter (default: 0.95)")
     parser.add_argument(
-        '--entropy-coef', type=float, default=0.01,
-        help='entropy term coefficient (default: 0.01)')
+        "--entropy-coef", type=float, default=0.01,
+        help="entropy term coefficient (default: 0.01)")
     parser.add_argument(
-        '--value-loss-coef', type=float, default=0.5,
-        help='value loss coefficient (default: 0.5)')
+        "--value-loss-coef", type=float, default=0.5,
+        help="value loss coefficient (default: 0.5)")
     parser.add_argument(
-        '--max-grad-norm', type=float, default=0.5,
-        help='max norm of gradients (default: 0.5)')
+        "--max-grad-norm", type=float, default=0.5,
+        help="max norm of gradients (default: 0.5)")
     parser.add_argument(
-        '--use_clipped_value_loss', action='store_true', default=False,
-        help='clip value loss update')
+        "--use_clipped_value_loss", action="store_true", default=False,
+        help="clip value loss update")
     parser.add_argument(
-        '--num-steps', type=int, default=20000,
-        help='number of forward steps in PPO (default: 20000)')
+        "--num-steps", type=int, default=20000,
+        help="number of forward steps in PPO (default: 20000)")
     parser.add_argument(
-        '--ppo-epoch', type=int, default=4,
-        help='number of ppo epochs (default: 4)')
+        "--ppo-epoch", type=int, default=4,
+        help="number of ppo epochs (default: 4)")
     parser.add_argument(
-        '--num-mini-batch', type=int, default=32,
-        help='number of batches for ppo (default: 32)')
+        "--num-mini-batch", type=int, default=32,
+        help="number of batches for ppo (default: 32)")
     parser.add_argument(
-        '--clip-param', type=float, default=0.2,
-        help='ppo clip parameter (default: 0.2)')
+        "--clip-param", type=float, default=0.2,
+        help="ppo clip parameter (default: 0.2)")
 
     # Feature extractor model specs
     parser.add_argument(
-        '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
+        "--feature-extractor-net", default="MLP", help="Type of nn. Options include MLP, CNN, Fixup")
     parser.add_argument(
-        '--restart-model', default=None,
-        help='Restart training using the model given')
+        "--restart-model", default=None,
+        help="Restart training using the model given")
     parser.add_argument(
-        '--recurrent-net', default=None, help='Recurrent neural networks to use')
+        "--recurrent-net", default=None, help="Recurrent neural networks to use")
     parser.add_argument(
-        '--kl-coef', type=float, default=0.5,
-        help='discount factor for rewards (default: 0.5)')
+        "--kl-coef", type=float, default=0.5,
+        help="discount factor for rewards (default: 0.5)")
 
     # Scheme specs
     parser.add_argument(
-        '--num-env-processes', type=int, default=16,
-        help='how many training CPU processes to use (default: 16)')
+        "--num-env-processes", type=int, default=16,
+        help="how many training CPU processes to use (default: 16)")
     parser.add_argument(
-        '--num-grad-workers', type=int, default=1,
-        help='how many agent workers to use (default: 1)')
+        "--num-grad-workers", type=int, default=1,
+        help="how many agent workers to use (default: 1)")
     parser.add_argument(
-        '--com-grad-workers', default='synchronous',
-        help='communication patters grad workers (default: synchronous)')
+        "--com-grad-workers", default="synchronous",
+        help="communication patters grad workers (default: synchronous)")
     parser.add_argument(
-        '--num-col-workers', type=int, default=1,
-        help='how many agent workers to use (default: 1)')
+        "--num-col-workers", type=int, default=1,
+        help="how many agent workers to use (default: 1)")
     parser.add_argument(
-        '--com-col-workers', default='synchronous',
-        help='communication patters col workers (default: synchronous)')
+        "--com-col-workers", default="synchronous",
+        help="communication patters col workers (default: synchronous)")
     parser.add_argument(
-        '--cluster', action='store_true', default=False,
-        help='script is running in a cluster')
+        "--cluster", action="store_true", default=False,
+        help="script is running in a cluster")
 
     # General training specs
     parser.add_argument(
-        '--num-env-steps', type=int, default=10e7,
-        help='number of environment steps to train (default: 10e6)')
+        "--num-env-steps", type=int, default=10e7,
+        help="number of environment steps to train (default: 10e6)")
     parser.add_argument(
-        '--max-time', type=int, default=-1,
-        help='stop script after this amount of time in seconds (default: no limit)')
+        "--max-time", type=int, default=-1,
+        help="stop script after this amount of time in seconds (default: no limit)")
     parser.add_argument(
-        '--log-interval', type=int, default=1,
-        help='log interval, one log per n updates (default: 10)')
+        "--log-interval", type=int, default=1,
+        help="log interval, one log per n updates (default: 10)")
     parser.add_argument(
-        '--save-interval', type=int, default=100,
-        help='save interval, one save per n updates (default: 100)')
+        "--save-interval", type=int, default=100,
+        help="save interval, one save per n updates (default: 100)")
     parser.add_argument(
-        '--log-dir', default='/tmp/obstacle_tower_ppo',
-        help='directory to save agent logs (default: /tmp/obstacle_tower_ppo)')
+        "--log-dir", default="/tmp/obstacle_tower_ppo",
+        help="directory to save agent logs (default: /tmp/obstacle_tower_ppo)")
 
     args = parser.parse_args()
     args.log_dir = os.path.expanduser(args.log_dir)

@@ -18,11 +18,21 @@ Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf
 
     python code_examples/train_genchem/ppo/train.py --help
 
+## 3. Pre-training (not necessary)
+
+To pretrain an agent with the current `conf.yaml` configuration run
+
+    ./code_examples/train_genchem/ppo/pretrain_model.sh
+
+In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on.
+
 ## 3. Training
 
 To train an agent with the current `conf.yaml` configuration run
 
     ./code_examples/train_genchem/ppo/train.sh
+
+If the agent was not pre-trained, a default pretai
 
 ## 4. Log in wandb during training
 
