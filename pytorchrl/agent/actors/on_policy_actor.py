@@ -453,7 +453,7 @@ class OnPolicyActor(Actor):
 
         # ---- 2. Define memory network  --------------------------------------
 
-        features = policy_feature_extractor(torch.randn(1, *self.input_space.shape))
+        features = policy_feature_extractor(torch.randn(1, *self.input_space.shape)*0.1)
         feature_size = int(np.prod(features.shape))
 
         if self.recurrent_net:
