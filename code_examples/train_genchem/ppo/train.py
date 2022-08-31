@@ -29,7 +29,6 @@ from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring
 def main():
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init
@@ -49,15 +48,16 @@ def main():
             pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
             tokenizer = pretrained_ckpt.get("tokenizer")
             vocabulary = pretrained_ckpt.get("vocabulary")
-            feature_network_params = pretrained_ckpt.get("recurrent_network_paramsfeature_network_params", {})
-            recurrent_network_params = pretrained_ckpt.get("recurrent_network_params", {})
-            network_weights = pretrained_ckpt.get("network_weights", {})
+            feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
+            recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
             max_sequence_length = pretrained_ckpt.get("max_sequence_length", None)
+            torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
+            network_weights = "/tmp/network_params.tmp"
         else:
-            (vocabulary, tokenizer, max_sequence_length, recurrent_network_params,
+            (vocabulary, tokenizer, max_sequence_length, recurrent_net_kwargs,
              network_weights) = adapt_checkpoint(os.path.join(os.path.dirname(
                 __file__), "../../../pytorchrl/envs/generative_chemistry/models/random.prior.new"))
-            feature_network_params = {"vocabulary_size": len(vocabulary)}
+            feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
@@ -85,9 +85,9 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            feature_extractor_kwargs={**feature_network_params},
+            feature_extractor_kwargs={**feature_extractor_kwargs},
             recurrent_net=get_memory_network(args.recurrent_net),
-            recurrent_net_kwargs={**recurrent_network_params},
+            recurrent_net_kwargs={**recurrent_net_kwargs},
             restart_model=restart_model,
         )
 
@@ -97,6 +97,7 @@ def main():
             behavior_weights=[1.0],
             loss_term_weight=args.kl_coef,
         )
+
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, eps=args.eps, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,

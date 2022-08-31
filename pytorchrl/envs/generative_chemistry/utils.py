@@ -37,6 +37,7 @@ def adapt_checkpoint(file_path):
     torch.save(new_save_dict, "/tmp/network_params.tmp")
 
     # Remove unnecessary network parameters
+    network_params = save_dict["network_params"]
     network_params.pop("cell_type", None)
     network_params.pop("embedding_layer_size", None)
 
