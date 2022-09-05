@@ -2,6 +2,7 @@
 import os
 import wandb
 from tqdm import tqdm
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from transformers import OpenAIGPTConfig, OpenAIGPTModel
@@ -60,8 +61,8 @@ if __name__ == "__main__":
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
     else:
         pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        tokenizer = pretrained_ckpt_dict["tokenizer"]
-        vocabulary = pretrained_ckpt_dict["vocabulary"]
+        tokenizer = pretrained_ckpt["tokenizer"] = pretrained_ckpt_dict["tokenizer"]
+        vocabulary = pretrained_ckpt["vocabulary"] = pretrained_ckpt_dict["vocabulary"]
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
 
     ####################################################################################################################
@@ -94,6 +95,7 @@ if __name__ == "__main__":
     model_config.n_embd = 256
     model_config.n_head = 4
     model_config.n_layer = 4
+    model_config.n_positions = 256
     model_config.vocab_size = len(vocabulary)
 
     ####################################################################################################################
@@ -133,17 +135,17 @@ if __name__ == "__main__":
             recurrent_net_kwargs=None)(device)
 
         ####################################################################################################################
+
         # Define optimizer
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
         print("\nStarting pretraining...")
         for epoch in range(1, 10):
-            # When training on a few million compounds, this model converges
-            # in a few of epochs or even faster. If model sized is increased
-            # its probably a good idea to check loss against an external set of
-            # validation SMILES to make sure we dont overfit too much.
 
             for step, batch in tqdm(enumerate(data), total=len(data)):
+
+                # Train mdoe
+                actor.train()
 
                 # Sample from DataLoader seqs = (batch_size, seq_length)
                 seqs = batch.long().to(device)
@@ -153,16 +155,17 @@ if __name__ == "__main__":
                 logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:, :])
 
                 # Optimization step
-                loss = - logp_action.squeeze(-1).sum(0).mean()
+                loss = - logp_action.squeeze(-1).sum(1).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
                 info_dict = {}
                 total_steps = step + len(data) * (epoch - 1)
+                if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
 
-                print(loss.item())
-                if True:  # (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
+                    # Eval mode
+                    actor.train()
 
                     # Decrease learning rate
                     decrease_learning_rate(optimizer, decrease_by=args.pretrain_lr_decrease_value)
