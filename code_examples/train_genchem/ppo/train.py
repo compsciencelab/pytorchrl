@@ -175,6 +175,9 @@ def get_args():
         "--pretrain-batch-size", type=int, default=128,
         help="Batch size used to pretrain the agent (default 128).")
     parser.add_argument(
+        "--pretrain-epochs", type=int, default=10,
+        help="Number of epochs to pretrain the agent (default 10).")
+    parser.add_argument(
         "--pretrain-max-smile-length", type=int, default=200,
         help="Max length allows for SMILES (default 200).")
     parser.add_argument(

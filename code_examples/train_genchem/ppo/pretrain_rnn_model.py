@@ -1,11 +1,19 @@
-"""Can I pretrain a GPT model?"""
+#!/usr/bin/env python3
+
+"""Code adapted from https://github.com/MarcusOlivecrona/REINVENT"""
+
 import os
+import re
+import sys
+import time
 import wandb
-from tqdm import tqdm
-import numpy as np
 import torch
+import argparse
+import numpy as np
+from tqdm import tqdm
+from rdkit import Chem
+from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from transformers import OpenAIGPTConfig, OpenAIGPTModel
 
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
@@ -14,12 +22,94 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 from code_examples.train_genchem.ppo.train import get_args
-from code_examples.train_genchem.ppo.pretrain_model import \
-    is_valid_smile, filter_mol, read_and_filter_data, write_smiles_to_file, MolData, decrease_learning_rate
 
 
-# testing
-from pytorchrl.agent.actors.feature_extractors.gpt import GPT
+def decrease_learning_rate(optimizer, decrease_by=0.01):
+    """Multiplies the learning rate of the optimizer by 1 - decrease_by"""
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= (1 - decrease_by)
+
+
+def is_valid_smile(smile):
+    """Returns true is smile is syntactically valid."""
+    mol = Chem.MolFromSmiles(smile)
+    return mol is not None
+
+
+def filter_mol(mol, max_heavy_atoms=50, min_heavy_atoms=10, element_list=[6, 7, 8, 9, 16, 17, 35]):
+    """
+    Filters molecules on number of heavy atoms and atom types.
+
+    element_list: to filter out smiles that contain atoms of other elements.
+    """
+    if mol is not None:
+        num_heavy = min_heavy_atoms < mol.GetNumHeavyAtoms() < max_heavy_atoms
+        elements = all([atom.GetAtomicNum() in element_list for atom in mol.GetAtoms()])
+        if num_heavy and elements:
+            return True
+        else:
+            return False
+
+
+def read_and_filter_data(fname, max_heavy_atoms, min_heavy_atoms, element_list):
+    """Reads a SMILES file and returns a list of RDKIT SMILES"""
+    with open(fname, 'r') as f:
+        smiles_list = []
+        for i, line in enumerate(f):
+            if i % 100000 == 0:
+                print("{} lines processed.".format(i))
+            smiles = line.split(" ")[0]
+            mol = Chem.MolFromSmiles(smiles)
+            if filter_mol(mol, max_heavy_atoms, min_heavy_atoms, element_list):
+                smiles_list.append(Chem.MolToSmiles(mol))
+        print("{} SMILES retrieved".format(len(smiles_list)))
+        return smiles_list
+
+
+def write_smiles_to_file(smiles_list, fname):
+    """Write a list of SMILES to a file."""
+    with open(fname, 'w') as f:
+        for smiles in smiles_list:
+            f.write(smiles + "\n")
+
+
+class MolData(Dataset):
+    """Custom PyTorch Dataset that takes a file containing SMILES.
+
+    Args:
+            fname : path to a file containing \n separated SMILES.
+            voc   : a Vocabulary instance
+    Returns:
+            A custom PyTorch dataset for training the Prior.
+    """
+    def __init__(self, fname, voc, tokenizer):
+        self.voc = voc
+        self.tokenizer = tokenizer
+        self.smiles = []
+        with open(fname, 'r') as f:
+            for line in f:
+                self.smiles.append(line.split()[0])
+
+    def __getitem__(self, i):
+        mol = self.smiles[i]
+        tokenized = self.tokenizer.tokenize(mol)
+        encoded = self.voc.encode(tokenized)
+        return torch.from_numpy(encoded)
+
+    def __len__(self):
+        return len(self.smiles)
+
+    def __str__(self):
+        return "Dataset containing {} structures.".format(len(self))
+
+    @classmethod
+    def collate_fn(cls, arr):
+        """Function to take a list of encoded sequences and turn them into a batch"""
+        max_length = max([seq.size(0) for seq in arr])
+        collated_arr = torch.zeros(len(arr), max_length)
+        for i, seq in enumerate(arr):
+            collated_arr[i, :seq.size(0)] = seq
+        return collated_arr
 
 
 if __name__ == "__main__":
@@ -30,8 +120,6 @@ if __name__ == "__main__":
     pretrained_ckpt = {}
     os.makedirs("data", exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    args.pretrainingset_path = "/Users/abou/Downloads/data/prior_trainingset"
 
     if not os.path.exists(f"{args.log_dir}/mols_filtered.smi"):
         if not os.path.exists(args.pretrainingset_path):
@@ -59,46 +147,12 @@ if __name__ == "__main__":
         pretrained_ckpt["tokenizer"] = tokenizer
         pretrained_ckpt["vocabulary"] = vocabulary
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
+        torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
     else:
         pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        tokenizer = pretrained_ckpt["tokenizer"] = pretrained_ckpt_dict["tokenizer"]
-        vocabulary = pretrained_ckpt["vocabulary"] = pretrained_ckpt_dict["vocabulary"]
+        tokenizer = pretrained_ckpt_dict["tokenizer"]
+        vocabulary = pretrained_ckpt_dict["vocabulary"]
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
-
-    ####################################################################################################################
-
-    # Get original config
-    model_config = OpenAIGPTConfig()
-    # {
-    #     "afn": "gelu",
-    #     "attn_pdrop": 0.1,
-    #     "embd_pdrop": 0.1,
-    #     "initializer_range": 0.02,
-    #     "layer_norm_epsilon": 1e-05,
-    #     "model_type": "openai-gpt",
-    #     "n_embd": 768,
-    #     "n_head": 12,
-    #     "n_layer": 12,
-    #     "n_positions": 512,
-    #     "predict_special_tokens": true,
-    #     "resid_pdrop": 0.1,
-    #     "summary_activation": null,
-    #     "summary_first_dropout": 0.1,
-    #     "summary_proj_to_labels": true,
-    #     "summary_type": "cls_index",
-    #     "summary_use_proj": true,
-    #     "transformers_version": "4.21.2",
-    #     "vocab_size": 40478
-    # }
-
-    # Adjust model size
-    model_config.n_embd = 256
-    model_config.n_head = 4
-    model_config.n_layer = 4
-    model_config.n_positions = 256
-    model_config.vocab_size = len(vocabulary)
-
-    ####################################################################################################################
 
     # Handle wandb init
     if args.wandb_key:
@@ -125,37 +179,43 @@ if __name__ == "__main__":
         env = test_env(device)
 
         # Define model
-        feature_extractor_kwargs = {"transformers_config": model_config}
+        feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
         recurrent_net_kwargs = {}
         actor = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
-            feature_extractor_network=GPT,
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             feature_extractor_kwargs={**feature_extractor_kwargs},
-            recurrent_net=None,
-            recurrent_net_kwargs=None)(device)
-
-        ####################################################################################################################
+            recurrent_net=get_memory_network(args.recurrent_net),
+            recurrent_net_kwargs={**recurrent_net_kwargs})(device)
+        pretrained_ckpt["feature_extractor_kwargs"] = feature_extractor_kwargs
+        pretrained_ckpt["recurrent_net_kwargs"] = recurrent_net_kwargs
 
         # Define optimizer
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
         print("\nStarting pretraining...")
-        for epoch in range(1, 10):
+        for epoch in range(1, args.pretrain_epochs):
+            # When training on a few million compounds, this model converges
+            # in a few of epochs or even faster. If model sized is increased
+            # its probably a good idea to check loss against an external set of
+            # validation SMILES to make sure we dont overfit too much.
+            print(f"Epoch{epoch + 1}:")
 
             for step, batch in tqdm(enumerate(data), total=len(data)):
-
-                # Train mdoe
-                actor.train()
 
                 # Sample from DataLoader seqs = (batch_size, seq_length)
                 seqs = batch.long().to(device)
 
+                # Transpose seqs because memory net wants seqs = (seq_length, batch_size)
+                seqs = torch.transpose(seqs, dim0=0, dim1=1)
+
                 # Predict next token log likelihood. TODO: Ugly hack, abstract this forward pass
                 features = actor.policy_net.feature_extractor(seqs[:-1, :])
+                features, _ = actor.policy_net.memory_net._rnn(features)
                 logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:, :])
 
                 # Optimization step
-                loss = - logp_action.squeeze(-1).sum(1).mean()
+                loss = - logp_action.squeeze(-1).sum(0).mean()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -163,9 +223,6 @@ if __name__ == "__main__":
                 info_dict = {}
                 total_steps = step + len(data) * (epoch - 1)
                 if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
-
-                    # Eval mode
-                    actor.train()
 
                     # Decrease learning rate
                     decrease_learning_rate(optimizer, decrease_by=args.pretrain_lr_decrease_value)
@@ -178,16 +235,12 @@ if __name__ == "__main__":
                     list_entropy = []
                     for i in range(total_molecules):
                         obs, rhs, done = actor.actor_initial_states(env.reset())
-                        obs = obs.reshape(1, 1)
                         tokens = []
                         while not done:
                             with torch.no_grad():
                                 _, action, _, rhs, entropy_dist, dist = actor.get_action(
-                                    obs, rhs=None, done=None, deterministic=False)
-                            action = action.reshape(1, -1)[:, -1:]
-                            _, _, done, _ = env.step(action)
-                            obs = obs.reshape(1, -1)
-                            obs = torch.cat([obs, action], dim=1)
+                                    obs, rhs, done, deterministic=False)
+                            obs, _, done, _ = env.step(action)
                             tokens.append(vocabulary.decode([int(action)])[0])
                         molecule = tokenizer.untokenize(tokens)
                         if is_valid_smile(molecule):
@@ -216,4 +269,3 @@ if __name__ == "__main__":
                 wandb.log(info_dict, step=total_steps)
 
     print("Finished!")
-

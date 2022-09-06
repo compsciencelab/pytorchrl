@@ -1,6 +1,7 @@
 experiment_name: GenChem
 agent_name: PPO
 pretrain_lr: 0.001
+pretrain_epochs: 10
 pretrain_lr_decrease_value: 0.03
 pretrain_lr_decrease_period: 500
 pretrain_batch_size: 128
