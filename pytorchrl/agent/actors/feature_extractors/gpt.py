@@ -8,7 +8,7 @@ from transformers import OpenAIGPTConfig, OpenAIGPTModel
 
 class GPT(nn.Module):
     """
-    Wrapper for to be able to use GPT model from transformers.
+    Wrapper to be able to use GPT model from transformers.
 
     Parameters
     ----------

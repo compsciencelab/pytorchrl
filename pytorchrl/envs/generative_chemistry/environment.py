@@ -9,13 +9,14 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200):
+    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200, concatenate_obs=True):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.tokenizer = tokenizer
-        self.max_length = max_length
         self.vocabulary = vocabulary
+        self.max_length = max_length
+        self.concatenate_obs = concatenate_obs
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
@@ -77,7 +78,10 @@ class GenChemEnv(gym.Env):
         info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
             self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
-        new_obs = self.vocabulary.encode([action])
+        if self.concatenate_obs:
+            new_obs = self.vocabulary.encode(self.current_molecule)
+        else:
+            new_obs = self.vocabulary.encode([action])
 
         return new_obs, reward, done, info
 
