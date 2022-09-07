@@ -41,17 +41,26 @@ class GPT(nn.Module):
         batch_size = inputs.size(0)
         inputs1 = inputs.view(batch_size, -1)
 
-        # masks
+        # Masks
         mask_attn = (inputs < 0.0)
         has_masked_tokens = (mask_attn == True).any()
+        has_masked_tokens_in_all_sequences = mask_attn.any(dim=1).all()
 
-        # forward pass
+        # Identify unnecessary padding
+        if has_masked_tokens_in_all_sequences:
+            ask_dim0, mask_dim1 = torch.where(mask_attn.all(dim=0, keepdims=True))
+            last_idx = mask_dim1.min()
+        else:
+            last_idx = inputs.size(1) + 1
+
+        # Forward pass
         inputs[mask_attn] = 0.0
         out1 = self.feature_extractor(
-            input_ids=inputs1.long(),  # Shape (batch_size, sequence_length)
-            attention_mask=1 - mask_attn.long(),  # Shape (batch_size, sequence_length)
+            input_ids=inputs1[:, 0:last_idx].long(),  # Shape (batch_size, sequence_length)
+            attention_mask=1 - mask_attn[:, 0:last_idx].long(),  # Shape (batch_size, sequence_length)
         ).last_hidden_state
 
+        # Prepare outputs
         if has_masked_tokens:  # Data collection
             out2 = []
             mask_dim0, mask_dim1 = torch.where(mask_attn == False)
@@ -61,5 +70,8 @@ class GPT(nn.Module):
             out3 = torch.stack(out2)
         else:  # Gradient computation
             out3 = out1
+
+        # Ugly fix
         inputs[mask_attn] = - 1.0  # TODO: Should go back to whichever value had before!
+
         return out3

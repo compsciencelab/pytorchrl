@@ -184,6 +184,7 @@ if __name__ == "__main__":
                                         obs, rhs=None, done=None, deterministic=False)
                                 molecule_length += 1
                                 next_obs, _, done, _ = env.step(action)
+                            obs[obs == -1] = 0.0
                             molecule = tokenizer.untokenize(vocabulary.decode(obs.cpu().numpy().squeeze(0)))
                             tokens = vocabulary.encode(tokenizer.tokenize(molecule))
                             if is_valid_smile(molecule):
@@ -214,15 +215,3 @@ if __name__ == "__main__":
                     wandb.log(info_dict, step=total_steps)
 
     print("Finished!")
-
-    # Pretrain model manually by using features = actor.policy_net.feature_extractor.feature_extractor(seqs[:, :-1]) - ok
-
-    # Then make the forward pass of gpt so it only returns the last "non-masked" token - ok
-
-    # Make the env accept again a single token as action - ok
-
-    # Might need to do a different forward pass for data collection and for gradient compute, like for rnn's!
-
-    # Then for training, obs will be fixed sized length 200 tensors, but actions will still be a single token
-
-    # For evaluate actions, forward pass will returns a single prob distribution, and will work

@@ -83,7 +83,6 @@ def main():
             info_keywords=info_keywords)
 
         # 2. Define RL Policy
-        feature_extractor_kwargs = {"transformers_config": feature_extractor_kwargs}  # TODO: remove in the future
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=GPT,
