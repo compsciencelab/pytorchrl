@@ -20,10 +20,10 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+# from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 
 def main():
@@ -174,6 +174,9 @@ def get_args():
     parser.add_argument(
         "--pretrain-batch-size", type=int, default=128,
         help="Batch size used to pretrain the agent (default 128).")
+    parser.add_argument(
+        "--pretrain-epochs", type=int, default=10,
+        help="Number of epochs to pretrain the agent (default 10).")
     parser.add_argument(
         "--pretrain-max-smile-length", type=int, default=200,
         help="Max length allows for SMILES (default 200).")

@@ -40,6 +40,7 @@ class GruNet(nn.Module):
         Fast forward pass GRU network.
         from Ilya Kostrikov. PyTorch Implementations of Reinforcement Learning Algorithms.
         https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail. 2018
+
         Parameters
         ----------
         x : torch.tensor
@@ -48,6 +49,7 @@ class GruNet(nn.Module):
             Current recurrent hidden state.
         done : torch.tensor
             Current done tensor, indicating if episode has finished.
+
         Returns
         -------
         x : torch.tensor

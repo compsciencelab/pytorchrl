@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-
-"""Code adapted from https://github.com/MarcusOlivecrona/REINVENT"""
+"""
+Pretrain a GRU or LSTM model.
+Code adapted from https://github.com/MarcusOlivecrona/REINVENT
+"""
 
 import os
 import re
@@ -13,15 +15,15 @@ import numpy as np
 from tqdm import tqdm
 from rdkit import Chem
 from torch.utils.data import Dataset
-from pytorchrl.agent.env import VecEnv
 from torch.utils.data import DataLoader
 
 import pytorchrl as prl
+from pytorchrl.agent.env import VecEnv
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
-from code_examples.train_genchem.ppo.train import get_args
+from code_examples.train_genchem.ppo.train_rnn_model import get_args
 
 
 def decrease_learning_rate(optimizer, decrease_by=0.01):
@@ -194,76 +196,80 @@ if __name__ == "__main__":
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
         print("\nStarting pretraining...")
-        for epoch in range(1, 10):
+        for epoch in range(1, args.pretrain_epochs):
             # When training on a few million compounds, this model converges
             # in a few of epochs or even faster. If model sized is increased
             # its probably a good idea to check loss against an external set of
             # validation SMILES to make sure we dont overfit too much.
-            for step, batch in tqdm(enumerate(data), total=len(data)):
+            with tqdm(enumerate(data), total=len(data)) as tepoch:
 
-                # Sample from DataLoader seqs = (batch_size, seq_length)
-                seqs = batch.long().to(device)
+                tepoch.set_description(f"Epoch {epoch}")
 
-                # Transpose seqs because memory net wants seqs = (seq_length, batch_size)
-                seqs = torch.transpose(seqs, dim0=0, dim1=1)
+                for step, batch in tepoch:
 
-                # Predict next token log likelihood. TODO: Ugly hack, abstract this forward pass
-                features = actor.policy_net.feature_extractor(seqs[:-1, :])
-                features, _ = actor.policy_net.memory_net._rnn(features)
-                logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:, :])
+                    # Sample from DataLoader seqs = (batch_size, seq_length)
+                        seqs = batch.long().to(device)
 
-                # Optimization step
-                loss = - logp_action.squeeze(-1).sum(0).mean()
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                        # Transpose seqs because memory net wants seqs = (seq_length, batch_size)
+                        seqs = torch.transpose(seqs, dim0=0, dim1=1)
 
-                info_dict = {}
-                total_steps = step + len(data) * (epoch - 1)
-                if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
+                        # Predict next token log likelihood. TODO: Ugly hack, abstract this forward pass
+                        features = actor.policy_net.feature_extractor(seqs[:-1, :])
+                        features, _ = actor.policy_net.memory_net._rnn(features)
+                        logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[1:, :])
 
-                    # Decrease learning rate
-                    decrease_learning_rate(optimizer, decrease_by=args.pretrain_lr_decrease_value)
+                        # Optimization step
+                        loss = - logp_action.squeeze(-1).sum(0).mean()
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
-                    # Generate a few molecules and check how many are valid
-                    total_molecules = 100
-                    valid_molecules = 0
-                    list_molecules = []
-                    list_tokens = []
-                    list_entropy = []
-                    for i in range(total_molecules):
-                        obs, rhs, done = actor.actor_initial_states(env.reset())
-                        tokens = []
-                        while not done:
-                            with torch.no_grad():
-                                _, action, _, rhs, entropy_dist, dist = actor.get_action(
-                                    obs, rhs, done, deterministic=False)
-                            obs, _, done, _ = env.step(action)
-                            tokens.append(vocabulary.decode([int(action)])[0])
-                        molecule = tokenizer.untokenize(tokens)
-                        if is_valid_smile(molecule):
-                            valid_molecules += 1
-                        list_molecules.append(molecule)
-                        list_tokens.append(tokens)
-                        list_entropy.append(entropy_dist.item())
+                        info_dict = {}
+                        total_steps = step + len(data) * (epoch - 1)
+                        if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
 
-                    # Check how many are repeated
-                    ratio_repeated = len(set(list_molecules)) / len(list_molecules) if total_molecules > 0 else 0
+                            # Decrease learning rate
+                            decrease_learning_rate(optimizer, decrease_by=args.pretrain_lr_decrease_value)
 
-                    # Add to info dict
-                    info_dict.update({
-                        "pretrain_avg_molecular_length": np.mean([len(s) for s in list_tokens]),
-                        "pretrain_avg_entropy": np.mean(list_entropy),
-                        "pretrain_valid_molecules": valid_molecules / total_molecules,
-                        "pretrain_ratio_repeated": ratio_repeated
-                    })
+                            # Generate a few molecules and check how many are valid
+                            total_molecules = 100
+                            valid_molecules = 0
+                            list_molecules = []
+                            list_tokens = []
+                            list_entropy = []
+                            for i in range(total_molecules):
+                                obs, rhs, done = actor.actor_initial_states(env.reset())
+                                tokens = []
+                                while not done:
+                                    with torch.no_grad():
+                                        _, action, _, rhs, entropy_dist, dist = actor.get_action(
+                                            obs, rhs, done, deterministic=False)
+                                    obs, _, done, _ = env.step(action)
+                                    tokens.append(vocabulary.decode([int(action)])[0])
+                                molecule = tokenizer.untokenize(tokens)
+                                if is_valid_smile(molecule):
+                                    valid_molecules += 1
+                                list_molecules.append(molecule)
+                                list_tokens.append(tokens)
+                                list_entropy.append(entropy_dist.item())
 
-                    # Save model
-                    pretrained_ckpt["network_weights"] = actor.state_dict()
-                    torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
+                            # Check how many are repeated
+                            ratio_repeated = len(set(list_molecules)) / len(list_molecules) if total_molecules > 0 else 0
 
-                # Wandb logging
-                info_dict.update({"pretrain_loss": loss.item()})
-                wandb.log(info_dict, step=total_steps)
+                            # Add to info dict
+                            info_dict.update({
+                                "pretrain_avg_molecular_length": np.mean([len(s) for s in list_tokens]),
+                                "pretrain_avg_entropy": np.mean(list_entropy),
+                                "pretrain_valid_molecules": valid_molecules / total_molecules,
+                                "pretrain_ratio_repeated": ratio_repeated
+                            })
+
+                            # Save model
+                            pretrained_ckpt["network_weights"] = actor.state_dict()
+                            torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
+
+                        # Wandb logging
+                        info_dict.update({"pretrain_loss": loss.item()})
+                        wandb.log(info_dict, step=total_steps)
 
     print("Finished!")
