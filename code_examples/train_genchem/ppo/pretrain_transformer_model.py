@@ -113,10 +113,10 @@ if __name__ == "__main__":
         # }
 
         # Adjust model size
-        model_config.n_embd = 256
-        model_config.n_head = 8
-        model_config.n_layer = 2
-        model_config.n_positions = 256
+        model_config.n_layer = 4
+        model_config.n_head = 4
+        model_config.n_embd = 64 * model_config.n_head
+        model_config.n_positions = 128
         model_config.vocab_size = len(vocabulary)
 
         feature_extractor_kwargs = {"transformers_config": model_config}
