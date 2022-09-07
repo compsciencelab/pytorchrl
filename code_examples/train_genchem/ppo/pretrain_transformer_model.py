@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
         # Adjust model size
         model_config.n_embd = 256
-        model_config.n_head = 6
+        model_config.n_head = 8
         model_config.n_layer = 2
         model_config.n_positions = 256
         model_config.vocab_size = len(vocabulary)

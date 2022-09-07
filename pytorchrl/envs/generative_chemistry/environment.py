@@ -40,7 +40,7 @@ class GenChemEnv(gym.Env):
 
         info = {}
         self.current_episode_length += 1
-        if self.current_episode_length == self.max_length - 1:
+        if self.current_episode_length == self.max_length - 2:
             action = "$"
         self.current_molecule_str += action
 
