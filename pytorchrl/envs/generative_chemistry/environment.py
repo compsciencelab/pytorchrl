@@ -32,9 +32,6 @@ class GenChemEnv(gym.Env):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        if action.shape[0] == self.max_length:
-            action = int(action[self.current_episode_length])
-
         if not isinstance(action, str):
             action = self.vocabulary.decode([action])[0]
 
