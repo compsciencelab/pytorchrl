@@ -86,7 +86,7 @@ if __name__ == "__main__":
             env_kwargs={
                 "scoring_function": lambda a: {"reward": 1.0},
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "smiles_max_length": args.pretrain_max_smile_length},
+                "concatenate_obs": True, "smiles_max_length": args.pretrain_max_smile_length},
             vec_env_size=1)
         env = test_env(device)
 
@@ -117,13 +117,13 @@ if __name__ == "__main__":
 
         # Adjust model size
         model_config.n_embd = 256
-        model_config.n_head = 4
-        model_config.n_layer = 4
+        model_config.n_head = 6
+        model_config.n_layer = 2
         model_config.n_positions = 256
         model_config.vocab_size = len(vocabulary)
 
         feature_extractor_kwargs = {"transformers_config": model_config}
-        pretrained_ckpt["feature_extractor_kwargs"] = model_config
+        pretrained_ckpt["feature_extractor_kwargs"] = feature_extractor_kwargs
         actor = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=GPT,
@@ -150,7 +150,9 @@ if __name__ == "__main__":
                     seqs = batch.long().to(device)
 
                     # Predict next token log likelihood. TODO: Ugly hack, abstract this forward pass
-                    features = actor.policy_net.feature_extractor(seqs[:, :-1])
+                    features = actor.policy_net.feature_extractor.feature_extractor(
+                        input_ids=seqs[:, :-1].long(), attention_mask=torch.ones_like(seqs[:, :-1]).long()
+                    ).last_hidden_state
                     logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(features, seqs[:, 1:])
 
                     # Optimization step
@@ -176,19 +178,17 @@ if __name__ == "__main__":
                         list_tokens = []
                         list_entropy = []
                         for i in range(total_molecules):
-                            obs, rhs, done = actor.actor_initial_states(env.reset())
-                            obs = obs.reshape(1, 1)
-                            tokens = []
+                            next_obs, rhs, done = actor.actor_initial_states(env.reset())
+                            molecule_length = 0
                             while not done:
+                                obs = next_obs
                                 with torch.no_grad():
                                     _, action, _, rhs, entropy_dist, dist = actor.get_action(
                                         obs, rhs=None, done=None, deterministic=False)
-                                action = action.reshape(1, -1)[:, -1:]
-                                _, _, done, _ = env.step(action)
-                                obs = obs.reshape(1, -1)
-                                obs = torch.cat([obs, action], dim=1)
-                                tokens.append(vocabulary.decode([int(action)])[0])
-                            molecule = tokenizer.untokenize(tokens)
+                                molecule_length += 1
+                                next_obs, _, done, _ = env.step(action)
+                            molecule = tokenizer.untokenize(vocabulary.decode(obs.cpu().numpy().squeeze(0)))
+                            tokens = vocabulary.encode(tokenizer.tokenize(molecule))
                             if is_valid_smile(molecule):
                                 valid_molecules += 1
                             list_molecules.append(molecule)
@@ -218,3 +218,14 @@ if __name__ == "__main__":
 
     print("Finished!")
 
+    # Pretrain model manually by using features = actor.policy_net.feature_extractor.feature_extractor(seqs[:, :-1]) - ok
+
+    # Then make the forward pass of gpt so it only returns the last "non-masked" token - ok
+
+    # Make the env accept again a single token as action - ok
+
+    # Might need to do a different forward pass for data collection and for gradient compute, like for rnn's!
+
+    # Then for training, obs will be fixed sized length 200 tensors, but actions will still be a single token
+
+    # For evaluate actions, forward pass will returns a single prob distribution, and will work

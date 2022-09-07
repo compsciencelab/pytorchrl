@@ -6,6 +6,7 @@ import time
 import wandb
 import torch
 import argparse
+from transformers import OpenAIGPTConfig, OpenAIGPTModel
 
 import pytorchrl as prl
 from pytorchrl.scheme import Scheme
@@ -20,10 +21,10 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-# from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
 from pytorchrl.agent.actors.feature_extractors.gpt import GPT
@@ -46,7 +47,7 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
+        # 0. Load local pretrained checkpoint if available, else raise ValueError
         if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
             pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
             tokenizer = pretrained_ckpt.get("tokenizer")
@@ -57,10 +58,7 @@ def main():
             torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
             network_weights = "/tmp/network_params.tmp"
         else:
-            (vocabulary, tokenizer, max_sequence_length, recurrent_net_kwargs,
-             network_weights) = adapt_checkpoint(os.path.join(os.path.dirname(
-                __file__), "../../../pytorchrl/envs/generative_chemistry/models/random.prior.new"))
-            feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
+            raise ValueError(f"missing pretrained_ckpt.prior! in {args.log_dir}")
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
@@ -79,44 +77,13 @@ def main():
             env_kwargs={
                 "scoring_function": scoring_function,
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "smiles_max_length": max_sequence_length or 200,
+                "concatenate_obs": True, "smiles_max_length": max_sequence_length or 200,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
 
         # 2. Define RL Policy
-        # Get original config
-        model_config = OpenAIGPTConfig()
-        # {
-        #     "afn": "gelu",
-        #     "attn_pdrop": 0.1,
-        #     "embd_pdrop": 0.1,
-        #     "initializer_range": 0.02,
-        #     "layer_norm_epsilon": 1e-05,
-        #     "model_type": "openai-gpt",
-        #     "n_embd": 768,
-        #     "n_head": 12,
-        #     "n_layer": 12,
-        #     "n_positions": 512,
-        #     "predict_special_tokens": true,
-        #     "resid_pdrop": 0.1,
-        #     "summary_activation": null,
-        #     "summary_first_dropout": 0.1,
-        #     "summary_proj_to_labels": true,
-        #     "summary_type": "cls_index",
-        #     "summary_use_proj": true,
-        #     "transformers_version": "4.21.2",
-        #     "vocab_size": 40478
-        # }
-
-        # Adjust model size
-        model_config.n_embd = 256
-        model_config.n_head = 4
-        model_config.n_layer = 4
-        model_config.n_positions = 256
-        model_config.vocab_size = len(vocabulary)
-
-        feature_extractor_kwargs = {"transformers_config": model_config}
+        feature_extractor_kwargs = {"transformers_config": feature_extractor_kwargs}  # TODO: remove in the future
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=GPT,
