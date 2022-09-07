@@ -13,16 +13,13 @@ from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
-from code_examples.train_genchem.ppo.train import get_args
+from code_examples.train_genchem.ppo.train_transformer_model import get_args
 from code_examples.train_genchem.ppo.pretrain_rnn_model import \
     is_valid_smile, filter_mol, read_and_filter_data, write_smiles_to_file, MolData, decrease_learning_rate
 
 
 # testing
 from pytorchrl.agent.actors.feature_extractors.gpt import GPT
-
-# TODO: how to integrate huggingface models?
-# TODO: create an env (or modify current) so each obs is the concatenation of all previous ones
 
 
 if __name__ == "__main__":
