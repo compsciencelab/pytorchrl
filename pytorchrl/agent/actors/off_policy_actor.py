@@ -473,7 +473,7 @@ class OffPolicyActor(Actor):
         q_obs_feature_extractor = obs_extractor(
             self.input_space, **self.obs_feature_extractor_kwargs)
         obs_feature_size = q_obs_feature_extractor(
-            torch.randn(1, *self.input_space.shape)).shape[-1]
+            torch.zeros(1, *self.input_space.shape)).shape[-1]
 
         # ---- 3. Define shared feature extractor -----------------------------
 
@@ -483,7 +483,7 @@ class OffPolicyActor(Actor):
 
         elif isinstance(self.action_space, gym.spaces.Box):
             act_feature_size = q_act_feature_extractor(
-                torch.randn(1, *self.action_space.shape)).shape[-1] if self.act_feature_extractor \
+                torch.zeros(1, *self.action_space.shape)).shape[-1] if self.act_feature_extractor \
                 else self.action_space.shape[-1]
             q_outputs = 1
 
@@ -496,7 +496,7 @@ class OffPolicyActor(Actor):
 
         # ---- 4. Define memory network ---------------------------------------
 
-        feature_size = q_common_feature_extractor(torch.randn(1, feature_size)).shape[-1]
+        feature_size = q_common_feature_extractor(torch.zeros(1, feature_size)).shape[-1]
         q_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs) if\
             self.recurrent_net else nn.Identity()
         feature_size = q_memory_net.recurrent_hidden_state_size if self.recurrent_net\
@@ -545,14 +545,14 @@ class OffPolicyActor(Actor):
 
         # ---- 2. Define Common feature extractor -----------------------------
 
-        feature_size = policy_obs_feature_extractor(torch.randn(1, *self.input_space.shape)).shape[-1]
+        feature_size = policy_obs_feature_extractor(torch.zeros(1, *self.input_space.shape)).shape[-1]
 
         policy_common_feature_extractor = self.common_feature_extractor(
             feature_size, **self.common_feature_extractor_kwargs)
 
         # ---- 3. Define memory network  --------------------------------------
 
-        feature_size = policy_common_feature_extractor(torch.randn(1, feature_size)).shape[-1]
+        feature_size = policy_common_feature_extractor(torch.zeros(1, feature_size)).shape[-1]
 
         if self.recurrent_net:
             policy_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
