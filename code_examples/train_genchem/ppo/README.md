@@ -16,13 +16,13 @@ pytorchrl also has to be pip installed
 
 Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
-    python code_examples/train_genchem/ppo/train.py --help
+    python code_examples/train_genchem/ppo/train_rnn_model.py --help
 
 ## 3. Pre-training (not necessary)
 
 To pretrain an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/ppo/pretrain_model.sh
+    ./code_examples/train_genchem/ppo/pretrain_rnn_model.sh
 
 In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on. Additionally,  `conf.yaml` fields `pretrain_element_list`,  `pretrain_min_heavy_atoms` and `pretrain_max_heavy_atoms` allow filtering out molecules from the training set.
 
@@ -30,7 +30,7 @@ In particular, the `conf.yaml` field `pretrainingset_path` has to provide a vali
 
 To train an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/ppo/train.sh
+    ./code_examples/train_genchem/ppo/train_rnn_model.sh
 
 If the agent was not pre-trained, a default pretai
 
