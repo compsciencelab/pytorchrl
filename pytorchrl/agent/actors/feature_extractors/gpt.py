@@ -25,7 +25,9 @@ class GPT(nn.Module):
 
     def forward(self, inputs):
         """
-        Forward pass Neural Network
+        Forward pass Neural Network.
+
+        This model assumes padding tokens are -1.
 
         Parameters
         ----------
@@ -53,8 +55,10 @@ class GPT(nn.Module):
         else:
             last_idx = inputs.size(1) + 1
 
-        # Forward pass
+        # Remove -1 padding tokens
         inputs[mask_attn] = 0.0
+
+        # Forward pass
         out1 = self.feature_extractor(
             input_ids=inputs1[:, 0:last_idx].long(),  # Shape (batch_size, sequence_length)
             attention_mask=1 - mask_attn[:, 0:last_idx].long(),  # Shape (batch_size, sequence_length)
@@ -62,16 +66,12 @@ class GPT(nn.Module):
 
         # Prepare outputs
         if has_masked_tokens:  # Data collection
-            out2 = []
-            mask_dim0, mask_dim1 = torch.where(mask_attn == False)
-            for i in range(batch_size):
-                idx = max(mask_dim1[mask_dim0 == i])
-                out2.append(out1[i, idx])
-            out3 = torch.stack(out2)
+            idxs = (mask_attn.size(1) - mask_attn.sum(1)) - 1
+            out2 = out1[torch.arange(len(out1)), idxs.view(-1)]
         else:  # Gradient computation
-            out3 = out1
+            out2 = out1
 
-        # Ugly fix
-        inputs[mask_attn] = - 1.0  # TODO: Should go back to whichever value had before!
+        # Place again padding tokens
+        inputs[mask_attn] = - 1.0
 
-        return out3
+        return out2

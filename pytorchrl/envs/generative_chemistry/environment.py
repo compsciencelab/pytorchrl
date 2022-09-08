@@ -37,17 +37,13 @@ class GenChemEnv(gym.Env):
 
         info = {}
         self.current_episode_length += 1
-        if self.current_episode_length == self.max_length - 2:
+        if self.current_episode_length == self.max_length - 1:
             action = "$"
         self.current_molecule_str += action
 
         if action != "$":  # If character is not $, return 0.0 reward
             reward = 0.0
             done = False
-
-        elif len(self.current_molecule_str) == self.max_length - 2:
-            reward = 0.0
-            done = True
 
         else:  # if action is $, evaluate molecule
 
@@ -72,16 +68,16 @@ class GenChemEnv(gym.Env):
                 else:
                     self.running_mean_valid_smiles.append(0.0)
 
+            # Update molecule
+            info.update({"molecule": self.tokenizer.untokenize(self.current_molecule_str)})
+
+            # Update valid smiles tracker
+            info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
+                self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
+
             # Update info with remaining values
             info.update(score)
             done = True
-
-        # Update molecule
-        info.update({"molecule": self.tokenizer.untokenize(self.current_molecule_str)})
-
-        # Update valid smiles tracker
-        info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
-            self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
         new_obs = self.vocabulary.encode([action])
         if self.concatenate_obs:
