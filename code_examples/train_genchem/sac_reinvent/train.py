@@ -194,7 +194,7 @@ def main():
                 "smiles_list": smiles_list,
                 "scoring_function_parameters": scoring_function_parameters,
                 "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "obs_length": max_sequence_length,
+                "smiles_max_length": max_sequence_length,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=(

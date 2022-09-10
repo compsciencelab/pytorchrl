@@ -1,10 +1,13 @@
 import os
-from pytorchrl.envs.generative_chemistry.environment import GenChemEnv
+# from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv
+# from pytorchrl.envs.generative_chemistry.transformer_reinvent_environment import GenChemEnv
+from pytorchrl.envs.generative_chemistry.rnn_libinvent_environment import GenChemEnv
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 
 
 def generative_chemistry_train_env_factory(
-        scoring_function, tokenizer=None, vocabulary=None, smiles_max_length=200, concatenate_obs=False, smiles_list=[]):
+        scoring_function, tokenizer=None, vocabulary=None, smiles_max_length=200,
+        concatenate_obs=False, smiles_list=[], scaffolds=[]):
     """
     Create train GenChem environment.
 
@@ -20,6 +23,8 @@ def generative_chemistry_train_env_factory(
         Maximum length allowed for the generated SMILES. Equivalent to max episode length.
     smiles_list : list
         List of smiles from which to create a vocabulary. Only used if tokenizer and vocabulary are None.
+    scaffolds : list
+        List of LibInvent scaffolds
 
     Returns
     -------
@@ -36,7 +41,7 @@ def generative_chemistry_train_env_factory(
         tokenizer=tokenizer,
         vocabulary=vocabulary,
         max_length=smiles_max_length,
-        concatenate_obs=concatenate_obs)
+        scaffolds=scaffolds)
 
     return env
 

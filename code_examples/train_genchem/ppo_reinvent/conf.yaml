@@ -1,5 +1,5 @@
 experiment_name: GenChem
-agent_name: PPO
+agent_name: PPO_Reinvent
 pretrain_lr: 0.001
 pretrain_epochs: 10
 pretrain_lr_decrease_value: 0.03

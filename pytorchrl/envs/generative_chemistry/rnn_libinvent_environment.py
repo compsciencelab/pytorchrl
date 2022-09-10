@@ -3,34 +3,71 @@ import numpy as np
 from gym import spaces
 from collections import defaultdict, deque
 
+### TODO: make eveything work without loading the prior
+
+# TODO: define obs as space.dict
+
+# TODO: Define an optional "scaffold_list" parameter, which allows to provide scaffolds. If scaffolds available,
+# randomly pick one at the beginning of every episode.
+
+# TODO: code reset function
+
+# TODO: code step function
+
+# TODO: during the episode, provide {"scaffold": scaffold, "decoration": last token} as obs,
+#  and expect a decoration next token action.
+
+# TODO: For data collection is straightforward. In the memory net, compute the scaffold hidden state only if Done!
+
+# TODO: for gradient computation, need to delve into the code a bit more.
+
+### TODO: make eveything work without with the prior
+
+
+### TODO: allow training our own prior
+
 
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200, concatenate_obs=False):
+    def __init__(self, scoring_function, vocabulary, tokenizer, scaffolds,  max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
+        self.scaffolds = scaffolds
         self.tokenizer = tokenizer
         self.vocabulary = vocabulary
         self.max_length = max_length
+        self.current_episode_length = 0
         self.concatenate_obs = concatenate_obs
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
+        # Break down scaffolds into tokens
+        import ipdb; ipdb.set_trace()  # TODO: convert tokenized_scaffolds to arrays
+        self.tokenized_scaffolds = [vocabulary.encode(tokenizer.tokenize(i)) for i in self.scaffolds]
+        self.max_scaffold_length = max([len(i) for i in self.tokenized_scaffolds])
+
         # Define action and observation space
-        self.current_episode_length = 0
+        import ipdb; ipdb.set_trace()
+        scaffold_space = gym.spaces.Discrete(len(self.vocabulary))
+        scaffold_space.shape = (self.max_scaffold_length,)  # Ugly hack
+        decoration_space = gym.spaces.Discrete(len(self.vocabulary))
+        self.observation_space = gym.spaces.Dict({
+            "scaffold": scaffold_space,
+            "decoration": decoration_space,
+        })
         self.action_space = gym.spaces.Discrete(len(self.vocabulary))
-        self.observation_space = gym.spaces.Discrete(len(self.vocabulary))
+
         if concatenate_obs:
-            self.action_space.shape = (max_length,)
-            self.observation_space.shape = (max_length,)
-            self.current_molecule_np = -1 * np.ones(max_length)
+            pass
 
     def step(self, action):
         """Execute one time step within the environment"""
+
+        import ipdb; ipdb.set_trace()
 
         if not isinstance(action, str):
             action = self.vocabulary.decode([action])[0]
@@ -92,11 +129,13 @@ class GenChemEnv(gym.Env):
         Return padded base molecule to match length `obs_length`.
         """
         self.num_episodes += 1
-        self.current_molecule_str = "^"
+        self.current_molecule = "^"
         self.current_episode_length = 0
-        self.current_molecule_np = -1 * np.ones(self.max_length)
-        self.current_molecule_np[self.current_episode_length] = self.vocabulary.encode("^")
-        return self.current_molecule_np
+        obs = {
+            "scaffold": self.tokenized_scaffolds[0],
+            "decoration":  self.vocabulary.encode(self.current_molecule),
+        }
+        return obs
 
     def render(self, mode='human'):
         """Render the environment to the screen"""
