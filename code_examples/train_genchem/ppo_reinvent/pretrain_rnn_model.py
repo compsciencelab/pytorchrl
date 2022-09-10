@@ -21,7 +21,7 @@ import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
+from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 from code_examples.train_genchem.ppo.train_rnn_model import get_args
 
@@ -84,9 +84,8 @@ class MolData(Dataset):
     Returns:
             A custom PyTorch dataset for training the Prior.
     """
-    def __init__(self, fname, voc, tokenizer):
-        self.voc = voc
-        self.tokenizer = tokenizer
+    def __init__(self, fname, vocabulary):
+        self.vocabulary = vocabulary
         self.smiles = []
         with open(fname, 'r') as f:
             for line in f:
@@ -94,8 +93,7 @@ class MolData(Dataset):
 
     def __getitem__(self, i):
         mol = self.smiles[i]
-        tokenized = self.tokenizer.tokenize(mol)
-        encoded = self.voc.encode(tokenized)
+        encoded = self.vocabulary.encode(mol)
         return torch.from_numpy(encoded)
 
     def __len__(self):
@@ -144,15 +142,12 @@ if __name__ == "__main__":
 
     if not os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
         print("\nConstructing vocabulary...")
-        tokenizer = SMILESTokenizer()
-        vocabulary = create_vocabulary(smiles_list, tokenizer=tokenizer)
-        pretrained_ckpt["tokenizer"] = tokenizer
+        vocabulary = ReinventVocabulary.from_list(smiles_list)
         pretrained_ckpt["vocabulary"] = vocabulary
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
         torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
     else:
         pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        tokenizer = pretrained_ckpt_dict["tokenizer"]
         vocabulary = pretrained_ckpt_dict["vocabulary"]
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
 
@@ -175,8 +170,7 @@ if __name__ == "__main__":
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "scoring_function": lambda a: {"reward": 1.0},
-                "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "smiles_max_length": args.pretrain_max_smile_length},
+                "vocabulary": vocabulary, "smiles_max_length": args.pretrain_max_smile_length},
             vec_env_size=1)
         env = test_env(device)
 
@@ -245,8 +239,9 @@ if __name__ == "__main__":
                                         _, action, _, rhs, entropy_dist, dist = actor.get_action(
                                             obs, rhs, done, deterministic=False)
                                     obs, _, done, _ = env.step(action)
+                                    import ipdb; ipdb.set_trace()
                                     tokens.append(vocabulary.decode([int(action)])[0])
-                                molecule = tokenizer.untokenize(tokens)
+                                molecule = vocabulary.tokenizer.untokenize(tokens)
                                 if is_valid_smile(molecule):
                                     valid_molecules += 1
                                 list_molecules.append(molecule)

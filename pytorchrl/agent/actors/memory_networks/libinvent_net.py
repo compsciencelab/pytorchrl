@@ -2,12 +2,9 @@
 Implementation of the decorator using a Encoder-Decoder architecture.
 """
 import math
-
 import torch
 import torch.nn as tnn
 import torch.nn.utils.rnn as tnnur
-
-from running_modes.enums import GenerativeModelParametersEnum
 
 
 class Encoder(tnn.Module):
@@ -173,6 +170,21 @@ class Decorator(tnn.Module):
         super(Decorator, self).__init__()
 
         import ipdb; ipdb.set_trace()
+
+        encoder_params = {
+            "num_layers": 3,
+            "num_dimensions": 512,
+            "vocabulary_size": 256,
+            "dropout": 0,
+        }
+
+        decoder_params = {
+            "num_layers": 3,
+            "num_dimensions": 512,
+            "vocabulary_size": 256,
+            "dropout": 0,
+        }
+
         self._encoder = Encoder(**encoder_params)
         self._decoder = Decoder(**decoder_params)
 
@@ -210,13 +222,3 @@ class Decorator(tnn.Module):
         :return : Returns the logits and the hidden state for each element of the sequence passed.
         """
         return self._decoder(padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states)
-
-    def get_params(self):
-        """
-        Obtains the params for the network.
-        :return : A dict with the params.
-        """
-        return {
-            "encoder_params": self._encoder.get_params(),
-            "decoder_params": self._decoder.get_params()
-        }

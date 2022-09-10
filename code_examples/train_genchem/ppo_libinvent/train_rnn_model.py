@@ -23,7 +23,7 @@ from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import
 # from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
 from pytorchrl.agent.actors.memory_networks.libinvent_net import Decorator
@@ -86,13 +86,21 @@ def main():
             info_keywords=info_keywords)
 
         # 2. Define RL Policy
+        # actor_factory = OnPolicyActor.create_factory(
+        #     obs_space, action_space, prl.PPO,
+        #     feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
+        #     feature_extractor_kwargs={**feature_extractor_kwargs},
+        #     recurrent_net=Decorator,
+        #     recurrent_net_kwargs={**recurrent_net_kwargs},
+        #     restart_model=restart_model,
+        # )
+
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             feature_extractor_kwargs={**feature_extractor_kwargs},
             recurrent_net=Decorator,
             recurrent_net_kwargs={**recurrent_net_kwargs},
-            restart_model=restart_model,
         )
 
         # 3. Define RL training algorithm
