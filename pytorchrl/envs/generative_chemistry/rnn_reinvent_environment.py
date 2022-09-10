@@ -37,12 +37,11 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
-            import ipdb; ipdb.set_trace()
-            score = self.scoring_function(self.tokenizer.untokenize(self.current_molecule))
-            score = self.scoring_function(self.current_molecule)
+            # Compute score
+            score = self.scoring_function(self.vocabulary.remove_start_and_end_tokens(self.current_molecule))
 
+            # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
-
             assert "score" in score.keys() or "reward" in score.keys(), \
                 "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
 
@@ -61,9 +60,7 @@ class GenChemEnv(gym.Env):
                     self.running_mean_valid_smiles.append(0.0)
 
             # Update molecule
-            import ipdb;
-            ipdb.set_trace()
-            info.update({"molecule": self.tokenizer.untokenize(self.current_molecule)})
+            info.update({"molecule": self.vocabulary.remove_start_and_end_tokens(self.current_molecule)})
 
             # Update valid smiles tracker
             info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
@@ -73,7 +70,7 @@ class GenChemEnv(gym.Env):
             info.update(score)
             done = True
 
-        new_obs = self.vocabulary.encode(action, with_begin_and_end=False)
+        new_obs = self.vocabulary.encode_token(action)
 
         return new_obs, reward, done, info
 
@@ -85,7 +82,7 @@ class GenChemEnv(gym.Env):
         self.num_episodes += 1
         self.current_molecule = "^"
         self.current_episode_length = 0
-        return self.vocabulary.encode(self.current_molecule, with_begin_and_end=False)
+        return self.vocabulary.encode_token(self.current_molecule)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""

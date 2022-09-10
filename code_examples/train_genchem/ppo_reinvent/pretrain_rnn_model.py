@@ -229,23 +229,23 @@ if __name__ == "__main__":
                             total_molecules = 100
                             valid_molecules = 0
                             list_molecules = []
-                            list_tokens = []
+                            list_num_tokens = []
                             list_entropy = []
                             for i in range(total_molecules):
                                 obs, rhs, done = actor.actor_initial_states(env.reset())
-                                tokens = []
+                                molecule = "^"
+                                num_tokens = 0
                                 while not done:
                                     with torch.no_grad():
                                         _, action, _, rhs, entropy_dist, dist = actor.get_action(
                                             obs, rhs, done, deterministic=False)
                                     obs, _, done, _ = env.step(action)
-                                    import ipdb; ipdb.set_trace()
-                                    tokens.append(vocabulary.decode([int(action)])[0])
-                                molecule = vocabulary.tokenizer.untokenize(tokens)
+                                    molecule += vocabulary.decode_token(action)
+                                    num_tokens += 1
                                 if is_valid_smile(molecule):
                                     valid_molecules += 1
                                 list_molecules.append(molecule)
-                                list_tokens.append(tokens)
+                                list_num_tokens.append(num_tokens)
                                 list_entropy.append(entropy_dist.item())
 
                             # Check how many are repeated
@@ -253,7 +253,7 @@ if __name__ == "__main__":
 
                             # Add to info dict
                             info_dict.update({
-                                "pretrain_avg_molecular_length": np.mean([len(s) for s in list_tokens]),
+                                "pretrain_avg_molecular_length": np.mean(list_num_tokens),
                                 "pretrain_avg_entropy": np.mean(list_entropy),
                                 "pretrain_valid_molecules": valid_molecules / total_molecules,
                                 "pretrain_ratio_repeated": ratio_repeated

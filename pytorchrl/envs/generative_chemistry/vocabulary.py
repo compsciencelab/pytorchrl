@@ -155,15 +155,15 @@ class ReinventVocabulary:
 
     def encode_token(self, token):
         """Encodes token from str to int"""
-        return self.vocabulary.encode([token])
+        return self.vocabulary.encode([str(token)])[0]
 
     def decode_token(self, token):
         """Decodes token from int to str"""
-        return self.vocabulary.decode([token])
+        return self.vocabulary.decode([int(token)])[0]
 
-    def remove_start_and_end(self, smile):
+    def remove_start_and_end_tokens(self, smile):
         """Remove start and end tokens from a SMILE"""
-        return smile[1:-1]
+        return self.tokenizer.untokenize(smile)
 
     def count_tokens(self, smile):
         return len(self.encode(smile))
