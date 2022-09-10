@@ -9,11 +9,10 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, max_length=200):
+    def __init__(self, scoring_function, vocabulary, max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
-        self.tokenizer = tokenizer
         self.max_length = max_length
         self.vocabulary = vocabulary
         self.scoring_function = scoring_function
@@ -27,13 +26,9 @@ class GenChemEnv(gym.Env):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        if not isinstance(action, str):
-            action = self.vocabulary.decode([action])[0]
-
         info = {}
         self.current_episode_length += 1
-        if self.current_episode_length == self.max_length - 1:
-            action = "$"
+        action = "$" if self.current_episode_length == self.max_length - 1 else self.vocabulary.decode_token(action)
         self.current_molecule += action
 
         if action != "$":  # If character is not $, return 0.0 reward
@@ -42,7 +37,9 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
+            import ipdb; ipdb.set_trace()
             score = self.scoring_function(self.tokenizer.untokenize(self.current_molecule))
+            score = self.scoring_function(self.current_molecule)
 
             assert isinstance(score, dict), "scoring_function has to return a dict"
 
@@ -64,6 +61,8 @@ class GenChemEnv(gym.Env):
                     self.running_mean_valid_smiles.append(0.0)
 
             # Update molecule
+            import ipdb;
+            ipdb.set_trace()
             info.update({"molecule": self.tokenizer.untokenize(self.current_molecule)})
 
             # Update valid smiles tracker
@@ -74,7 +73,7 @@ class GenChemEnv(gym.Env):
             info.update(score)
             done = True
 
-        new_obs = self.vocabulary.encode([action])
+        new_obs = self.vocabulary.encode(action, with_begin_and_end=False)
 
         return new_obs, reward, done, info
 
@@ -86,7 +85,7 @@ class GenChemEnv(gym.Env):
         self.num_episodes += 1
         self.current_molecule = "^"
         self.current_episode_length = 0
-        return self.vocabulary.encode(self.current_molecule)
+        return self.vocabulary.encode(self.current_molecule, with_begin_and_end=False)
 
     def render(self, mode='human'):
         """Render the environment to the screen"""

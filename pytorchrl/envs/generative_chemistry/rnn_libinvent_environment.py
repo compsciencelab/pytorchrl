@@ -32,12 +32,11 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, tokenizer, scaffolds,  max_length=200):
+    def __init__(self, scoring_function, vocabulary, scaffolds,  max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
         self.scaffolds = scaffolds
-        self.tokenizer = tokenizer
         self.vocabulary = vocabulary
         self.max_length = max_length
         self.current_episode_length = 0

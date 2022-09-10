@@ -30,13 +30,9 @@ class GenChemEnv(gym.Env):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        if not isinstance(action, str):
-            action = self.vocabulary.decode([action])[0]
-
         info = {}
         self.current_episode_length += 1
-        if self.current_episode_length == self.max_length - 1:
-            action = "$"
+        action = "$" if self.current_episode_length == self.max_length - 1 else self.vocabulary.untokenize(action)
         self.current_molecule_str += action
 
         if action != "$":  # If character is not $, return 0.0 reward

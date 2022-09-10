@@ -1,7 +1,7 @@
 import os
-# from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv
+from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv
 # from pytorchrl.envs.generative_chemistry.transformer_reinvent_environment import GenChemEnv
-from pytorchrl.envs.generative_chemistry.rnn_libinvent_environment import GenChemEnv
+# from pytorchrl.envs.generative_chemistry.rnn_libinvent_environment import GenChemEnv
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 
 
@@ -29,7 +29,6 @@ def generative_chemistry_train_env_factory(scoring_function, vocabulary, smiles_
     env = GenChemEnv(
         scoring_function=scoring_function,
         vocabulary=vocabulary,
-        max_length=smiles_max_length,
-        scaffolds=scaffolds)
+        max_length=smiles_max_length)
 
     return env

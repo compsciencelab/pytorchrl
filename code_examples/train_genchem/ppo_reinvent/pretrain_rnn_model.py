@@ -93,7 +93,7 @@ class MolData(Dataset):
 
     def __getitem__(self, i):
         mol = self.smiles[i]
-        encoded = self.vocabulary.encode(mol)
+        encoded = self.vocabulary.encode_smile(mol)
         return torch.from_numpy(encoded)
 
     def __len__(self):

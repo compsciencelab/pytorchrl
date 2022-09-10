@@ -145,20 +145,32 @@ class ReinventVocabulary:
         self.vocabulary = vocabulary
         self.tokenizer = tokenizer
 
-    def encode(self, smile):
+    def encode_smile(self, smile, with_begin_and_end=True):
         """Encodes a SMILE from str to np.array."""
-        return self.vocabulary.encode(self.tokenizer.tokenize(smile))
+        return self.vocabulary.encode(self.tokenizer.tokenize(smile, with_begin_and_end))
 
-    def decode(self, encoded_smile):
+    def decode_smile(self, encoded_smile):
         """Decodes a SMILE from np.array to str."""
         return self.tokenizer.untokenize(self.vocabulary.decode(encoded_smile))
+
+    def encode_token(self, token):
+        """Encodes token from str to int"""
+        return self.vocabulary.encode([token])
+
+    def decode_token(self, token):
+        """Decodes token from int to str"""
+        return self.vocabulary.decode([token])
+
+    def remove_start_and_end(self, smile):
+        """Remove start and end tokens from a SMILE"""
+        return smile[1:-1]
 
     def count_tokens(self, smile):
         return len(self.encode(smile))
 
-    def len(self):
+    def __len__(self):
         """Returns the length of the vocabulary."""
-        return len(self.vocabulary)
+        return self.vocabulary.vocab_size
 
     @classmethod
     def from_list(cls, smiles_list):
