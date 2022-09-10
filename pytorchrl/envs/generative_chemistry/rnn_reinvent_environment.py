@@ -28,7 +28,8 @@ class GenChemEnv(gym.Env):
 
         info = {}
         self.current_episode_length += 1
-        action = "$" if self.current_episode_length == self.max_length - 1 else self.vocabulary.decode_token(action)
+        action = "$" if self.current_episode_length == self.max_length - 1 else \
+            self.vocabulary.decode_token(action)
         self.current_molecule += action
 
         if action != "$":  # If character is not $, return 0.0 reward
@@ -46,17 +47,12 @@ class GenChemEnv(gym.Env):
                 "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
 
             # Get reward
-            if "reward" in score.keys():
-                reward = score["reward"]
-            else:
-                reward = score["score"]
+            reward = score["reward"] if "reward" in score.keys() else score["score"]
 
             # If score contain field "Valid", update counter
             if "valid_smile" in score.keys():
                 valid = score["valid_smile"]
-                if valid:
-                    self.running_mean_valid_smiles.append(1.0)
-                else:
+                self.running_mean_valid_smiles.append(1.0) if valid else \
                     self.running_mean_valid_smiles.append(0.0)
 
             # Update molecule

@@ -46,18 +46,12 @@ def main():
         # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
         if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
             pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-            tokenizer = pretrained_ckpt.get("tokenizer")
             vocabulary = pretrained_ckpt.get("vocabulary")
             feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
             recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
             max_sequence_length = pretrained_ckpt.get("max_sequence_length", None)
             torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
             network_weights = "/tmp/network_params.tmp"
-        else:
-            (vocabulary, tokenizer, max_sequence_length, recurrent_net_kwargs,
-             network_weights) = adapt_checkpoint(os.path.join(os.path.dirname(
-                __file__), "../../../pytorchrl/envs/generative_chemistry/models/random.prior.new"))
-            feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
@@ -75,8 +69,7 @@ def main():
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "scoring_function": scoring_function,
-                "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "smiles_max_length": max_sequence_length or 200,
+                "vocabulary": vocabulary, "smiles_max_length": max_sequence_length or 200,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
