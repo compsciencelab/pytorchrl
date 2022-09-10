@@ -156,6 +156,10 @@ class ReinventVocabulary:
     def count_tokens(self, smile):
         return len(self.encode(smile))
 
+    def len(self):
+        """Returns the length of the vocabulary."""
+        return len(self.vocabulary)
+
     @classmethod
     def from_list(cls, smiles_list):
         """Creates the vocabulary from a list of smiles."""

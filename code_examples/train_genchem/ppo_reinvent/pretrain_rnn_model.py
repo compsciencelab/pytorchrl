@@ -161,7 +161,7 @@ if __name__ == "__main__":
     with wandb.init(project=args.experiment_name, name=args.agent_name + "_pretrain", config=args, mode=mode):
 
         # Define Dataloader
-        moldata = MolData(f"{args.log_dir}/mols_filtered.smi", vocabulary, tokenizer)
+        moldata = MolData(f"{args.log_dir}/mols_filtered.smi", vocabulary)
         data = DataLoader(
             moldata, batch_size=args.pretrain_batch_size, shuffle=True, drop_last=True, collate_fn=MolData.collate_fn)
 
