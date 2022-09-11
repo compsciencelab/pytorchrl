@@ -1,6 +1,6 @@
 import os
-from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv
-# from pytorchrl.envs.generative_chemistry.transformer_reinvent_environment import GenChemEnv
+# from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv
+from pytorchrl.envs.generative_chemistry.transformer_reinvent_environment import GenChemEnv
 # from pytorchrl.envs.generative_chemistry.rnn_libinvent_environment import GenChemEnv
 from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 

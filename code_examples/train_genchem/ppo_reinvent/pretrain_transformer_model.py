@@ -54,13 +54,11 @@ if __name__ == "__main__":
         print("\nConstructing vocabulary...")
         tokenizer = SMILESTokenizer()
         vocabulary = create_vocabulary(smiles_list, tokenizer=tokenizer)
-        pretrained_ckpt["tokenizer"] = tokenizer
         pretrained_ckpt["vocabulary"] = vocabulary
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
     else:
-        pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        tokenizer = pretrained_ckpt["tokenizer"] = pretrained_ckpt_dict["tokenizer"]
-        vocabulary = pretrained_ckpt["vocabulary"] = pretrained_ckpt_dict["vocabulary"]
+        pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
+        vocabulary = pretrained_ckpt["vocabulary"]
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
 
     # Handle wandb init
@@ -73,7 +71,7 @@ if __name__ == "__main__":
     with wandb.init(project=args.experiment_name, name=args.agent_name + "_pretrain", config=args, mode=mode):
 
         # Define Dataloader
-        moldata = MolData(f"{args.log_dir}/mols_filtered.smi", vocabulary, tokenizer)
+        moldata = MolData(f"{args.log_dir}/mols_filtered.smi", vocabulary)
         data = DataLoader(
             moldata, batch_size=args.pretrain_batch_size, shuffle=True, drop_last=True, collate_fn=MolData.collate_fn)
 
@@ -82,8 +80,7 @@ if __name__ == "__main__":
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "scoring_function": lambda a: {"reward": 1.0},
-                "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "concatenate_obs": True, "smiles_max_length": args.pretrain_max_smile_length},
+                "vocabulary": vocabulary, "smiles_max_length": args.pretrain_max_smile_length},
             vec_env_size=1)
         env = test_env(device)
 
@@ -174,6 +171,10 @@ if __name__ == "__main__":
                         list_molecules = []
                         list_tokens = []
                         list_entropy = []
+
+                        molecule = "^"
+                        num_tokens = 0
+
                         for i in range(total_molecules):
                             next_obs, rhs, done = actor.actor_initial_states(env.reset())
                             molecule_length = 0
@@ -184,9 +185,14 @@ if __name__ == "__main__":
                                         obs, rhs=None, done=None, deterministic=False)
                                 molecule_length += 1
                                 next_obs, _, done, _ = env.step(action)
-                            obs[obs == -1] = 0.0
+
+
+                            # obs[obs == -1] = 0.0
+                            import ipdb; ipdb.set_trace()
                             molecule = tokenizer.untokenize(vocabulary.decode(obs.cpu().numpy().squeeze(0)))
                             tokens = vocabulary.encode(tokenizer.tokenize(molecule))
+
+
                             if is_valid_smile(molecule):
                                 valid_molecules += 1
                             list_molecules.append(molecule)

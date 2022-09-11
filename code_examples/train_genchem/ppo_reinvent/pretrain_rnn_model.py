@@ -147,8 +147,8 @@ if __name__ == "__main__":
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
         torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
     else:
-        pretrained_ckpt_dict = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        vocabulary = pretrained_ckpt_dict["vocabulary"]
+        pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
+        vocabulary = pretrained_ckpt["vocabulary"]
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
 
     # Handle wandb init
@@ -163,7 +163,10 @@ if __name__ == "__main__":
         # Define Dataloader
         moldata = MolData(f"{args.log_dir}/mols_filtered.smi", vocabulary)
         data = DataLoader(
-            moldata, batch_size=args.pretrain_batch_size, shuffle=True, drop_last=True, collate_fn=MolData.collate_fn)
+            moldata,
+            batch_size=args.pretrain_batch_size,
+            shuffle=True, drop_last=True,
+            collate_fn=MolData.collate_fn)
 
         # Define env
         test_env, action_space, obs_space = VecEnv.create_factory(
@@ -262,6 +265,8 @@ if __name__ == "__main__":
                             # Save model
                             pretrained_ckpt["network_weights"] = actor.state_dict()
                             torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
+
+                        tepoch.set_postfix(loss=loss.item())
 
                         # Wandb logging
                         info_dict.update({"pretrain_loss": loss.item()})
