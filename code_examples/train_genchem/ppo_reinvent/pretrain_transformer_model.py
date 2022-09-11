@@ -11,7 +11,7 @@ import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
+from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 from code_examples.train_genchem.ppo_reinvent.train_transformer_model import get_args
 from code_examples.train_genchem.ppo_reinvent.pretrain_rnn_model import \
@@ -52,8 +52,7 @@ if __name__ == "__main__":
 
     if not os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
         print("\nConstructing vocabulary...")
-        tokenizer = SMILESTokenizer()
-        vocabulary = create_vocabulary(smiles_list, tokenizer=tokenizer)
+        vocabulary = ReinventVocabulary.from_list(smiles_list)
         pretrained_ckpt["vocabulary"] = vocabulary
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
     else:
@@ -137,7 +136,7 @@ if __name__ == "__main__":
 
                 for step, batch in tepoch:
 
-                    # Train mdoe
+                    # Train mode
                     actor.train()
 
                     # Sample from DataLoader seqs = (batch_size, seq_length)
@@ -169,34 +168,24 @@ if __name__ == "__main__":
                         total_molecules = 100
                         valid_molecules = 0
                         list_molecules = []
-                        list_tokens = []
+                        list_num_tokens = []
                         list_entropy = []
-
-                        molecule = "^"
-                        num_tokens = 0
-
                         for i in range(total_molecules):
                             next_obs, rhs, done = actor.actor_initial_states(env.reset())
-                            molecule_length = 0
+                            molecule = "^"
+                            num_tokens = 0
                             while not done:
                                 obs = next_obs
                                 with torch.no_grad():
                                     _, action, _, rhs, entropy_dist, dist = actor.get_action(
                                         obs, rhs=None, done=None, deterministic=False)
-                                molecule_length += 1
                                 next_obs, _, done, _ = env.step(action)
-
-
-                            # obs[obs == -1] = 0.0
-                            import ipdb; ipdb.set_trace()
-                            molecule = tokenizer.untokenize(vocabulary.decode(obs.cpu().numpy().squeeze(0)))
-                            tokens = vocabulary.encode(tokenizer.tokenize(molecule))
-
-
-                            if is_valid_smile(molecule):
+                                molecule += vocabulary.decode_token(action)
+                                num_tokens += 1
+                            if is_valid_smile(vocabulary.remove_start_and_end_tokens(molecule)):
                                 valid_molecules += 1
                             list_molecules.append(molecule)
-                            list_tokens.append(tokens)
+                            list_num_tokens.append(num_tokens)
                             list_entropy.append(entropy_dist.item())
 
                         # Check how many are repeated
@@ -204,7 +193,7 @@ if __name__ == "__main__":
 
                         # Add to info dict
                         info_dict.update({
-                            "pretrain_avg_molecular_length": np.mean([len(s) for s in list_tokens]),
+                            "pretrain_avg_molecular_length": np.mean(list_num_tokens),
                             "pretrain_avg_entropy": np.mean(list_entropy),
                             "pretrain_valid_molecules": valid_molecules / total_molecules,
                             "pretrain_ratio_repeated": ratio_repeated

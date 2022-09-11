@@ -245,7 +245,7 @@ if __name__ == "__main__":
                                     obs, _, done, _ = env.step(action)
                                     molecule += vocabulary.decode_token(action)
                                     num_tokens += 1
-                                if is_valid_smile(molecule):
+                                if is_valid_smile(vocabulary.remove_start_and_end_tokens(molecule)):
                                     valid_molecules += 1
                                 list_molecules.append(molecule)
                                 list_num_tokens.append(num_tokens)

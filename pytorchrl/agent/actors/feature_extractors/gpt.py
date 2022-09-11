@@ -46,7 +46,7 @@ class GPT(nn.Module):
         # Masks
         mask_attn = (inputs < 0.0)
         has_masked_tokens = (mask_attn == True).any()
-        has_masked_tokens_in_all_sequences = mask_attn.any(dim=1).all()
+        has_masked_tokens_in_all_sequences = mask_attn.any(dim=1).all() if
 
         # Identify unnecessary padding
         if has_masked_tokens_in_all_sequences:

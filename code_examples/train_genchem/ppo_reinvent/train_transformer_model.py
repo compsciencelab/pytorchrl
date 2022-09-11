@@ -15,16 +15,15 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
-from pytorchrl.envs.generative_chemistry.utils import adapt_checkpoint
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+# from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.ppo.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
 from pytorchrl.agent.actors.feature_extractors.gpt import GPT
@@ -50,7 +49,6 @@ def main():
         # 0. Load local pretrained checkpoint if available, else raise ValueError
         if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
             pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-            tokenizer = pretrained_ckpt.get("tokenizer")
             vocabulary = pretrained_ckpt.get("vocabulary")
             feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
             recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
@@ -76,8 +74,7 @@ def main():
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "scoring_function": scoring_function,
-                "tokenizer": tokenizer, "vocabulary": vocabulary,
-                "concatenate_obs": True, "smiles_max_length": max_sequence_length or 200,
+                "vocabulary": vocabulary, "smiles_max_length": max_sequence_length or 200,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
