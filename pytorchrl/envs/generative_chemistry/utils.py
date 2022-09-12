@@ -1,7 +1,7 @@
 """Utils to map the REINVENT pre-trained network checkpoint to the pytorchrl network."""
 
 import torch
-from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary
+from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary, LibinventVocabulary
 
 reinvent_weights_mapping = {
     "_embedding.weight": "policy_net.feature_extractor._embedding.weight",
@@ -48,8 +48,8 @@ def adapt_reinvent_checkpoint(file_path):
     network_params.pop("cell_type", None)
     network_params.pop("embedding_layer_size", None)
 
-    return ReinventVocabulary(save_dict['vocabulary'], save_dict['tokenizer']),\
-           save_dict['max_sequence_length'], save_dict['network_params'], "/tmp/network_params.tmp"
+    return ReinventVocabulary(save_dict["vocabulary"], save_dict["tokenizer"]),\
+           save_dict["max_sequence_length"], save_dict["network_params"], "/tmp/network_params.tmp"
 
 
 def adapt_libinvent_checkpoint(file_path):
@@ -60,10 +60,20 @@ def adapt_libinvent_checkpoint(file_path):
     else:
         save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
 
-    import ipdb; ipdb.set_trace()
     # Change network weight names
     new_save_dict = {}
-    for k in save_dict["network"].keys():
-        new_save_dict[libinvent_weights_mapping[k]] = save_dict["network"][k]
+    # for k in save_dict["decorator"]["state"].keys():
+    #     new_save_dict[libinvent_weights_mapping[k]] = save_dict["decorator"]["state"][k]
 
+    # Temporarily save network weight to /tmp/network_params
+    torch.save(new_save_dict, "/tmp/network_params.tmp")
 
+    vocabulary = LibinventVocabulary(
+        save_dict["model"]["vocabulary"].scaffold_vocabulary,
+        save_dict["model"]["vocabulary"].scaffold_tokenizer,
+        save_dict["model"]["vocabulary"].decoration_vocabulary,
+        save_dict["model"]["vocabulary"].decoration_tokenizer,
+    )
+
+    return vocabulary, save_dict["model"]["max_sequence_length"], \
+           save_dict["decorator"]["params"], "/tmp/network_params.tmp"

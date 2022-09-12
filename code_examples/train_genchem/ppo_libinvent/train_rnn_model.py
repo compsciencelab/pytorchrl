@@ -46,7 +46,7 @@ def main():
         # Sanity check, make sure that logging matches execution
         args = wandb.config
 
-        # # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
+        # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
         # if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
         #     pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
         #     vocabulary = pretrained_ckpt.get("vocabulary")
@@ -56,11 +56,10 @@ def main():
         #     torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
         #     network_weights = "/tmp/network_params.tmp"
         # else:
-        #     (vocabulary, max_sequence_length, recurrent_net_kwargs,
-        #      network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.dirname(
-        #         __file__), "../../../pytorchrl/envs/generative_chemistry/models/reaction_based.model"))
-        #     feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
-        # restart_model = {"policy_net": network_weights}
+        (vocabulary, max_sequence_length, recurrent_net_kwargs,
+         network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
+            __file__)), "../../../pytorchrl/envs/generative_chemistry/models/reaction_based.model"))
+        restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )
@@ -79,7 +78,7 @@ def main():
                 "scoring_function": scoring_function,
                 "vocabulary": vocabulary,
                 "smiles_max_length": max_sequence_length or 200,
-                "scaffolds": ["[*:0]N1CCN(CC1)CCCCN[*:1]"],
+                "scaffolds": ["N1CCN(CC1)CCCCN"],
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
@@ -96,8 +95,8 @@ def main():
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
-            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            feature_extractor_kwargs={**feature_extractor_kwargs},
+            feature_extractor_network=torch.nn.Identity,
+            feature_extractor_kwargs={},
             recurrent_net=Decorator,
             recurrent_net_kwargs={**recurrent_net_kwargs},
         )

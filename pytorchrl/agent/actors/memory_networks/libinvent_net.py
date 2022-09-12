@@ -5,6 +5,12 @@ import math
 import torch
 import torch.nn as tnn
 import torch.nn.utils.rnn as tnnur
+from pytorchrl.agent.actors.feature_extractors import Embedding
+
+# TODO: better understand attention layer
+# TODO: save the rhs better
+# TODO: do I need to compute scaffold rhs every time? no, actually I can do it only once every time if flips to data collection, and set it to None every time it flips to grad computation
+# If done, run encoder and get hidden states, otherwise use the provided hidden states
 
 
 class Encoder(tnn.Module):
@@ -35,24 +41,28 @@ class Encoder(tnn.Module):
         :param seq_lengths: The lengths of the sequences (for packed sequences).
         :return : A tensor with all the output values for each step and the two hidden states.
         """
+
         batch_size = padded_seqs.size(0)
         max_seq_size = padded_seqs.size(1)
         hidden_state = self._initialize_hidden_state(batch_size)
 
-        padded_seqs = self._embedding(padded_seqs)
+        padded_seqs = self._embedding(padded_seqs.long())
         hs_h, hs_c = (hidden_state, hidden_state.clone().detach())
 
+        # Is this faster?
         packed_seqs = tnnur.pack_padded_sequence(padded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
         packed_seqs, (hs_h, hs_c) = self._rnn(packed_seqs, (hs_h, hs_c))
         padded_seqs, _ = tnnur.pad_packed_sequence(packed_seqs, batch_first=True)
 
+        # padded_seqs, (hs_h, hs_c) = self._rnn(padded_seqs, (hs_h, hs_c))
+
         # sum up bidirectional layers and collapse
         hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions)\
-            .sum(dim=1).squeeze()  # (layers, batch, dim)
+            .sum(dim=1)  # .squeeze()  # (layers, batch, dim)
         hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions)\
-            .sum(dim=1).squeeze()  # (layers, batch, dim)
+            .sum(dim=1)  #.squeeze()  # (layers, batch, dim)
         padded_seqs = padded_seqs.view(batch_size, max_seq_size, 2, self.num_dimensions)\
-            .sum(dim=2).squeeze()  # (batch, seq, dim)
+            .sum(dim=2).squeeze(2)  # (batch, seq, dim)
 
         return padded_seqs, (hs_h, hs_c)
 
@@ -93,14 +103,14 @@ class AttentionLayer(tnn.Module):
         :param decoder_mask: A tensor that represents the encoded input mask.
         :return : Two tensors: one with the modified logits and another with the attention weights.
         """
+
         # scaled dot-product
-        # (batch, seq_d, 1, dim)*(batch, 1, seq_e, dim) => (batch, seq_d, seq_e*)
-        attention_weights = (padded_seqs.unsqueeze(dim=2)*encoder_padded_seqs.unsqueeze(dim=1))\
-            .sum(dim=3).div(math.sqrt(self.num_dimensions))\
-            .softmax(dim=2)
+        # (batch, seq_d, 1, dim) * (batch, 1, seq_e, dim) => (batch, seq_d, seq_e*)
+        attention_weights = (padded_seqs.unsqueeze(dim=2) * encoder_padded_seqs.unsqueeze(dim=1)) \
+            .sum(dim=3).div(math.sqrt(self.num_dimensions)).softmax(dim=2)
         # (batch, seq_d, seq_e*)@(batch, seq_e, dim) => (batch, seq_d, dim)
         attention_context = attention_weights.bmm(encoder_padded_seqs)
-        return (self._attention_linear(torch.cat([padded_seqs, attention_context], dim=2))*decoder_mask, attention_weights)
+        return (self._attention_linear(torch.cat([padded_seqs, attention_context], dim=2)) * decoder_mask, attention_weights)
 
 
 class Decoder(tnn.Module):
@@ -120,12 +130,13 @@ class Decoder(tnn.Module):
             tnn.Embedding(self.vocabulary_size, self.num_dimensions),
             tnn.Dropout(dropout)
         )
-        self._rnn = tnn.LSTM(self.num_dimensions, self.num_dimensions, self.num_layers,
-                             batch_first=True, dropout=self.dropout, bidirectional=False)
+        self._rnn = tnn.LSTM(
+            self.num_dimensions, self.num_dimensions, self.num_layers,
+            batch_first=True, dropout=self.dropout, bidirectional=False)
 
         self._attention = AttentionLayer(self.num_dimensions)
 
-        self._linear = tnn.Linear(self.num_dimensions, self.vocabulary_size)  # just to redimension
+        self._linear = tnn.Linear(self.num_dimensions, self.num_dimensions)  # just to redimension
 
     def forward(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):  # pylint: disable=arguments-differ
         """
@@ -136,12 +147,17 @@ class Decoder(tnn.Module):
         :param hidden_states: The hidden states from the encoder.
         :return : Three tensors: The output logits, the hidden states of the decoder and the attention weights.
         """
-        padded_encoded_seqs = self._embedding(padded_seqs)
-        packed_encoded_seqs = tnnur.pack_padded_sequence(
-            padded_encoded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
+
+        padded_encoded_seqs = self._embedding(padded_seqs.long())
+
+        # Is it faster ?
+        packed_encoded_seqs = tnnur.pack_padded_sequence(padded_encoded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
         packed_encoded_seqs, hidden_states = self._rnn(packed_encoded_seqs, hidden_states)
         padded_encoded_seqs, _ = tnnur.pad_packed_sequence(packed_encoded_seqs, batch_first=True)  # (batch, seq, dim)
 
+        # padded_encoded_seqs, hidden_states = self._rnn(padded_encoded_seqs, hidden_states)
+
+        # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
         logits = self._linear(attn_padded_encoded_seqs)*mask  # (batch, seq, voc_size)
@@ -169,24 +185,94 @@ class Decorator(tnn.Module):
     def __init__(self, input_size, encoder_params, decoder_params):
         super(Decorator, self).__init__()
 
-        import ipdb; ipdb.set_trace()
-
-        encoder_params = {
+        encoder_params.update({
             "num_layers": 3,
             "num_dimensions": 512,
-            "vocabulary_size": 256,
             "dropout": 0,
-        }
+        })
 
-        decoder_params = {
+        decoder_params.update({
             "num_layers": 3,
             "num_dimensions": 512,
-            "vocabulary_size": 256,
             "dropout": 0,
-        }
+        })
 
         self._encoder = Encoder(**encoder_params)
         self._decoder = Decoder(**decoder_params)
+        self.encoder_rhs = None
+        self.encoder_padded_seqs = None
+
+    def _forward_decorator(self, x, hxs, done):
+
+        encoder_seqs = x["scaffold"]
+        decoder_seqs = x["decoration"]
+        encoder_seq_lengths = x["scaffold_length"].cpu().long()
+        decoder_seq_lengths = x["decoration_length"].cpu().long()
+
+        masks = 1 - done
+
+        if x.size(0) == hxs.size(0):
+
+            if self.encoder_rhs is None or self.encoder_padded_seqs is None:
+                self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
+                import ipdb; ipdb.set_trace() # TODO: cat self.encoder_rhs
+
+            import ipdb; ipdb.set_trace() # TODO: replace "done" hxs by self.encoder_rhs
+            import ipdb; ipdb.set_trace() # TODO: chunk rhs (where does this go?)
+
+            logits, hxs, _ = self.forward_decoder(decoder_seqs, decoder_seq_lengths, encoder_padded_seqs, hidden_states)
+            logits = logits.squeeze(1)
+
+        else:
+
+            # Set encoder outputs to None
+            self.encoder_rhs = None
+            self.encoder_padded_seqs = None
+
+            import ipdb; ipdb.set_trace()
+
+            # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
+            N = hxs.size(0)
+            T = int(x.size(0) / N)
+
+            # unflatten
+            x = x.view(T, N, -1)
+
+            # Same deal with masks
+            masks = masks.view(T, N)
+
+            # Let's figure out which steps in the sequence have a zero for any agent
+            # We will always assume t=0 has a zero in it as that makes the logic cleaner
+            has_zeros = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+
+            # +1 to correct the masks[1:]
+            if has_zeros.dim() == 0:
+                # Deal with scalar
+                has_zeros = [has_zeros.item() + 1]
+            else:
+                has_zeros = (has_zeros + 1).numpy().tolist()
+
+            # add t=0 and t=T to the list
+            has_zeros = [0] + has_zeros + [T]
+
+            outputs = []
+            for i in range(len(has_zeros) - 1):
+                # We can now process steps that don't have any zeros in masks together!
+                # This is much faster
+                start_idx = has_zeros[i]
+                end_idx = has_zeros[i + 1]
+
+                import ipdb; ipdb.set_trace()  # TODO: run encoder in position start_idx
+                import ipdb; ipdb.set_trace()  # TODO: run decoder from start_idx to end_idx
+                import ipdb; ipdb.set_trace()  # TODO: outputs.append(logits)
+
+            # x is a (T, N, -1) tensor
+            x = torch.cat(outputs, dim=0)
+
+            # flatten
+            x = x.view(T * N, -1)
+
+        return logits, hxs
 
     def forward(self, inputs, rhs, done):  # pylint: disable=arguments-differ
         """
@@ -198,11 +284,9 @@ class Decorator(tnn.Module):
         :return : The output logits as a tensor (batch, seq_d, dim).
         """
 
-        import ipdb; ipdb.set_trace()
-        encoder_seqs, encoder_seq_lengths, decoder_seqs, decoder_seq_lengths = 0, 0, 0, 0
-        encoder_padded_seqs, hidden_states = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
-        logits, _, _ = self.forward_decoder(decoder_seqs, decoder_seq_lengths, encoder_padded_seqs, hidden_states)
-        return logits
+        logits, rhs = self._forward_decorator(x, hxs, done)
+
+        return logits, rhs
 
     def forward_encoder(self, padded_seqs, seq_lengths):
         """
@@ -222,3 +306,16 @@ class Decorator(tnn.Module):
         :return : Returns the logits and the hidden state for each element of the sequence passed.
         """
         return self._decoder(padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states)
+
+    @property
+    def num_outputs(self):
+        """Output feature map size (as in np.prod(self.output_shape))."""
+        return self._decoder.num_dimensions
+
+    @property
+    def recurrent_hidden_state_size(self):
+        """Recurrent hidden state size"""
+        return self._decoder.num_dimensions
+
+    def get_initial_recurrent_state(self, num_proc):
+        return torch.zeros(num_proc, self.num_layers * 2, self.num_dimensions)

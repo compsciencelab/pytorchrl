@@ -6,7 +6,6 @@ from https://github.com/MolecularAI/reinvent-models/blob/main/reinvent_models/re
 
 
 str --> list of str --> np.array
-
 str --> list of str: tokenizer.tokenize
 list of str --> np.array: vocabulary.encode
 
@@ -166,7 +165,7 @@ class ReinventVocabulary:
         return self.tokenizer.untokenize(smile)
 
     def count_tokens(self, smile):
-        return len(self.encode(smile))
+        return len(self.tokenizer.tokenize(smile))
 
     def __len__(self):
         """Returns the length of the vocabulary."""
@@ -203,20 +202,13 @@ class LibinventVocabulary:
         """
         return len(self.decoration_vocabulary)
 
-    def len(self):
-        """
-        Returns the lenght of both vocabularies in a tuple.
-        :return: A tuple with (len(scaff_voc), len(dec_voc)).
-        """
-        return (len(self.scaffold_vocabulary), len(self.decoration_vocabulary))
-
-    def encode_scaffold(self, smiles):
+    def encode_scaffold(self, scaffold):
         """
         Encodes a scaffold SMILES.
         :param smiles: Scaffold SMILES to encode.
         :return : An one-hot-encoded vector with the scaffold information.
         """
-        return self.scaffold_vocabulary.encode(self.scaffold_tokenizer.tokenize(smiles))
+        return self.scaffold_vocabulary.encode(self.scaffold_tokenizer.tokenize(scaffold))
 
     def decode_scaffold(self, encoded_scaffold):
         """
@@ -225,6 +217,14 @@ class LibinventVocabulary:
         :return : A SMILES of the scaffold.
         """
         return self.scaffold_tokenizer.untokenize(self.scaffold_vocabulary.decode(encoded_scaffold))
+
+    def encode_scaffold_token(self, token):
+        """Encodes token from str to int"""
+        return self.scaffold_vocabulary.encode([str(token)])[0]
+
+    def decode_scaffold_token(self, token):
+        """Decodes token from int to str"""
+        return self.scaffold_vocabulary.decode([int(token)])[0]
 
     def encode_decoration(self, smiles):
         """
@@ -241,6 +241,21 @@ class LibinventVocabulary:
         :return : A list with SMILES of all the fragments.
         """
         return self.decoration_tokenizer.untokenize(self.decoration_vocabulary.decode(encoded_decoration))
+
+    def encode_decoration_token(self, token):
+        """Encodes token from str to int"""
+        return self.decoration_vocabulary.encode([str(token)])[0]
+
+    def decode_decoration_token(self, token):
+        """Decodes token from int to str"""
+        return self.decoration_vocabulary.decode([int(token)])[0]
+
+    def count_scaffold_tokens(self, scaffold):
+        return len(self.scaffold_tokenizer.tokenize(scaffold))
+
+    def remove_start_and_end_tokens(self, smile):
+        """Remove start and end tokens from a SMILE"""
+        return self.decoration_tokenizer.untokenize(smile)
 
     @classmethod
     def from_lists(cls, scaffold_list, decoration_list):
