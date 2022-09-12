@@ -77,7 +77,7 @@ def main():
             env_fn=generative_chemistry_train_env_factory,
             env_kwargs={
                 "scoring_function": scoring_function,
-                "tokenizer": tokenizer, "vocabulary": vocabulary,
+                "vocabulary": vocabulary,
                 "smiles_max_length": max_sequence_length or 200,
                 "scaffolds": ["[*:0]N1CCN(CC1)CCCCN[*:1]"],
             },

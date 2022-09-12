@@ -26,9 +26,16 @@ def generative_chemistry_train_env_factory(scoring_function, vocabulary, smiles_
         Train environment.
     """
 
+    # env = GenChemEnv(
+    #     scoring_function=scoring_function,
+    #     vocabulary=vocabulary,
+    #     max_length=smiles_max_length)
+
     env = GenChemEnv(
         scoring_function=scoring_function,
         vocabulary=vocabulary,
-        max_length=smiles_max_length)
+        max_length=smiles_max_length,
+        scaffolds=scaffolds,
+    )
 
     return env
