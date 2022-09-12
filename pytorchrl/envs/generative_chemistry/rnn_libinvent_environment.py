@@ -14,12 +14,12 @@ from collections import defaultdict, deque
 
 # TODO: code step function
 
-# TODO: during the episode, provide {"scaffold": scaffold, "decoration": last token} as obs,
+# TODO: during the episode, provide {"scaffold": scaffold, "obs": last token} as obs,
 #  and expect a decoration next token action.
 
 # TODO: For data collection is straightforward. In the memory net, compute the scaffold hidden state only if Done!
 
-# TODO: for gradient computation, need to delve into the code a bit more.
+# TODO: for gradient computation is the same, encode only at the beginning of episode
 
 ### TODO: make eveything work without with the prior
 
@@ -32,7 +32,7 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, scaffolds,  max_length=200):
+    def __init__(self, scoring_function, vocabulary, scaffolds, max_length=200):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
@@ -51,17 +51,14 @@ class GenChemEnv(gym.Env):
 
         # Define action and observation space
         import ipdb; ipdb.set_trace()
-        scaffold_space = gym.spaces.Discrete(len(self.vocabulary))
-        scaffold_space.shape = (self.max_scaffold_length,)  # Ugly hack
-        decoration_space = gym.spaces.Discrete(len(self.vocabulary))
+        self.action_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
+        scaffold_space = gym.spaces.Discrete(len(self.vocabulary.scaffold_vocabulary))
+        scaffold_space.shape = (self.max_scaffold_length, )  # Ugly hack
+        decoration_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
         self.observation_space = gym.spaces.Dict({
             "scaffold": scaffold_space,
             "decoration": decoration_space,
         })
-        self.action_space = gym.spaces.Discrete(len(self.vocabulary))
-
-        if concatenate_obs:
-            pass
 
     def step(self, action):
         """Execute one time step within the environment"""
