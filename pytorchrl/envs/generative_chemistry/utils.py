@@ -64,6 +64,6 @@ def adapt_libinvent_checkpoint(file_path):
     # Change network weight names
     new_save_dict = {}
     for k in save_dict["network"].keys():
-        new_save_dict[reinvent_weights_mapping[k]] = save_dict["network"][k]
+        new_save_dict[libinvent_weights_mapping[k]] = save_dict["network"][k]
 
 

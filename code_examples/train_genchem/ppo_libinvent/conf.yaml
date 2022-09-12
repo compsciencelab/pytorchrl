@@ -16,7 +16,7 @@ gamma: 0.99
 kl_coef: 0.5
 save_interval: 10000
 max_time: 86400
-num_env_processes: 16
+num_env_processes: 1
 num_steps: 200
 num_mini_batch: 4
 clip_param: 0.1
