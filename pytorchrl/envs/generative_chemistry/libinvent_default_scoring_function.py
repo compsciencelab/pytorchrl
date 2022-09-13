@@ -23,7 +23,8 @@ class WrapperScoringClass:
             else:
                 raise ValueError("Scoring error due to wrong dtype")
 
-            import ipdb; ipdb.set_trace()
+            import ipdb;
+            ipdb.set_trace()
 
             output.update({
                 "valid_smile": True,
@@ -48,67 +49,65 @@ class WrapperScoringClass:
         return output
 
 
-qsar_model = {
-    "component_type": "predictive_property",
-    "name": "DRD2",
-    "weight": 1,
-    "model_path": os.path.join(os.path.dirname(__file__),
-                               '../../../pytorchrl/envs/generative_chemistry/models/drd2.pkl'),
-    "smiles": [],
-    "specific_parameters": {
-        "transformation_type": "no_transformation",
-        "scikit": "classification",
-        "transformation": False,
-        "descriptor_type": "ecfp",
-        "size": 2048,
-        "radius": 3
-    }
-}
-
-custom_alerts = {
-    "component_type": "custom_alerts",
-    "name": "Custom alerts",
-    "weight": 1,
-    "model_path": None,
-    "smiles": [
-        "[*;r8]",
-        "[*;r9]",
-        "[*;r10]",
-        "[*;r11]",
-        "[*;r12]",
-        "[*;r13]",
-        "[*;r14]",
-        "[*;r15]",
-        "[*;r16]",
-        "[*;r17]",
-        "[#8][#8]",
-        "[#6;+]",
-        "[#16][#16]",
-        "[#7;!n][S;!$(S(=O)=O)]",
-        "[#7;!n][#7;!n]",
-        "C#C",
-        "C(=[O,S])[O,S]",
-        "[#7;!n][C;!$(C(=[O,N])[N,O])][#16;!s]",
-        "[#7;!n][C;!$(C(=[O,N])[N,O])][#7;!n]",
-        "[#7;!n][C;!$(C(=[O,N])[N,O])][#8;!o]",
-        "[#8;!o][C;!$(C(=[O,N])[N,O])][#16;!s]",
-        "[#8;!o][C;!$(C(=[O,N])[N,O])][#8;!o]",
-        "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
-    ],
-    "specific_parameters": None
-}
-
 scoring_function_parameters = {
     "name": "custom_sum",
     "parallel": False,  # Do not change
-    "parameters": [qsar_model, custom_alerts]
+
+    "parameters": [
+        {
+            "component_type": "predictive_property",
+            "name": "DRD2",
+            "weight": 1,
+            "specific_parameters": {
+                "model_path": os.path.join(ipynb_path, "models/drd2.pkl"),
+                "scikit": "classification",
+                "descriptor_type": "ecfp",
+                "size": 2048,
+                "radius": 3,
+                "transformation": {
+                    "transformation_type": "no_transformation"
+                }
+            }
+        },
+        {
+            "component_type": "custom_alerts",
+            "name": "Custom alerts",
+            "weight": 1,
+            "specific_parameters": {
+                "smiles": [
+                    "[*;r8]",
+                    "[*;r9]",
+                    "[*;r10]",
+                    "[*;r11]",
+                    "[*;r12]",
+                    "[*;r13]",
+                    "[*;r14]",
+                    "[*;r15]",
+                    "[*;r16]",
+                    "[*;r17]",
+                    "[#8][#8]",
+                    "[#6;+]",
+                    "[#16][#16]",
+                    "[#7;!n][S;!$(S(=O)=O)]",
+                    "[#7;!n][#7;!n]",
+                    "C#C",
+                    "C(=[O,S])[O,S]",
+                    "[#7;!n][C;!$(C(=[O,N])[N,O])][#16;!s]",
+                    "[#7;!n][C;!$(C(=[O,N])[N,O])][#7;!n]",
+                    "[#7;!n][C;!$(C(=[O,N])[N,O])][#8;!o]",
+                    "[#8;!o][C;!$(C(=[O,N])[N,O])][#16;!s]",
+                    "[#8;!o][C;!$(C(=[O,N])[N,O])][#8;!o]",
+                    "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
+                ]
+            }
+        }]
 }
+
 scoring_params = ScoringFuncionParameters(
     scoring_function_parameters["name"],
     scoring_function_parameters["parameters"],
     scoring_function_parameters["parallel"])
 
-import ipdb; ipdb.set_trace()
 scoring_class = ScoringFunctionFactory(scoring_params)
 wrapper_scoring_class = WrapperScoringClass(scoring_class)
 scoring_function = wrapper_scoring_class.get_final_score
