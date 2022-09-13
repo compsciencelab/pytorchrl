@@ -117,3 +117,4 @@ def adapt_libinvent_checkpoint(file_path):
 
     return vocabulary, save_dict["model"]["max_sequence_length"], \
            save_dict["decorator"]["params"], "/tmp/network_params.tmp"
+

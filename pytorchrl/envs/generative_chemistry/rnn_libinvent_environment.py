@@ -4,6 +4,12 @@ import numpy as np
 from gym import spaces
 from collections import defaultdict, deque
 
+
+from reinvent_chemistry import Conversions
+from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
+from running_modes.reinforcement_learning.dto.sampled_sequences_dto import SampledSequencesDTO
+
+
 ### TODO: make eveything work without loading the prior
 
 # TODO: define obs as space.dict
@@ -37,8 +43,9 @@ class GenChemEnv(gym.Env):
         self.running_mean_valid_smiles = deque(maxlen=100)
 
         # Break down scaffolds into tokens
-        self.vectorised_scaffolds = [vocabulary.encode_scaffold(i) for i in self.scaffolds]
-        self.max_scaffold_length = max([vocabulary.count_scaffold_tokens(i) for i in self.scaffolds])
+        self.clean_scaffolds = [self._attachment_points.remove_attachment_point_numbers(scaffold) for scaffold in self.scaffolds]
+        self.vectorised_scaffolds = [vocabulary.encode_scaffold(i) for i in self.clean_scaffolds]
+        self.max_scaffold_length = max([vocabulary.count_scaffold_tokens(i) for i in self.clean_scaffolds])
 
         # Define action and observation space
         self.action_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
@@ -48,8 +55,8 @@ class GenChemEnv(gym.Env):
         decoration_length = gym.spaces.Discrete(self.max_length)
 
         # Ugly hack
-        scaffold_space.shape = (self.max_scaffold_length, )
-        decoration_space.shape = (self.max_length, )
+        scaffold_space._shape = (self.max_scaffold_length, )
+        decoration_space._shape = (self.max_length, )
 
         self.observation_space = gym.spaces.Dict({
             "scaffold": scaffold_space,
@@ -57,6 +64,10 @@ class GenChemEnv(gym.Env):
             "decoration": decoration_space,
             "decoration_length": decoration_length,
         })
+
+        self._bond_maker = BondMaker()
+        self._conversion = Conversions()
+        self._attachment_points = AttachmentPoints()
 
     def step(self, action):
         """Execute one time step within the environment"""
@@ -73,8 +84,14 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
+            import ipdb; ipdb.set_trace()
+            decorated_smile = self.join_scaffold_and_decorations(
+                self.vocabulary.remove_start_and_end_tokens(self.padded_scaffold),
+                self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
+            )
+
             # Compute score
-            score = self.scoring_function(self.vocabulary.remove_start_and_end_tokens(self.current_decoration))
+            score = self.scoring_function(decorated_smile)
 
             # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
@@ -153,3 +170,9 @@ class GenChemEnv(gym.Env):
 
         print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
+
+    def join_scaffold_and_decorations(self, scaffold, decorations):
+        scaffold = self._attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)
+        molecule = self._bond_maker.join_scaffolds_and_decorations(scaffold, decorations)
+        smile = self._conversion.mol_to_smiles(molecule)
+        return smile

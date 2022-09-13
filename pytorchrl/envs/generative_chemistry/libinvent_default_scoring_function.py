@@ -59,7 +59,8 @@ scoring_function_parameters = {
             "name": "DRD2",
             "weight": 1,
             "specific_parameters": {
-                "model_path": os.path.join(ipynb_path, "models/drd2.pkl"),
+                "model_path": os.path.join(os.path.dirname(__file__),
+                                           '../../../pytorchrl/envs/generative_chemistry/models/drd2.pkl'),
                 "scikit": "classification",
                 "descriptor_type": "ecfp",
                 "size": 2048,

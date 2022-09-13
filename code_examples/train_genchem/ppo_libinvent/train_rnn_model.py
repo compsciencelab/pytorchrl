@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+import torch
+
 import os
 import sys
 import time
 import wandb
-import torch
 import argparse
 
 import pytorchrl as prl
