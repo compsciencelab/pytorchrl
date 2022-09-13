@@ -4,7 +4,7 @@ Defines the default scoring function to guide the genchem RL agent.
 
 import os
 from reinvent_scoring.scoring import ScoringFunctionFactory
-from reinvent_scoring.scoring.scoring_function_parameters import ScoringFuncionParameters
+from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
 
 
 class WrapperScoringClass:
@@ -103,7 +103,7 @@ scoring_function_parameters = {
         }]
 }
 
-scoring_params = ScoringFuncionParameters(
+scoring_params = ScoringFunctionParameters(
     scoring_function_parameters["name"],
     scoring_function_parameters["parameters"],
     scoring_function_parameters["parallel"])
