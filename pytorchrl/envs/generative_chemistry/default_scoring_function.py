@@ -137,7 +137,8 @@ scoring_function_parameters = {
 scoring_params = ScoringFunctionParameters(
     scoring_function_parameters["name"],
     scoring_function_parameters["parameters"],
-    scoring_function_parameters["parallel"])
+    scoring_function_parameters["parallel"],
+)
 
 scoring_class = ScoringFunctionFactory(scoring_params)
 wrapper_scoring_class = WrapperScoringClass(scoring_class)

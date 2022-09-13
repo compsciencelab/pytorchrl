@@ -4,9 +4,10 @@ This code example uses the same approach as REINVENT (Blaschke et al., 2020) to 
 
 ## 1. Requirements
 
-To be able to use the same scoring functions as REINVENT, install conda environment from REINVENT github repository. To use a customized scoring function that is not necessary.
+To be able to use the same scoring functions as REINVENT, install the conda environment. To use a customized scoring function that is not necessary.
 
-    https://github.com/MolecularAI/Reinvent
+    conda env create -f environment.yml
+    conda activate reinvent.v3.2
 
 pytorchrl also has to be pip installed
 
