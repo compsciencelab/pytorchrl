@@ -59,7 +59,7 @@ def main():
         (vocabulary, max_sequence_length, recurrent_net_kwargs,
          network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
             __file__)), "../../../pytorchrl/envs/generative_chemistry/models/reaction_based.model"))
-        restart_model = {"policy_net": network_weights}
+        restart_model = {"memory_net": network_weights}
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )
@@ -84,21 +84,13 @@ def main():
             info_keywords=info_keywords)
 
         # 2. Define RL Policy
-        # actor_factory = OnPolicyActor.create_factory(
-        #     obs_space, action_space, prl.PPO,
-        #     feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-        #     feature_extractor_kwargs={**feature_extractor_kwargs},
-        #     recurrent_net=Decorator,
-        #     recurrent_net_kwargs={**recurrent_net_kwargs},
-        #     restart_model=restart_model,
-        # )
-
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
             feature_extractor_network=torch.nn.Identity,
             feature_extractor_kwargs={},
             recurrent_net=Decorator,
             recurrent_net_kwargs={**recurrent_net_kwargs},
+            restart_model=restart_model,
         )
 
         # 3. Define RL training algorithm

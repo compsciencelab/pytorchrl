@@ -22,9 +22,49 @@ reinvent_weights_mapping = {
 }
 
 libinvent_weights_mapping = {
-
+    "_encoder._embedding.0.weight": "memory_net._encoder._embedding.0.weight",
+    "_encoder._rnn.weight_ih_l0": "memory_net._encoder._rnn.weight_ih_l0",
+    "_encoder._rnn.weight_hh_l0": "memory_net._encoder._rnn.weight_hh_l0",
+    "_encoder._rnn.bias_ih_l0": "memory_net._encoder._rnn.bias_ih_l0",
+    "_encoder._rnn.bias_hh_l0": "memory_net._encoder._rnn.bias_hh_l0",
+    "_encoder._rnn.weight_ih_l0_reverse": "memory_net._encoder._rnn.weight_ih_l0_reverse",
+    "_encoder._rnn.weight_hh_l0_reverse": "memory_net._encoder._rnn.weight_hh_l0_reverse",
+    "_encoder._rnn.bias_ih_l0_reverse": "memory_net._encoder._rnn.bias_ih_l0_reverse",
+    "_encoder._rnn.bias_hh_l0_reverse": "memory_net._encoder._rnn.bias_hh_l0_reverse",
+    "_encoder._rnn.weight_ih_l1": "memory_net._encoder._rnn.weight_ih_l1",
+    "_encoder._rnn.weight_hh_l1": "memory_net._encoder._rnn.weight_hh_l1",
+    "_encoder._rnn.bias_ih_l1": "memory_net._encoder._rnn.bias_ih_l1",
+    "_encoder._rnn.bias_hh_l1": "memory_net._encoder._rnn.bias_hh_l1",
+    "_encoder._rnn.weight_ih_l1_reverse": "memory_net._encoder._rnn.weight_ih_l1_reverse",
+    "_encoder._rnn.weight_hh_l1_reverse": "memory_net._encoder._rnn.weight_hh_l1_reverse",
+    "_encoder._rnn.bias_ih_l1_reverse": "memory_net._encoder._rnn.bias_ih_l1_reverse",
+    "_encoder._rnn.bias_hh_l1_reverse": "memory_net._encoder._rnn.bias_hh_l1_reverse",
+    "_encoder._rnn.weight_ih_l2": "memory_net._encoder._rnn.weight_ih_l2",
+    "_encoder._rnn.weight_hh_l2": "memory_net._encoder._rnn.weight_hh_l2",
+    "_encoder._rnn.bias_ih_l2": "memory_net._encoder._rnn.bias_ih_l2",
+    "_encoder._rnn.bias_hh_l2": "memory_net._encoder._rnn.bias_hh_l2",
+    "_encoder._rnn.weight_ih_l2_reverse": "memory_net._encoder._rnn.weight_ih_l2_reverse",
+    "_encoder._rnn.weight_hh_l2_reverse": "memory_net._encoder._rnn.weight_hh_l2_reverse",
+    "_encoder._rnn.bias_ih_l2_reverse": "memory_net._encoder._rnn.bias_ih_l2_reverse",
+    "_encoder._rnn.bias_hh_l2_reverse": "memory_net._encoder._rnn.bias_hh_l2_reverse",
+    "_decoder._embedding.0.weight": "memory_net._decoder._embedding.0.weight",
+    "_decoder._rnn.weight_ih_l0": "memory_net._decoder._rnn.weight_ih_l0",
+    "_decoder._rnn.weight_hh_l0": "memory_net._decoder._rnn.weight_hh_l0",
+    "_decoder._rnn.bias_ih_l0": "memory_net._decoder._rnn.bias_ih_l0",
+    "_decoder._rnn.bias_hh_l0": "memory_net._decoder._rnn.bias_hh_l0",
+    "_decoder._rnn.weight_ih_l1": "memory_net._decoder._rnn.weight_ih_l1",
+    "_decoder._rnn.weight_hh_l1": "memory_net._decoder._rnn.weight_hh_l1",
+    "_decoder._rnn.bias_ih_l1": "memory_net._decoder._rnn.bias_ih_l1",
+    "_decoder._rnn.bias_hh_l1": "memory_net._decoder._rnn.bias_hh_l1",
+    "_decoder._rnn.weight_ih_l2": "memory_net._decoder._rnn.weight_ih_l2",
+    "_decoder._rnn.weight_hh_l2": "memory_net._decoder._rnn.weight_hh_l2",
+    "_decoder._rnn.bias_ih_l2": "memory_net._decoder._rnn.bias_ih_l2",
+    "_decoder._rnn.bias_hh_l2": "memory_net._decoder._rnn.bias_hh_l2",
+    "_decoder._attention._attention_linear.0.weight": "memory_net._decoder._attention._attention_linear.0.weight",
+    "_decoder._attention._attention_linear.0.bias": "memory_net._decoder._attention._attention_linear.0.bias",
+    "_decoder._linear.weight": "dist.linear.weight",
+    "_decoder._linear.bias": "dist.linear.bias",
 }
-
 
 
 def adapt_reinvent_checkpoint(file_path):
@@ -48,7 +88,7 @@ def adapt_reinvent_checkpoint(file_path):
     network_params.pop("cell_type", None)
     network_params.pop("embedding_layer_size", None)
 
-    return ReinventVocabulary(save_dict["vocabulary"], save_dict["tokenizer"]),\
+    return ReinventVocabulary(save_dict["vocabulary"], save_dict["tokenizer"]), \
            save_dict["max_sequence_length"], save_dict["network_params"], "/tmp/network_params.tmp"
 
 
@@ -62,8 +102,8 @@ def adapt_libinvent_checkpoint(file_path):
 
     # Change network weight names
     new_save_dict = {}
-    # for k in save_dict["decorator"]["state"].keys():
-    #     new_save_dict[libinvent_weights_mapping[k]] = save_dict["decorator"]["state"][k]
+    for k in save_dict["decorator"]["state"].keys():
+        new_save_dict[libinvent_weights_mapping[k]] = save_dict["decorator"]["state"][k]
 
     # Temporarily save network weight to /tmp/network_params
     torch.save(new_save_dict, "/tmp/network_params.tmp")

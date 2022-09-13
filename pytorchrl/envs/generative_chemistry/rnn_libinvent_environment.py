@@ -73,9 +73,6 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
-            import ipdb;
-            ipdb.set_trace()
-
             # Compute score
             score = self.scoring_function(self.vocabulary.remove_start_and_end_tokens(self.current_decoration))
 

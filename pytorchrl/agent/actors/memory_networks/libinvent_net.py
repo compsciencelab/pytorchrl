@@ -7,11 +7,6 @@ import torch.nn as tnn
 import torch.nn.utils.rnn as tnnur
 from pytorchrl.agent.actors.feature_extractors import Embedding
 
-# TODO: better understand attention layer
-# TODO: save the rhs better
-# TODO: do I need to compute scaffold rhs every time? no, actually I can do it only once every time if flips to data collection, and set it to None every time it flips to grad computation
-# If done, run encoder and get hidden states, otherwise use the provided hidden states
-
 
 class Encoder(tnn.Module):
     """
@@ -136,7 +131,6 @@ class Decoder(tnn.Module):
 
         self._attention = AttentionLayer(self.num_dimensions)
 
-        self._linear = tnn.Linear(self.num_dimensions, self.num_dimensions)  # just to redimension
 
     def forward(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):  # pylint: disable=arguments-differ
         """
@@ -160,7 +154,6 @@ class Decoder(tnn.Module):
         # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
-        logits = self._linear(attn_padded_encoded_seqs)*mask  # (batch, seq, voc_size)
         return logits, hidden_states, attention_weights
 
     def get_params(self):
@@ -211,17 +204,22 @@ class Decorator(tnn.Module):
 
         masks = 1 - done
 
-        if x.size(0) == hxs.size(0):
+        if decoder_seqs.size(0) == hxs.size(0):
 
             if self.encoder_rhs is None or self.encoder_padded_seqs is None:
                 self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
-                import ipdb; ipdb.set_trace() # TODO: cat self.encoder_rhs
+                self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
 
-            import ipdb; ipdb.set_trace() # TODO: replace "done" hxs by self.encoder_rhs
-            import ipdb; ipdb.set_trace() # TODO: chunk rhs (where does this go?)
+            # Replace "done" hxs by self.encoder_rhs
+            hxs = torch.where(done.unsqueeze(-1) > 0.0, self.encoder_rhs, hxs)
 
-            logits, hxs, _ = self.forward_decoder(decoder_seqs, decoder_seq_lengths, encoder_padded_seqs, hidden_states)
+            # Chunk rhs (where does this go?)
+            hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
+
+            logits, hxs, _ = self.forward_decoder(decoder_seqs, decoder_seq_lengths, self.encoder_padded_seqs, hxs)
+
             logits = logits.squeeze(1)
+            hxs = torch.transpose(torch.cat(hxs), 0, 1)
 
         else:
 
@@ -229,21 +227,21 @@ class Decorator(tnn.Module):
             self.encoder_rhs = None
             self.encoder_padded_seqs = None
 
-            import ipdb; ipdb.set_trace()
-
             # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
             N = hxs.size(0)
-            T = int(x.size(0) / N)
+            T = int(decoder_seqs.size(0) / N)
 
             # unflatten
-            x = x.view(T, N, -1)
+            decoder_seqs = decoder_seqs.view(N, T, -1)
 
             # Same deal with masks
-            masks = masks.view(T, N)
+            masks = masks.view(N, T)
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            has_zeros_old = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
+            assert (has_zeros_old == has_zeros).all()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:
@@ -262,15 +260,30 @@ class Decorator(tnn.Module):
                 start_idx = has_zeros[i]
                 end_idx = has_zeros[i + 1]
 
-                import ipdb; ipdb.set_trace()  # TODO: run encoder in position start_idx
-                import ipdb; ipdb.set_trace()  # TODO: run decoder from start_idx to end_idx
-                import ipdb; ipdb.set_trace()  # TODO: outputs.append(logits)
+                # TODO: run encoder in position start_idx if required
+                if self.encoder_rhs is None or self.encoder_padded_seqs is None:
+                    lengths = encoder_seq_lengths[start_idx: start_idx + 1].cpu().long()
+                    if lengths == 0: lengths += encoder_seqs.size(1)
+                    self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(
+                        encoder_seqs[start_idx: start_idx + 1], lengths)
+
+                # TODO: run decoder from start_idx to end_idx
+                lengths = torch.LongTensor([end_idx - start_idx])
+                logits, hxs, _ = self.forward_decoder(decoder_seqs[:, start_idx:end_idx].squeeze(-1), lengths, self.encoder_padded_seqs, self.encoder_rhs)
+
+                outputs.append(logits)
 
             # x is a (T, N, -1) tensor
-            x = torch.cat(outputs, dim=0)
+            logits = torch.cat(outputs, dim=0)
 
             # flatten
-            x = x.view(T * N, -1)
+            logits = logits.view(T * N, -1)
+
+            hxs = torch.transpose(torch.cat(hxs), 0, 1)
+
+            # Set encoder outputs to None
+            self.encoder_rhs = None
+            self.encoder_padded_seqs = None
 
         return logits, hxs
 
@@ -284,7 +297,7 @@ class Decorator(tnn.Module):
         :return : The output logits as a tensor (batch, seq_d, dim).
         """
 
-        logits, rhs = self._forward_decorator(x, hxs, done)
+        logits, rhs = self._forward_decorator(inputs, rhs, done)
 
         return logits, rhs
 
@@ -318,4 +331,4 @@ class Decorator(tnn.Module):
         return self._decoder.num_dimensions
 
     def get_initial_recurrent_state(self, num_proc):
-        return torch.zeros(num_proc, self.num_layers * 2, self.num_dimensions)
+        return torch.zeros(num_proc, self._encoder.num_layers * 2, self._encoder.num_dimensions)
