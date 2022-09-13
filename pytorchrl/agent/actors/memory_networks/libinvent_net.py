@@ -131,7 +131,6 @@ class Decoder(tnn.Module):
 
         self._attention = AttentionLayer(self.num_dimensions)
 
-
     def forward(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):  # pylint: disable=arguments-differ
         """
         Performs the forward pass.
@@ -154,6 +153,9 @@ class Decoder(tnn.Module):
         # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
+
+        logits = attn_padded_encoded_seqs
+
         return logits, hidden_states, attention_weights
 
     def get_params(self):
@@ -239,9 +241,9 @@ class Decorator(tnn.Module):
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros_old = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            # has_zeros_old = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
             has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
-            assert (has_zeros_old == has_zeros).all()
+            # assert (has_zeros_old == has_zeros).all()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:

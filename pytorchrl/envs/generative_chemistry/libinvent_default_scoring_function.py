@@ -1,0 +1,112 @@
+"""
+Defines the default scoring function to guide the genchem RL agent.
+"""
+
+import os
+from reinvent_scoring.scoring import ScoringFunctionFactory
+from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
+
+
+class WrapperScoringClass:
+
+    def __init__(self, scoring_class):
+        self.scoring_class = scoring_class
+
+    def get_final_score(self, smile):
+
+        output = {}
+
+        try:
+
+            if isinstance(smile, str):
+                score = self.scoring_class.get_final_score([smile])
+            else:
+                raise ValueError("Scoring error due to wrong dtype")
+
+            output.update({
+                "valid_smile": True,
+                "score": float(score.total_score[0]),
+                "regression_model": float(score.profile[0].score[0]),
+                "matching_substructure": float(score.profile[1].score[0]),
+                "custom_alerts": float(score.profile[2].score[0]),
+                "QED_score": float(score.profile[3].score[0]),
+                "raw_regression_model": float(score.profile[4].score[0]),
+            })
+
+        except TypeError:
+
+            output.update({
+                "valid_smile": False,
+                "score": 0.0,
+                "regression_model": 0.0,
+                "matching_substructure": 0.0,
+                "custom_alerts": 0.0,
+                "QED_score": 0.0,
+                "raw_regression_model": 0.0,
+            })
+
+        return output
+
+
+qsar_model = {
+        "component_type": "predictive_property",
+        "name": "DRD2",
+        "weight": 1,
+        "model_path": os.path.join(os.path.dirname(__file__), '../../../pytorchrl/envs/generative_chemistry/models/drd2.pkl'),
+        "smiles": [],
+        "specific_parameters": {
+            "transformation_type": "no_transformation",
+            "scikit": "classification",
+            "transformation": False,
+            "descriptor_type": "ecfp",
+            "size": 2048,
+            "radius": 3
+        }
+    }
+
+custom_alerts =  {
+        "component_type": "custom_alerts",
+        "name": "Custom alerts",
+        "weight": 1,
+        "model_path": None,
+        "smiles": [
+            "[*;r8]",
+            "[*;r9]",
+            "[*;r10]",
+            "[*;r11]",
+            "[*;r12]",
+            "[*;r13]",
+            "[*;r14]",
+            "[*;r15]",
+            "[*;r16]",
+            "[*;r17]",
+            "[#8][#8]",
+            "[#6;+]",
+            "[#16][#16]",
+            "[#7;!n][S;!$(S(=O)=O)]",
+            "[#7;!n][#7;!n]",
+            "C#C",
+            "C(=[O,S])[O,S]",
+            "[#7;!n][C;!$(C(=[O,N])[N,O])][#16;!s]",
+            "[#7;!n][C;!$(C(=[O,N])[N,O])][#7;!n]",
+            "[#7;!n][C;!$(C(=[O,N])[N,O])][#8;!o]",
+            "[#8;!o][C;!$(C(=[O,N])[N,O])][#16;!s]",
+            "[#8;!o][C;!$(C(=[O,N])[N,O])][#8;!o]",
+            "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
+        ],
+        "specific_parameters": None
+    }
+
+scoring_function_parameters = {
+    "name": "custom_sum",
+    "parallel": False,  # Do not change
+    "parameters": [qsar_model, custom_alerts]
+}
+scoring_params = ScoringFunctionParameters(
+    scoring_function_parameters["name"],
+    scoring_function_parameters["parameters"],
+    scoring_function_parameters["parallel"])
+
+scoring_class = ScoringFunctionFactory(scoring_params)
+wrapper_scoring_class = WrapperScoringClass(scoring_class)
+scoring_function = wrapper_scoring_class.get_final_score
