@@ -100,17 +100,10 @@ def adapt_libinvent_checkpoint(file_path):
     else:
         save_dict = torch.load(file_path, map_location=lambda storage, loc: storage)
 
-    test_dict = torch.load("/home/abou/test_ckpt")
-    # for aaa, bbb in zip(test_dict.values(), save_dict["decorator"]["state"].values()):
-    #     assert (aaa == bbb).all()
-    #     import ipdb; ipdb.set_trace()
-
     # Change network weight names
     new_save_dict = {}
-    for k in test_dict.keys():
-        new_save_dict[libinvent_weights_mapping[k]] = test_dict[k]
-    # for k in save_dict["decorator"]["state"].keys():
-    #     new_save_dict[libinvent_weights_mapping[k]] = save_dict["decorator"]["state"][k]
+    for k in save_dict["decorator"]["state"].keys():
+        new_save_dict[libinvent_weights_mapping[k]] = save_dict["decorator"]["state"][k]
 
     # Temporarily save network weight to /tmp/network_params
     torch.save(new_save_dict, "/tmp/network_params.tmp")
@@ -124,4 +117,3 @@ def adapt_libinvent_checkpoint(file_path):
 
     return vocabulary, save_dict["model"]["max_sequence_length"], \
            save_dict["decorator"]["params"], "/tmp/network_params.tmp"
-

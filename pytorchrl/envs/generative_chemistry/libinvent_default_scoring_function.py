@@ -19,6 +19,8 @@ class WrapperScoringClass:
 
             if isinstance(smile, str):
                 score = self.scoring_class.get_final_score([smile])
+            elif smile is None:
+                raise TypeError
             else:
                 raise ValueError("Scoring error due to wrong dtype")
 

@@ -83,15 +83,10 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
-            # import ipdb; ipdb.set_trace()
             decorated_smile = self.join_scaffold_and_decorations(
-                "C1N(CCCCN[*])CCN([*])C1",  # self.vocabulary.decode_scaffold(self.padded_scaffold),
-                "c12ccc3ccccc3c1n(CC)cc(C(=O)*)c2=O|c1(*)cc(Cl)c(N)cc1", #self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
+                self.vocabulary.decode_scaffold(self.padded_scaffold),
+                self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
             )
-
-            # TODO: very ugly fix
-            if decorated_smile is None:
-                decorated_smile = " "
 
             # Compute score
             score = self.scoring_function(decorated_smile)

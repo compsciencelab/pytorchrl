@@ -37,8 +37,6 @@ class Encoder(tnn.Module):
         :return : A tensor with all the output values for each step and the two hidden states.
         """
 
-        import ipdb; ipdb.set_trace()
-
         batch_size = padded_seqs.size(0)
         max_seq_size = padded_seqs.size(1)
         hidden_state = self._initialize_hidden_state(batch_size)
@@ -152,7 +150,6 @@ class Decoder(tnn.Module):
         # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
-
         logits = attn_padded_encoded_seqs
 
         return logits, hidden_states, attention_weights
@@ -207,21 +204,12 @@ class Decorator(tnn.Module):
 
         if decoder_seqs.size(0) == hxs.size(0):
 
-            #### LSTM CODE ########
-
-            # self._rnn.flatten_parameters()
-            # x, hxs = self._rnn(x.unsqueeze(0), torch.chunk((torch.transpose(hxs, 0, 1) * masks).contiguous(), 2))
-            # hxs = torch.transpose(torch.cat(hxs), 0, 1)
-            # x = x.squeeze(0)
-
-            ########################
-
-            # if self.encoder_rhs is None or self.encoder_padded_seqs is None:
-            self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
-            self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
+            if self.encoder_rhs is None or self.encoder_padded_seqs is None:
+                self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
+                self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
 
             # Replace "done" hxs by self.encoder_rhs
-            # hxs = torch.where(done.unsqueeze(-1) > 0.0, self.encoder_rhs, hxs)
+            hxs = torch.where(done.unsqueeze(-1) > 0.0, self.encoder_rhs, hxs)
 
             # Chunk rhs (where does this go?)
             hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
@@ -237,10 +225,10 @@ class Decorator(tnn.Module):
             N = hxs.size(0)
             T = int(decoder_seqs.size(0) / N)
 
-            # # Set encoder outputs to None
-            # self.encoder_rhs = None
-            # self.encoder_padded_seqs = None
-            #
+            # Set encoder outputs to None
+            self.encoder_rhs = None
+            self.encoder_padded_seqs = None
+
             # # unflatten
             # decoder_seqs = decoder_seqs.view(N, T, -1)
             #
