@@ -21,10 +21,10 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-# from pytorchrl.envs.generative_chemistry.libinvent_default_scoring_function import scoring_function
+from pytorchrl.envs.generative_chemistry.libinvent_default_scoring_function import scoring_function
 
 # Test dummy custom score function
-from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
 from pytorchrl.agent.actors.memory_networks.libinvent_net import Decorator
@@ -60,7 +60,7 @@ def main():
         (vocabulary, max_sequence_length, recurrent_net_kwargs,
          network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
             __file__)), "../../../pytorchrl/envs/generative_chemistry/models/library_design.prior"))
-        restart_model = {"memory_net": network_weights}
+        restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )

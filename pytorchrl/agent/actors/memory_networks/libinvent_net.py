@@ -16,10 +16,10 @@ class Encoder(tnn.Module):
     def __init__(self, num_layers, num_dimensions, vocabulary_size, dropout):
         super(Encoder, self).__init__()
 
+        self.dropout = dropout
         self.num_layers = num_layers
         self.num_dimensions = num_dimensions
         self.vocabulary_size = vocabulary_size
-        self.dropout = dropout
 
         self._embedding = tnn.Sequential(
             tnn.Embedding(self.vocabulary_size, self.num_dimensions),
@@ -37,6 +37,8 @@ class Encoder(tnn.Module):
         :return : A tensor with all the output values for each step and the two hidden states.
         """
 
+        import ipdb; ipdb.set_trace()
+
         batch_size = padded_seqs.size(0)
         max_seq_size = padded_seqs.size(1)
         hidden_state = self._initialize_hidden_state(batch_size)
@@ -52,12 +54,9 @@ class Encoder(tnn.Module):
         # padded_seqs, (hs_h, hs_c) = self._rnn(padded_seqs, (hs_h, hs_c))
 
         # sum up bidirectional layers and collapse
-        hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions)\
-            .sum(dim=1)  # .squeeze()  # (layers, batch, dim)
-        hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions)\
-            .sum(dim=1)  #.squeeze()  # (layers, batch, dim)
-        padded_seqs = padded_seqs.view(batch_size, max_seq_size, 2, self.num_dimensions)\
-            .sum(dim=2).squeeze(2)  # (batch, seq, dim)
+        hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)  # .squeeze()  # (layers, batch, dim)
+        hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)  #.squeeze()  # (layers, batch, dim)
+        padded_seqs = padded_seqs.view(batch_size, max_seq_size, 2, self.num_dimensions).sum(dim=2).squeeze(2)  # (batch, seq, dim)
 
         return padded_seqs, (hs_h, hs_c)
 
@@ -208,12 +207,21 @@ class Decorator(tnn.Module):
 
         if decoder_seqs.size(0) == hxs.size(0):
 
-            if self.encoder_rhs is None or self.encoder_padded_seqs is None:
-                self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
-                self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
+            #### LSTM CODE ########
+
+            # self._rnn.flatten_parameters()
+            # x, hxs = self._rnn(x.unsqueeze(0), torch.chunk((torch.transpose(hxs, 0, 1) * masks).contiguous(), 2))
+            # hxs = torch.transpose(torch.cat(hxs), 0, 1)
+            # x = x.squeeze(0)
+
+            ########################
+
+            # if self.encoder_rhs is None or self.encoder_padded_seqs is None:
+            self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
+            self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
 
             # Replace "done" hxs by self.encoder_rhs
-            hxs = torch.where(done.unsqueeze(-1) > 0.0, self.encoder_rhs, hxs)
+            # hxs = torch.where(done.unsqueeze(-1) > 0.0, self.encoder_rhs, hxs)
 
             # Chunk rhs (where does this go?)
             hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
@@ -225,67 +233,69 @@ class Decorator(tnn.Module):
 
         else:
 
-            # Set encoder outputs to None
-            self.encoder_rhs = None
-            self.encoder_padded_seqs = None
-
             # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
             N = hxs.size(0)
             T = int(decoder_seqs.size(0) / N)
 
-            # unflatten
-            decoder_seqs = decoder_seqs.view(N, T, -1)
+            # # Set encoder outputs to None
+            # self.encoder_rhs = None
+            # self.encoder_padded_seqs = None
+            #
+            # # unflatten
+            # decoder_seqs = decoder_seqs.view(N, T, -1)
+            #
+            # # Same deal with masks
+            # masks = masks.view(N, T)
+            #
+            # # Let's figure out which steps in the sequence have a zero for any agent
+            # # We will always assume t=0 has a zero in it as that makes the logic cleaner
+            # # has_zeros_old = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            # has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
+            # # assert (has_zeros_old == has_zeros).all()
+            #
+            # # +1 to correct the masks[1:]
+            # if has_zeros.dim() == 0:
+            #     # Deal with scalar
+            #     has_zeros = [has_zeros.item() + 1]
+            # else:
+            #     has_zeros = (has_zeros + 1).numpy().tolist()
+            #
+            # # add t=0 and t=T to the list
+            # has_zeros = [0] + has_zeros + [T]
+            #
+            # outputs = []
+            # for i in range(len(has_zeros) - 1):
+            #     # We can now process steps that don't have any zeros in masks together!
+            #     # This is much faster
+            #     start_idx = has_zeros[i]
+            #     end_idx = has_zeros[i + 1]
+            #
+            #     # TODO: run encoder in position start_idx if required
+            #     if self.encoder_rhs is None or self.encoder_padded_seqs is None:
+            #         lengths = encoder_seq_lengths[start_idx: start_idx + 1].cpu().long()
+            #         if lengths == 0: lengths += encoder_seqs.size(1)
+            #         self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(
+            #             encoder_seqs[start_idx: start_idx + 1], lengths)
+            #
+            #     # TODO: run decoder from start_idx to end_idx
+            #     lengths = torch.LongTensor([end_idx - start_idx])
+            #     logits, hxs, _ = self.forward_decoder(decoder_seqs[:, start_idx:end_idx].squeeze(-1), lengths, self.encoder_padded_seqs, self.encoder_rhs)
+            #
+            #     outputs.append(logits)
+            #
+            # # x is a (T, N, -1) tensor
+            # logits = torch.cat(outputs, dim=0)
+            #
+            # # flatten
+            # logits = logits.view(T * N, -1)
+            #
+            # hxs = torch.transpose(torch.cat(hxs), 0, 1)
+            #
+            # # Set encoder outputs to None
+            # self.encoder_rhs = None
+            # self.encoder_padded_seqs = None
 
-            # Same deal with masks
-            masks = masks.view(N, T)
-
-            # Let's figure out which steps in the sequence have a zero for any agent
-            # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            # has_zeros_old = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
-            has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
-            # assert (has_zeros_old == has_zeros).all()
-
-            # +1 to correct the masks[1:]
-            if has_zeros.dim() == 0:
-                # Deal with scalar
-                has_zeros = [has_zeros.item() + 1]
-            else:
-                has_zeros = (has_zeros + 1).numpy().tolist()
-
-            # add t=0 and t=T to the list
-            has_zeros = [0] + has_zeros + [T]
-
-            outputs = []
-            for i in range(len(has_zeros) - 1):
-                # We can now process steps that don't have any zeros in masks together!
-                # This is much faster
-                start_idx = has_zeros[i]
-                end_idx = has_zeros[i + 1]
-
-                # TODO: run encoder in position start_idx if required
-                if self.encoder_rhs is None or self.encoder_padded_seqs is None:
-                    lengths = encoder_seq_lengths[start_idx: start_idx + 1].cpu().long()
-                    if lengths == 0: lengths += encoder_seqs.size(1)
-                    self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(
-                        encoder_seqs[start_idx: start_idx + 1], lengths)
-
-                # TODO: run decoder from start_idx to end_idx
-                lengths = torch.LongTensor([end_idx - start_idx])
-                logits, hxs, _ = self.forward_decoder(decoder_seqs[:, start_idx:end_idx].squeeze(-1), lengths, self.encoder_padded_seqs, self.encoder_rhs)
-
-                outputs.append(logits)
-
-            # x is a (T, N, -1) tensor
-            logits = torch.cat(outputs, dim=0)
-
-            # flatten
-            logits = logits.view(T * N, -1)
-
-            hxs = torch.transpose(torch.cat(hxs), 0, 1)
-
-            # Set encoder outputs to None
-            self.encoder_rhs = None
-            self.encoder_padded_seqs = None
+            logits = torch.zeros(T * N, self._encoder.num_dimensions).cuda()
 
         return logits, hxs
 

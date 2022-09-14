@@ -15,7 +15,6 @@ class WrapperScoringClass:
     def get_final_score(self, smile):
 
         output = {}
-
         try:
 
             if isinstance(smile, str):
@@ -23,15 +22,12 @@ class WrapperScoringClass:
             else:
                 raise ValueError("Scoring error due to wrong dtype")
 
-            import ipdb;
-            ipdb.set_trace()
-
             output.update({
                 "valid_smile": True,
                 "score": float(score.total_score[0]),
-                "custom_alerts": float(score.profile[2].score[0]),
-                "DRD2": float(score.profile[3].score[0]),
-                "raw_DRD2": float(score.profile[4].score[0]),
+                "DRD2": float(score.profile[0].score[0]),
+                "custom_alerts": float(score.profile[1].score[0]),
+                "raw_DRD2": float(score.profile[2].score[0]),
             })
 
         except TypeError:
@@ -39,11 +35,9 @@ class WrapperScoringClass:
             output.update({
                 "valid_smile": False,
                 "score": 0.0,
-                "regression_model": 0.0,
-                "matching_substructure": 0.0,
+                "DRD2": 0.0,
                 "custom_alerts": 0.0,
-                "QED_score": 0.0,
-                "raw_regression_model": 0.0,
+                "raw_DRD2": 0.0,
             })
 
         return output

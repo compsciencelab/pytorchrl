@@ -7,8 +7,6 @@ from collections import defaultdict, deque
 
 from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
-from running_modes.reinforcement_learning.dto.sampled_sequences_dto import SampledSequencesDTO
-
 
 ### TODO: make eveything work without loading the prior
 
@@ -42,6 +40,10 @@ class GenChemEnv(gym.Env):
         self.scoring_function = scoring_function
         self.running_mean_valid_smiles = deque(maxlen=100)
 
+        self._bond_maker = BondMaker()
+        self._conversion = Conversions()
+        self._attachment_points = AttachmentPoints()
+
         # Break down scaffolds into tokens
         self.clean_scaffolds = [self._attachment_points.remove_attachment_point_numbers(scaffold) for scaffold in self.scaffolds]
         self.vectorised_scaffolds = [vocabulary.encode_scaffold(i) for i in self.clean_scaffolds]
@@ -56,7 +58,8 @@ class GenChemEnv(gym.Env):
 
         # Ugly hack
         scaffold_space._shape = (self.max_scaffold_length, )
-        decoration_space._shape = (self.max_length, )
+        # decoration_space._shape = (self.max_length, )
+        decoration_space._shape = (1, )
 
         self.observation_space = gym.spaces.Dict({
             "scaffold": scaffold_space,
@@ -64,10 +67,6 @@ class GenChemEnv(gym.Env):
             "decoration": decoration_space,
             "decoration_length": decoration_length,
         })
-
-        self._bond_maker = BondMaker()
-        self._conversion = Conversions()
-        self._attachment_points = AttachmentPoints()
 
     def step(self, action):
         """Execute one time step within the environment"""
@@ -84,11 +83,15 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             decorated_smile = self.join_scaffold_and_decorations(
-                self.vocabulary.remove_start_and_end_tokens(self.padded_scaffold),
-                self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
+                "C1N(CCCCN[*])CCN([*])C1",  # self.vocabulary.decode_scaffold(self.padded_scaffold),
+                "c12ccc3ccccc3c1n(CC)cc(C(=O)*)c2=O|c1(*)cc(Cl)c(N)cc1", #self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
             )
+
+            # TODO: very ugly fix
+            if decorated_smile is None:
+                decorated_smile = " "
 
             # Compute score
             score = self.scoring_function(decorated_smile)
