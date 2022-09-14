@@ -3,25 +3,8 @@ import random
 import numpy as np
 from gym import spaces
 from collections import defaultdict, deque
-
-
 from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
-
-### TODO: make eveything work without loading the prior
-
-# TODO: define obs as space.dict
-
-# TODO: scaffolds and decorations are of fixed size with padding
-
-# TODO: In both cases create a np vector with padding tokens and fill it up with data
-
-# TODO: Then provide the real length of the scaffold/decoration in the obs
-
-### TODO: make eveything work without with the prior
-
-
-### TODO: allow training our own prior
 
 
 class GenChemEnv(gym.Env):
@@ -122,10 +105,8 @@ class GenChemEnv(gym.Env):
         next_obs = {
             "scaffold": self.padded_scaffold,
             "scaffold_length": np.array(self.scaffold_length),
-
             # "decoration":  self.padded_current_decoration,
             # "decoration_length": np.array(self.current_decoration_length),
-
             "decoration": np.array(self.vocabulary.encode_decoration_token(action)).reshape(1),
             "decoration_length": np.array(1),
         }
@@ -152,10 +133,8 @@ class GenChemEnv(gym.Env):
         obs = {
             "scaffold": self.padded_scaffold,
             "scaffold_length": np.array(self.scaffold_length),
-
             # "decoration":  self.padded_current_decoration,
             # "decoration_length": np.array(self.current_decoration_length),
-
             "decoration": np.array(self.vocabulary.encode_decoration_token(self.current_decoration)).reshape(1),
             "decoration_length": np.array(1),
 
