@@ -7,6 +7,9 @@ from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
 
 
+# TODO: add randomize_scaffolds
+# TODO: add scaffolds to conf.yaml
+
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
@@ -41,7 +44,6 @@ class GenChemEnv(gym.Env):
 
         # Ugly hack
         scaffold_space._shape = (self.max_scaffold_length, )
-        # decoration_space._shape = (self.max_length, )
         decoration_space._shape = (1, )
 
         self.observation_space = gym.spaces.Dict({
@@ -89,7 +91,10 @@ class GenChemEnv(gym.Env):
                     self.running_mean_valid_smiles.append(0.0)
 
             # Update molecule
-            info.update({"molecule": self.vocabulary.remove_start_and_end_tokens(self.current_decoration)})
+            info.update({"molecule": decorated_smile or "invalid_smile"})
+
+            if "*" in info["molecule"]:
+                import ipdb; ipdb.set_trace()
 
             # Update valid smiles tracker
             info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
@@ -137,7 +142,6 @@ class GenChemEnv(gym.Env):
             # "decoration_length": np.array(self.current_decoration_length),
             "decoration": np.array(self.vocabulary.encode_decoration_token(self.current_decoration)).reshape(1),
             "decoration_length": np.array(1),
-
         }
 
         return obs

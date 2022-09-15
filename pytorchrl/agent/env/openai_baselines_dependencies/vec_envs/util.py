@@ -69,7 +69,7 @@ def obs_space_info(obs_space):
     dtypes = {}
     for key, box in subspaces.items():
         keys.append(key)
-        shapes[key] = box.shape
+        shapes[key] = box._shape if hasattr(box, "_shape") else box.shape
         dtypes[key] = box.dtype
     return keys, shapes, dtypes
 

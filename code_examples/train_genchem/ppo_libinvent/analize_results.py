@@ -2,12 +2,12 @@
 
 import os
 import time
-
+import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import Draw
 
 from pytorchrl.agent.env import load_baselines_results
-from code_examples.train_genchem.ppo.train import get_args
+from code_examples.train_genchem.ppo_libinvent.train_rnn_model import get_args
 
 
 def analize_results(num_top_molecules=10):
@@ -21,6 +21,8 @@ def analize_results(num_top_molecules=10):
     monitor_files = monitor_files.sort_values("r", ascending=False)
 
     # List top X molecules with highest score
+    pd.options.display.max_colwidth = 300
+    monitor_files = monitor_files[monitor_files["molecule"].duplicated() == False]
     print(monitor_files[["r", "molecule"]].head(n=num_top_molecules))
 
     # Generate and save 2D smiles image

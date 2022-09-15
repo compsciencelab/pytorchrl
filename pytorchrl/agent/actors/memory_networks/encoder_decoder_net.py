@@ -150,7 +150,7 @@ class Decoder(tnn.Module):
         # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
-        logits = attn_padded_encoded_seqs
+        logits = attn_padded_encoded_seqs * mask
 
         return logits, hidden_states, attention_weights
 
