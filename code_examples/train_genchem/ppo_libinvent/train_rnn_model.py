@@ -30,6 +30,9 @@ from pytorchrl.envs.generative_chemistry.libinvent.default_scoring_function impo
 from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
 
 
+# TODO. specify net input parameters from here!
+
+
 def main():
 
     args = get_args()
@@ -69,6 +72,7 @@ def main():
             "DRD2",
             "raw_DRD2",
             "valid_smile",
+            "reaction_scores"
         )
 
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
@@ -89,7 +93,7 @@ def main():
             obs_space, action_space, prl.PPO,
             feature_extractor_network=torch.nn.Identity,
             feature_extractor_kwargs={},
-            recurrent_net=Decorator,
+            recurrent_net=LSTMEncoderDecoder,
             recurrent_net_kwargs={**recurrent_net_kwargs},
             restart_model=restart_model,
         )

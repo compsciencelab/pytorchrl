@@ -1,15 +1,13 @@
 import gym
 import random
 import numpy as np
+import rdkit as Chem
 from gym import spaces
 from collections import defaultdict, deque
 from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
-from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter,\
+from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter, \
     ReactionFilterConfiguration
-
-# TODO: add randomize_scaffolds
-# TODO: add RF's
 
 # reaction_filter_conf = {
 #     "type": "selective",
@@ -29,25 +27,21 @@ class GenChemEnv(gym.Env):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
+        self.reactions = reactions
         self.scaffolds = scaffolds
         self.vocabulary = vocabulary
         self.max_length = max_length
         self.current_episode_length = 0
         self.scoring_function = scoring_function
+        self.randomize_scaffolds = randomize_scaffolds
         self.running_mean_valid_smiles = deque(maxlen=100)
 
         self._bond_maker = BondMaker()
         self._conversion = Conversions()
         self._attachment_points = AttachmentPoints()
 
-        # randomize_scaffolds are incompatible with reactions
-        if randomize_scaffolds and len(reactions) == 0:
-            self.scaffolds = self.randomize_scaffolds(scaffolds)
-
-        # Break down scaffolds into tokens
-        self.clean_scaffolds = [self._attachment_points.remove_attachment_point_numbers(scaffold) for scaffold in self.scaffolds]
-        self.vectorised_scaffolds = [vocabulary.encode_scaffold(i) for i in self.clean_scaffolds]
-        self.max_scaffold_length = max([vocabulary.count_scaffold_tokens(i) for i in self.clean_scaffolds])
+        # Check maximum possible scaffold length
+        self.max_scaffold_length = max([len(self.select_scaffold()) for _ in range(1000)])
 
         # Define action and observation space
         self.action_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
@@ -57,8 +51,8 @@ class GenChemEnv(gym.Env):
         decoration_length = gym.spaces.Discrete(self.max_length)
 
         # Ugly hack
-        scaffold_space._shape = (self.max_scaffold_length, )
-        decoration_space._shape = (1, )
+        scaffold_space._shape = (self.max_scaffold_length,)
+        decoration_space._shape = (1,)
 
         self.observation_space = gym.spaces.Dict({
             "scaffold": scaffold_space,
@@ -68,7 +62,7 @@ class GenChemEnv(gym.Env):
         })
 
         # Reaction Filters
-        reaction_filter_conf = {"type": "selective",  "reactions": reactions}
+        reaction_filter_conf = {"type": "selective", "reactions": reactions}
         reaction_filter_conf = ReactionFilterConfiguration(
             type=reaction_filter_conf["type"],
             reactions=reaction_filter_conf["reactions"],
@@ -90,7 +84,7 @@ class GenChemEnv(gym.Env):
 
         else:  # if action is $, evaluate molecule
 
-            decorated_smile = self.join_scaffold_and_decorations(
+            decorated_smile, molecule = self.join_scaffold_and_decorations(
                 self.vocabulary.decode_scaffold(self.padded_scaffold),
                 self.vocabulary.remove_start_and_end_tokens(self.current_decoration)
             )
@@ -98,13 +92,14 @@ class GenChemEnv(gym.Env):
             # Compute score
             score = self.scoring_function(decorated_smile)
 
-            # Apply reaction filters
-            self.apply_reaction_filters(decorated_smile, score)
-
             # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
             assert "score" in score.keys() or "reward" in score.keys(), \
                 "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
+
+            # Apply reaction filters
+            if molecule:
+                self.apply_reaction_filters(molecule, score)
 
             # Get reward
             reward = score["reward"] if "reward" in score.keys() else score["score"]
@@ -117,9 +112,6 @@ class GenChemEnv(gym.Env):
 
             # Update molecule
             info.update({"molecule": decorated_smile or "invalid_smile"})
-
-            if "*" in info["molecule"]:
-                import ipdb; ipdb.set_trace()
 
             # Update valid smiles tracker
             info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
@@ -150,8 +142,11 @@ class GenChemEnv(gym.Env):
         """
         self.num_episodes += 1
 
-        self.scaffold = random.choice(self.vectorised_scaffolds)
-        self.scaffold_length = len(self.scaffold)
+        self.scaffold_length = np.Inf
+        while self.scaffold_length > self.max_scaffold_length:
+            self.scaffold = self.select_scaffold()
+            self.scaffold_length = len(self.scaffold)
+
         self.padded_scaffold = self.vocabulary.encode_scaffold_token('<pad>') * np.ones(self.max_scaffold_length)
         self.padded_scaffold[0:self.scaffold_length] = self.scaffold
 
@@ -177,26 +172,24 @@ class GenChemEnv(gym.Env):
         print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
 
-    def randomize_scaffolds(self, scaffolds):
-        import ipdb; ipdb.set_trace()
-        scaffold_mols = [self._conversion.smile_to_mol(scaffold) for scaffold in scaffolds]
-        randomized = [self._bond_maker.randomize_scaffold(mol) for mol in scaffold_mols]
-        return randomized
+    def select_scaffold(self):
+        scaffold = random.choice(self.scaffolds)
+        if self.randomize_scaffolds and len(self.reactions) == 0:
+            mol = self._conversion.smile_to_mol(scaffold)
+            scaffold = self._bond_maker.randomize_scaffold(mol)  # randomize
+        scaffold = self._attachment_points.remove_attachment_point_numbers(scaffold)
+        scaffold = self.vocabulary.encode_scaffold(scaffold)
+        return scaffold
 
     def join_scaffold_and_decorations(self, scaffold, decorations):
         scaffold = self._attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)
         molecule = self._bond_maker.join_scaffolds_and_decorations(scaffold, decorations)
-        smile = self._conversion.mol_to_smiles(molecule)
-        return smile
+        smile = self._conversion.mol_to_smiles(molecule) if molecule else None
+        return smile, molecule
 
-    def apply_reaction_filters(self, smile, final_score):
-        import ipdb; ipdb.set_trace()
-        mol = Chem.MolFromSmiles(smile)
-        sf_component = ScoringFunctionComponentNameEnum()
+    def apply_reaction_filters(self, mol, final_score):
         reaction_scores = [self.reaction_filter.evaluate(mol)]
-        component_parameters = ComponentParameters(component_type=sf_component.REACTION_FILTERS,name=sf_component.REACTION_FILTERS, weight=1)
-        component_summary = ComponentSummary(total_score=reaction_scores, parameters=component_parameters)
-        final_score.total_score = final_score.total_score * np.array(reaction_scores)
-        final_score.scaffold_log.append(component_summary)
-        final_score.profile.append(loggable_component)
+        reward = final_score["reward"] if "reward" in final_score.keys() else final_score["score"]
+        final_score["reward"] = float(reward * np.array(reaction_scores))
+        final_score["reaction_scores"] = float(np.array(reaction_scores))
         return final_score

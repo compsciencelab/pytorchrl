@@ -27,6 +27,7 @@ class WrapperScoringClass:
             output.update({
                 "valid_smile": True,
                 "score": float(score.total_score[0]),
+                "reward": float(score.total_score[0]),
                 "DRD2": float(score.profile[0].score[0]),
                 "custom_alerts": float(score.profile[1].score[0]),
                 "raw_DRD2": float(score.profile[2].score[0]),
@@ -37,6 +38,7 @@ class WrapperScoringClass:
             output.update({
                 "valid_smile": False,
                 "score": 0.0,
+                "reward": 0.0,
                 "DRD2": 0.0,
                 "custom_alerts": 0.0,
                 "raw_DRD2": 0.0,

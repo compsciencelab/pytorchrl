@@ -37,7 +37,6 @@ class Encoder(tnn.Module):
         """
 
         batch_size = padded_seqs.size(0)
-        max_seq_size = padded_seqs.size(1)
         hidden_state = self._initialize_hidden_state(batch_size)
 
         padded_seqs = self._embedding(padded_seqs.long())
@@ -50,7 +49,7 @@ class Encoder(tnn.Module):
         # sum up bidirectional layers and collapse
         hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)
         hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)
-        padded_seqs = padded_seqs.view(batch_size, max_seq_size, 2, self.num_dimensions).sum(dim=2).squeeze(2)  # (batch, seq, dim)
+        padded_seqs = padded_seqs.view(batch_size, -1, 2, self.num_dimensions).sum(dim=2).squeeze(2)  # (batch, seq, dim)
 
         return padded_seqs, (hs_h, hs_c)
 
@@ -141,7 +140,7 @@ class LSTMEncoderDecoder(tnn.Module):
     """
 
     def __init__(self, input_size, encoder_params, decoder_params):
-        super(Decorator, self).__init__()
+        super(LSTMEncoderDecoder, self).__init__()
 
         encoder_params.update({
             "num_layers": 3,
