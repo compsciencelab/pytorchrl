@@ -98,6 +98,7 @@ class GenChemEnv(gym.Env):
                 "scoring_function outputs requires at lest the keyword ´score´ or ´reward´"
 
             # Apply reaction filters
+            score.update({"reaction_scores": 0.0})
             if molecule:
                 self.apply_reaction_filters(molecule, score)
 
