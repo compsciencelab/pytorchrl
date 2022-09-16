@@ -1,4 +1,5 @@
 import gym
+import rdkit as Chem
 import numpy as np
 from gym import spaces
 from collections import defaultdict, deque

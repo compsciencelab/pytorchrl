@@ -8,7 +8,20 @@ from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
 
 
 # TODO: add randomize_scaffolds
-# TODO: add scaffolds to conf.yaml
+# TODO: add RF's
+from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter, ReactionFilterConfiguration
+
+reaction_filter_conf = {
+    "type": "selective",
+    "reactions": [
+        ["[#6;!$(C(C=*)(C=*));!$([#6]~[O,N,S]);$([#6]~[#6]):1][C:2](=[O:3])[N;D2;$(N(C=[O,S]));!$(N~[O,P,S,N]):4][#6;!$(C=*);!$([#6](~[O,N,S])N);$([#6]~[#6]):5]>>[#6:1][C:2](=[O:3])[*].[*][N:4][#6:5]"],
+        ["[c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1]-!@[N;$(NC)&!$(N=*)&!$([N-])&!$(N#*)&!$([ND1])&!$(N[O])&!$(N[C,S]=[S,O,N]),H2&$(Nc1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):2]>>[*][c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1].[*][N:2]"],
+    ]
+}
+reaction_filter_conf = ReactionFilterConfiguration(type=reaction_filter_conf["type"], reactions=reaction_filter_conf["reactions"], reaction_definition_file=None)
+reaction_filter = ReactionFilter(strategy_configuration.reaction_filter)
+
+
 
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
@@ -75,6 +88,9 @@ class GenChemEnv(gym.Env):
 
             # Compute score
             score = self.scoring_function(decorated_smile)
+
+            # Apply reaction filters
+            self.apply_reaction_filters(decorated_smile, score)
 
             # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
@@ -157,3 +173,15 @@ class GenChemEnv(gym.Env):
         molecule = self._bond_maker.join_scaffolds_and_decorations(scaffold, decorations)
         smile = self._conversion.mol_to_smiles(molecule)
         return smile
+
+    def apply_reaction_filters(self, smile, final_score):
+        import ipdb; ipdb.set_trace()
+        mol = Chem.MolFromSmiles(smile)
+        sf_component = ScoringFunctionComponentNameEnum()
+        reaction_scores = [self.reaction_filter.evaluate(mol)]
+        component_parameters = ComponentParameters(component_type=sf_component.REACTION_FILTERS,name=sf_component.REACTION_FILTERS, weight=1)
+        component_summary = ComponentSummary(total_score=reaction_scores, parameters=component_parameters)
+        final_score.total_score = final_score.total_score * np.array(reaction_scores)
+        final_score.scaffold_log.append(component_summary)
+        final_score.profile.append(loggable_component)
+        return final_score
