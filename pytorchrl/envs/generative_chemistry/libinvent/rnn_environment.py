@@ -9,14 +9,6 @@ from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
 from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter, \
     ReactionFilterConfiguration
 
-# reaction_filter_conf = {
-#     "type": "selective",
-#     "reactions": [
-#         ["[#6;!$(C(C=*)(C=*));!$([#6]~[O,N,S]);$([#6]~[#6]):1][C:2](=[O:3])[N;D2;$(N(C=[O,S]));!$(N~[O,P,S,N]):4][#6;!$(C=*);!$([#6](~[O,N,S])N);$([#6]~[#6]):5]>>[#6:1][C:2](=[O:3])[*].[*][N:4][#6:5]"],
-#         ["[c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1]-!@[N;$(NC)&!$(N=*)&!$([N-])&!$(N#*)&!$([ND1])&!$(N[O])&!$(N[C,S]=[S,O,N]),H2&$(Nc1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):2]>>[*][c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1].[*][N:2]"],
-#     ]
-# }
-
 
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
