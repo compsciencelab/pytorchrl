@@ -56,7 +56,7 @@ scoring_function_parameters = {
             "weight": 1,
             "specific_parameters": {
                 "model_path": os.path.join(os.path.dirname(__file__),
-                                           '../../../pytorchrl/envs/generative_chemistry/libinvent/models/drd2.pkl'),
+                                           '../../../../pytorchrl/envs/generative_chemistry/libinvent/models/drd2.pkl'),
                 "scikit": "classification",
                 "descriptor_type": "ecfp",
                 "size": 2048,

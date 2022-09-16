@@ -42,7 +42,7 @@ class GenChemEnv(gym.Env):
 
         # randomize_scaffolds are incompatible with reactions
         if randomize_scaffolds and len(reactions) == 0:
-            self.scaffolds = self._randomize_scaffolds(scaffolds)
+            self.scaffolds = self.randomize_scaffolds(scaffolds)
 
         # Break down scaffolds into tokens
         self.clean_scaffolds = [self._attachment_points.remove_attachment_point_numbers(scaffold) for scaffold in self.scaffolds]
@@ -179,7 +179,7 @@ class GenChemEnv(gym.Env):
 
     def randomize_scaffolds(self, scaffolds):
         import ipdb; ipdb.set_trace()
-        scaffold_mols = [self._conversions.smile_to_mol(scaffold) for scaffold in scaffolds]
+        scaffold_mols = [self._conversion.smile_to_mol(scaffold) for scaffold in scaffolds]
         randomized = [self._bond_maker.randomize_scaffold(mol) for mol in scaffold_mols]
         return randomized
 

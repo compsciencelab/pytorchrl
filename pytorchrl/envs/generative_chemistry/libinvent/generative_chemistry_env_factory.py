@@ -39,7 +39,7 @@ def libinvent_train_env_factory(
         max_length=smiles_max_length,
         scaffolds=scaffolds,
         randomize_scaffolds=randomize_scaffolds,
-        reaction_filters=reaction_filters,
+        reactions=reaction_filters,
     )
 
     return env
