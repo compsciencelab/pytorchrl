@@ -90,7 +90,7 @@ class GenChemEnv(gym.Env):
             score = self.scoring_function(decorated_smile)
 
             # Apply reaction filters
-            self.apply_reaction_filters(decorated_smile, score)
+            # self.apply_reaction_filters(decorated_smile, score)
 
             # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
