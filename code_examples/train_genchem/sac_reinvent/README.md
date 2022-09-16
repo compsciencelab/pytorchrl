@@ -1,8 +1,14 @@
 # Generative chemistry in PyTorchRL
 
-This is based in this notebook https://github.com/MolecularAI/ReinventCommunity/blob/master/notebooks/Reinforcement_Learning_Demo.ipynb
+This code example uses the same approach as REINVENT (Blaschke et al., 2020) to guide a RL Proximal Policy Optimization (PPO) agent in the process of drug discovery.
 
-# Installation
+## 1. Requirements
 
-Follow the installation instructions for REINVENT. We use their scoring function and their langage model.
-https://github.com/MolecularAI/Reinvent
+To be able to use the same scoring functions as REINVENT, install the conda environment. To use a customized scoring function that is not necessary.
+
+    conda env create -f environment.yml
+    conda activate reinvent.v3.2
+
+pytorchrl also has to be pip installed
+
+    pip install pytorchrl

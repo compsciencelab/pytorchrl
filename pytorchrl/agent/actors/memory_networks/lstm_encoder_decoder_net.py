@@ -29,7 +29,6 @@ class Encoder(tnn.Module):
                              batch_first=True, dropout=self.dropout, bidirectional=True)
 
     def forward(self, padded_seqs, seq_lengths):  # pylint: disable=arguments-differ
-        # FIXME: This fails with a batch of 1 because squeezing looses a dimension with size 1
         """
         Performs the forward pass.
         :param padded_seqs: A tensor with the sequences (batch, seq).
@@ -44,35 +43,19 @@ class Encoder(tnn.Module):
         padded_seqs = self._embedding(padded_seqs.long())
         hs_h, hs_c = (hidden_state, hidden_state.clone().detach())
 
-        # Is this faster?
         packed_seqs = tnnur.pack_padded_sequence(padded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
         packed_seqs, (hs_h, hs_c) = self._rnn(packed_seqs, (hs_h, hs_c))
         padded_seqs, _ = tnnur.pad_packed_sequence(packed_seqs, batch_first=True)
 
-        # padded_seqs, (hs_h, hs_c) = self._rnn(padded_seqs, (hs_h, hs_c))
-
         # sum up bidirectional layers and collapse
-        hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)  # .squeeze()  # (layers, batch, dim)
-        hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)  #.squeeze()  # (layers, batch, dim)
+        hs_h = hs_h.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)
+        hs_c = hs_c.view(self.num_layers, 2, batch_size, self.num_dimensions).sum(dim=1)
         padded_seqs = padded_seqs.view(batch_size, max_seq_size, 2, self.num_dimensions).sum(dim=2).squeeze(2)  # (batch, seq, dim)
 
         return padded_seqs, (hs_h, hs_c)
 
     def _initialize_hidden_state(self, batch_size):
         return torch.zeros(self.num_layers*2, batch_size, self.num_dimensions).cuda()
-
-    def get_params(self):
-        parameter_enums = GenerativeModelParametersEnum
-        """
-        Obtains the params for the network.
-        :return : A dict with the params.
-        """
-        return {
-            parameter_enums.NUMBER_OF_LAYERS: self.num_layers,
-            parameter_enums.NUMBER_OF_DIMENSIONS: self.num_dimensions,
-            parameter_enums.VOCABULARY_SIZE: self.vocabulary_size,
-            parameter_enums.DROPOUT: self.dropout
-        }
 
 
 class AttentionLayer(tnn.Module):
@@ -140,35 +123,19 @@ class Decoder(tnn.Module):
 
         padded_encoded_seqs = self._embedding(padded_seqs.long())
 
-        # Is it faster ?
         packed_encoded_seqs = tnnur.pack_padded_sequence(padded_encoded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
         packed_encoded_seqs, hidden_states = self._rnn(packed_encoded_seqs, hidden_states)
         padded_encoded_seqs, _ = tnnur.pad_packed_sequence(packed_encoded_seqs, batch_first=True)  # (batch, seq, dim)
 
-        # padded_encoded_seqs, hidden_states = self._rnn(padded_encoded_seqs, hidden_states)
-
         # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
-        logits = attn_padded_encoded_seqs * mask
+        logits = attn_padded_encoded_seqs
 
         return logits, hidden_states, attention_weights
 
-    def get_params(self):
-        parameter_enum = GenerativeModelParametersEnum
-        """
-        Obtains the params for the network.
-        :return : A dict with the params.
-        """
-        return {
-            parameter_enum.NUMBER_OF_LAYERS: self.num_layers,
-            parameter_enum.NUMBER_OF_DIMENSIONS: self.num_dimensions,
-            parameter_enum.VOCABULARY_SIZE: self.vocabulary_size,
-            parameter_enum.DROPOUT: self.dropout
-        }
 
-
-class Decorator(tnn.Module):
+class LSTMEncoderDecoder(tnn.Module):
     """
     An encoder-decoder that decorates scaffolds.
     """
@@ -225,18 +192,22 @@ class Decorator(tnn.Module):
             N = hxs.size(0)
             T = int(decoder_seqs.size(0) / N)
 
+            # TODO: check encoder shape and make sure it is (N, T, -1) ???
+
             # Set encoder outputs to None
             self.encoder_rhs = None
             self.encoder_padded_seqs = None
 
             # unflatten
-            decoder_seqs = decoder_seqs.view(N, T, -1)
+            # decoder_seqs = decoder_seqs.view(N, T, -1)
+            decoder_seqs = torch.transpose(decoder_seqs.view(T, N, -1), 0, 1)
             encoder_seqs = encoder_seqs.view(T, N, -1)[0]
             encoder_seq_lengths[encoder_seq_lengths == 0] = encoder_seqs.size(1)
             encoder_seq_lengths = encoder_seq_lengths.view(T, N)[0]
 
             # Same deal with masks
-            masks = masks.view(N, T)
+            # masks = masks.view(N, T)
+            masks = torch.transpose(masks.view(T, N), 0, 1)
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
@@ -286,7 +257,7 @@ class Decorator(tnn.Module):
             logits = torch.cat(outputs, dim=1)
 
             # flatten
-            logits = logits.view(T * N, -1)
+            logits = torch.transpose(logits, 0, 1).reshape(T * N, -1)
 
             # Set encoder outputs to None
             self.encoder_rhs = None

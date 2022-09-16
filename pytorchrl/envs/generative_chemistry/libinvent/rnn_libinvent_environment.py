@@ -19,7 +19,7 @@ reaction_filter_conf = {
     ]
 }
 reaction_filter_conf = ReactionFilterConfiguration(type=reaction_filter_conf["type"], reactions=reaction_filter_conf["reactions"], reaction_definition_file=None)
-reaction_filter = ReactionFilter(strategy_configuration.reaction_filter)
+reaction_filter = ReactionFilter(reaction_filter_conf)
 
 
 
