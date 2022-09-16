@@ -17,10 +17,10 @@ from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
-from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
+from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-# from pytorchrl.envs.generative_chemistry.reinvent_default_scoring_function import scoring_function
+# from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function import scoring_function
 
 # Test dummy custom score function
 from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
@@ -71,7 +71,7 @@ def main():
         )
 
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-            env_fn=generative_chemistry_train_env_factory,
+            env_fn=reinvent_train_env_factory,
             env_kwargs={
                 "scoring_function": scoring_function,
                 "vocabulary": vocabulary, "smiles_max_length": max_sequence_length or 200,

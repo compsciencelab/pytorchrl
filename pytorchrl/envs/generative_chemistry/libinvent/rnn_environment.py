@@ -5,22 +5,19 @@ from gym import spaces
 from collections import defaultdict, deque
 from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
-
+from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter,\
+    ReactionFilterConfiguration
 
 # TODO: add randomize_scaffolds
 # TODO: add RF's
-from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter, ReactionFilterConfiguration
 
-reaction_filter_conf = {
-    "type": "selective",
-    "reactions": [
-        ["[#6;!$(C(C=*)(C=*));!$([#6]~[O,N,S]);$([#6]~[#6]):1][C:2](=[O:3])[N;D2;$(N(C=[O,S]));!$(N~[O,P,S,N]):4][#6;!$(C=*);!$([#6](~[O,N,S])N);$([#6]~[#6]):5]>>[#6:1][C:2](=[O:3])[*].[*][N:4][#6:5]"],
-        ["[c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1]-!@[N;$(NC)&!$(N=*)&!$([N-])&!$(N#*)&!$([ND1])&!$(N[O])&!$(N[C,S]=[S,O,N]),H2&$(Nc1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):2]>>[*][c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1].[*][N:2]"],
-    ]
-}
-reaction_filter_conf = ReactionFilterConfiguration(type=reaction_filter_conf["type"], reactions=reaction_filter_conf["reactions"], reaction_definition_file=None)
-reaction_filter = ReactionFilter(reaction_filter_conf)
-
+# reaction_filter_conf = {
+#     "type": "selective",
+#     "reactions": [
+#         ["[#6;!$(C(C=*)(C=*));!$([#6]~[O,N,S]);$([#6]~[#6]):1][C:2](=[O:3])[N;D2;$(N(C=[O,S]));!$(N~[O,P,S,N]):4][#6;!$(C=*);!$([#6](~[O,N,S])N);$([#6]~[#6]):5]>>[#6:1][C:2](=[O:3])[*].[*][N:4][#6:5]"],
+#         ["[c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1]-!@[N;$(NC)&!$(N=*)&!$([N-])&!$(N#*)&!$([ND1])&!$(N[O])&!$(N[C,S]=[S,O,N]),H2&$(Nc1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):2]>>[*][c;$(c1:[c,n]:[c,n]:[c,n]:[c,n]:[c,n]:1):1].[*][N:2]"],
+#     ]
+# }
 
 
 class GenChemEnv(gym.Env):
@@ -28,7 +25,7 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, scaffolds, max_length=200):
+    def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=True, max_length=200, reactions=[]):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
@@ -42,6 +39,10 @@ class GenChemEnv(gym.Env):
         self._bond_maker = BondMaker()
         self._conversion = Conversions()
         self._attachment_points = AttachmentPoints()
+
+        # randomize_scaffolds are incompatible with reactions
+        if randomize_scaffolds and len(reactions) == 0:
+            self.scaffolds = self._randomize_scaffolds(scaffolds)
 
         # Break down scaffolds into tokens
         self.clean_scaffolds = [self._attachment_points.remove_attachment_point_numbers(scaffold) for scaffold in self.scaffolds]
@@ -65,6 +66,14 @@ class GenChemEnv(gym.Env):
             "decoration": decoration_space,
             "decoration_length": decoration_length,
         })
+
+        # Reaction Filters
+        reaction_filter_conf = {"type": "selective",  "reactions": reactions}
+        reaction_filter_conf = ReactionFilterConfiguration(
+            type=reaction_filter_conf["type"],
+            reactions=reaction_filter_conf["reactions"],
+            reaction_definition_file=None)
+        self.reaction_filter = ReactionFilter(reaction_filter_conf)
 
     def step(self, action):
         """Execute one time step within the environment"""
@@ -90,7 +99,7 @@ class GenChemEnv(gym.Env):
             score = self.scoring_function(decorated_smile)
 
             # Apply reaction filters
-            # self.apply_reaction_filters(decorated_smile, score)
+            self.apply_reaction_filters(decorated_smile, score)
 
             # Sanity check
             assert isinstance(score, dict), "scoring_function has to return a dict"
@@ -167,6 +176,12 @@ class GenChemEnv(gym.Env):
 
         print(f'Current Molecule: {self.current_molecule}')
         print(f'Vocabulary: {self.vocabulary._tokens}')
+
+    def randomize_scaffolds(self, scaffolds):
+        import ipdb; ipdb.set_trace()
+        scaffold_mols = [self._conversions.smile_to_mol(scaffold) for scaffold in scaffolds]
+        randomized = [self._bond_maker.randomize_scaffold(mol) for mol in scaffold_mols]
+        return randomized
 
     def join_scaffold_and_decorations(self, scaffold, decorations):
         scaffold = self._attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)

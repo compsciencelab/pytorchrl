@@ -1,15 +1,12 @@
 import os
-from pytorchrl.envs.generative_chemistry.rnn_reinvent_environment import GenChemEnv as RnnReinvent
-from pytorchrl.envs.generative_chemistry.transformer_reinvent_environment import GenChemEnv as TrReinvent
-from pytorchrl.envs.generative_chemistry.rnn_libinvent_environment import GenChemEnv as RnnLibInvent
-from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary,\
-    ReinventVocabulary, LibinventVocabulary
+from pytorchrl.envs.generative_chemistry.reinvent.rnn_environment import GenChemEnv as RnnReinvent
+from pytorchrl.envs.generative_chemistry.reinvent.transformer_environment import GenChemEnv as TrReinvent
+from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, create_vocabulary
 
 
-def generative_chemistry_train_env_factory(
-        scoring_function, vocabulary, smiles_max_length=200,  scaffolds=[], accumulate_obs=False):
+def reinvent_train_env_factory(scoring_function, vocabulary, smiles_max_length=200, accumulate_obs=False):
     """
-    Create train GenChem environment.
+    Create train REINVENT environment.
 
     Parameters
     ----------
@@ -19,8 +16,6 @@ def generative_chemistry_train_env_factory(
         Class that stores the tokens and allows their conversion to vocabulary indexes.
     smiles_max_length : int
         Maximum length allowed for the generated SMILES. Equivalent to max episode length.
-    scaffolds : list
-        List of LibInvent scaffolds to be decorated.
     accumulate_obs : bool
         If True, obs are accumulated at every time step (e.g. C, CC, CCC, ...)
 
@@ -30,25 +25,15 @@ def generative_chemistry_train_env_factory(
         Train environment.
     """
 
-    if isinstance(vocabulary, ReinventVocabulary):
-        if accumulate_obs:
-            env = TrReinvent(
-                scoring_function=scoring_function,
-                vocabulary=vocabulary,
-                max_length=smiles_max_length)
-        else:
-            env = RnnReinvent(
-                scoring_function=scoring_function,
-                vocabulary=vocabulary,
-                max_length=smiles_max_length)
-    elif isinstance(vocabulary, LibinventVocabulary):
-        assert len(scaffolds) > 0, "LibInvent environment requires at least 1 scaffold!"
-        env = RnnLibInvent(
+    if accumulate_obs:
+        env = TrReinvent(
             scoring_function=scoring_function,
             vocabulary=vocabulary,
-            max_length=smiles_max_length,
-            scaffolds=scaffolds)
+            max_length=smiles_max_length)
     else:
-        raise ValueError("Vocabulary class not recognised!")
+        env = RnnReinvent(
+            scoring_function=scoring_function,
+            vocabulary=vocabulary,
+            max_length=smiles_max_length)
 
     return env

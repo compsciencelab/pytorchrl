@@ -27,7 +27,7 @@ from pytorchrl.envs.generative_chemistry.libinvent_default_scoring_function impo
 # from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
-from pytorchrl.agent.actors.memory_networks.libinvent_net import Decorator
+from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
 
 
 def main():
@@ -77,7 +77,9 @@ def main():
                 "scoring_function": scoring_function,
                 "vocabulary": vocabulary,
                 "smiles_max_length": max_sequence_length or 200,
-                "scaffolds": args.scaffold,
+                "scaffolds": args.scaffolds,
+                "reaction_filters": args.reaction_filters,
+                "randomize-scaffolds": args.randomize-scaffolds,
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=info_keywords)
@@ -164,7 +166,12 @@ def get_args():
 
     # Environment specs
     parser.add_argument(
-        "--scaffold", default=None, help="Scaffold to use for PPO REINVENT training.")
+        "--scaffolds", default=None, help="Scaffolds to use for PPO REINVENT training.")
+    parser.add_argument(
+        "--reaction-filters", default=None, help="Favour selected reactions in the reward.")
+    parser.add_argument(
+        "--randomize-scaffolds", action="store_true", default=False,
+        help="Whether or not a random SMILES representation of the scaffolds should be used at each episode.")
 
     # PPO specs
     parser.add_argument(

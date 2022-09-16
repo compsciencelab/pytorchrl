@@ -12,7 +12,7 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary
-from pytorchrl.envs.generative_chemistry.generative_chemistry_env_factory import generative_chemistry_train_env_factory
+from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
 from code_examples.train_genchem.ppo_reinvent.train_transformer_model import get_args
 from code_examples.train_genchem.ppo_reinvent.pretrain_rnn_model import \
     is_valid_smile, filter_mol, read_and_filter_data, write_smiles_to_file, MolData, decrease_learning_rate
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
         # Define env
         test_env, action_space, obs_space = VecEnv.create_factory(
-            env_fn=generative_chemistry_train_env_factory,
+            env_fn=reinvent_train_env_factory,
             env_kwargs={
                 "scoring_function": lambda a: {"reward": 1.0},
                 "vocabulary": vocabulary, "smiles_max_length": args.pretrain_max_smile_length},
