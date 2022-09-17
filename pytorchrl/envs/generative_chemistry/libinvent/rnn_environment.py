@@ -15,7 +15,7 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=True, max_length=200, reactions=[]):
+    def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200, reactions=[]):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0

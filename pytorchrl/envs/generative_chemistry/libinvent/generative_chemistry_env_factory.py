@@ -5,7 +5,7 @@ from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, crea
 
 def libinvent_train_env_factory(
         scoring_function, vocabulary, smiles_max_length=200,  scaffolds=[],
-        randomize_scaffolds=True, reaction_filters=[], accumulate_obs=False):
+        randomize_scaffolds=False, reaction_filters=[], accumulate_obs=False):
     """
     Create train GenChem environment.
 
