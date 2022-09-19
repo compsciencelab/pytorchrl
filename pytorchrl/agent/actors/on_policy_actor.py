@@ -404,7 +404,17 @@ class OnPolicyActor(Actor):
 
             # ---- 2. Define memory network  ----------------------------------
 
-            feature_size = value_feature_extractor(torch.zeros(1, *self.input_space.shape)).shape[-1]
+            if isinstance(self.input_space, gym.spaces.Dict):
+                dummy_obs = {k: torch.zeros(1, *self.input_space[k].shape) for k in self.input_space}
+                features = value_feature_extractor(dummy_obs)
+            else:
+                dummy_obs = torch.zeros(1, *self.input_space.shape)
+                features = value_feature_extractor(dummy_obs)
+
+            if isinstance(value_feature_extractor, nn.Identity):
+                feature_size = dummy_obs
+            else:
+                feature_size = features.shape[-1]
 
             if isinstance(self.action_space, gym.spaces.MultiDiscrete):
                 feature_size = self.recurrent_hidden_state_size
@@ -452,8 +462,17 @@ class OnPolicyActor(Actor):
 
         # ---- 2. Define memory network  --------------------------------------
 
-        features = policy_feature_extractor(torch.zeros(1, *self.input_space.shape))
-        feature_size = features.shape[-1]
+        if isinstance(self.input_space, gym.spaces.Dict):
+            dummy_obs = {k: torch.zeros(1, *self.input_space[k].shape) for k in self.input_space}
+            features = policy_feature_extractor(dummy_obs)
+        else:
+            dummy_obs = torch.zeros(1, *self.input_space.shape)
+            features = policy_feature_extractor(dummy_obs)
+
+        if isinstance(policy_feature_extractor, nn.Identity):
+            feature_size = dummy_obs
+        else:
+            feature_size = features.shape[-1]
 
         if self.recurrent_net:
             policy_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)

@@ -1,0 +1,34 @@
+experiment_name: GenChem
+agent_name: SAC
+pretrain_lr: 0.001
+pretrain_epochs: 10
+pretrain_lr_decrease_value: 0.03
+pretrain_lr_decrease_period: 500
+pretrain_batch_size: 128
+pretrain_max_smile_length: 100
+pretrain_element_list: [6, 7, 8, 9, 16, 17, 35]
+pretrainingset_path: ../../../code_examples/train_genchem/ppo/prior_trainingset
+pretrain_max_heavy_atoms: 50
+pretrain_min_heavy_atoms: 10
+num_env_steps : 100_000_000
+log_dir: /tmp/genchem_sac_reinvent
+gamma: 0.99
+polyak: 0.995
+save_interval: 50_000
+max_time: 86400
+num_env_processes: 1
+mini_batch_size: 64
+update_every: 1
+num_updates: 1
+start_steps: 20_000
+buffer_size: 300_000
+target_update_interval: 8_000
+lr: 0.0001
+kl_coef: 0.5
+feature_extractor_net: Embedding
+recurrent_net: LSTM
+num_grad_workers: 1
+num_col_workers: 1
+com_grad_workers: synchronous
+com_col_workers: synchronous
+wandb_key: null

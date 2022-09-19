@@ -6,13 +6,27 @@ import torch.nn.functional as nnf
 
 
 class LstmNet(nn.Module):
-    """
-    Implements a N layer GRU(M) cell including an embedding layer
-    and an output linear layer back to the size of the vocabulary
-    """
+    """Implements a LSTM model."""
 
     def __init__(self, input_size, layer_size=512, num_layers=3, dropout=0., layer_normalization=False):
-        """Implements a N layer LSTM cell."""
+        """
+        Initializes a N layer LSTM cell.
+
+        Parameters
+        ----------
+        input_size : int
+            Input feature map size.
+        output_size : int
+            Recurrent hidden state and output size.
+        dropout : float
+            If non-zero, introduces a Dropout layer on the outputs of each GRU layer except the last layer.
+        num_layers : int
+            Number of recurrent layers.
+        activation : func
+            Non-linear activation function.
+        layer_normalization : bool
+            If True, adds a layer normalization module at the end of the model.
+        """
         super(LstmNet, self).__init__()
         self._input_size = input_size
         self._layer_size = layer_size
@@ -45,6 +59,7 @@ class LstmNet(nn.Module):
             Current recurrent hidden state.
         done : torch.tensor
             Current done tensor, indicating if episode has finished.
+
         Returns
         -------
         x : torch.tensor
@@ -52,7 +67,6 @@ class LstmNet(nn.Module):
         hxs : torch.tensor
             Updated recurrent hidden state.
         """
-
         masks = 1 - done
         if x.size(0) == hxs.size(0):
             self._rnn.flatten_parameters()
@@ -74,7 +88,7 @@ class LstmNet(nn.Module):
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:
@@ -108,19 +122,34 @@ class LstmNet(nn.Module):
 
         return x, hxs
 
-    def forward(self, input_vector, hidden_state=None, done=False):
+    def forward(self, inputs, rhs=None, done=False):
         """
-        Performs a forward pass on the model. Note: you pass the **whole** sequence.
-        :param input_vector: Input tensor (batch_size, seq_size).
-        :param hidden_state: Hidden state tensor.
+        Forward pass Neural Network
+
+        Parameters
+        ----------
+        inputs : torch.tensor
+            A tensor containing episode observations.
+        rhs : torch.tensor
+            A tensor representing the recurrent hidden states.
+        done : torch.tensor
+            A tensor indicating where episodes end.
+
+        Returns
+        -------
+        x : torch.tensor
+            Output feature map.
+        rhs : torch.tensor
+            Updated recurrent hidden state.
         """
-        input_vector = input_vector.view(input_vector.size(0), -1)
-        output_vector, hidden_state_out = self._forward_lstm(input_vector, hidden_state, done)
+        x = inputs.view(inputs.size(0), -1)
+        x, rhs = self._forward_lstm(x, rhs, done)
 
         if self._layer_normalization:
-            output_vector = nnf.layer_norm(output_vector, output_vector.size()[1:])
+            x = nnf.layer_norm(x, x.size()[1:])
 
-        return output_vector, hidden_state_out
+        return x, rhs
 
     def get_initial_recurrent_state(self, num_proc):
+        """Returns a tensor of zeros with the expected shape of the model's rhs."""
         return torch.zeros(num_proc, self._num_layers * 2, self._layer_size)

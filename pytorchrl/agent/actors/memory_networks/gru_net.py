@@ -3,23 +3,27 @@ import torch.nn as nn
 
 
 class GruNet(nn.Module):
-    """
-    Base Neural Network class.
+    """Implements a GRU model"""
+    def __init__(self, input_size, output_size=256, num_layers=1, activation=nn.ReLU, dropout=0.0):
+        """
+        Initializes a GRU model.
 
-    Parameters
-    ----------
-    input_size : int
-        Input feature map size.
-    output_size : int
-        Recurrent hidden state and output size.
-    activation : func
-        Non-linear activation function.
-    """
-    def __init__(self, input_size, output_size=256, activation=nn.ReLU):
-
+        Parameters
+        ----------
+        input_size : int
+            Input feature map size.
+        output_size : int
+            Recurrent hidden state and output size.
+        dropout : float
+            If non-zero, introduces a Dropout layer on the outputs of each GRU layer except the last layer.
+        num_layers : int
+            Number of recurrent layers.
+        activation : func
+            Non-linear activation function.
+        """
         super(GruNet, self).__init__()
 
-        self._rnn = nn.GRU(input_size, output_size)
+        self._rnn = nn.GRU(input_size=input_size, num_layers=num_layers, hidden_size=output_size, dropout=dropout)
         self._num_outputs = output_size
         self.activation = activation()
 
@@ -78,7 +82,7 @@ class GruNet(nn.Module):
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros = ((masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu())
+            has_zeros = torch.nonzero(((masks[1:] == 0.0).any(dim=-1)), as_tuple=False).squeeze().cpu()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:
@@ -119,10 +123,12 @@ class GruNet(nn.Module):
 
         Parameters
         ----------
-        inputs : tuple
-            tuple with 3 positions. First, the obs, a tensor or a dict. Second,
-            a tensor representing the recurrent hidden state. Finally, the
-            current done tensor, indicating if episode has finished.
+        inputs : torch.tensor
+            A tensor containing episode observations.
+        rhs : torch.tensor
+            A tensor representing the recurrent hidden states.
+        done : torch.tensor
+            A tensor indicating where episodes end.
 
         Returns
         -------
@@ -139,5 +145,6 @@ class GruNet(nn.Module):
         return x, rhs
 
     def get_initial_recurrent_state(self, num_proc):
+        """Returns a tensor of zeros with the expected shape of the model's rhs."""
         return torch.zeros(num_proc, self._layer_size)
 

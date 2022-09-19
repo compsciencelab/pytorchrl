@@ -42,11 +42,12 @@ class GPT(nn.Module):
 
         batch_size = inputs.size(0)
         inputs1 = inputs.view(batch_size, -1)
+        inputs = inputs1 if len(inputs.shape) == 1 else inputs
 
         # Masks
         mask_attn = (inputs < 0.0)
         has_masked_tokens = (mask_attn == True).any()
-        has_masked_tokens_in_all_sequences = mask_attn.any(dim=1).all()
+        has_masked_tokens_in_all_sequences = mask_attn.any(dim=1).all() if batch_size > 1 else mask_attn.any()
 
         # Identify unnecessary padding
         if has_masked_tokens_in_all_sequences:
@@ -69,7 +70,7 @@ class GPT(nn.Module):
             idxs = (mask_attn.size(1) - mask_attn.sum(1)) - 1
             out2 = out1[torch.arange(len(out1)), idxs.view(-1)]
         else:  # Gradient computation
-            out2 = out1
+            out2 = out1[:, -1]
 
         # Place again padding tokens
         inputs[mask_attn] = - 1.0
