@@ -1,7 +1,7 @@
 experiment_name: GenChem
 agent_name: PPO_Libinvent
 num_env_steps : 1000_000_000
-log_dir: /tmp/genchem_ppo
+log_dir: /tmp/genchem_ppo_libinvent
 gamma: 0.99
 kl_coef: 0.5
 save_interval: 10000

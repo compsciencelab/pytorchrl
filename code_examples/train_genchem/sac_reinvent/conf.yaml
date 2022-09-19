@@ -11,7 +11,7 @@ pretrainingset_path: ../../../code_examples/train_genchem/ppo/prior_trainingset
 pretrain_max_heavy_atoms: 50
 pretrain_min_heavy_atoms: 10
 num_env_steps : 100_000_000
-log_dir: /tmp/genchem_sac
+log_dir: /tmp/genchem_sac_reinvent
 gamma: 0.99
 polyak: 0.995
 save_interval: 50_000
@@ -24,6 +24,7 @@ start_steps: 20_000
 buffer_size: 300_000
 target_update_interval: 8_000
 lr: 0.0001
+kl_coef: 0.5
 feature_extractor_net: Embedding
 recurrent_net: LSTM
 num_grad_workers: 1

@@ -31,7 +31,7 @@ from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function impor
 def main():
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
+    os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init
@@ -56,12 +56,8 @@ def main():
             torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
             network_weights = "/tmp/network_params.tmp"
         else:
-            (vocabulary, max_sequence_length, recurrent_net_kwargs,
-             network_weights) = adapt_reinvent_checkpoint(os.path.join(os.path.dirname(
-                __file__), "../../../pytorchrl/envs/generative_chemistry/reinvent/models/random.prior.new"))
-            feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
-        restart_model = {"policy_net": network_weights}
-        restart_model = None
+            raise ValueError(f"Missing pretrained_ckpt.prior! in {args.log_dir}")
+        restart_model = network_weights
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )

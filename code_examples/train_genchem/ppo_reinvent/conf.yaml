@@ -11,7 +11,7 @@ pretrainingset_path: ../../../code_examples/train_genchem/ppo/prior_trainingset
 pretrain_max_heavy_atoms: 50
 pretrain_min_heavy_atoms: 10
 num_env_steps : 1000_000_000
-log_dir: /tmp/genchem_ppo
+log_dir: /tmp/genchem_ppo_reinvent
 gamma: 0.99
 kl_coef: 0.5
 save_interval: 10000
