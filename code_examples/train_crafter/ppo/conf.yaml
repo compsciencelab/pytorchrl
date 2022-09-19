@@ -1,0 +1,24 @@
+env_id: CrafterReward-v1
+experiment_name: PPO-CrafterReward-v1
+agent_name: PPO
+wandb_key: null
+num_env_steps : 10000000
+log_dir: /tmp/crafter-ppo
+gamma: 0.99
+save_interval: 10000
+max_time: 86400
+num_env_processes: 8
+num_steps: 128
+num_mini_batch: 4
+clip_param: 0.1
+ppo_epoch: 3
+gae_lambda: 0.95
+value_loss_coef: 1.0
+entropy_coef: 0.01
+max_grad_norm: 0.5
+lr: 0.00025
+feature_extractor_net: CNN
+num_grad_workers: 1
+num_col_workers: 1 
+com_grad_workers: synchronous
+com_col_workers: synchronous

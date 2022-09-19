@@ -1,0 +1,12 @@
+# default on-policy architecture config:
+recurrent_net: null
+recurrent_net_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+feature_extractor_kwargs: {}
+  # empty kwargs
+  # if add like
+  # - parameter_name: parameter_value
+feature_extractor_network: null
+shared_policy_value_network: True
