@@ -42,16 +42,21 @@ class GenChemEnv(gym.Env):
         scaffold_length = gym.spaces.Discrete(self.max_scaffold_length)
         decoration_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
         decoration_length = gym.spaces.Discrete(self.max_length)
+        full_decoration_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
+        full_decoration_length = gym.spaces.Discrete(self.max_length)
 
         # Ugly hack
-        scaffold_space._shape = (self.max_scaffold_length,)
+        scaffold_space._shape = (self.max_lengthmax_length,)
+        # full_decoration_space._shape = (self.max_length,)
         decoration_space._shape = (1,)
 
         self.observation_space = gym.spaces.Dict({
-            "scaffold": scaffold_space,
-            "scaffold_length": scaffold_length,
-            "decoration": decoration_space,
-            "decoration_length": decoration_length,
+            "context": scaffold_space,
+            "context_length": scaffold_length,
+            "obs": decoration_space,
+            "obs_length": decoration_length,
+            # "full_obs": full_decoration_space,
+            # "full_obs_length": full_decoration_length,
         })
 
         # Reaction Filters
@@ -123,8 +128,8 @@ class GenChemEnv(gym.Env):
             "context_length": np.array(self.scaffold_length),
             "obs": np.array(self.vocabulary.encode_decoration_token(action)).reshape(1),
             "obs_length": np.array(1),
-            "full_obs":  self.padded_current_decoration,
-            "full_obs_length": np.array(self.current_decoration_length),
+            # "full_obs":  self.padded_current_decoration,
+            # "full_obs_length": np.array(self.current_decoration_length),
         }
 
         return next_obs, reward, done, info
@@ -157,8 +162,8 @@ class GenChemEnv(gym.Env):
             "context_length": np.array(self.scaffold_length),
             "obs": np.array(self.vocabulary.encode_decoration_token(self.current_decoration)).reshape(1),
             "obs_length": np.array(1),
-            "full_obs":  self.padded_current_decoration,
-            "full_obs_length": np.array(self.current_decoration_length),
+            # "full_obs":  self.padded_current_decoration,
+            # "full_obs_length": np.array(self.current_decoration_length),
         }
 
         return obs

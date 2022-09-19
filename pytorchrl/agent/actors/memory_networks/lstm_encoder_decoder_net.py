@@ -277,7 +277,6 @@ class LSTMEncoderDecoder(nn.Module):
         decoder_seqs = x["obs"]
         encoder_seq_lengths = x["context_length"].cpu().long()
         decoder_seq_lengths = x["obs_length"].cpu().long()
-
         masks = 1 - done
 
         if decoder_seqs.size(0) == hxs.size(0):
@@ -293,8 +292,8 @@ class LSTMEncoderDecoder(nn.Module):
             hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
 
             logits, hxs, _ = self._forward_decoder(decoder_seqs, decoder_seq_lengths, self.encoder_padded_seqs, hxs)
-
             logits = logits.squeeze(1)
+
             hxs = torch.transpose(torch.cat(hxs), 0, 1)
 
         else:
