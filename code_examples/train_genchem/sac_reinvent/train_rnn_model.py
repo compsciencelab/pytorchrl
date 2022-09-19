@@ -21,6 +21,12 @@ from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, crea
 from pytorchrl.envs.generative_chemistry.utils import adapt_reinvent_checkpoint
 from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
 
+# Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
+from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function import scoring_function
+
+# Test dummy custom score function
+# from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+
 
 def main():
 
@@ -55,6 +61,7 @@ def main():
                 __file__), "../../../pytorchrl/envs/generative_chemistry/reinvent/models/random.prior.new"))
             feature_extractor_kwargs = {"vocabulary_size": len(vocabulary)}
         restart_model = {"policy_net": network_weights}
+        restart_model = None
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )

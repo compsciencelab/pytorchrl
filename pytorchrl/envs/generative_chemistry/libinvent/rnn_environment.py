@@ -190,7 +190,7 @@ class GenChemEnv(gym.Env):
         return smile, molecule
 
     def apply_reaction_filters(self, mol, final_score):
-        reaction_scores = [self.reaction_filter.evaluate(mol)]
+        reaction_scores = [self.reaction_filter.evaluate(mol) if mol else 0.0]
         reward = final_score["reward"] if "reward" in final_score.keys() else final_score["score"]
         final_score["reward"] = float(reward * np.array(reaction_scores))
         final_score["reaction_scores"] = float(np.array(reaction_scores))
