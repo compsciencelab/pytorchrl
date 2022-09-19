@@ -170,7 +170,7 @@ class ReinventVocabulary:
 
     def __len__(self):
         """Returns the length of the vocabulary."""
-        return self.vocabulary.vocab_size
+        return len(self.vocabulary)
 
     @classmethod
     def from_list(cls, smiles_list):
