@@ -46,7 +46,7 @@ class GenChemEnv(gym.Env):
         full_decoration_length = gym.spaces.Discrete(self.max_length)
 
         # Ugly hack
-        scaffold_space._shape = (self.max_length,)
+        scaffold_space._shape = (self.max_scaffold_length,)
         # full_decoration_space._shape = (self.max_length,)
         decoration_space._shape = (1,)
 
