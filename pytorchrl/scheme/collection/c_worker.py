@@ -228,6 +228,7 @@ class CWorker(W):
         # Define number of collections steps to perform
         num_steps = int(num_steps) if num_steps is not None else int(self.update_every)
         min_steps = int(num_steps * self.fraction_samples)
+        self.actor.eval()
 
         for step in range(num_steps):
 
@@ -275,6 +276,7 @@ class CWorker(W):
         # Average episodes infos
         info = {} if len(info) == 0 else {k: np.mean(v) for k, v in info.items()}
 
+        self.actor.train()
         return info
 
     def evaluate(self):
