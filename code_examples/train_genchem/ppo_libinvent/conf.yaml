@@ -18,7 +18,7 @@ max_grad_norm: 0.5
 lr: 0.0001
 recurrent_net: EncoderDecoder
 scaffolds: ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
-randomize_scaffolds: True
+randomize_scaffolds: False
 reaction_filters: []
 num_grad_workers: 1
 num_col_workers: 1 

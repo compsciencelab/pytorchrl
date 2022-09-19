@@ -1,19 +1,33 @@
 """
 Implementation of the decorator using a Encoder-Decoder architecture.
+Adapted from https://github.com/MolecularAI/reinvent-models.
 """
 import math
 import torch
-import torch.nn as tnn
+import torch.nn as nn
 import torch.nn.utils.rnn as tnnur
 from pytorchrl.agent.actors.feature_extractors import Embedding
 
 
-class Encoder(tnn.Module):
-    """
-    Simple bidirectional RNN encoder implementation.
-    """
+class Encoder(nn.Module):
+    """LSTM Bidirectional RNN encoder model."""
 
-    def __init__(self, num_layers, num_dimensions, vocabulary_size, dropout):
+    def __init__(self, vocabulary_size, num_layers=3, num_dimensions=512, dropout=0.0):
+        """
+        Initializes the LSTM Bidirectional RNN encoder model.
+
+        Parameters
+        ----------
+        vocabulary_size : int
+            Number of possible tokens in the input space.
+        num_dimensions : int
+            Recurrent hidden state and output size.
+        dropout : float
+            If non-zero, introduces a Dropout layer on the outputs of each GRU layer except the last layer.
+        num_layers : int
+            Number of recurrent layers.
+        """
+
         super(Encoder, self).__init__()
 
         self.dropout = dropout
@@ -21,19 +35,31 @@ class Encoder(tnn.Module):
         self.num_dimensions = num_dimensions
         self.vocabulary_size = vocabulary_size
 
-        self._embedding = tnn.Sequential(
-            tnn.Embedding(self.vocabulary_size, self.num_dimensions),
-            tnn.Dropout(dropout)
-        )
-        self._rnn = tnn.LSTM(self.num_dimensions, self.num_dimensions, self.num_layers,
-                             batch_first=True, dropout=self.dropout, bidirectional=True)
+        self._embedding = nn.Sequential(
+            nn.Embedding(self.vocabulary_size, self.num_dimensions),
+            nn.Dropout(dropout))
 
-    def forward(self, padded_seqs, seq_lengths):  # pylint: disable=arguments-differ
+        self._rnn = nn.LSTM(
+            self.num_dimensions, self.num_dimensions, self.num_layers,
+            batch_first=True, dropout=self.dropout, bidirectional=True)
+
+    def forward(self, padded_seqs, seq_lengths):
         """
-        Performs the forward pass.
-        :param padded_seqs: A tensor with the sequences (batch, seq).
-        :param seq_lengths: The lengths of the sequences (for packed sequences).
-        :return : A tensor with all the output values for each step and the two hidden states.
+        Performs encoder forward pass.
+
+        Parameters
+        ----------
+        padded_seqs : torch.tensor
+            A tensor with the sequences (batch, seq).
+        seq_lengths : torch.tensor
+            1D tensor with the lengths of the sequences (for packed sequences).
+
+        Returns
+        -------
+        padded_seqs : torch.tensor
+            LSTM outputs values.
+        (hs_h, hs_c) : tuple
+            LSTM last recurrent hidden state.
         """
 
         batch_size = padded_seqs.size(0)
@@ -54,45 +80,69 @@ class Encoder(tnn.Module):
         return padded_seqs, (hs_h, hs_c)
 
     def _initialize_hidden_state(self, batch_size):
+        """Returns a tensor of zeros with the expected shape of the model's rhs."""
         return torch.zeros(self.num_layers*2, batch_size, self.num_dimensions).cuda()
 
 
-class AttentionLayer(tnn.Module):
+class AttentionLayer(nn.Module):
 
     def __init__(self, num_dimensions):
         super(AttentionLayer, self).__init__()
 
         self.num_dimensions = num_dimensions
 
-        self._attention_linear = tnn.Sequential(
-            tnn.Linear(self.num_dimensions*2, self.num_dimensions),
-            tnn.Tanh()
-        )
+        self._attention_linear = nn.Sequential(
+            nn.Linear(self.num_dimensions*2, self.num_dimensions), nn.Tanh())
 
-    def forward(self, padded_seqs, encoder_padded_seqs, decoder_mask):  # pylint: disable=arguments-differ
-        """
-        Performs the forward pass.
-        :param padded_seqs: A tensor with the output sequences (batch, seq_d, dim).
-        :param encoder_padded_seqs: A tensor with the encoded input scaffold sequences (batch, seq_e, dim).
-        :param decoder_mask: A tensor that represents the encoded input mask.
-        :return : Two tensors: one with the modified logits and another with the attention weights.
+    def forward(self, padded_seqs, encoder_padded_seqs, decoder_mask):
+        """Performs the forward pass.
+
+        Parameters
+        ----------
+        padded_seqs : torch.tensor
+            A tensor with the decoder output sequences (batch, seq_d, dim).
+        encoder_padded_seqs : torch.tensor
+             tensor with the encoded context sequences (batch, seq_e, dim).
+        decoder_mask : torch.tensor
+            A tensor that represents the encoded input mask.
+
+        Returns
+        -------
+        logits : torch.tensor
+            Modified logits.
+        attention_weights : torch.tensor
+            Model attention weights.
         """
 
         # scaled dot-product
-        # (batch, seq_d, 1, dim) * (batch, 1, seq_e, dim) => (batch, seq_d, seq_e*)
-        attention_weights = (padded_seqs.unsqueeze(dim=2) * encoder_padded_seqs.unsqueeze(dim=1)) \
-            .sum(dim=3).div(math.sqrt(self.num_dimensions)).softmax(dim=2)
-        # (batch, seq_d, seq_e*)@(batch, seq_e, dim) => (batch, seq_d, dim)
+        # (batch, seq_d, 1, dim) * (batch, 1, seq_e, dim) => (batch, seq_d, seq_e)
+        attention_weights = (padded_seqs.unsqueeze(dim=2) * encoder_padded_seqs.unsqueeze(dim=1)).sum(
+            dim=3).div(math.sqrt(self.num_dimensions)).softmax(dim=2)
+
+        # (batch, seq_d, seq_e) @ (batch, seq_e, dim) => (batch, seq_d, dim)
         attention_context = attention_weights.bmm(encoder_padded_seqs)
-        return (self._attention_linear(torch.cat([padded_seqs, attention_context], dim=2)) * decoder_mask, attention_weights)
+        return (self._attention_linear(torch.cat(
+            [padded_seqs, attention_context], dim=2)) * decoder_mask, attention_weights)
 
 
-class Decoder(tnn.Module):
-    """
-    Simple RNN decoder.
-    """
+class Decoder(nn.Module):
+    """LSTM RNN decoder model."""
 
-    def __init__(self, num_layers, num_dimensions, vocabulary_size, dropout):
+    def __init__(self, vocabulary_size, num_layers=3, num_dimensions=512, dropout=0.0):
+        """
+        Initializes the LSTM decoder model.
+
+        Parameters
+        ----------
+        vocabulary_size : int
+            Number of possible tokens in the input space.
+        num_dimensions : int
+            Recurrent hidden state and output size.
+        dropout : float
+            If non-zero, introduces a Dropout layer on the outputs of each GRU layer except the last layer.
+        num_layers : int
+            Number of recurrent layers.
+        """
         super(Decoder, self).__init__()
 
         self.num_layers = num_layers
@@ -100,24 +150,39 @@ class Decoder(tnn.Module):
         self.vocabulary_size = vocabulary_size
         self.dropout = dropout
 
-        self._embedding = tnn.Sequential(
-            tnn.Embedding(self.vocabulary_size, self.num_dimensions),
-            tnn.Dropout(dropout)
-        )
-        self._rnn = tnn.LSTM(
+        self._embedding = nn.Sequential(
+            nn.Embedding(self.vocabulary_size, self.num_dimensions),
+            nn.Dropout(dropout))
+
+        self._rnn = nn.LSTM(
             self.num_dimensions, self.num_dimensions, self.num_layers,
             batch_first=True, dropout=self.dropout, bidirectional=False)
 
         self._attention = AttentionLayer(self.num_dimensions)
 
-    def forward(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):  # pylint: disable=arguments-differ
+    def forward(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):
         """
-        Performs the forward pass.
-        :param padded_seqs: A tensor with the output sequences (batch, seq_d, dim).
-        :param seq_lengths: A list with the length of each output sequence.
-        :param encoder_padded_seqs: A tensor with the encoded input scaffold sequences (batch, seq_e, dim).
-        :param hidden_states: The hidden states from the encoder.
-        :return : Three tensors: The output logits, the hidden states of the decoder and the attention weights.
+        Performs decoder forward pass.
+
+        Parameters
+        ----------
+        padded_seqs : torch.tensor
+            A tensor with the sequences (batch, seq).
+        seq_lengths : torch.tensor
+            1D tensor with the lengths of the sequences (for packed sequences).
+        encoder_padded_seqs : torch.tensor
+             tensor with the encoded context sequences (batch, seq_e, dim).
+        hidden_states : tuple
+            Last recurrent hidden states.
+
+        Returns
+        -------
+        logits : torch.tensor
+            Output logits.
+        hidden_states : tuple
+            Updated recurrent hidden state.
+        attention_weights : tensor
+            Attention layer weights.
         """
 
         padded_encoded_seqs = self._embedding(padded_seqs.long())
@@ -126,52 +191,99 @@ class Decoder(tnn.Module):
         packed_encoded_seqs, hidden_states = self._rnn(packed_encoded_seqs, hidden_states)
         padded_encoded_seqs, _ = tnnur.pad_packed_sequence(packed_encoded_seqs, batch_first=True)  # (batch, seq, dim)
 
-        # import ipdb; ipdb.set_trace() # What is the mask?
         mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
         attn_padded_encoded_seqs, attention_weights = self._attention(padded_encoded_seqs, encoder_padded_seqs, mask)
-        logits = attn_padded_encoded_seqs
+        logits = attn_padded_encoded_seqs  # * mask ?
 
         return logits, hidden_states, attention_weights
 
 
-class LSTMEncoderDecoder(tnn.Module):
+class LSTMEncoderDecoder(nn.Module):
     """
-    An encoder-decoder that decorates scaffolds.
+    An encoder-decoder model that encodes context and then uses a decoder and an attention layer
+    to autoregressively generate actions.
+
+    Action space is expected to be a dict, containing at least the following fields:
+        - context: padded context sequences, expected shape=(batch_size, sequences_length)
+        - context_length: a 1D tensor with the length of each context sequence.
+        - obs: next episode observations, shape=(batch_size, **obs_input_shape)
+        - obs_length: a 1D tensor with the length of each obs sequence (can be 1).
+
+    Parameters
+    ----------
+    input_size : int
+        Input feature map size (unused).
+    encoder_params : dict
+        Dictionary specifying encoder's vocabulary_size, num_layers (default 3), num_dimensions (default 512) and
+        dropout (default 0.0).
+    decoder_params : dict
+        Dictionary specifying decoder's vocabulary_size, num_layers (default 3), num_dimensions (default 512) and
+        dropout (default 0.0).
     """
 
-    def __init__(self, input_size, encoder_params, decoder_params):
+    def __init__(self, input_size, encoder_params={}, decoder_params={}):
         super(LSTMEncoderDecoder, self).__init__()
-
-        encoder_params.update({
-            "num_layers": 3,
-            "num_dimensions": 512,
-            "dropout": 0,
-        })
-
-        decoder_params.update({
-            "num_layers": 3,
-            "num_dimensions": 512,
-            "dropout": 0,
-        })
 
         self._encoder = Encoder(**encoder_params)
         self._decoder = Decoder(**decoder_params)
         self.encoder_rhs = None
         self.encoder_padded_seqs = None
 
-    def _forward_decorator(self, x, hxs, done):
+    def _forward_encoder(self, padded_seqs, seq_lengths):
+        """
+        Does a forward pass only of the encoder.
 
-        encoder_seqs = x["scaffold"]
-        decoder_seqs = x["decoration"]
-        encoder_seq_lengths = x["scaffold_length"].cpu().long()
-        decoder_seq_lengths = x["decoration_length"].cpu().long()
+        Parameters
+        ----------
+        padded_seqs : torch.tensor
+            Input data to feed the encoder.
+        seq_lengths : torch.tensor
+            1D tensor with the lengths of each padded_seqs sequences (for packed sequences).
+
+        Returns
+        -------
+        encoded_seqs : torch.tensor
+            Output encoded sequences.
+        hidden_states : tuple
+            Updated recurrent hidden state.
+        """
+        return self._encoder(padded_seqs, seq_lengths)
+
+    def _forward_decoder(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):
+        """
+        Does a forward pass only of the decoder.
+
+        Parameters
+        ----------
+        padded_seqs : torch.tensor
+            Input data to feed the decoder.
+        seq_lengths : torch.tensor
+            1D tensor with the lengths of each padded_seqs sequences (for packed sequences).
+        hidden_states : tuple
+            Last recurrent hidden states.
+
+        Returns
+        -------
+        logits : torch.tensor
+            Output decoder logits.
+        hidden_states : tuple
+            Updated recurrent hidden state.
+        """
+        return self._decoder(padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states)
+
+    def _forward_encoder_decoder(self, x, hxs, done):
+
+        encoder_seqs = x["context"]
+        decoder_seqs = x["obs"]
+        encoder_seq_lengths = x["context_length"].cpu().long()
+        decoder_seq_lengths = x["obs_length"].cpu().long()
 
         masks = 1 - done
 
         if decoder_seqs.size(0) == hxs.size(0):
 
             if self.encoder_rhs is None or self.encoder_padded_seqs is None:
-                self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(encoder_seqs, encoder_seq_lengths)
+                self.encoder_padded_seqs, self.encoder_rhs = self._forward_encoder(encoder_seqs, encoder_seq_lengths)
                 self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
 
             # Replace "done" hxs by self.encoder_rhs
@@ -180,7 +292,7 @@ class LSTMEncoderDecoder(tnn.Module):
             # Chunk rhs (where does this go?)
             hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
 
-            logits, hxs, _ = self.forward_decoder(decoder_seqs, decoder_seq_lengths, self.encoder_padded_seqs, hxs)
+            logits, hxs, _ = self._forward_decoder(decoder_seqs, decoder_seq_lengths, self.encoder_padded_seqs, hxs)
 
             logits = logits.squeeze(1)
             hxs = torch.transpose(torch.cat(hxs), 0, 1)
@@ -191,27 +303,22 @@ class LSTMEncoderDecoder(tnn.Module):
             N = hxs.size(0)
             T = int(decoder_seqs.size(0) / N)
 
-            # TODO: check encoder shape and make sure it is (N, T, -1) ???
-
             # Set encoder outputs to None
             self.encoder_rhs = None
             self.encoder_padded_seqs = None
 
             # unflatten
-            # decoder_seqs = decoder_seqs.view(N, T, -1)
             decoder_seqs = torch.transpose(decoder_seqs.view(T, N, -1), 0, 1)
             encoder_seqs = encoder_seqs.view(T, N, -1)[0]
             encoder_seq_lengths[encoder_seq_lengths == 0] = encoder_seqs.size(1)
             encoder_seq_lengths = encoder_seq_lengths.view(T, N)[0]
 
             # Same deal with masks
-            # masks = masks.view(N, T)
             masks = torch.transpose(masks.view(T, N), 0, 1)
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
             has_zeros = torch.nonzero(((masks[:, 1:] == 0.0).any(dim=0)), as_tuple=False).squeeze().cpu()
-            # assert (has_zeros_old == has_zeros).all()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:
@@ -232,7 +339,7 @@ class LSTMEncoderDecoder(tnn.Module):
 
                 # TODO: run encoder in position start_idx if required
                 if self.encoder_rhs is None or self.encoder_padded_seqs is None:
-                    self.encoder_padded_seqs, self.encoder_rhs = self.forward_encoder(
+                    self.encoder_padded_seqs, self.encoder_rhs = self._forward_encoder(
                         encoder_seqs, encoder_seq_lengths)
                     self.encoder_rhs = torch.transpose(torch.cat(self.encoder_rhs), 0, 1)
 
@@ -244,9 +351,8 @@ class LSTMEncoderDecoder(tnn.Module):
                 # TODO: run decoder from start_idx to end_idx
                 lengths = torch.cat([torch.LongTensor([end_idx - start_idx])] * N)
 
-                logits, hxs, _ = self.forward_decoder(
-                    decoder_seqs[:, start_idx:end_idx].squeeze(-1),
-                    lengths, self.encoder_padded_seqs, hxs)
+                logits, hxs, _ = self._forward_decoder(
+                    decoder_seqs[:, start_idx:end_idx].squeeze(-1), lengths, self.encoder_padded_seqs, hxs)
 
                 hxs = torch.transpose(torch.cat(hxs), 0, 1)
 
@@ -264,38 +370,30 @@ class LSTMEncoderDecoder(tnn.Module):
 
         return logits, hxs
 
-    def forward(self, inputs, rhs, done):  # pylint: disable=arguments-differ
+    def forward(self, inputs, rhs, done):
         """
-        Performs the forward pass.
-        :param encoder_seqs: A tensor with the output sequences (batch, seq_d, dim).
-        :param encoder_seq_lengths: A list with the length of each input sequence.
-        :param decoder_seqs: A tensor with the encoded input scaffold sequences (batch, seq_e, dim).
-        :param decoder_seq_lengths: The lengths of the decoder sequences.
-        :return : The output logits as a tensor (batch, seq_d, dim).
+        Forward pass Neural Network
+
+        Parameters
+        ----------
+        inputs : torch.tensor
+            A tensor containing episode observations.
+        rhs : torch.tensor
+            A tensor representing the recurrent hidden states.
+        done : torch.tensor
+            A tensor indicating where episodes end.
+
+        Returns
+        -------
+        x : torch.tensor
+            Output feature map.
+        rhs : torch.tensor
+            Updated recurrent hidden state.
         """
 
-        logits, rhs = self._forward_decorator(inputs, rhs, done)
+        logits, rhs = self._forward_encoder_decoder(inputs, rhs, done)
 
         return logits, rhs
-
-    def forward_encoder(self, padded_seqs, seq_lengths):
-        """
-        Does a forward pass only of the encoder.
-        :param padded_seqs: The data to feed the encoder.
-        :param seq_lengths: The length of each sequence in the batch.
-        :return : Returns a tuple with (encoded_seqs, hidden_states)
-        """
-        return self._encoder(padded_seqs, seq_lengths)
-
-    def forward_decoder(self, padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states):
-        """
-        Does a forward pass only of the decoder.
-        :param hidden_states: The hidden states from the encoder.
-        :param padded_seqs: The data to feed to the decoder.
-        :param seq_lengths: The length of each sequence in the batch.
-        :return : Returns the logits and the hidden state for each element of the sequence passed.
-        """
-        return self._decoder(padded_seqs, seq_lengths, encoder_padded_seqs, hidden_states)
 
     @property
     def num_outputs(self):
@@ -308,4 +406,5 @@ class LSTMEncoderDecoder(tnn.Module):
         return self._decoder.num_dimensions
 
     def get_initial_recurrent_state(self, num_proc):
+        """Returns a tensor of zeros with the expected shape of the model's rhs."""
         return torch.zeros(num_proc, self._encoder.num_layers * 2, self._encoder.num_dimensions)

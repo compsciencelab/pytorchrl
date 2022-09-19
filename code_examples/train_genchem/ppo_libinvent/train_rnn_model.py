@@ -36,6 +36,7 @@ from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTM
 def main():
 
     args = get_args()
+    os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init

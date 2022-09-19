@@ -15,7 +15,8 @@ class GenChemEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200, reactions=[]):
+    def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200,
+                 reactions=[]):
         super(GenChemEnv, self).__init__()
 
         self.num_episodes = 0
@@ -118,12 +119,12 @@ class GenChemEnv(gym.Env):
             self.vocabulary.encode_decoration_token(action)
 
         next_obs = {
-            "scaffold": self.padded_scaffold,
-            "scaffold_length": np.array(self.scaffold_length),
-            # "decoration":  self.padded_current_decoration,
-            # "decoration_length": np.array(self.current_decoration_length),
-            "decoration": np.array(self.vocabulary.encode_decoration_token(action)).reshape(1),
-            "decoration_length": np.array(1),
+            "context": self.padded_scaffold,
+            "context_length": np.array(self.scaffold_length),
+            "obs": np.array(self.vocabulary.encode_decoration_token(action)).reshape(1),
+            "obs_length": np.array(1),
+            "full_obs":  self.padded_current_decoration,
+            "full_obs_length": np.array(self.current_decoration_length),
         }
 
         return next_obs, reward, done, info
@@ -148,13 +149,16 @@ class GenChemEnv(gym.Env):
         self.padded_current_decoration[0] = self.vocabulary.encode_decoration_token(self.current_decoration)
         self.current_decoration_length = 1
 
+        # "decoration":  self.padded_current_decoration,
+        # "decoration_length": np.array(self.current_decoration_length),
+
         obs = {
-            "scaffold": self.padded_scaffold,
-            "scaffold_length": np.array(self.scaffold_length),
-            # "decoration":  self.padded_current_decoration,
-            # "decoration_length": np.array(self.current_decoration_length),
-            "decoration": np.array(self.vocabulary.encode_decoration_token(self.current_decoration)).reshape(1),
-            "decoration_length": np.array(1),
+            "context": self.padded_scaffold,
+            "context_length": np.array(self.scaffold_length),
+            "obs": np.array(self.vocabulary.encode_decoration_token(self.current_decoration)).reshape(1),
+            "obs_length": np.array(1),
+            "full_obs":  self.padded_current_decoration,
+            "full_obs_length": np.array(self.current_decoration_length),
         }
 
         return obs

@@ -1,6 +1,6 @@
 # Generative chemistry in PyTorchRL
 
-This code example uses the same approach as REINVENT (Blaschke et al., 2020) to guide a RL Proximal Policy Optimization (PPO) agent in the process of drug discovery.
+This code example uses the same approach as REINVENT (Blaschke et al., 2020) to guide a RL Soft Actor Critic (SAC) agent in the process of drug discovery.
 
 ## 1. Requirements
 

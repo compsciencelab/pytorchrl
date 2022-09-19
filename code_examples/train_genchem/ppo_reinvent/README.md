@@ -15,43 +15,43 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
+Training parameters can be adjusted in the `code_examples/train_genchem/ppo_reinvent/conf.yaml` file. Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
-    python code_examples/train_genchem/ppo/train_rnn_model.py --help
+    python code_examples/train_genchem/ppo_reinvent/train_rnn_model.py --help
 
 ## 3. Pre-training (not necessary)
 
 To pretrain an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/ppo/pretrain_rnn_model.sh
+    ./code_examples/train_genchem/ppo_reinvent/pretrain_rnn_model.sh
 
 In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on. Additionally,  `conf.yaml` fields `pretrain_element_list`,  `pretrain_min_heavy_atoms` and `pretrain_max_heavy_atoms` allow filtering out molecules from the training set.
 
-## 3. Training
+## 4. Training
 
 To train an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/ppo/train_rnn_model.sh
+    ./code_examples/train_genchem/ppo_reinvent/train_rnn_model.sh
 
-If the agent was not pre-trained, a default pretai
+If the agent was not pre-trained, a default pre-trained model is used.
 
-## 4. Log in wandb during training
+## 5. Log in wandb during training
 
-If you have a `wandb` account, you can visualise you training progress at https://wandb.ai/ by adding you account key to the configuration file in `line 25`.
+If you have a `wandb` account, you can visualise you training progress at https://wandb.ai/ by adding you account key to the configuration file in `line 35`.
 
-## 5. Analize results
+## 6. Analize results
 
 After training, results (including an image of the top generated molecules) can be analized by running
 
-    ./code_examples/train_genchem/ppo/analize_results.sh
+    ./code_examples/train_genchem/ppo_reinvent/analize_results.sh
 
-## 6. Use a custom scoring function
+## 7. Use a custom scoring function
 
 By default, the training script will use a default scoring function, which can be found in 
 
-    pytorchrl/envs/generative_chemistry/default_scoring_function.py
+    pytorchrl/envs/generative_chemistry/reinvent/default_scoring_function.py
 
-### 6.1 Define an alternative scoring function
+### 7.1 Define an alternative scoring function
 
 Any custom scoring function can be used as long as it fulfills the following requirements:
     
@@ -70,15 +70,15 @@ As a reference, an instance output for the default_scoring_function looks like t
         "raw_regression_model": 0.33,
     }
 
-Additionally, for a custom scoring function dummy example look at `code_examples/train_genchem/ppo/dummy_custom_scoring_function.py`
+Additionally, for a custom scoring function dummy example look at `code_examples/train_genchem/ppo_reinvent/dummy_custom_scoring_function.py`
 
-### 6.2 Code Adjustments
+### 7.2 Code Adjustments
 
 To use a custom scoring function two minor code modifications are required.
 
-First, replace `line 25` in `code_examples/train_genchem/ppo/train.py` by importing the custom scoring_function. For example from 
+First, replace `line 23` in `code_examples/train_genchem/ppo_reinvent/train_rnn_model.py` by importing the custom scoring_function. For example from 
 
-    from pytorchrl.envs.generative_chemistry.default_scoring_function import scoring_function
+    from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function import scoring_function
 
 to
 
