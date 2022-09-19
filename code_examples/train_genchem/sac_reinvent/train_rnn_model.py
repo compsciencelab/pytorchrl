@@ -175,6 +175,37 @@ def get_args():
         '--frame-stack', type=int, default=0,
         help='Number of frame to stack in observation (default no stack)')
 
+    # Pretrain specs
+    parser.add_argument(
+        "--pretrain-lr", type=float, default=1e-3,
+        help="learning rate used during agent pretraining (default: 1e-3)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-value", type=float, default=0.03,
+        help="How much to decrease lr during pretraining (default: 0.03)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-period", type=int, default=550,
+        help="Number of network updates between lr decreases during pretraining (default 500).")
+    parser.add_argument(
+        "--pretrain-batch-size", type=int, default=128,
+        help="Batch size used to pretrain the agent (default 128).")
+    parser.add_argument(
+        "--pretrain-epochs", type=int, default=10,
+        help="Number of epochs to pretrain the agent (default 10).")
+    parser.add_argument(
+        "--pretrain-max-smile-length", type=int, default=200,
+        help="Max length allows for SMILES (default 200).")
+    parser.add_argument(
+        "--pretrain-max-heavy-atoms", type=int, default=50,
+        help="Filter out molecules with more heavy atoms (default 50).")
+    parser.add_argument(
+        "--pretrain-min-heavy-atoms", type=int, default=10,
+        help="Filter out molecules with less heavy atoms (default 10).")
+    parser.add_argument(
+        "--pretrain-element-list", nargs="+", default=[6, 7, 8, 9, 16, 17, 35],
+        help="Filter out molecules containing other atoms (default [6, 7, 8, 9, 16, 17, 35]).")
+    parser.add_argument(
+        "--pretrainingset-path", default=None, help="Path to dataset to train the prior")
+
     # SAC specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
