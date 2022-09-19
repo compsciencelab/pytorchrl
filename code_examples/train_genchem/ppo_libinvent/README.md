@@ -15,7 +15,7 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. In particular, used the field `scaffolds` to define a list of the scaffolds to be decorated, `reaction_filters` to specify a list of reactions which should be favoured by the reward function and `randomize_scaffolds` to define whether or not a random SMILES representation of the scaffolds should be used at each episode. 
+Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. In particular, use the field `scaffolds` to define a list of the scaffolds to be decorated, `reaction_filters` to specify a list of reactions which should be favoured by the reward function and `randomize_scaffolds` to define whether or not a random SMILES representation of the scaffolds should be used at each episode. 
 
 Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
