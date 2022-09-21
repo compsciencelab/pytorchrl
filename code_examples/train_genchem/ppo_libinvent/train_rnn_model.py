@@ -30,9 +30,6 @@ from pytorchrl.envs.generative_chemistry.libinvent.default_scoring_function impo
 from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
 
 
-# TODO. specify net input parameters from here!
-
-
 def main():
 
     args = get_args()
