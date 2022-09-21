@@ -23,6 +23,7 @@ def analize_results(num_top_molecules=30):
 
     # List top X molecules with highest score
     pd.options.display.max_colwidth = 300
+    monitor_files = monitor_files[monitor_files["molecule"] != "invalid_smile"]
     monitor_files = monitor_files[monitor_files["molecule"].duplicated() == False]
     total_unique_molecules = monitor_files.shape[0]
     unique_percentage = (total_unique_molecules / total_proposed_molecules) * 100
