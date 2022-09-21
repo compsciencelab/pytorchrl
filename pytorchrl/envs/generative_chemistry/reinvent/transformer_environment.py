@@ -63,7 +63,7 @@ class GenChemEnv(gym.Env):
 
             # Update valid smiles tracker
             info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
-                self.running_mean_valid_smiles)) if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
+                self.running_mean_valid_smiles)) * 100 if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
 
             # Update info with remaining values
             info.update(score)
