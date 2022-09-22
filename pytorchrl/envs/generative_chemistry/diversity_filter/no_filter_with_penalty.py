@@ -15,6 +15,6 @@ class NoFilterWithPenalty(BaseDiversityFilter):
             score = 0.5 * score if self._smiles_exists(smile) else score
 
         if score >= self.minscore:
-            self._add_to_memory(score, smile)
+            self._add_to_memory(smile)
 
-        return scores
+        return score

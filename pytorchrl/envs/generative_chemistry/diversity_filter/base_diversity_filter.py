@@ -1,6 +1,5 @@
-
-
 import abc
+import pandas as pd
 from reinvent_chemistry.conversions import Conversions
 from pytorchrl.envs.generative_chemistry.diversity_filter.diversity_filter_memory import DiversityFilterMemory
 
