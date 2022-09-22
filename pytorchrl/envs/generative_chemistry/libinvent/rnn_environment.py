@@ -8,6 +8,7 @@ from reinvent_chemistry import Conversions
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
 from reinvent_chemistry.library_design.reaction_filters.reaction_filter import ReactionFilter, \
     ReactionFilterConfiguration
+from pytorchrl.envs.generative_chemistry.diversity_filter.no_filter_with_penalty import NoFilterWithPenalty
 
 
 class GenChemEnv(gym.Env):
@@ -67,6 +68,9 @@ class GenChemEnv(gym.Env):
             reaction_definition_file=None)
         self.reaction_filter = ReactionFilter(reaction_filter_conf)
 
+        # Diversity Filter: penalizes the score by 0.5 if a previously seen compound is proposed.
+        self.diversity_filter = NoFilterWithPenalty()
+
     def step(self, action):
         """Execute one time step within the environment"""
 
@@ -103,6 +107,9 @@ class GenChemEnv(gym.Env):
             # Get reward
             reward = score["reward"] if "reward" in score.keys() else score["score"]
 
+            # Adjust reward with diversity filter
+            reward = self.diversity_filter.update_score(reward, decorated_smile)
+
             # If score contain field "Valid", update counter
             if "valid_smile" in score.keys():
                 valid = score["valid_smile"]
@@ -118,6 +125,7 @@ class GenChemEnv(gym.Env):
 
             # Update info with remaining values
             info.update(score)
+
             done = True
 
         self.padded_current_decoration[self.current_decoration_length - 1] = \

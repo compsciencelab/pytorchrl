@@ -31,6 +31,7 @@ from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function impor
 def main():
 
     args = get_args()
+    cleanup_log_dir(args.log_dir)
     os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
