@@ -1,4 +1,4 @@
-experiment_name: GenChem
+experiment_name: benchmarking_libinvent
 agent_name: PPO_Libinvent
 num_env_steps : 1000_000_000
 log_dir: /tmp/genchem_ppo_libinvent
@@ -13,9 +13,9 @@ clip_param: 0.1
 ppo_epoch: 4
 gae_lambda: 0.95
 value_loss_coef: 1.0
-entropy_coef: 0.01
+entropy_coef: 0.005
 max_grad_norm: 0.5
-lr: 0.005
+lr: 0.0005
 recurrent_net: EncoderDecoder
 scaffolds: ["[*:0]N1CCN(CC1)CCCCN[*:1]"]
 randomize_scaffolds: False

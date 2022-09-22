@@ -28,7 +28,7 @@ class GenChemEnv(gym.Env):
         self.current_episode_length = 0
         self.scoring_function = scoring_function
         self.randomize_scaffolds = randomize_scaffolds
-        self.running_mean_valid_smiles = deque(maxlen=100)
+        self.running_mean_valid_smiles = deque(maxlen=1)
 
         self._bond_maker = BondMaker()
         self._conversion = Conversions()
@@ -119,12 +119,12 @@ class GenChemEnv(gym.Env):
             # Update molecule
             info.update({"molecule": decorated_smile or "invalid_smile"})
 
+            # Update info with remaining values
+            info.update(score)
+
             # Update valid smiles tracker
             info.update({"valid_smile": float((sum(self.running_mean_valid_smiles) / len(
                 self.running_mean_valid_smiles)) * 100 if len(self.running_mean_valid_smiles) != 0.0 else 0.0)})
-
-            # Update info with remaining values
-            info.update(score)
 
             done = True
 

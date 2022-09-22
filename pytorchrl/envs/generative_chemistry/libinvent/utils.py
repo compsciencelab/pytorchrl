@@ -16,7 +16,7 @@ def get_num_unique_smiles(experiment_path):
         # Filter data
         data = data[data["molecule"] != "invalid_smile"]
         data = data[data["molecule"].duplicated() == False]
-        data = data[data["r"] > 0.0]
+        data = data[data["r"] > 0.4]
 
         # Get number of unique smiles
         num_smiles = data.shape[0]
