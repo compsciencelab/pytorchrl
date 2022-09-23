@@ -18,6 +18,7 @@ from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
 from pytorchrl.envs.generative_chemistry.utils import adapt_libinvent_checkpoint
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
+from pytorchrl.envs.generative_chemistry.libinvent.utils import get_num_unique_smiles
 from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_factory import libinvent_train_env_factory
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
@@ -33,6 +34,7 @@ from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTM
 def main():
 
     args = get_args()
+    cleanup_log_dir(args.log_dir)
     os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
@@ -130,6 +132,7 @@ def main():
         # 7. Define train loop
         iterations = 0
         start_time = time.time()
+        num_smiles_function = get_num_unique_smiles(args.log_dir)
         while not learner.done():
 
             learner.step()
@@ -137,6 +140,11 @@ def main():
             if iterations % args.log_interval == 0:
                 log_data = learner.get_metrics(add_episodes_metrics=True)
                 log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
+
+                if iterations % 100 == 0:
+                    num_smiles = num_smiles_function()
+                    log_data.update({"Number of SMILES found": num_smiles})
+
                 wandb.log(log_data, step=learner.num_samples_collected)
                 learner.print_info()
 
