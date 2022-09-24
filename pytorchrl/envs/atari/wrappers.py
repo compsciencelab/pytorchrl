@@ -271,7 +271,7 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
 
     def step(self, action):
 
-        # Create ebedding
+        # Create embedding
         if self.use_domain_knowledge:
             ram = self.unwrapped.ale.getRAM()
             assert len(ram) == 128
@@ -297,6 +297,55 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
                         ram[self.room_address] + 24 * ram[self.room_level],
                     ]
                 )
+            state, reward, done, info = self.env.step(action)
+        else:
+            state, reward, done, info = self.env.step(action)
+            embed_state = imdownscale(
+                state=self.last_state[:, :, -1],
+                target_shape=self.embeddings_shape,
+                max_pix_value=self.embeddings_num_values)
+
+        # Concat last 2 embeddings if specified
+        if self.double_state:
+            if len(self._embed_buff) < 2:
+                self._embed_buff.append(embed_state)
+                self._embed_buff.append(embed_state)
+            if (embed_state != self._embed_buff[-1]).any():
+                self._embed_buff.append(embed_state)
+            embed_state = np.concatenate(self._embed_buff)
+
+        info.update({"StateEmbeddings": embed_state})
+        self.last_state = state
+
+        return state, reward, done, info
+
+    def reset(self):
+        self.last_state = self.env.reset()
+        return self.last_state
+
+
+class PitfallEmbeddingsEnv(gym.Wrapper):
+    def __init__(self, env, embeddings_shape=(11, 8), embeddings_num_values=8, use_domain_knowledge=False,
+                 double_state=False):
+        gym.Wrapper.__init__(self, env)
+
+        # pos 1: room ID
+        self.room_level = 1
+        self.last_state = None
+        self.embeddings_shape = embeddings_shape
+        self.embeddings_num_values = embeddings_num_values
+        self.use_domain_knowledge = use_domain_knowledge
+        self.double_state = double_state
+        if double_state:
+            self._embed_buff = deque(maxlen=2)
+
+    def step(self, action):
+
+        # Create embedding
+        if self.use_domain_knowledge:
+            ram = self.unwrapped.ale.getRAM()
+            assert len(ram) == 128
+            embed_state = np.array([np.clip(ram[self.room_level], 0, 255)])  # range 0 - 255
             state, reward, done, info = self.env.step(action)
         else:
             state, reward, done, info = self.env.step(action)

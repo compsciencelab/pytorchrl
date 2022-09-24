@@ -1,5 +1,5 @@
 from pytorchrl.envs.atari.wrappers import wrap_deepmind, make_atari, MontezumaVisitedRoomEnv,\
-    MontezumaEmbeddingsEnv,ScaleRewardEnv
+    MontezumaEmbeddingsEnv, ScaleRewardEnv, PitfallEmbeddingsEnv
 from pytorchrl.envs.common import DelayedReward
 
 
@@ -66,7 +66,10 @@ def atari_train_env_factory(
             env, embeddings_shape, embeddings_num_values, use_domain_knowledge,
             domain_knowledge_embedding, double_state)
     elif env_id == "PitfallNoFrameskip-v4":
-        env = ScaleRewardEnv(env, 0.001)
+        env = PitfallEmbeddingsEnv(
+            env, embeddings_shape, embeddings_num_values,
+            use_domain_knowledge, double_state)
+        # env = ScaleRewardEnv(env, 0.001)
 
     if reward_delay > 1:
         env = DelayedReward(env, delay=reward_delay)
