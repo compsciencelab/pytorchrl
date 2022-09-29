@@ -528,13 +528,14 @@ class PPODBuffer(B):
                 try:
 
                     new_demo = self.load_demo(demo_file)
-                    self.reward_demos.append(new_demo)
-                    num_loaded_supplementary_demos += 1
+                    if new_demo["TotalReward"] >= self.reward_threshold:
+                        self.reward_demos.append(new_demo)
+                        num_loaded_supplementary_demos += 1
 
                 except Exception:
                     print("Failed to load supplementary demo!")
 
-        print("\nLOADED {} SUPPLEMENTARY DEMOS".format(supplementary_demos))
+        print("\nLOADED {} SUPPLEMENTARY DEMOS\n".format(num_loaded_supplementary_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demos, with probability phi insert value demos."""
