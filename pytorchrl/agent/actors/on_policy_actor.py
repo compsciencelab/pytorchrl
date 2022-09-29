@@ -311,25 +311,13 @@ class OnPolicyActor(Actor):
         if self.shared_policy_value_network:
             if self.last_action_features.shape[0] != done.shape[0]:
                 _, _, _, _, _, _ = self.get_action(obs, rhs["policy"], done)
-
-            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
-                features = rhs["policy"]
-            else:
-                features = self.last_action_features
-
             value = value_net.predictor(features)
 
         else:
-            value_features = value_net.feature_extractor(obs)
+            features = value_net.feature_extractor(obs)
             if self.recurrent_net:
-                value_features, rhs[value_net_name] = value_net.memory_net(
-                    value_features, rhs[value_net_name], done)
-
-                if isinstance(self.action_space, gym.spaces.MultiDiscrete):
-                    features = rhs[value_net_name]
-                else:
-                    features = value_features
-
+                features, rhs[value_net_name] = value_net.memory_net(
+                    features, rhs[value_net_name], done)
             value = value_net.predictor(features)
 
         return value, rhs
@@ -416,9 +404,6 @@ class OnPolicyActor(Actor):
             else:
                 feature_size = features.shape[-1]
 
-            if isinstance(self.action_space, gym.spaces.MultiDiscrete):
-                feature_size = self.recurrent_hidden_state_size
-
             if self.recurrent_net:
                 value_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs)
             else:
@@ -485,11 +470,6 @@ class OnPolicyActor(Actor):
 
         if isinstance(self.action_space, gym.spaces.Discrete):
             dist = get_dist("Categorical")(self.recurrent_size, self.action_space.n)
-            self.scale = None
-            self.unscale = None
-
-        elif isinstance(self.action_space, gym.spaces.MultiDiscrete):
-            dist = get_dist("MultiCategorical")(self.recurrent_size, self.action_space.individual_shape[0])
             self.scale = None
             self.unscale = None
 

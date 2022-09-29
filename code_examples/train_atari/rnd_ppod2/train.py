@@ -18,7 +18,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
+from pytorchrl.agent.storages.on_policy.ppod_buffer2 import PPODBuffer2
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
@@ -112,7 +112,7 @@ def main():
         # Define rollouts storage
         supp_demos_dir = args.log_dir + "/supplementary_demos/"
         os.makedirs(supp_demos_dir, exist_ok=True)
-        storage_factory = PPODBuffer.create_factory(
+        storage_factory = PPODBuffer2.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
             initial_reward_threshold=1.0, demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16},
