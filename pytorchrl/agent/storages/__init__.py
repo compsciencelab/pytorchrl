@@ -6,6 +6,7 @@ from pytorchrl.agent.storages.off_policy.her_buffer import HERBuffer
 
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer
 from pytorchrl.agent.storages.on_policy.ppod_buffer import PPODBuffer
+from pytorchrl.agent.storages.on_policy.ppod_buffer2 import PPODBuffer2
 from pytorchrl.agent.storages.on_policy.vtrace_buffer import VTraceBuffer
 from pytorchrl.agent.storages.on_policy.vanilla_on_policy_buffer import VanillaOnPolicyBuffer
 
