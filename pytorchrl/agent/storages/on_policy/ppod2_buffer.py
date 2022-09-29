@@ -19,7 +19,7 @@ from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 MIN_BUFFER_SIZE = 10
 
 
-class PPODBuffer2(B):
+class PPOD2Buffer(B):
     """
     Storage class for a modified version of the PPO+D algorithm.
 
@@ -87,7 +87,7 @@ class PPODBuffer2(B):
                  initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None, save_demos_every=10,
                  demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
-        super(PPODBuffer2, self).__init__(
+        super(PPOD2Buffer, self).__init__(
             size=size,
             envs=envs,
             actor=actor,
@@ -168,7 +168,7 @@ class PPODBuffer2(B):
                        initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
                        save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
         """
-        Returns a function that creates PPODBuffer2 instances.
+        Returns a function that creates PPOD2Buffer instances.
 
         Parameters
         ----------
@@ -212,10 +212,10 @@ class PPODBuffer2(B):
         Returns
         -------
         create_buffer_instance : func
-            creates a new PPODBuffer2 class instance.
+            creates a new PPOD2Buffer class instance.
         """
         def create_buffer_instance(device, actor, algorithm, envs):
-            """Create and return a PPODBuffer2 instance."""
+            """Create and return a PPOD2Buffer instance."""
             return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha,
                        total_buffer_demo_capacity, initial_reward_threshold, initial_reward_demos_dir,
                        supplementary_demos_dir, target_reward_demos_dir, num_reward_demos_to_save,
@@ -234,7 +234,7 @@ class PPODBuffer2(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        super(PPODBuffer2, self).init_tensors()
+        super(PPOD2Buffer, self).init_tensors()
 
         if prl.IREW not in sample.keys():
             self.phi = 0.0
@@ -250,7 +250,7 @@ class PPODBuffer2(B):
               " INTRINSIC THRESHOLD {}\n".format(len(self.reward_demos), len(self.intrinsic_demos),
             self.rho, self.phi, self.reward_threshold, self.max_demo_reward, self.intrinsic_threshold))
 
-        super(PPODBuffer2, self).before_gradients()
+        super(PPOD2Buffer, self).before_gradients()
 
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
@@ -274,7 +274,7 @@ class PPODBuffer2(B):
             info dict updated with relevant info from Storage.
         """
 
-        super(PPODBuffer2, self).after_gradients(batch, info)
+        super(PPOD2Buffer, self).after_gradients(batch, info)
 
         # info['NumberSamples'] -= self.inserted_samples
         self.inserted_samples = 0
