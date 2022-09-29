@@ -214,66 +214,8 @@ class PPODBuffer(B):
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
-        # Get most recent state
-        last_tensors = {}
-        step = self.step if self.step != 0 else -1
-        for k in (prl.OBS, prl.RHS, prl.DONE):
-            if isinstance(self.data[k], dict):
-                last_tensors[k] = {x: self.data[k][x][step] for x in self.data[k]}
-            else:
-                last_tensors[k] = self.data[k][step]
-
-        # Predict values given most recent state
-        with torch.no_grad():
-            _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_rhs = value_dict.get("rhs")
-
-        # Store next recurrent hidden state
-        if isinstance(next_rhs, dict):
-            for x in self.data[prl.RHS]:
-                self.data[prl.RHS][x][step].copy_(next_rhs[x])
-        else:
-            self.data[prl.RHS][step] = next_rhs
-
-        # Compute returns and advantages
-        if isinstance(self.data[prl.VAL], dict):
-            # If multiple critics
-            for x in self.data[prl.VAL]:
-                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
-                self.compute_returns(
-                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
-                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
-        else:
-            # If single critic
-            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-            self.compute_returns(
-                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
-            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
-
-        if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
-            self.normalize_int_rewards()
-            self.algo.state_rms.update(
-                self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
-
-        # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
-        if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
-            if isinstance(self.data[prl.IVAL], dict):
-                # If multiple critics
-                for x in self.data[prl.IVAL]:
-                    self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
-                    self.compute_returns(
-                        self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
-                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
-                    self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
-            else:
-                # If single critic
-                self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
-                self.compute_returns(
-                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
-                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
-                self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
-
+        super(PPODBuffer, self).before_gradients()
+        
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
@@ -296,32 +238,12 @@ class PPODBuffer(B):
             info dict updated with relevant info from Storage.
         """
 
-        step = self.step if self.step != 0 else -1
-        for k in (prl.OBS, prl.RHS, prl.DONE):
-            if isinstance(self.data[k], dict):
-                for x in self.data[k]:
-                    self.data[k][x][0].copy_(self.data[k][x][step])
-            else:
-                self.data[k][0].copy_(self.data[k][step])
-
-        if self.step != 0:
-            self.step = 0
+        super(PPODBuffer, self).after_gradients(batch, info)
 
         # info['NumberSamples'] -= self.inserted_samples
         self.inserted_samples = 0
 
         return info
-
-    def get_num_channels_obs(self, sample):
-        """
-        Obtain num_channels_obs and set it as class attribute.
-
-        Parameters
-        ----------
-        sample : dict
-            Data sample (containing all tensors of an environment transition)
-        """
-        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
 
     def insert_transition(self, sample):
         """
