@@ -32,6 +32,9 @@ class PPODBuffer(B):
         Path to directory containing human initial demonstrations.
     initial_agent_demos_dir : str
         Path to directory containing other agent initial demonstrations.
+    supplementary_demos_dir : str
+        Path to a directory where additional demos can be added after training has started.
+        these demos will be incorporated into the buffer as bonus agent demos.
     target_agent_demos_dir : str
         Path to directory where best reward demonstrations should be saved.
     rho : float
@@ -62,8 +65,9 @@ class PPODBuffer(B):
 
     def __init__(self, size, device, actor, algorithm, envs, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10,
                  total_buffer_demo_capacity=51, initial_human_demos_dir=None, initial_agent_demos_dir=None,
-                 target_agent_demos_dir=None,  num_agent_demos_to_save=10, initial_reward_threshold=None,
-                 save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
+                 supplementary_demos_dir=None, target_agent_demos_dir=None, num_agent_demos_to_save=10,
+                 initial_reward_threshold=None, save_demos_every=10,
+                 demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
         super(PPODBuffer, self).__init__(
             size=size,
@@ -86,6 +90,7 @@ class PPODBuffer(B):
         self.num_agent_demos_to_save = num_agent_demos_to_save
         self.initial_human_demos_dir = initial_human_demos_dir
         self.initial_agent_demos_dir = initial_agent_demos_dir
+        self.supplementary_demos_dir = supplementary_demos_dir
         self.target_agent_demos_dir = target_agent_demos_dir
 
         # Data parameters
@@ -124,11 +129,14 @@ class PPODBuffer(B):
                 prl.RHS: None,
             } for i in range(self.num_envs)}
 
+        # To keep track of supplementary demos loaded
+        self.supplementary_demos_loaded = []
+
     @classmethod
     def create_factory(cls, size, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51,
-                       initial_human_demos_dir=None, initial_agent_demos_dir=None, target_agent_demos_dir=None,
-                       num_agent_demos_to_save=10, initial_reward_threshold=None, save_demos_every=10,
-                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
+                       initial_human_demos_dir=None, initial_agent_demos_dir=None, supplementary_demos_dir=None,
+                       target_agent_demos_dir=None, num_agent_demos_to_save=10, initial_reward_threshold=None,
+                       save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -140,6 +148,9 @@ class PPODBuffer(B):
             Path to directory containing human initial demonstrations.
         initial_agent_demos_dir : str
             Path to directory containing other agent initial demonstrations.
+        supplementary_demos_dir : str
+            Path to a directory where additional demos can be added after training has started.
+            these demos will be incorporated into the buffer as bonus agent demos.
         target_agent_demos_dir : str
             Path to directory where best reward demonstrations should be saved.
         rho : float
@@ -170,7 +181,7 @@ class PPODBuffer(B):
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
-                       initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir,
+                       initial_human_demos_dir, initial_agent_demos_dir, supplementary_demos_dir, target_agent_demos_dir,
                        num_agent_demos_to_save, initial_reward_threshold, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
@@ -182,69 +193,14 @@ class PPODBuffer(B):
         print("\nREWARD DEMOS {}, VALUE DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {}\n".format(
             len(self.reward_demos), len(self.value_demos), self.rho, self.phi, self.reward_threshold, self.max_demo_reward))
 
-        # Get most recent state
-        last_tensors = {}
-        step = self.step if self.step != 0 else -1
-        for k in (prl.OBS, prl.RHS, prl.DONE):
-            if isinstance(self.data[k], dict):
-                last_tensors[k] = {x: self.data[k][x][step] for x in self.data[k]}
-            else:
-                last_tensors[k] = self.data[k][step]
-
-        # Predict values given most recent state
-        with torch.no_grad():
-            _ = self.actor.get_action(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            value_dict = self.actor.get_value(last_tensors[prl.OBS], last_tensors[prl.RHS], last_tensors[prl.DONE])
-            next_rhs = value_dict.get("rhs")
-
-        # Store next recurrent hidden state
-        if isinstance(next_rhs, dict):
-            for x in self.data[prl.RHS]:
-                self.data[prl.RHS][x][step].copy_(next_rhs[x])
-        else:
-            self.data[prl.RHS][step] = next_rhs
-
-        # Compute returns and advantages
-        if isinstance(self.data[prl.VAL], dict):
-            # If multiple critics
-            for x in self.data[prl.VAL]:
-                self.data[prl.VAL][x][step].copy_(value_dict.get(x))
-                self.compute_returns(
-                    self.data[prl.REW], self.data[prl.RET][x], self.data[prl.VAL][x], self.data[prl.DONE], self.algo.gamma)
-                self.data[prl.ADV][x] = self.compute_advantages(self.data[prl.RET][x], self.data[prl.VAL][x])
-        else:
-            # If single critic
-            self.data[prl.VAL][step].copy_(value_dict.get("value_net1"))
-            self.compute_returns(
-                self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
-            self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
-
-        if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
-            self.normalize_int_rewards()
-            self.algo.state_rms.update(
-                self.data[prl.OBS][:, :, -self.num_channels_obs:, ...].reshape(-1, 1, *self.data[prl.OBS].shape[3:]))
-
-        # If algorithm with intrinsic rewards, also compute ireturns and iadvantages
-        if prl.IVAL in self.data.keys() and prl.IREW in self.data.keys():
-            if isinstance(self.data[prl.IVAL], dict):
-                # If multiple critics
-                for x in self.data[prl.IVAL]:
-                    self.data[prl.IVAL][x][step].copy_(value_dict.get(x))
-                    self.compute_returns(
-                        self.data[prl.IREW], self.data[prl.IRET][x], self.data[prl.IVAL][x],
-                        torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
-                    self.data[prl.IADV][x] = self.compute_advantages(self.data[prl.IRET][x], self.data[prl.IVAL][x])
-            else:
-                # If single critic
-                self.data[prl.IVAL][step].copy_(value_dict.get("ivalue_net1"))
-                self.compute_returns(
-                    self.data[prl.IREW], self.data[prl.IRET], self.data[prl.IVAL],
-                    torch.zeros_like(self.data[prl.DONE]), self.algo.gamma_intrinsic)
-                self.data[prl.IADV] = self.compute_advantages(self.data[prl.IRET], self.data[prl.IVAL])
-
+        super(PPODBuffer, self).before_gradients()
+        
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
             self.save_demos()
+
+        if self.supplementary_demos_dir:
+            self.load_supplementary_demos()
 
     def after_gradients(self, batch, info):
         """
@@ -261,32 +217,12 @@ class PPODBuffer(B):
             info dict updated with relevant info from Storage.
         """
 
-        step = self.step if self.step != 0 else -1
-        for k in (prl.OBS, prl.RHS, prl.DONE):
-            if isinstance(self.data[k], dict):
-                for x in self.data[k]:
-                    self.data[k][x][0].copy_(self.data[k][x][step])
-            else:
-                self.data[k][0].copy_(self.data[k][step])
-
-        if self.step != 0:
-            self.step = 0
+        super(PPODBuffer, self).after_gradients(batch, info)
 
         # info['NumberSamples'] -= self.inserted_samples
         self.inserted_samples = 0
 
         return info
-
-    def get_num_channels_obs(self, sample):
-        """
-        Obtain num_channels_obs and set it as class attribute.
-
-        Parameters
-        ----------
-        sample : dict
-            Data sample (containing all tensors of an environment transition)
-        """
-        self.num_channels_obs = int(sample[prl.OBS][0].shape[0] // self.frame_stack)
 
     def insert_transition(self, sample):
         """
@@ -510,10 +446,33 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_val["env{}".format(i + 1)] = - np.inf
 
+    def load_demo(self, demo_path):
+        """Loads and returns a environment demonstration."""
+
+        # Load demos tensors
+        demo = np.load(demo_path)
+        new_demo = {k: {} for k in self.demos_data_fields}
+
+        if int(demo["FrameSkip"]) != self.frame_skip:
+            raise ValueError(
+                "Env and demo with different frame skip!")
+
+        # Add action, obs, rew
+        new_demo[prl.ACT] = demo[prl.ACT]
+        new_demo[prl.OBS] = demo[prl.OBS]
+        new_demo[prl.REW] = demo[prl.REW]
+
+        new_demo.update({
+            "ID": str(uuid.uuid4()),
+            "DemoLength": demo[prl.ACT].shape[0],
+            "TotalReward": new_demo[prl.REW].sum()})
+
+        return new_demo
+
     def load_initial_demos(self):
         """
         Load initial demonstrations.
-        Warning: make sure the frame_skip and frame_stack hyperparameters are
+        Warning: make sure the environment frame_skip and frame_stack hyperparameters are
         the same as those used to record the demonstrations!
         """
 
@@ -530,23 +489,7 @@ class PPODBuffer(B):
 
             try:
 
-                # Load demos tensors
-                demo = np.load(demo_file)
-                new_demo = {k: {} for k in self.demos_data_fields}
-
-                if int(demo["FrameSkip"]) != self.frame_skip:
-                    raise ValueError(
-                        "Env and demo with different frame skip!")
-
-                # Add action, obs, rew
-                new_demo[prl.ACT] = demo[prl.ACT]
-                new_demo[prl.OBS] = demo[prl.OBS]
-                new_demo[prl.REW] = demo[prl.REW]
-
-                new_demo.update({
-                    "ID": str(uuid.uuid4()),
-                    "DemoLength": demo[prl.ACT].shape[0],
-                    "TotalReward": new_demo[prl.REW].sum()})
+                new_demo = self.load_demo(demo_file)
                 self.reward_demos.append(new_demo)
                 num_loaded_human_demos += 1
 
@@ -557,23 +500,7 @@ class PPODBuffer(B):
 
             try:
 
-                # Load demos tensors
-                demo = np.load(demo_file)
-                new_demo = {k: {} for k in self.demos_data_fields}
-
-                if int(demo["FrameSkip"]) != self.frame_skip:
-                    raise ValueError(
-                        "Env and demo with different frame skip!")
-
-                # Add action, obs, rew
-                new_demo[prl.ACT] = demo[prl.ACT]
-                new_demo[prl.OBS] = demo[prl.OBS]
-                new_demo[prl.REW] = demo[prl.REW]
-
-                new_demo.update({
-                    "ID": str(uuid.uuid4()),
-                    "DemoLength": demo[prl.ACT].shape[0],
-                    "TotalReward": new_demo[prl.REW].sum()})
+                new_demo = self.load_demo(demo_file)
                 self.reward_demos.append(new_demo)
                 num_loaded_reward_demos += 1
 
@@ -583,6 +510,32 @@ class PPODBuffer(B):
         self.num_loaded_human_demos = num_loaded_human_demos
         self.num_loaded_reward_demos = num_loaded_reward_demos
         print("\nLOADED {} HUMAN DEMOS AND {} REWARD DEMOS".format(num_loaded_human_demos, num_loaded_reward_demos))
+
+    def load_supplementary_demos(self):
+        """
+        Load demonstrations found in the self.supplementary_demos (if any).
+        Warning: make sure the environment frame_skip and frame_stack hyperparameters are
+        the same as those used in the demonstrations!
+        """
+        num_loaded_supplementary_demos = 0
+        supplementary_demos = glob.glob(self.supplementary_demos_dir + '/*.npz') if self.supplementary_demos_dir else []
+
+        for demo_file in supplementary_demos:
+
+            if demo_file not in self.supplementary_demos_loaded:
+
+                self.supplementary_demos_loaded.append(demo_file)
+                try:
+
+                    new_demo = self.load_demo(demo_file)
+                    if new_demo["TotalReward"] >= self.reward_threshold:
+                        self.reward_demos.append(new_demo)
+                        num_loaded_supplementary_demos += 1
+
+                except Exception:
+                    print("Failed to load supplementary demo!")
+
+        print("\nLOADED {} SUPPLEMENTARY DEMOS\n".format(num_loaded_supplementary_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward demos, with probability phi insert value demos."""
@@ -710,3 +663,4 @@ class PPODBuffer(B):
                     Reward=np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
                     Action=np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     FrameSkip=self.frame_skip)
+

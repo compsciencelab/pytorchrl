@@ -258,6 +258,7 @@ class VanillaOnPolicyBuffer(S):
                 self.data[prl.REW], self.data[prl.RET], self.data[prl.VAL], self.data[prl.DONE], self.algo.gamma)
             self.data[prl.ADV] = self.compute_advantages(self.data[prl.RET], self.data[prl.VAL])
 
+        # If intrinsic rewards, normalize them
         if hasattr(self.algo, "gamma_intrinsic") and prl.IREW in self.data.keys():
             self.normalize_int_rewards()
             self.algo.state_rms.update(
