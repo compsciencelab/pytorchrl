@@ -37,8 +37,8 @@ ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
 predictor_proportion: 0.25
 pre_normalization_steps: 50
-rho: 0.15
-phi: 0.0
-demos_dir: code_examples/train_atari/ppod/demos/
+buffer_capacity: 200
+rho: 0.1
+phi: 0.05
 wandb_key: null
 

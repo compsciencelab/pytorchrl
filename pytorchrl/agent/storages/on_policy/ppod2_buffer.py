@@ -76,7 +76,7 @@ class PPOD2Buffer(B):
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
-    storage_tensors = prl.OnPolicyDataKeys
+    on_policy_data_fields = prl.OnPolicyDataKeys
 
     # Data tensors to collect for each reward_demos
     demos_data_fields = prl.DemosDataKeys
@@ -105,8 +105,8 @@ class PPOD2Buffer(B):
 
         # Define buffer demos capacity
         if rho != 0.0 or phi != 0.0:
-            self.max_reward_demos = max(MIN_BUFFER_SIZE, int(self.max_demos * (rho / (rho + phi))))
-            self.max_intrinsic_demos = max(MIN_BUFFER_SIZE, int(self.max_demos * (phi / (rho + phi))))
+            self.max_reward_demos = max(MIN_BUFFER_SIZE, int(total_buffer_demo_capacity * (rho / (rho + phi))))
+            self.max_intrinsic_demos = max(MIN_BUFFER_SIZE, int(total_buffer_demo_capacity * (phi / (rho + phi))))
         else:
             self.max_reward_demos = MIN_BUFFER_SIZE
             self.max_intrinsic_demos = MIN_BUFFER_SIZE
@@ -160,6 +160,9 @@ class PPOD2Buffer(B):
                 "ID": None, "Demo": None, "Step": 0, "DemoLength": -1, "DemoType": None,
                 "CumIntrinsicReward": 0.0, "MaxIntrinsicReward": 0.0, prl.RHS: None,
             } for i in range(self.num_envs)}
+
+        # To keep track of supplementary demos loaded
+        self.supplementary_demos_loaded = []
 
     @classmethod
     def create_factory(cls, size, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
@@ -234,7 +237,7 @@ class PPOD2Buffer(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        super(PPOD2Buffer, self).init_tensors()
+        super(PPOD2Buffer, self).init_tensors(sample)
 
         if prl.IREW not in sample.keys():
             self.phi = 0.0
@@ -384,7 +387,7 @@ class PPOD2Buffer(B):
 
                 # Set inserted data mask to 0.0 only if Intrinsic demo
                 if prl.MASK in self.data.keys():
-                    if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["DemoType"] == "Intrinsic":
+                    if self.demos_in_progress["env{}".format(i + 1)]["DemoType"] == "Intrinsic":
                         self.data[prl.MASK][self.step][i].copy_(torch.zeros(1))
 
                 # Insert other tensors predicted in the forward pass
@@ -434,7 +437,6 @@ class PPOD2Buffer(B):
                     obs2[-self.num_channels_obs:].copy_(torch.FloatTensor(
                         self.demos_in_progress["env{}".format(i + 1)]["Demo"][prl.OBS][demo_step + 1]))
                     self.data[prl.OBS][self.step + 1][i].copy_(obs2)
-                    self.data[prl.OBS2][self.step][i].copy_(obs2)
 
                     # Insert demo rhs2 tensor to self.step + 1
                     if self.recurrent_actor:
@@ -495,113 +497,11 @@ class PPOD2Buffer(B):
                             potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
                         potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
-                        # Check distances
-                        if self.embeds_to_avoid is not None and (potential_demo[prl.REW] > 0.0).sum():
-                            embeddings = np.stack([embed for embed in potential_demo["StateEmbeddings"].reshape(
-                                -1, 1, self.features_flat)[potential_demo[prl.REW] > 0.0]])
-                            distances = self.compute_distances(torch.FloatTensor(embeddings).to(self.device))
-                            has_avoided_states = (distances >= self.embed_dist_thresh).all().cpu()
-                        else:
-                            has_avoided_states = True
+                        # Add agent_demos to reward buffer
+                        self.reward_demos.append(potential_demo)
 
-                        if has_avoided_states:
-
-                            if episode_reward > self.reward_threshold:
-
-                                # Create target dir for reward agent_demos if necessary
-                                if not os.path.exists(self.target_agent_demos_dir):
-                                    os.makedirs(self.target_agent_demos_dir, exist_ok=True)
-
-                                # Check the difference with the reward threshold
-                                # Remove frames until the diff is 1.0
-                                diff = episode_reward - self.reward_threshold
-                                while diff > 1.0:
-
-                                    nonzero = np.flatnonzero(potential_demo[prl.REW][:-1] > 0.0)
-                                    last_reward = np.max(nonzero)
-
-                                    # Cut off data after last reward
-                                    for tensor in self.demos_data_fields:
-                                        potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
-                                    potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
-
-                                    episode_reward = potential_demo[prl.REW].sum()
-                                    diff = episode_reward - self.reward_threshold
-
-                                # Save newly found demo without any extra avoid state
-                                filename = "found_demo_1"
-                                if self.embeds_to_avoid is not None:
-                                    np.savez(
-                                        os.path.join(self.target_agent_demos_dir, filename),
-                                        Observation=np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                                        Reward=np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                                        Action=np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                                        StateEmbeddings=np.array(potential_demo["StateEmbeddings"]).astype(
-                                            self.demo_dtypes["StateEmbeddings"]),
-                                        FrameSkip=self.frame_skip, RewardThreshold=self.reward_threshold + 1,
-                                        AvoidEmbeds=self.embeds_to_avoid.cpu().numpy().astype(
-                                            self.demo_dtypes["StateEmbeddings"]))
-                                else:
-                                    np.savez(
-                                        os.path.join(self.target_agent_demos_dir, filename),
-                                        Observation=np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                                        Reward=np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                                        Action=np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                                        StateEmbeddings=np.array(potential_demo["StateEmbeddings"]).astype(
-                                            self.demo_dtypes["StateEmbeddings"]),
-                                        FrameSkip=self.frame_skip, RewardThreshold=self.reward_threshold + 1)
-
-                                # Save newly found demo without any extra avoid state
-                                filename = "found_demo_2"
-                                if self.embeds_to_avoid is not None:
-
-                                    current_embeds_to_avoid = self.embeds_to_avoid.cpu().numpy()
-                                    reward_embeds = potential_demo['StateEmbeddings'].reshape(
-                                        -1, 1, self.features_flat)[potential_demo[prl.REW] > 0.0]
-
-                                    # Check if the last one is already present in the embeds to avoid
-                                    for e in reversed(reward_embeds):
-
-                                        present = [(e == j.cpu().numpy()).all() for j in self.embeds_to_avoid] if len(
-                                            self.embeds_to_avoid) > 0 else [False]
-
-                                        # If at least one True, this reward frame is already in the list
-                                        if any(present):
-                                            continue
-
-                                        # If not present, add to list and break, otherwise check previous frame
-                                        else:
-                                            current_embeds_to_avoid = np.concatenate(
-                                                [current_embeds_to_avoid, e.reshape(1, self.features_flat).astype(
-                                                    self.demo_dtypes["StateEmbeddings"])], axis=0)
-                                            break
-
-                                    np.savez(
-                                        os.path.join(self.target_agent_demos_dir, filename),
-                                        Observation=np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                                        Reward=np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                                        Action=np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                                        FrameSkip=self.frame_skip, RewardThreshold=self.reward_threshold,
-                                        StateEmbeddings=np.array(potential_demo["StateEmbeddings"]).astype(
-                                            self.demo_dtypes["StateEmbeddings"]),
-                                        AvoidEmbeds=current_embeds_to_avoid.astype(self.demo_dtypes["StateEmbeddings"]))
-                                else:
-                                    np.savez(
-                                        os.path.join(self.target_agent_demos_dir, filename),
-                                        Observation=np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                                        Reward=np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                                        Action=np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                                        FrameSkip=self.frame_skip, RewardThreshold=self.reward_threshold,
-                                        StateEmbeddings=np.array(potential_demo["StateEmbeddings"]).astype(
-                                            self.demo_dtypes["StateEmbeddings"]),
-                                        AvoidEmbeds=potential_demo['StateEmbeddings'][-1:].astype(
-                                            self.demo_dtypes["StateEmbeddings"]))
-
-                            # Add agent_demos to reward buffer
-                            self.reward_demos.append(potential_demo)
-
-                            # Check if buffers are full
-                            self.check_demo_buffer_capacity()
+                        # Check if buffers are full
+                        self.check_demo_buffer_capacity()
 
                 if self.max_intrinsic_demos > 0:
 
@@ -726,7 +626,8 @@ class PPOD2Buffer(B):
                 except Exception:
                     print("Failed to load supplementary demo!")
 
-        print("\nLOADED {} SUPPLEMENTARY DEMOS\n".format(num_loaded_supplementary_demos))
+        if num_loaded_supplementary_demos > 0:
+            print("LOADED {} SUPPLEMENTARY DEMOS\n".format(num_loaded_supplementary_demos))
 
     def sample_demo(self, env_id):
         """With probability rho insert reward reward_demos, with probability phi insert intrinsic reward_demos."""
@@ -820,3 +721,63 @@ class PPOD2Buffer(B):
             for _ in range(len(self.reward_demos) - self.max_reward_demos):
                 lengths = np.array([p[prl.OBS].shape[0] for p in self.reward_demos])
                 del self.reward_demos[np.argmax(lengths)]
+
+    def save_demos(self):
+        """
+        Saves the top `num_rewards_demos` agent_demos from the reward agent_demos buffer and
+        the top `num_intrinsic_demos` agent_demos from the intrinsic agent_demos buffer.
+        """
+
+        if self.target_reward_demos_dir:
+
+            # Create target dir for reward agent_demos if necessary
+            if not os.path.exists(self.target_reward_demos_dir):
+                os.makedirs(self.target_reward_demos_dir, exist_ok=True)
+
+            # Rank agent agent_demos according to episode reward
+            reward_ranking = np.flip(np.array([d["TotalReward"] for d in self.reward_demos]).argsort())
+
+            # Save agent reward agent_demos
+            saved_demos = 0
+            for demo_pos in reward_ranking:
+
+                if saved_demos == self.num_reward_demos_to_save:
+                    break
+
+                filename = "reward_demo_{}".format(saved_demos + 1)
+
+                save_data = {
+                    "Observation": np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                    "Reward": np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                    "Action": np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                    "RewardThreshold": self.reward_threshold, "FrameSkip": self.frame_skip}
+
+                np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data),
+                saved_demos += 1
+
+        if self.target_int_demos_dir:
+
+            # Create target dir for reward agent_demos if necessary
+            if not os.path.exists(self.target_int_demos_dir):
+                os.makedirs(self.target_int_demos_dir, exist_ok=True)
+
+            # Rank agent agent_demos according to episode reward
+            intrinsic_ranking = np.flip(np.array([d["IntrinsicReward"] for d in self.intrinsic_demos]).argsort())
+
+            # Save agent intrinsic agent_demos
+            saved_demos = 0
+            for demo_pos in intrinsic_ranking:
+
+                if saved_demos == self.num_int_demos_to_save:
+                    break
+
+                filename = "intrinsic_demo_{}".format(saved_demos + 1)
+
+                save_data = {
+                    "Observation": np.array(self.intrinsic_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                    "Reward": np.array(self.intrinsic_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                    "Action": np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                    "RewardThreshold": self.reward_threshold, "FrameSkip": self.frame_skip}
+
+                np.savez(os.path.join(self.target_int_demos_dir, filename), **save_data)
+                saved_demos += 1

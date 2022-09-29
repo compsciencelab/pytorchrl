@@ -114,7 +114,8 @@ def main():
         os.makedirs(supp_demos_dir, exist_ok=True)
         storage_factory = PPOD2Buffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
-            target_agent_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
+            total_buffer_demo_capacity=args.buffer_capacity,
+            target_reward_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
             initial_reward_threshold=1.0, demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16},
             supplementary_demos_dir=supp_demos_dir,
         )
@@ -251,7 +252,7 @@ def get_args():
         '--sticky-actions', action='store_true', default=False,
         help='Use sticky actions')
 
-    # RND PPO specs
+    # RND PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
@@ -302,6 +303,9 @@ def get_args():
     parser.add_argument(
         '--pre-normalization-steps', type=int, default=50,
         help='rnd ppo number of pre-normalization steps parameter (default: 50)')
+    parser.add_argument(
+        '--buffer-capacity', type=int, default=50,
+        help='Max number of demos allowed int he buffer (default: 50)')
     parser.add_argument(
         '--demos-dir', default='/tmp/atari_ppod',
         help='target directory to store and retrieve demos.')
