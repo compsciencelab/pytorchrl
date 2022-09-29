@@ -532,6 +532,9 @@ class PPODBuffer(B):
                         self.reward_demos.append(new_demo)
                         num_loaded_supplementary_demos += 1
 
+                    # Check if buffer is full and if so, handle it
+                    self.check_demo_buffer_capacity()
+
                 except Exception:
                     print("Failed to load supplementary demo!")
 
