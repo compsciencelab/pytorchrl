@@ -81,7 +81,7 @@ def main():
             predictor_proportion=args.predictor_proportion, gamma=args.gamma,
             pre_normalization_steps=args.pre_normalization_steps,
             pre_normalization_length=args.num_steps,
-            intrinsic_rewards_network=get_feature_extractor(args.nn),
+            intrinsic_rewards_network=get_feature_extractor(args.feature_extractor_net),
             intrinsic_rewards_target_network_kwargs={
                 "output_sizes": [512],
                  "activation": nn.LeakyReLU,

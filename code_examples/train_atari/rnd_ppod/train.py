@@ -105,7 +105,7 @@ def main():
         # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            feature_extractor_network=get_feature_extractor(args.nn),
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             restart_model=checkpoint, recurrent_net=get_memory_network(args.recurrent_net))
 
         # Define rollouts storage
