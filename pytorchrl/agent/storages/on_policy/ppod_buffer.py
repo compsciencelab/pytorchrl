@@ -10,30 +10,6 @@ import pytorchrl as prl
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 
-def load_demo(demo_path):
-    """Loads and returns a environment demonstration."""
-
-    # Load demos tensors
-    demo = np.load(demo_path)
-    new_demo = {k: {} for k in self.demos_data_fields}
-
-    if int(demo["FrameSkip"]) != self.frame_skip:
-        raise ValueError(
-            "Env and demo with different frame skip!")
-
-    # Add action, obs, rew
-    new_demo[prl.ACT] = demo[prl.ACT]
-    new_demo[prl.OBS] = demo[prl.OBS]
-    new_demo[prl.REW] = demo[prl.REW]
-
-    new_demo.update({
-        "ID": str(uuid.uuid4()),
-        "DemoLength": demo[prl.ACT].shape[0],
-        "TotalReward": new_demo[prl.REW].sum()})
-
-    return new_demo
-
-
 class PPODBuffer(B):
     """
     Storage class for PPO+D algorithm.
@@ -89,7 +65,7 @@ class PPODBuffer(B):
 
     def __init__(self, size, device, actor, algorithm, envs, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10,
                  total_buffer_demo_capacity=51, initial_human_demos_dir=None, initial_agent_demos_dir=None,
-                 supplementary_demos_dir=None, target_agent_demos_dir=None,  num_agent_demos_to_save=10,
+                 supplementary_demos_dir=None, target_agent_demos_dir=None, num_agent_demos_to_save=10,
                  initial_reward_threshold=None, save_demos_every=10,
                  demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
@@ -158,9 +134,9 @@ class PPODBuffer(B):
 
     @classmethod
     def create_factory(cls, size, rho=0.1, phi=0.3, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=51,
-                       initial_human_demos_dir=None, initial_agent_demos_dir=None, target_agent_demos_dir=None,
-                       num_agent_demos_to_save=10, initial_reward_threshold=None, save_demos_every=10,
-                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
+                       initial_human_demos_dir=None, initial_agent_demos_dir=None, supplementary_demos_dir=None,
+                       target_agent_demos_dir=None, num_agent_demos_to_save=10, initial_reward_threshold=None,
+                       save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
         """
         Returns a function that creates PPODBuffer instances.
 
@@ -172,6 +148,9 @@ class PPODBuffer(B):
             Path to directory containing human initial demonstrations.
         initial_agent_demos_dir : str
             Path to directory containing other agent initial demonstrations.
+        supplementary_demos_dir : str
+            Path to a directory where additional demos can be added after training has started.
+            these demos will be incorporated into the buffer as bonus agent demos.
         target_agent_demos_dir : str
             Path to directory where best reward demonstrations should be saved.
         rho : float
@@ -202,7 +181,7 @@ class PPODBuffer(B):
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPODBuffer instance."""
             return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
-                       initial_human_demos_dir, initial_agent_demos_dir, target_agent_demos_dir,
+                       initial_human_demos_dir, initial_agent_demos_dir, supplementary_demos_dir, target_agent_demos_dir,
                        num_agent_demos_to_save, initial_reward_threshold, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
@@ -467,6 +446,29 @@ class PPODBuffer(B):
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_val["env{}".format(i + 1)] = - np.inf
 
+    def load_demo(self, demo_path):
+        """Loads and returns a environment demonstration."""
+
+        # Load demos tensors
+        demo = np.load(demo_path)
+        new_demo = {k: {} for k in self.demos_data_fields}
+
+        if int(demo["FrameSkip"]) != self.frame_skip:
+            raise ValueError(
+                "Env and demo with different frame skip!")
+
+        # Add action, obs, rew
+        new_demo[prl.ACT] = demo[prl.ACT]
+        new_demo[prl.OBS] = demo[prl.OBS]
+        new_demo[prl.REW] = demo[prl.REW]
+
+        new_demo.update({
+            "ID": str(uuid.uuid4()),
+            "DemoLength": demo[prl.ACT].shape[0],
+            "TotalReward": new_demo[prl.REW].sum()})
+
+        return new_demo
+
     def load_initial_demos(self):
         """
         Load initial demonstrations.
@@ -487,7 +489,7 @@ class PPODBuffer(B):
 
             try:
 
-                new_demo = load_demo(demo_file)
+                new_demo = self.load_demo(demo_file)
                 self.reward_demos.append(new_demo)
                 num_loaded_human_demos += 1
 
@@ -498,7 +500,7 @@ class PPODBuffer(B):
 
             try:
 
-                new_demo = load_demo(demo_file)
+                new_demo = self.load_demo(demo_file)
                 self.reward_demos.append(new_demo)
                 num_loaded_reward_demos += 1
 
@@ -525,7 +527,7 @@ class PPODBuffer(B):
                 self.supplementary_demos_loaded.append(demo_file)
                 try:
 
-                    new_demo = load_demo(demo_file)
+                    new_demo = self.load_demo(demo_file)
                     self.reward_demos.append(new_demo)
                     num_loaded_supplementary_demos += 1
 
