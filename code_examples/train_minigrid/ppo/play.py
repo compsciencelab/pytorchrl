@@ -56,13 +56,13 @@ def key_handler(env, window, event):
         return
 
     # Spacebar
-    if event.key == " ":
+    if event.key == "t":
         step(env, window, env.actions.toggle)
         return
-    if event.key == "pageup":
+    if event.key == "k":
         step(env, window, env.actions.pickup)
         return
-    if event.key == "pagedown":
+    if event.key == "d":
         step(env, window, env.actions.drop)
         return
 

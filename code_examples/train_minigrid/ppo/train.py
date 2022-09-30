@@ -52,7 +52,6 @@ def main():
         "actor_factory": actor_factory,
         "storage_factory": storage_factory,
         "train_envs_factory": train_envs_factory,
-        "test_envs_factory": test_envs_factory,
     })
 
     scheme = Scheme(**params)
