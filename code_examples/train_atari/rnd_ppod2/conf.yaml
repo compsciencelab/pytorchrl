@@ -13,14 +13,14 @@ frame_skip: 0
 frame_stack: 4
 gae_lambda: 0.95
 gamma: 0.999
-log_dir: /tmp/rnd_ppod
+log_dir: /tmp/rnd_ppod2
 log_interval: 1
 lr: 0.0001
 max_grad_norm: 1.0
 max_time: 8640000
 feature_extractor_net: CNN
 num_col_workers: 1
-num_env_processes: 128
+num_env_processes: 64
 num_grad_workers: 1
 num_mini_batch: 4
 num_steps: 128
@@ -34,10 +34,10 @@ value_loss_coef: 1.0
 gamma_intrinsic: 0.99
 ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
-predictor_proportion: 0.25
+predictor_proportion: 0.5
 pre_normalization_steps: 50
-rho: 0.15
-phi: 0.0
-demos_dir: code_examples/train_atari/ppod/demos/
+buffer_capacity: 300
+rho: 0.1
+phi: 0.05
 wandb_key: null
 

@@ -105,7 +105,7 @@ def main():
         # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            feature_extractor_network=get_feature_extractor(args.nn),
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             restart_model=checkpoint, recurrent_net=get_memory_network(args.recurrent_net))
 
         # Define rollouts storage
@@ -248,7 +248,7 @@ def get_args():
         '--sticky-actions', action='store_true', default=False,
         help='Use sticky actions')
 
-    # RND PPO specs
+    # RND PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(

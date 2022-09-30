@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 import sys
-import subprocess
 
 import os
 import ray
 import time
 import glob
-import yaml
 import torch
 import wandb
 import shutil
@@ -15,14 +13,15 @@ import argparse
 import numpy as np
 import torch.nn as nn
 
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
+from pytorchrl.agent.storages.on_policy.ppod2_buffer import PPOD2Buffer
 from pytorchrl.envs.atari import atari_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 
 
 def main():
@@ -81,7 +80,7 @@ def main():
             predictor_proportion=args.predictor_proportion, gamma=args.gamma,
             pre_normalization_steps=args.pre_normalization_steps,
             pre_normalization_length=args.num_steps,
-            intrinsic_rewards_network=get_feature_extractor(args.feature_extractor_net),
+            intrinsic_rewards_network=get_feature_extractor("CNN"),
             intrinsic_rewards_target_network_kwargs={
                 "output_sizes": [512],
                  "activation": nn.LeakyReLU,
@@ -106,11 +105,20 @@ def main():
         # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            feature_extractor_network=get_feature_extractor("CNN"),
+            shared_policy_value_network=False,
+            feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
             restart_model=checkpoint, recurrent_net=get_memory_network(args.recurrent_net))
 
         # Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        supp_demos_dir = args.log_dir + "/supplementary_demos/"
+        os.makedirs(supp_demos_dir, exist_ok=True)
+        storage_factory = PPOD2Buffer.create_factory(
+            size=args.num_steps, rho=args.rho, phi=args.phi,
+            total_buffer_demo_capacity=args.buffer_capacity,
+            gae_lambda=args.gae_lambda, initial_reward_threshold=1.0,
+            demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16},
+            supplementary_demos_dir=supp_demos_dir,
+        )
 
         # Define scheme
         params = {}
@@ -244,12 +252,18 @@ def get_args():
         '--sticky-actions', action='store_true', default=False,
         help='Use sticky actions')
 
-    # RND PPO specs
+    # RND PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
         '--gamma', type=float, default=0.99,
         help='discount factor for rewards (default: 0.99)')
+    parser.add_argument(
+        '--rho', type=float, default=0.3,
+        help='PPO+D rho parameter (default: 0.3)')
+    parser.add_argument(
+        '--phi', type=float, default=0.0,
+        help='PPO+D phi parameter (default: 0.0)')
     parser.add_argument(
         '--gae-lambda', type=float, default=0.95,
         help='gae lambda parameter (default: 0.95)')
@@ -289,6 +303,12 @@ def get_args():
     parser.add_argument(
         '--pre-normalization-steps', type=int, default=50,
         help='rnd ppo number of pre-normalization steps parameter (default: 50)')
+    parser.add_argument(
+        '--buffer-capacity', type=int, default=50,
+        help='Max number of demos allowed int he buffer (default: 50)')
+    parser.add_argument(
+        '--demos-dir', default='/tmp/atari_ppod',
+        help='target directory to store and retrieve demos.')
 
     # Feature extractor model specs
     parser.add_argument(
