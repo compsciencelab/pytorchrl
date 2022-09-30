@@ -23,14 +23,11 @@ def reset(env, window, seed=None):
 
 
 def step(env, window, action):
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     print(f"step={env.step_count}, reward={reward:.2f}")
 
     if terminated:
         print("terminated!")
-        reset(env, window)
-    elif truncated:
-        print("truncated!")
         reset(env, window)
     else:
         img = env.get_frame()
