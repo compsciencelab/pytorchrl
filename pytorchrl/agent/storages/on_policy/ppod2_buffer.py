@@ -1,8 +1,3 @@
-"""
-Extension of PPOD that uses intrinsic rewards instead of value predictions to rank demos.
-This version does not differentiate between human demos and agent demos, and classifies everything as reward demos.
-"""
-
 import os
 import glob
 import copy
@@ -13,7 +8,6 @@ from copy import deepcopy
 from collections import defaultdict
 
 import pytorchrl as prl
-from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 MIN_BUFFER_SIZE = 10
@@ -232,7 +226,6 @@ class PPOD2Buffer(B):
 
         Parameters
         ----------
-        ----------
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
@@ -245,9 +238,7 @@ class PPOD2Buffer(B):
             self.max_intrinsic_demos = 0
 
     def before_gradients(self):
-        """
-        Before updating actor policy model, compute returns and advantages.
-        """
+        """Before updating actor policy model, compute returns and advantages."""
 
         print("\nREWARD DEMOS {}, INTRINSIC DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {},"
               " INTRINSIC THRESHOLD {}\n".format(len(self.reward_demos), len(self.intrinsic_demos),
@@ -265,12 +256,14 @@ class PPOD2Buffer(B):
     def after_gradients(self, batch, info):
         """
         After updating actor policy model, make sure self.step is at 0.
+
         Parameters
         ----------
         batch : dict
             Data batch used to compute the gradients.
         info : dict
             Additional relevant info from gradient computation.
+
         Returns
         -------
         info : dict
@@ -503,6 +496,12 @@ class PPOD2Buffer(B):
                         # Check if buffers are full
                         self.check_demo_buffer_capacity()
 
+                        # Update reward_threshold.
+                        self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+
+                        # Update max demo reward
+                        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+
                 if self.max_intrinsic_demos > 0:
 
                     # Set potential demo cumulative intrinsic reward
@@ -515,11 +514,11 @@ class PPOD2Buffer(B):
                         # Add agent_demos to intrinsic buffer
                         self.intrinsic_demos.append(potential_demo)
 
+                        # Check if buffer is full
+                        self.check_demo_buffer_capacity()
+
                         # Update intrinsic_threshold
                         self.intrinsic_threshold = min([p["IntrinsicReward"] for p in self.intrinsic_demos])
-
-                        # Check if buffers are full
-                        self.check_demo_buffer_capacity()
 
                 # Reset potential agent_demos dict
                 for tensor in self.demos_data_fields:
@@ -621,7 +620,16 @@ class PPOD2Buffer(B):
                     new_demo = self.load_demo(demo_file)
                     self.reward_demos.append(new_demo)
                     num_loaded_supplementary_demos += 1
+
+                    # Check if buffer is full
                     self.check_demo_buffer_capacity()
+
+                    # Update reward_threshold.
+                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+
+                    # Update max demo reward
+                    self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+
 
                 except Exception:
                     print("Failed to load supplementary demo!")

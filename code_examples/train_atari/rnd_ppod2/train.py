@@ -115,8 +115,8 @@ def main():
         storage_factory = PPOD2Buffer.create_factory(
             size=args.num_steps, rho=args.rho, phi=args.phi,
             total_buffer_demo_capacity=args.buffer_capacity,
-            target_reward_demos_dir="/tmp/atari_demos/", gae_lambda=args.gae_lambda,
-            initial_reward_threshold=1.0, demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16},
+            gae_lambda=args.gae_lambda, initial_reward_threshold=1.0,
+            demo_dtypes={prl.OBS: np.uint8, prl.ACT: np.int8, prl.REW: np.float16},
             supplementary_demos_dir=supp_demos_dir,
         )
 

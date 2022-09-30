@@ -3,7 +3,6 @@ clip_param: 0.1
 cluster: false
 com_col_workers: synchronous
 com_grad_workers: synchronous
-conf: null
 entropy_coef: 0.001
 env_id: MontezumaRevengeNoFrameskip-v4
 episodic_life: false
