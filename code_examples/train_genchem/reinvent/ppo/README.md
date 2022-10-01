@@ -76,9 +76,9 @@ Additionally, for a custom scoring function dummy example look at `code_examples
 
 To use a custom scoring function two minor code modifications are required.
 
-First, replace `line 23` in `code_examples/train_genchem/ppo_reinvent/train_rnn_model.py` by importing the custom scoring_function. For example from 
+First, replace `line 25` in `code_examples/train_genchem/ppo_reinvent/train_rnn_model.py` by importing the custom scoring_function. For example from 
 
-    from code_examples.train_genchem.reinvent.default_scoring_function import scoring_function
+    from default_scoring_function import scoring_function
 
 to
 

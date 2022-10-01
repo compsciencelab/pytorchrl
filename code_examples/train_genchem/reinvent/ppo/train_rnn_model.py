@@ -19,11 +19,13 @@ from pytorchrl.envs.generative_chemistry.utils import adapt_reinvent_checkpoint
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
+
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from code_examples.train_genchem.reinvent.default_scoring_function import scoring_function
+from default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 
 def main():

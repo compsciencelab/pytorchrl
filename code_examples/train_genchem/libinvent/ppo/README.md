@@ -70,9 +70,9 @@ Additionally, for a custom scoring function dummy example look at `code_examples
 
 To use a custom scoring function two minor code modifications are required.
 
-First, replace `line 24` in `code_examples/train_genchem/libinvent/ppo/train.py` by importing the custom scoring_function. For example from 
+First, replace `line 27` in `code_examples/train_genchem/libinvent/ppo/train.py` by importing the custom scoring_function. For example from 
 
-    from code_examples.train_genchem.libinvent.default_scoring_function import scoring_function
+    from default_scoring_function import scoring_function
 
 to
 

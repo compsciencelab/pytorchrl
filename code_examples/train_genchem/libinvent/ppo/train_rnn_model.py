@@ -21,11 +21,13 @@ from pytorchrl.envs.generative_chemistry.utils import adapt_libinvent_checkpoint
 from pytorchrl.envs.generative_chemistry.libinvent.utils import get_num_unique_smiles
 from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_factory import libinvent_train_env_factory
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
+
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from code_examples.train_genchem.libinvent.default_scoring_function import scoring_function
+from default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.libinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 # testing
 from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
