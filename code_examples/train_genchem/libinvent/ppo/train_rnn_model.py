@@ -62,7 +62,7 @@ def main():
         # else:
         (vocabulary, max_sequence_length, recurrent_net_kwargs,
          network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
-            __file__)), "models/library_design.prior"))
+            __file__)), "../models/library_design.prior"))
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs

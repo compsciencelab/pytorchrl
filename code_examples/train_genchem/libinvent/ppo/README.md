@@ -15,17 +15,17 @@ pytorchrl also has to be pip installed
 
 ## 2. Experiment configuration
 
-Training parameters can be adjusted in the `code_examples/train_genchem/ppo/conf.yaml` file. In particular, use the field `scaffolds` to define a list of the scaffolds to be decorated, `reaction_filters` to specify a list of reactions which should be favoured by the reward function and `randomize_scaffolds` to define whether or not a random SMILES representation of the scaffolds should be used at each episode. 
+Training parameters can be adjusted in the `code_examples/train_genchem/libinvent/ppo/conf.yaml` file. In particular, use the field `scaffolds` to define a list of the scaffolds to be decorated, `reaction_filters` to specify a list of reactions which should be favoured by the reward function and `randomize_scaffolds` to define whether or not a random SMILES representation of the scaffolds should be used at each episode. 
 
 Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
-    python code_examples/train_genchem/ppo_libinvent/train_rnn_model.py --help
+    python code_examples/train_genchem/libinvent/ppo/train_rnn_model.py --help
 
 ## 3. Training
 
 To train an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/ppo_libinvent/train_rnn_model.sh
+    ./code_examples/train_genchem/libinvent/ppo/train_rnn_model.sh
 
 If the agent was not pre-trained, a default pre-trained model is used.
 
@@ -37,13 +37,13 @@ If you have a `wandb` account, you can visualise you training progress at https:
 
 After training, results (including an image of the top generated molecules) can be analized by running
 
-    ./code_examples/train_genchem/ppo_libinvent/analize_results.sh
+    ./code_examples/train_genchem/libinvent/ppo/analize_results.sh
 
 ## 6. Use a custom scoring function
 
 By default, the training script will use a default scoring function, which can be found in 
 
-    pytorchrl/envs/generative_chemistry/libinvent/default_scoring_function.py
+    code_examples/train_genchem/libinvent/default_scoring_function.py
 
 ### 6.1 Define an alternative scoring function
 
@@ -64,15 +64,15 @@ As a reference, an instance output for the default_scoring_function looks like t
         "raw_regression_model": 0.33,
     }
 
-Additionally, for a custom scoring function dummy example look at `code_examples/train_genchem/ppo/dummy_custom_scoring_function.py`
+Additionally, for a custom scoring function dummy example look at `code_examples/train_genchem/libinvent/dummy_custom_scoring_function.py`
 
 ### 6.2 Code Adjustments
 
 To use a custom scoring function two minor code modifications are required.
 
-First, replace `line 24` in `code_examples/train_genchem/ppo_libinvent/train.py` by importing the custom scoring_function. For example from 
+First, replace `line 24` in `code_examples/train_genchem/libinvent/ppo/train.py` by importing the custom scoring_function. For example from 
 
-    from pytorchrl.envs.generative_chemistry.libinvent.default_scoring_function import scoring_function
+    from code_examples.train_genchem.libinvent.default_scoring_function import scoring_function
 
 to
 
