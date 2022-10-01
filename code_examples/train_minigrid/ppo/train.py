@@ -34,11 +34,13 @@ def main():
         lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
         entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
         max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-        use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma)
+        use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,)
 
     # 3. Define RL Policy
     actor_factory = OnPolicyActor.create_factory(
-        obs_space, action_space, algo_name, restart_model=args.restart_model)
+        obs_space, action_space, algo_name,
+        restart_model=args.restart_model,
+        shared_policy_value_network=False)
 
     # 4. Define rollouts storage
     storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)

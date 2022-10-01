@@ -4,6 +4,7 @@ import os
 import time
 import torch
 import argparse
+import numpy as np
 import pytorchrl as prl
 from minigrid.utils.window import Window
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_test_env_factory
@@ -30,6 +31,7 @@ def reset(env, window, seed=None):
 
 
 def step(env, window, action, policy):
+
     obs, reward, done, info = env.step(action)
 
     # Define tensors
@@ -39,10 +41,10 @@ def step(env, window, action, policy):
     _, rhs, _ = policy.actor_initial_states(obs)
 
     with torch.no_grad():
-        _, _, _, rhs, _, _ = policy.get_action(obs, rhs, done, deterministic=False)
-        value = policy.get_value(obs, rhs, done)['value_net1']
+        value = policy.get_value(obs, rhs, done)['value_net1'].item()
 
-    print(f"step={env.step_count}, reward={reward:.2f}, value={value.item():.2f}")
+    value_error = np.abs(value - reward)
+    print(f"step={env.step_count}, reward={reward:.2f}, value={value:.2f}, value_error={value_error:.2f}")
 
     if done:
         print("terminated!")
@@ -102,14 +104,16 @@ def enjoy():
 
     policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space, prl.PPO,
-        restart_model=os.path.join(args.log_dir, "model.state_dict"))(device)
-
-    # Define initial Tensors
-    obs, done = env.reset(), False
-    _, rhs, _ = policy.actor_initial_states(torch.tensor(obs))
+        restart_model=os.path.join(args.log_dir, "model.state_dict"),
+        shared_policy_value_network=False,
+    )(device)
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
+
+    global value
+    value = 0.0
+
     window.reg_key_handler(lambda event: key_handler(env, window, event, policy))
 
     seed = None
