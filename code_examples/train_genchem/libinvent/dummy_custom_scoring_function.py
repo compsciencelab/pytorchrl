@@ -6,3 +6,4 @@ def dummy_custom_scoring_function(smile):
         "reward": random.random(),
         "valid_smile": True,
     }
+
