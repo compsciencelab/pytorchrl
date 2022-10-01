@@ -13,10 +13,9 @@ from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.vocabulary import ReinventVocabulary
 from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
-from code_examples.train_genchem.ppo_reinvent.train_transformer_model import get_args
-from code_examples.train_genchem.ppo_reinvent.pretrain_rnn_model import \
+from code_examples.train_genchem.reinvent.ppo.train_transformer_model import get_args
+from code_examples.train_genchem.reinvent.ppo.pretrain_rnn_model import \
     is_valid_smile, filter_mol, read_and_filter_data, write_smiles_to_file, MolData, decrease_learning_rate
-
 
 # testing
 from pytorchrl.agent.actors.feature_extractors.gpt import GPT
