@@ -1,6 +1,5 @@
 __version__ = "2.6.14"
 
-
 from collections import namedtuple
 
 __all__ = [
