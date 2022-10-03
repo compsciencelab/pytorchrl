@@ -35,14 +35,28 @@ class EnvManager:
 
         img = self.env.get_frame()
 
+<<<<<<< HEAD
         self.redraw(img)
+=======
+def step(env, window, action, policy):
+
+    obs, reward, done, info = env.step(action)
+>>>>>>> d7d1963 (miigrid code examples)
 
     def step(self, action):
 
+<<<<<<< HEAD
         obs, reward, done, info = self.env.step(action)
 
         value_error = np.abs(self.value - reward)
         print(f"step={self.env.step_count}, reward={reward:.2f}, value={self.value:.2f}, value_error={value_error:.2f}")
+=======
+    with torch.no_grad():
+        value = policy.get_value(obs, rhs, done)['value_net1'].item()
+
+    value_error = np.abs(value - reward)
+    print(f"step={env.step_count}, reward={reward:.2f}, value={value:.2f}, value_error={value_error:.2f}")
+>>>>>>> d7d1963 (miigrid code examples)
 
         # Define tensors
         device = self.policy.device
@@ -117,9 +131,17 @@ def enjoy():
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
+<<<<<<< HEAD
     manager = EnvManager(env, window, policy)
 
     window.reg_key_handler(lambda event: key_handler(manager, event))
+=======
+
+    global value
+    value = 0.0
+
+    window.reg_key_handler(lambda event: key_handler(env, window, event, policy))
+>>>>>>> d7d1963 (miigrid code examples)
 
     seed = None
     manager.reset(seed)
