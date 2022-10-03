@@ -1,6 +1,6 @@
 from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
-from minigrid.core.world_object import Goal
+from minigrid.core.world_object import Goal, Lava
 from minigrid.minigrid_env import MiniGridEnv
 
 
@@ -8,18 +8,12 @@ class DeceivingRewardsEnv(MiniGridEnv):
     """
     ### Description
 
-    This environment is an empty room, and the goal of the agent is to reach the
-    green goal square, which provides a sparse reward. A small penalty is
-    subtracted for the number of steps to reach the goal. This environment is
-    useful, with small rooms, to validate that your RL algorithm works
-    correctly, and with large rooms to experiment with sparse rewards and
-    exploration. The random variants of the environment have the agent starting
-    at a random position for each episode, while the regular variants have the
-    agent always starting in the corner opposite to the goal.
+    Environment with 2 goals, one easy to get and one requiring more exploration.
+    The agent must find the access to a room to get the second reward.
 
     ### Mission Space
 
-    "get to the green goal square"
+    "get to a green goal square"
 
     ### Action Space
 
@@ -43,7 +37,7 @@ class DeceivingRewardsEnv(MiniGridEnv):
 
     ### Rewards
 
-    A reward of '1' is given for success, and '0' for failure.
+    A reward of '1' is given for the easy goal, and '0.5' for the hard goal.
 
     ### Termination
 
@@ -54,24 +48,16 @@ class DeceivingRewardsEnv(MiniGridEnv):
 
     ### Registered Configurations
 
-    - `MiniGrid-Empty-5x5-v0`
-    - `MiniGrid-Empty-Random-5x5-v0`
-    - `MiniGrid-Empty-6x6-v0`
-    - `MiniGrid-Empty-Random-6x6-v0`
-    - `MiniGrid-Empty-8x8-v0`
-    - `MiniGrid-Empty-16x16-v0`
+    - `MiniGrid-DeceivingRewards-v0`
     """
 
-    def __init__(self, size=20, agent_start_pos=(1, 1), agent_start_dir=0, **kwargs):
-        self.agent_start_pos = agent_start_pos
-        self.agent_start_dir = agent_start_dir
-
-        self.agent_pos = agent_start_pos
+    def __init__(self, **kwargs):
 
         mission_space = MissionSpace(
             mission_func=lambda: "get to the green goal square"
         )
 
+        size = 20
         super().__init__(
             mission_space=mission_space,
             grid_size=size,
@@ -88,17 +74,44 @@ class DeceivingRewardsEnv(MiniGridEnv):
         # Generate the surrounding walls
         self.grid.wall_rect(0, 0, width, height)
 
+        room_w = width // 2
+        room_h = height // 2
+
+        # For each row of rooms
+        for j in range(0, 2):
+
+            # For each column
+            for i in range(0, 2):
+
+                if j != 1 and i != 1:
+                    continue
+
+                xL = i * room_w
+                yT = j * room_h
+                xR = xL + room_w
+                yB = yT + room_h
+
+                # Bottom wall and door
+                if i + 1 < 2:
+                    self.grid.vert_wall(xR, yT, room_h)
+                    pos = (xR, yB - 2)
+                    self.grid.set(*pos, None)
+
+                # Bottom wall and door
+                if j + 1 < 2:
+                    self.grid.horz_wall(xL, yB, room_w)
+
         # Place a goal square in the bottom-right corner
         self.put_obj(Goal(), width - 2, height - 2)
 
         # Place a goal square in the bottom-right corner
         self.put_obj(Goal(), width - 2, 1)
 
+        # Place some lava to make goal more distinguishable
+        self.grid.vert_wall(height - 2, room_h + 1, 6, Lava)
+
         # Place the agent
-        if self.agent_start_pos is not None:
-            self.agent_pos = self.agent_start_pos
-            self.agent_dir = self.agent_start_dir
-        else:
-            self.place_agent()
+        self.agent_pos = (width - 5, room_h - 3)
+        self.agent_dir = 3
 
         self.mission = "get to the green goal square"

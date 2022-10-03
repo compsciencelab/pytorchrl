@@ -4,6 +4,7 @@ import gymnasium as gym
 from minigrid.utils.window import Window
 from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
+from code_examples.train_minigrid.ppo.train import get_args
 
 
 def redraw(window, img):
@@ -73,7 +74,8 @@ def key_handler(env, window, event):
 
 if __name__ == "__main__":
 
-    env = minigrid_train_env_factory(env_id="MiniGrid-DeceivingRewards-v0")
+    args = get_args()
+    env = minigrid_train_env_factory(env_id=args.env_id)
 
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
     window.reg_key_handler(lambda event: key_handler(env, window, event))

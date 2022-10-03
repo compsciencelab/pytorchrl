@@ -14,80 +14,87 @@ from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
 from code_examples.train_minigrid.ppo.train import get_args
 
 
-def redraw(window, img):
-    window.show_img(img)
+class EnvManager:
+
+    def __init__(self, env, window, policy):
+
+        self.env = env
+        self.policy = policy
+        self.window = window
+        self.value = 0.0
+
+    def redraw(self, img):
+        self.window.show_img(img)
+
+    def reset(self, seed=None):
+        self.env.reset(seed=seed)
+
+        if hasattr(self.env, "mission"):
+            print("Mission: %s" % self.env.mission)
+            self.window.set_caption(self.env.mission)
+
+        img = self.env.get_frame()
+
+        self.redraw(img)
+
+    def step(self, action):
+
+        obs, reward, done, info = self.env.step(action)
+
+        value_error = np.abs(self.value - reward)
+        print(f"step={self.env.step_count}, reward={reward:.2f}, value={self.value:.2f}, value_error={value_error:.2f}")
+
+        # Define tensors
+        device = self.policy.device
+        obs = torch.Tensor(obs).unsqueeze(0).to(device)
+        done = torch.Tensor([done]).unsqueeze(0).to(device)
+        _, rhs, _ = self.policy.actor_initial_states(obs)
+
+        with torch.no_grad():
+            self.value = self.policy.get_value(obs, rhs, done)['value_net1'].item()
+
+        if done:
+            print("terminated!")
+            self.reset()
+        else:
+            img = self.env.get_frame()
+            self.redraw(img)
 
 
-def reset(env, window, seed=None):
-    env.reset(seed=seed)
-
-    if hasattr(env, "mission"):
-        print("Mission: %s" % env.mission)
-        window.set_caption(env.mission)
-
-    img = env.get_frame()
-
-    redraw(window, img)
-
-
-def step(env, window, action, policy):
-
-    obs, reward, done, info = env.step(action)
-
-    # Define tensors
-    device = policy.device
-    obs = torch.Tensor(obs).unsqueeze(0).to(device)
-    done = torch.Tensor([done]).unsqueeze(0).to(device)
-    _, rhs, _ = policy.actor_initial_states(obs)
-
-    with torch.no_grad():
-        value = policy.get_value(obs, rhs, done)['value_net1'].item()
-
-    value_error = np.abs(value - reward)
-    print(f"step={env.step_count}, reward={reward:.2f}, value={value:.2f}, value_error={value_error:.2f}")
-
-    if done:
-        print("terminated!")
-        reset(env, window)
-    else:
-        img = env.get_frame()
-        redraw(window, img)
-
-
-def key_handler(env, window, event, policy):
+def key_handler(manager, event):
     print("pressed", event.key)
 
     if event.key == "escape":
-        window.close()
+        manager.window.close()
         return
 
     if event.key == "backspace":
-        reset(env, window)
+        manager.reset()
         return
 
     if event.key == "left":
-        step(env, window, env.actions.left, policy)
+        manager.step(manager.env.actions.left)
         return
     if event.key == "right":
-        step(env, window, env.actions.right, policy)
+        manager.step(manager.env.actions.right)
         return
     if event.key == "up":
-        step(env, window, env.actions.forward, policy)
+        manager.step(manager.env.actions.forward)
         return
 
     # Spacebar
     if event.key == "t":
-        step(env, window, env.actions.toggle, policy)
+        manager.step(manager.env.actions.toggle)
         return
     if event.key == "k":
-        step(env, window, env.actions.pickup, policy)
+        manager.step(manager.env.actions.pickup)
         return
     if event.key == "d":
-        step(env, window, env.actions.drop, policy)
+        manager.step(manager.env.actions.drop)
         return
 
     if event.key == "enter":
-        step(env, window, env.actions.done, policy)
+        manager.step(manager.env.actions.done)
         return
 
 
@@ -110,14 +117,12 @@ def enjoy():
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
+    manager = EnvManager(env, window, policy)
 
-    global value
-    value = 0.0
-
-    window.reg_key_handler(lambda event: key_handler(env, window, event, policy))
+    window.reg_key_handler(lambda event: key_handler(manager, event))
 
     seed = None
-    reset(env, window, seed)
+    manager.reset(seed)
 
     # Blocking event loop
     window.show(block=True)

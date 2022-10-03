@@ -18,7 +18,4 @@ def register_custom_minigrid_envs():
         entry_point="pytorchrl.envs.minigrid.custom_environments:DeceivingRewardsEnv",
     )
 
-# Register environments
-register_custom_minigrid_envs()
-
 
