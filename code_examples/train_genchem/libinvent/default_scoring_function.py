@@ -57,15 +57,7 @@ scoring_function_parameters = {
             "name": "DRD2",
             "weight": 1,
             "specific_parameters": {
-<<<<<<< HEAD:code_examples/train_genchem/libinvent/default_scoring_function.py
                 "model_path": os.path.join(os.path.dirname(__file__), "models/drd2.pkl"),
-=======
-                "model_path": os.path.join(os.path.dirname(__file__), "/models/drd2.pkl"),
-<<<<<<< HEAD
->>>>>>> 0dcf0ed (genchem code examples):pytorchrl/envs/generative_chemistry/libinvent/default_scoring_function.py
-=======
->>>>>>> f3219c0 (genchem code examples):pytorchrl/envs/generative_chemistry/libinvent/default_scoring_function.py
->>>>>>> 5ec0fb9 (minigrid code examples)
                 "scikit": "classification",
                 "descriptor_type": "ecfp",
                 "size": 2048,
