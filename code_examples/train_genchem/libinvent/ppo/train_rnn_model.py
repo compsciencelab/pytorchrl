@@ -34,7 +34,11 @@ from code_examples.train_genchem.libinvent.default_scoring_function import scori
 
 # Test dummy custom score function
 # from code_examples.train_genchem.libinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+<<<<<<< HEAD
 >>>>>>> 0dcf0ed (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
+=======
+>>>>>>> f3219c0 (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
+>>>>>>> 5ec0fb9 (minigrid code examples)
 
 # testing
 from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
@@ -75,7 +79,11 @@ def main():
             __file__)), "../models/library_design.prior"))
 =======
             __file__)), "models/library_design.prior"))
+<<<<<<< HEAD
 >>>>>>> 0dcf0ed (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
+=======
+>>>>>>> f3219c0 (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
+>>>>>>> 5ec0fb9 (minigrid code examples)
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
