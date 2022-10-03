@@ -15,9 +15,9 @@ from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.algorithms.policy_loss_addons import AttractionKL
-from pytorchrl.envs.generative_chemistry.utils import adapt_libinvent_checkpoint
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
+from pytorchrl.envs.generative_chemistry.utils import adapt_libinvent_checkpoint
 from pytorchrl.envs.generative_chemistry.libinvent.utils import get_num_unique_smiles
 from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_factory import libinvent_train_env_factory
 
