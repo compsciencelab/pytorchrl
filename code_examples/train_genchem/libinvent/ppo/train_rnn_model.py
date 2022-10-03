@@ -24,10 +24,17 @@ from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_fact
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
+<<<<<<< HEAD:code_examples/train_genchem/libinvent/ppo/train_rnn_model.py
 from default_scoring_function import scoring_function
 
 # Test dummy custom score function
 # from dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+=======
+from code_examples.train_genchem.libinvent.default_scoring_function import scoring_function
+
+# Test dummy custom score function
+# from code_examples.train_genchem.libinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+>>>>>>> 0dcf0ed (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
 
 # testing
 from pytorchrl.agent.actors.memory_networks.lstm_encoder_decoder_net import LSTMEncoderDecoder
@@ -64,7 +71,11 @@ def main():
         # else:
         (vocabulary, max_sequence_length, recurrent_net_kwargs,
          network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
+<<<<<<< HEAD:code_examples/train_genchem/libinvent/ppo/train_rnn_model.py
             __file__)), "../models/library_design.prior"))
+=======
+            __file__)), "models/library_design.prior"))
+>>>>>>> 0dcf0ed (genchem code examples):code_examples/train_genchem/ppo_libinvent/train_rnn_model.py
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
