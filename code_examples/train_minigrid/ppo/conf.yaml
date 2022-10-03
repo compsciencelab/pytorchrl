@@ -1,3 +1,6 @@
+experiment_name: MiniGridTrain
+agent_name: MiniGridAgent
+wandb_key: null
 env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
 log_dir: /tmp/minigrid_ppo
@@ -15,9 +18,3 @@ entropy_coef: 0.01
 max_grad_norm: 0.5
 lr: 0.0001
 feature_extractor_net: CNN
-frame_skip: 0
-frame_stack: 4
-num_grad_workers: 1
-num_col_workers: 1 
-com_grad_workers: synchronous
-com_col_workers: synchronous
