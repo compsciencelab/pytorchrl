@@ -115,3 +115,9 @@ class DeceivingRewardsEnv(MiniGridEnv):
         self.agent_dir = 3
 
         self.mission = "get to the green goal square"
+
+    def _reward(self):
+        """
+        Compute the reward to be given upon success
+        """
+        return 1

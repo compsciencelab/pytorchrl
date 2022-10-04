@@ -12,7 +12,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.storages import PPOD2RebelBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -52,11 +52,18 @@ def main():
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model,
+            restart_model=args.restart_reference_model,
             shared_policy_value_network=False)
 
         # 4. Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        storage_factory = PPOD2RebelBuffer.create_factory(
+            size=args.num_steps, gae_lambda=args.gae_lambda,
+            general_value_net_factory=actor_factory)
+
+        actor_factory = OnPolicyActor.create_factory(
+            obs_space, action_space, algo_name,
+            restart_model=args.restart_model,
+            shared_policy_value_network=False)
 
         # 5. Define scheme
         params = {}
@@ -169,7 +176,7 @@ def get_args():
         '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
-        help='Restart training using the model given')
+        help='Restart training using the given model')
     parser.add_argument(
         '--restart-reference-model', default=None,
         help='Restart training using the given reference model')

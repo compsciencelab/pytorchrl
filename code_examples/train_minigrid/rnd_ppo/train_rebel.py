@@ -7,12 +7,13 @@ import json
 import wandb
 import argparse
 import numpy as np
+import torch.nn as nn
 
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
-from pytorchrl.agent.algorithms import PPO
+from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.storages import PPOD2RebelBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -43,20 +44,45 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
         # 2. Define RL training algorithm
-        algo_factory, algo_name = PPO.create_factory(
+        algo_factory, algo_name = RND_PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,)
+            use_clipped_value_loss=False, gamma_intrinsic=args.gamma_intrinsic,
+            ext_adv_coeff=args.ext_adv_coeff, int_adv_coeff=args.int_adv_coeff,
+            predictor_proportion=args.predictor_proportion, gamma=args.gamma,
+            pre_normalization_steps=args.pre_normalization_steps,
+            pre_normalization_length=args.num_steps,
+            intrinsic_rewards_network=get_feature_extractor(args.feature_extractor_net),
+            intrinsic_rewards_target_network_kwargs={
+                "output_sizes": [512],
+                 "activation": nn.LeakyReLU,
+                "final_activation": False,
+                "rgb_norm": False,
+            },
+            intrinsic_rewards_predictor_network_kwargs={
+                "output_sizes": [512, 512, 512],
+                 "activation": nn.LeakyReLU,
+                "final_activation": False,
+                "rgb_norm": False,
+            },
+        )
 
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model,
+            restart_model={"value_net1": args.restart_reference_model},
             shared_policy_value_network=False)
 
         # 4. Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        storage_factory = PPOD2RebelBuffer.create_factory(
+            size=args.num_steps, gae_lambda=args.gae_lambda,
+            general_value_net_factory=actor_factory)
+
+        actor_factory = OnPolicyActor.create_factory(
+            obs_space, action_space, algo_name,
+            restart_model={"value_net1": args.restart_reference_model},
+            shared_policy_value_network=False)
 
         # 5. Define scheme
         params = {}
@@ -163,13 +189,28 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        '--gamma-intrinsic', type=float, default=0.99,
+        help='rnd ppo intrinsic gamma parameter (default: 0.99)')
+    parser.add_argument(
+        '--ext-adv-coeff', type=float, default=2.0,
+        help='rnd ppo external advantage coefficient parameter (default: 2.0)')
+    parser.add_argument(
+        '--int-adv-coeff', type=float, default=1.0,
+        help='rnd ppo internal advantage coefficient parameter (default: 1.0)')
+    parser.add_argument(
+        '--predictor-proportion', type=float, default=1.0,
+        help='rnd ppo proportion of batch samples to use to update predictor net (default: 1.0)')
+    parser.add_argument(
+        '--pre-normalization-steps', type=int, default=50,
+        help='rnd ppo number of pre-normalization steps parameter (default: 50)')
 
     # Feature extractor model specs
     parser.add_argument(
         '--feature-extractor-net', default='MLP', help='Type of nn. Options include MLP, CNN, Fixup')
     parser.add_argument(
         '--restart-model', default=None,
-        help='Restart training using the model given')
+        help='Restart training using the given model')
     parser.add_argument(
         '--restart-reference-model', default=None,
         help='Restart training using the given reference model')

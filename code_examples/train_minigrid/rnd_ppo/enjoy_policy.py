@@ -10,7 +10,7 @@ from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_test_env_facto
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
 from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
-from code_examples.train_minigrid.ppo.train import get_args
+from code_examples.train_minigrid.rnd_ppo.train_rebel import get_args
 
 
 def enjoy():

@@ -324,7 +324,8 @@ class PPOD2Buffer(B):
                 self.data[k][pos].copy_(sample[sample_k])
 
         # Set inserted data mask to 1.0
-        self.data[prl.MASK][self.step].fill_(1.0)
+        if prl.MASK in self.data.keys():
+            self.data[prl.MASK][self.step].fill_(1.0)
 
         # Overwrite demo data in environments where a demo being replayed
         all_envs, all_obs, all_done, all_rhs = [], [], [], {k: [] for k in sample[prl.RHS].keys()}
@@ -389,7 +390,7 @@ class PPOD2Buffer(B):
                     if tensor in algo_data.keys():
                         self.data[tensor][self.step][i].copy_(algo_data[tensor][num])
 
-                    if tensor == prl.IREW and prl.IREW in self.data.keys():
+                    if tensor == prl.IREW and prl.IREW in algo_data.keys():
                         # Track the cumulative sum of intrinsic rewards of the demo
                         self.demos_in_progress["env{}".format(i + 1)]["CumIntrinsicReward"] += \
                             algo_data[prl.IREW][num].item()

@@ -42,6 +42,8 @@ class PPOD2RebelBuffer(B):
         Algorithm class instance.
     envs : VecEnv
         Vector of experiments instance.
+    general_value_net_factory : func
+        Method to create the reference value function.
     rho : float
         PPO+D rho parameter.
     phi : float
@@ -81,7 +83,7 @@ class PPOD2RebelBuffer(B):
     # Data tensors to collect for each reward_demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
+    def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
                  total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
                  supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
                  initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None, save_demos_every=10,
@@ -93,13 +95,16 @@ class PPOD2RebelBuffer(B):
             num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
             save_demos_every, demo_dtypes)
 
-        # Create value model and move it to device
+        # Create general value model and move it to device
+        self.general_value_net = general_value_net_factory(self.device)
 
-        # Load value model weights and freeze them
+        # Freeze general value model with respect to optimizers
+        for p in self.general_value_net.parameters():
+            p.requires_grad = False
 
     @classmethod
-    def create_factory(cls, size, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
-                       initial_reward_threshold=None, initial_reward_demos_dir=None,
+    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
+                       total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
                        supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
                        initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
                        save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
@@ -152,8 +157,8 @@ class PPOD2RebelBuffer(B):
         """
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPOD2Buffer instance."""
-            return cls(size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha,
-                       total_buffer_demo_capacity, initial_reward_threshold, initial_reward_demos_dir,
+            return cls(size, device, actor, algorithm, envs, general_value_net_factory, rho, phi, gae_lambda,
+                       alpha, total_buffer_demo_capacity, initial_reward_threshold, initial_reward_demos_dir,
                        supplementary_demos_dir, target_reward_demos_dir, num_reward_demos_to_save,
                        initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
                        save_demos_every, demo_dtypes)
@@ -164,18 +169,52 @@ class PPOD2RebelBuffer(B):
 
         self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
+        print("MIN RETURN:", self.data[prl.RET].min())
+        print("MAX RETURN:", self.data[prl.RET].max())
+        print("AVG RETURN:", self.data[prl.RET].mean())
+
+    def after_gradients(self, batch, info):
+        """
+        After updating actor policy model, make sure self.step is at 0.
+
+        Parameters
+        ----------
+        batch : dict
+            Data batch used to compute the gradients.
+        info : dict
+            Additional relevant info from gradient computation.
+
+        Returns
+        -------
+        info : dict
+            info dict updated with relevant info from Storage.
+        """
+
+        super(PPOD2RebelBuffer, self).after_gradients(batch, info)
+
+        info.update({
+            "max_reward": self.data[prl.REW].max(),
+            "min_reward": self.data[prl.REW].min(),
+            "avg_reward": self.data[prl.REW].mean(),
+        })
+
+        return info
 
     def apply_rebel_logic(self):
-
-        self.compute_cumulative_rewards()
-        self.predict_central_value_functions()
-        self.modify_rewards()
+        ref_value = self.predict_reference_value()
+        self.modify_rewards(ref_value)
 
     def compute_cumulative_rewards(self):
-        pass
+        return
 
-    def predict_central_value_functions(self):
-        pass
+    def predict_reference_value(self):
+        return self.general_value_net.get_value(
+            self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:]),
+            self.data[prl.RHS]["value_net1"].view(-1, *self.data[prl.RHS]["value_net1"].shape[2:]),
+            self.data[prl.DONE].view(-1, *self.data[prl.DONE].shape[2:]),
+        )['value_net1'].view(self.data[prl.DONE].shape)
 
-    def modify_rewards(self):
-        pass
+    def modify_rewards(self, ref_value, thresh=0.1):
+        errors = torch.abs(ref_value - self.data[prl.REW])
+        self.data[prl.REW][errors < thresh] *= -1
+
