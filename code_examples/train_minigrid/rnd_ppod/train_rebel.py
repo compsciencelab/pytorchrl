@@ -78,7 +78,7 @@ def main():
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda, phi=args.phi,
             rho=args.rho, general_value_net_factory=actor_factory,
-            value_threshold=args.value_threshold)
+            error_threshold=args.value_threshold)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
