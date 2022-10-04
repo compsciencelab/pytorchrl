@@ -163,6 +163,9 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        "--value-threshold", type=float, default=0.01,
+        help="Minimum  value  prediction error (default: 0.01)")
 
     # Feature extractor model specs
     parser.add_argument(

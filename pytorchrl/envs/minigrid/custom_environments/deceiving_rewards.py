@@ -1,7 +1,18 @@
 from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Goal, Lava
-from minigrid.minigrid_env import MiniGridEnv
+from minigrid.minigrid_env import MiniGridEnv, WorldObj, COLORS, fill_coords, point_in_rect
+
+
+class BlueGoal(WorldObj):
+    def __init__(self):
+        super().__init__("goal", "blue")
+
+    def can_overlap(self):
+        return True
+
+    def render(self, img):
+        fill_coords(img, point_in_rect(0, 1, 0, 1), COLORS[self.color])
 
 
 class DeceivingRewardsEnv(MiniGridEnv):
@@ -101,11 +112,11 @@ class DeceivingRewardsEnv(MiniGridEnv):
                 if j + 1 < 2:
                     self.grid.horz_wall(xL, yB, room_w)
 
-        # Place a goal square in the bottom-right corner
-        self.put_obj(Goal(), width - 2, height - 2)
-
-        # Place a goal square in the bottom-right corner
+        # Place a green goal square in the upper-right corner
         self.put_obj(Goal(), width - 2, 1)
+
+        # Place a blue goal square in the bottom-right corner
+        self.put_obj(BlueGoal(), width - 2, height - 2)
 
         # Place some lava to make goal more distinguishable
         self.grid.vert_wall(height - 2, room_h + 1, 6, Lava)

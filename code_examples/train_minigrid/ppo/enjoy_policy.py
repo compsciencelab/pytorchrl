@@ -36,25 +36,30 @@ def enjoy():
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
-    while not done:
 
-        img = env.get_frame()
-        window.show_img(img)
-        time.sleep(0.01)
-        obs = torch.Tensor(obs).unsqueeze(0).to(device)
-        done = torch.Tensor([done]).unsqueeze(0).to(device)
-        with torch.no_grad():
-            _, clipped_action, _, rhs, _, _ = policy.get_action(obs, rhs, done, deterministic=False)
-            value = policy.get_value(obs, rhs, done)['value_net1']
-        obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
-        episode_steps += 1
-        episode_reward += reward
-        print(f"step: {episode_steps}, reward {reward}, value {value.item():.4f}", flush=True)
+    try:
+        while not done:
 
-        if done:
-            print(f"EPISODE: reward: {episode_reward}", flush=True)
-            done, episode_reward, episode_steps = 0, False, 0
-            obs = env.reset()
+            img = env.get_frame()
+            window.show_img(img)
+            time.sleep(0.01)
+            obs = torch.Tensor(obs).unsqueeze(0).to(device)
+            done = torch.Tensor([done]).unsqueeze(0).to(device)
+            with torch.no_grad():
+                _, clipped_action, _, rhs, _, _ = policy.get_action(obs, rhs, done, deterministic=False)
+                value = policy.get_value(obs, rhs, done)['value_net1']
+            obs, reward, done, info = env.step(clipped_action.squeeze().cpu().numpy())
+            episode_steps += 1
+            episode_reward += reward
+            print(f"step: {episode_steps}, reward {reward}, value {value.item():.4f}", flush=True)
+
+            if done:
+                print(f"EPISODE: reward: {episode_reward}", flush=True)
+                done, episode_reward, episode_steps = 0, False, 0
+                obs = env.reset()
+
+    except KeyboardInterrupt:
+        window.close()
 
 
 if __name__ == "__main__":

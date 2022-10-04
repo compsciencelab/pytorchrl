@@ -58,7 +58,8 @@ def main():
         # 4. Define rollouts storage
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda,
-            general_value_net_factory=actor_factory)
+            general_value_net_factory=actor_factory,
+            value_threshold=args.value_threshold)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
@@ -170,6 +171,9 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        "--value-threshold", type=float, default=0.01,
+        help="Minimum  value  prediction error (default: 0.01)")
 
     # Feature extractor model specs
     parser.add_argument(

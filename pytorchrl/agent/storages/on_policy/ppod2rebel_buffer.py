@@ -1,8 +1,3 @@
-"""
-Extension of PPOD that uses intrinsic rewards instead of value predictions to rank demos.
-This version does not differentiate between human demos and agent demos, and classifies everything as reward demos.
-"""
-
 import os
 import glob
 import copy
@@ -50,6 +45,8 @@ class PPOD2RebelBuffer(B):
         PPO+D phi parameter.
     gae_lambda : float
         GAE lambda parameter.
+    error_threshold : float
+        Minimum value prediction error. Below error_threshold, reward sign is flipped.
     alpha : float
         PPO+D alpha parameter
     initial_reward_threshold : float
@@ -83,10 +80,11 @@ class PPOD2RebelBuffer(B):
     # Data tensors to collect for each reward_demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
-                 total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
-                 supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
-                 initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None, save_demos_every=10,
+    def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory, rho=0.05, phi=0.05,
+                 error_threshold=0.01, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
+                 initial_reward_threshold=None, initial_reward_demos_dir=None, supplementary_demos_dir=None,
+                 target_reward_demos_dir=None, num_reward_demos_to_save=None, initial_int_demos_dir=None,
+                 target_int_demos_dir=None, num_int_demos_to_save=None, save_demos_every=10,
                  demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
         super(PPOD2RebelBuffer, self).__init__(
@@ -94,6 +92,9 @@ class PPOD2RebelBuffer(B):
             initial_reward_threshold, initial_reward_demos_dir, supplementary_demos_dir, target_reward_demos_dir,
             num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
             save_demos_every, demo_dtypes)
+
+        # Define minimum value prediction error
+        self.error_threshold = error_threshold
 
         # Create general value model and move it to device
         self.general_value_net = general_value_net_factory(self.device)
@@ -103,13 +104,14 @@ class PPOD2RebelBuffer(B):
             p.requires_grad = False
 
     @classmethod
-    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
-                       total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
-                       supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
-                       initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
-                       save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
+    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, error_threshold=0.01, gae_lambda=0.95,
+                       alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None,
+                       initial_reward_demos_dir=None, supplementary_demos_dir=None, target_reward_demos_dir=None,
+                       num_reward_demos_to_save=None, initial_int_demos_dir=None, target_int_demos_dir=None,
+                       num_int_demos_to_save=None, save_demos_every=10,
+                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
         """
-        Returns a function that creates PPOD2Buffer instances.
+        Returns a function that creates PPOD2RebelBuffer instances.
 
         Parameters
         ----------
@@ -153,14 +155,14 @@ class PPOD2RebelBuffer(B):
         Returns
         -------
         create_buffer_instance : func
-            creates a new PPOD2Buffer class instance.
+            creates a new PPOD2RebelBuffer class instance.
         """
         def create_buffer_instance(device, actor, algorithm, envs):
-            """Create and return a PPOD2Buffer instance."""
-            return cls(size, device, actor, algorithm, envs, general_value_net_factory, rho, phi, gae_lambda,
-                       alpha, total_buffer_demo_capacity, initial_reward_threshold, initial_reward_demos_dir,
-                       supplementary_demos_dir, target_reward_demos_dir, num_reward_demos_to_save,
-                       initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
+            """Create and return a PPOD2RebelBuffer instance."""
+            return cls(size, device, actor, algorithm, envs, general_value_net_factory, rho, phi, error_threshold,
+                       gae_lambda, alpha, total_buffer_demo_capacity, initial_reward_threshold,
+                       initial_reward_demos_dir, supplementary_demos_dir, target_reward_demos_dir,
+                       num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
                        save_demos_every, demo_dtypes)
         return create_buffer_instance
 
@@ -169,9 +171,6 @@ class PPOD2RebelBuffer(B):
 
         self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
-        print("MIN RETURN:", self.data[prl.RET].min())
-        print("MAX RETURN:", self.data[prl.RET].max())
-        print("AVG RETURN:", self.data[prl.RET].mean())
 
     def after_gradients(self, batch, info):
         """
@@ -190,12 +189,12 @@ class PPOD2RebelBuffer(B):
             info dict updated with relevant info from Storage.
         """
 
-        super(PPOD2RebelBuffer, self).after_gradients(batch, info)
+        info = super(PPOD2RebelBuffer, self).after_gradients(batch, info)
 
-        info.update({
-            "max_reward": self.data[prl.REW].max(),
-            "min_reward": self.data[prl.REW].min(),
-            "avg_reward": self.data[prl.REW].mean(),
+        info["Algorithm"].update({
+            "max_modified_reward": self.data[prl.REW].max().item(),
+            "min_modified_reward": self.data[prl.REW].min().item(),
+            "avg_modified_reward": self.data[prl.REW].mean().item(),
         })
 
         return info
@@ -214,7 +213,7 @@ class PPOD2RebelBuffer(B):
             self.data[prl.DONE].view(-1, *self.data[prl.DONE].shape[2:]),
         )['value_net1'].view(self.data[prl.DONE].shape)
 
-    def modify_rewards(self, ref_value, thresh=0.1):
+    def modify_rewards(self, ref_value):
         errors = torch.abs(ref_value - self.data[prl.REW])
-        self.data[prl.REW][errors < thresh] *= -1
+        self.data[prl.REW][errors < self.error_threshold] *= -1
 

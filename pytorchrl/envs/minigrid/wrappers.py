@@ -7,8 +7,8 @@ class RewardShapeWrapper(Wrapper):
     """Wrapper to change certain reward values at specific positions."""
 
     def __init__(self, env, positions=[], scale=1.0):
-        self.target_positions = [(env.width - 2, env.height - 2)]  # positions
-        self.scale = 0.5  # scale
+        self.target_positions = positions  # [(env.width - 2, env.height - 2)]
+        self.scale = scale
         super().__init__(env)
 
     def step(self, action):

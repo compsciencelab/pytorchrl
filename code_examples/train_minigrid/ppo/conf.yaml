@@ -1,6 +1,6 @@
 experiment_name: MiniGridTrain
 agent_name: MiniGridAgent
-wandb_key: b5ef9811ad92fac918facca483c7b6caa73df290
+wandb_key: null
 env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
 log_dir: /tmp/minigrid_ppo
@@ -16,8 +16,8 @@ gae_lambda: 0.95
 value_loss_coef: 2.0
 entropy_coef: 0.05
 max_grad_norm: 0.5
-lr: 0.0001
+lr: 0.001
 feature_extractor_net: CNN
-restart_reference_model: /Users/abou/Desktop/minigrid_ppo/model.state_dict
-restart_model: /Users/abou/Desktop/minigrid_ppo/model.state_dict
-# restart_model: null
+restart_reference_model: null
+restart_model: null
+value_threshold: 0.02
