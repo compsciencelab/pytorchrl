@@ -50,6 +50,7 @@ class EnvManager:
         _, rhs, _ = self.policy.actor_initial_states(obs)
 
         with torch.no_grad():
+            _, _, _, rhs, _, _ = self.policy.get_action(obs, rhs, done, deterministic=False)
             self.value = self.policy.get_value(obs, rhs, done)['value_net1'].item()
 
         if done:
@@ -111,7 +112,7 @@ def enjoy():
     policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space, prl.PPO,
         restart_model=args.restart_model or os.path.join(args.log_dir, "model.state_dict"),
-        shared_policy_value_network=False,
+        shared_policy_value_network=args.shared_policy_value_network,
     )(device)
 
     # Execute episodes

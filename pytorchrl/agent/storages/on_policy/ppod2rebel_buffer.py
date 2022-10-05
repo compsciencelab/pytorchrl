@@ -103,6 +103,9 @@ class PPOD2RebelBuffer(B):
         for p in self.general_value_net.parameters():
             p.requires_grad = False
 
+        # Define reward threshold
+        self.reward_threshold = 1.0  # initial_reward_threshold
+
     @classmethod
     def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, error_threshold=0.01, gae_lambda=0.95,
                        alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None,
@@ -166,9 +169,24 @@ class PPOD2RebelBuffer(B):
                        save_demos_every, demo_dtypes)
         return create_buffer_instance
 
+    def init_tensors(self, sample):
+        """
+        Lazy initialization of data tensors from a sample.
+
+        Parameters
+        ----------
+        sample : dict
+            Data sample (containing all tensors of an environment transition)"""
+
+        super(PPOD2RebelBuffer, self).init_tensors(sample)
+
+        # Add cumulative rewards tensor to self.data
+        self.data["CumRew"] = torch.zeros_like(self.data[prl.REW])
+
     def before_gradients(self):
         """Before updating actor policy model, compute returns and advantages."""
 
+        self.compute_cumulative_rewards()
         self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
 
@@ -204,9 +222,18 @@ class PPOD2RebelBuffer(B):
         self.modify_rewards(ref_value)
 
     def compute_cumulative_rewards(self):
-        return
+        """Compute cumulative episode rewards and also returns."""
+        length = self.step - 1 if self.step != 0 else self.max_size
+        self.data[prl.RET][length].copy_(self.data[prl.VAL][length])
+        self.data["CumRew"].copy_(self.data[prl.REW])
+        for step in reversed(range(length)):
+            self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * self.algo.gamma * (
+                    1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
+        for step in range(length + 1):
+            self.data["CumRew"][step] += self.data["CumRew"][step - 1] * (1.0 - self.data[prl.DONE][step])
 
     def predict_reference_value(self):
+        """Generate value predictions with the reference value network."""
         return self.general_value_net.get_value(
             self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:]),
             self.data[prl.RHS]["value_net1"].view(-1, *self.data[prl.RHS]["value_net1"].shape[2:]),
@@ -214,6 +241,137 @@ class PPOD2RebelBuffer(B):
         )['value_net1'].view(self.data[prl.DONE].shape)
 
     def modify_rewards(self, ref_value):
-        errors = torch.abs(ref_value - self.data[prl.REW])
-        self.data[prl.REW][errors < self.error_threshold] *= -1
+        """Flip the sign of the rewards with lower reference value prediction than self.error_threshold."""
+        errors = torch.abs(ref_value - self.data[prl.RET])
+        mask = (errors < self.error_threshold) * (self.data["CumRew"] >= self.reward_threshold) * (
+                self.data[prl.REW] > 0.0)
+        self.data[prl.REW][mask] *= -1
 
+    def validate_demo(self, demo):
+        """
+        Verify demo has high value prediction error for rewarded states with
+        cumulative reward higher than self.reward_threshold - 1.
+        """
+
+        # Compute demo cumulative rewards
+        cumulative_rewards = np.copy(demo[prl.REW])
+        for step in range(1, len(cumulative_rewards)):
+            cumulative_rewards[step] += cumulative_rewards[step - 1]
+
+        # Define mask to get only final states
+        mask = (cumulative_rewards >= self.reward_threshold).reshape(-1)
+
+        # Compute demo returns
+        returns = np.copy(demo[prl.REW][mask])
+        for step in reversed(range(len(returns) - 1)):
+            cumulative_rewards[step] += cumulative_rewards[step + 1] * self.algo.gamma
+
+        # Compute reference value prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
+        value_preds = self.general_value_net.get_value(
+            torch.tensor(demo[prl.OBS][mask]).to(self.device),
+            torch.zeros_like(torch.tensor(demo[prl.REW][mask]).to(self.device)),
+            torch.zeros_like(torch.tensor(demo[prl.REW][mask])).to(self.device)
+        )['value_net1'].cpu().numpy()
+
+        # Verify all predicted errors are higher than self.error_threshold
+        valid = (np.abs(value_preds - returns) < self.error_threshold).all()
+
+        return valid
+
+    def track_potential_demos(self, sample):
+        """ Tracks current episodes looking for potential agent_demos """
+
+        for i in range(self.num_envs):
+
+            # Copy transition
+            for tensor in self.demos_data_fields:
+                if tensor in (prl.OBS, ):
+                    self.potential_demos["env{}".format(i + 1)][tensor].append(copy.deepcopy(
+                        sample[tensor][i, -self.num_channels_obs:]).cpu().numpy().astype(self.demo_dtypes[tensor]))
+                else:
+                    self.potential_demos["env{}".format(i + 1)][tensor].append(
+                        copy.deepcopy(sample[tensor][i]).cpu().numpy().astype(self.demo_dtypes[tensor]))
+
+            # Update cumulative intrinsic reward
+            if prl.IREW in sample.keys():
+
+                # Track the cumulative sum of intrinsic rewards of the demo
+                self.potential_demos_cumsum_int["env{}".format(i + 1)] += sample[prl.IREW][i].cpu().item()
+
+                # Track the max intrinsic reward of the demo
+                self.potential_demos_max_int["env{}".format(i + 1)] = max(
+                    self.potential_demos_max_int["env{}".format(i + 1)], sample[prl.IREW][i].cpu().item())
+
+            # Handle end of episode
+            if sample[prl.DONE2][i] == 1.0:
+
+                # Get candidate agent_demos
+                potential_demo = {}
+                for tensor in self.demos_data_fields:
+                    potential_demo[tensor] = np.stack(self.potential_demos["env{}".format(i + 1)][tensor])
+                    if tensor == prl.REW:
+                        nonzero = np.flatnonzero(potential_demo[tensor] > 0.0)
+                        last_reward = len(potential_demo[tensor]) if len(nonzero) == 0 else np.max(nonzero)
+
+                # Compute accumulated reward
+                episode_reward = potential_demo[prl.REW].sum()
+                potential_demo["ID"] = str(uuid.uuid4())
+                potential_demo["TotalReward"] = episode_reward
+                potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
+
+                # Consider candidate agent_demos for agent_demos reward
+                if self.max_reward_demos > 0:
+
+                    if episode_reward >= self.reward_threshold:
+
+                        # Cut off data after last reward
+                        for tensor in self.demos_data_fields:
+                            potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
+                        potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
+
+                        # Make sure new reward was previously unknown
+                        valid = self.validate_demo(potential_demo)
+                        if valid and self.target_reward_demos_dir:
+                            filename = "found_demo"
+                            save_data = {
+                                "Observation": np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                                "Reward": np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                                "Action": np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                                "FrameSkip": self.frame_skip}
+                            np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data)
+
+                        # Add agent_demos to reward buffer
+                        self.reward_demos.append(potential_demo)
+
+                        # Check if buffers are full
+                        self.check_demo_buffer_capacity()
+
+                        # Update reward_threshold.
+                        self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+
+                        # Update max demo reward
+                        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+
+                if self.max_intrinsic_demos > 0:
+
+                    # Set potential demo cumulative intrinsic reward
+                    episode_ireward = self.eta * self.potential_demos_max_int["env{}".format(i + 1)] + (1 - self.eta) * (
+                            self.potential_demos_cumsum_int["env{}".format(i + 1)] / potential_demo["DemoLength"])
+                    potential_demo["IntrinsicReward"] = episode_ireward
+
+                    if episode_ireward >= self.intrinsic_threshold or len(self.intrinsic_demos) < self.max_intrinsic_demos:
+
+                        # Add agent_demos to intrinsic buffer
+                        self.intrinsic_demos.append(potential_demo)
+
+                        # Check if buffer is full
+                        self.check_demo_buffer_capacity()
+
+                        # Update intrinsic_threshold
+                        self.intrinsic_threshold = min([p["IntrinsicReward"] for p in self.intrinsic_demos])
+
+                # Reset potential agent_demos dict
+                for tensor in self.demos_data_fields:
+                    self.potential_demos["env{}".format(i + 1)][tensor] = []
+                    self.potential_demos_max_int["env{}".format(i + 1)] = 0.0
+                    self.potential_demos_cumsum_int["env{}".format(i + 1)] = 0.0

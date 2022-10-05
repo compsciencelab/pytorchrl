@@ -72,7 +72,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model={"value_net1": args.restart_reference_model},
-            shared_policy_value_network=False)
+            shared_policy_value_network=args.shared_policy_value_network)
 
         # 4. Define rollouts storage
         storage_factory = PPOD2RebelBuffer.create_factory(
@@ -83,7 +83,7 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model={"value_net1": args.restart_reference_model},
-            shared_policy_value_network=False)
+            shared_policy_value_network=args.shared_policy_value_network)
 
         # 5. Define scheme
         params = {}
@@ -226,6 +226,9 @@ def get_args():
         help="Restart training using the given reference model")
     parser.add_argument(
         "--recurrent-net", default=None, help="Recurrent neural networks to use")
+    parser.add_argument(
+        '--shared-policy-value-network', action='store_true', default=False,
+        help='Shared feature extractor for value network and policy')
 
     # Scheme specs
     parser.add_argument(

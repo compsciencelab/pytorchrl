@@ -631,7 +631,6 @@ class PPOD2Buffer(B):
                     # Update max demo reward
                     self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
-
                 except Exception:
                     print("Failed to load supplementary demo!")
 
@@ -759,7 +758,7 @@ class PPOD2Buffer(B):
                     "Observation": np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
                     "Reward": np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
                     "Action": np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                    "RewardThreshold": self.reward_threshold, "FrameSkip": self.frame_skip}
+                    "FrameSkip": self.frame_skip}
 
                 np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data),
                 saved_demos += 1
@@ -786,7 +785,7 @@ class PPOD2Buffer(B):
                     "Observation": np.array(self.intrinsic_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
                     "Reward": np.array(self.intrinsic_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
                     "Action": np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                    "RewardThreshold": self.reward_threshold, "FrameSkip": self.frame_skip}
+                    "FrameSkip": self.frame_skip}
 
                 np.savez(os.path.join(self.target_int_demos_dir, filename), **save_data)
                 saved_demos += 1

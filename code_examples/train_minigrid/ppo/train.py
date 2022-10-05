@@ -12,7 +12,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import GAEBuffer
+from pytorchrl.agent.storages import VanillaOnPolicyBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -53,10 +53,10 @@ def main():
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
             restart_model=args.restart_model,
-            shared_policy_value_network=False)
+            shared_policy_value_network=args.shared_policy_value_network)
 
         # 4. Define rollouts storage
-        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        storage_factory = VanillaOnPolicyBuffer.create_factory(size=args.num_steps)
 
         # 5. Define scheme
         params = {}
@@ -178,6 +178,9 @@ def get_args():
         help='Restart training using the given reference model')
     parser.add_argument(
         '--recurrent-net', default=None, help='Recurrent neural networks to use')
+    parser.add_argument(
+        '--shared-policy-value-network', action='store_true', default=False,
+        help='Shared feature extractor for value network and policy')
 
     # Scheme specs
     parser.add_argument(

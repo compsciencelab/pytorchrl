@@ -26,7 +26,9 @@ def enjoy():
 
     policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space, prl.PPO,
-        restart_model=args.restart_model or os.path.join(args.log_dir, "model.state_dict"))(device)
+        restart_model=args.restart_model or os.path.join(args.log_dir, "model.state_dict"),
+        shared_policy_value_network=args.shared_policy_value_network,
+    )(device)
 
     # Define initial Tensors
     obs, done = env.reset(), False

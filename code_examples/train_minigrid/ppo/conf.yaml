@@ -1,6 +1,6 @@
 experiment_name: MiniGridTrain
 agent_name: MiniGridAgent
-wandb_key: null
+wandb_key: b5ef9811ad92fac918facca483c7b6caa73df290
 env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
 log_dir: /tmp/minigrid_ppo
@@ -21,3 +21,4 @@ feature_extractor_net: CNN
 restart_reference_model: null
 restart_model: null
 value_threshold: 0.02
+shared_policy_value_network: True

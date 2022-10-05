@@ -28,3 +28,4 @@ predictor_proportion: 1.0
 pre_normalization_steps: 1
 restart_reference_model: null
 restart_model: null
+shared_policy_value_network: True
