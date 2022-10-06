@@ -44,7 +44,7 @@ class DecoratorDataset(Dataset):
 
     def __getitem__(self, i):
         scaff, dec = self._encoded_list[i]
-        return (torch.tensor(scaff, dtype=torch.long), torch.tensor(dec, dtype=torch.long))  # pylint: disable=E1102
+        return torch.tensor(scaff, dtype=torch.long), torch.tensor(dec, dtype=torch.long)
 
     def __len__(self):
         return len(self._encoded_list)
@@ -57,7 +57,7 @@ class DecoratorDataset(Dataset):
         :return: A tuple with two tensors, one for the scaffolds and one for the decorations in the same order as given.
         """
         encoded_scaffolds, encoded_decorations = list(zip(*encoded_pairs))
-        return (pad_batch(encoded_scaffolds), pad_batch(encoded_decorations))
+        return pad_batch(encoded_scaffolds), pad_batch(encoded_decorations)
 
 
 def pad_batch(encoded_seqs):
@@ -67,7 +67,7 @@ def pad_batch(encoded_seqs):
     :return: A tensor with the sequences correctly padded.
     """
     seq_lengths = torch.tensor([len(seq) for seq in encoded_seqs], dtype=torch.int64)
-    return (tnnur.pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths)
+    return tnnur.pad_sequence(encoded_seqs, batch_first=True), seq_lengths
 
 
 if __name__ == "__main__":
