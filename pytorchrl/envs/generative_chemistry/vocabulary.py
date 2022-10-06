@@ -133,9 +133,26 @@ def create_vocabulary(smiles_list, tokenizer):
         tokens.update(tokenizer.tokenize(smi, with_begin_and_end=False))
 
     vocabulary = Vocabulary()
-    vocabulary.update(["$", "^"] + sorted(tokens))  # end token is 0 (also counts as padding)
-    # vocabulary.update(["<pad>", "$", "^"] + sorted(tokens))
+    vocabulary.update(["<pad>", "$", "^"] + sorted(tokens))
     return vocabulary
+
+
+def create_vocabularies(scaffold_list, scaffold_tokenizer, decoration_list, decoration_tokenizer):
+    """Creates a vocabulary for the SMILES syntax."""
+    scaffold_tokens = set()
+    decoration_tokens = set()
+    for scaffold, decoration in zip(scaffold_list, decoration_list):
+        scaffold_tokens.update(scaffold_tokenizer.tokenize(scaffold, with_begin_and_end=False))
+        decoration_tokens.update(decoration_tokenizer.tokenize(decoration, with_begin_and_end=False))
+
+    scaffold_vocabulary = Vocabulary()
+    # vocabulary.update(["$", "^"] + sorted(tokens))  # end token is 0 (also counts as padding)
+    scaffold_vocabulary.update(["<pad>", "$", "^"] + sorted(scaffold_tokens))
+
+    decoration_vocabulary = Vocabulary()
+    decoration_vocabulary.update(["<pad>", "$", "^"] + sorted(decoration_tokens))
+
+    return scaffold_vocabulary, decoration_vocabulary
 
 
 class ReinventVocabulary:
@@ -265,11 +282,9 @@ class LibinventVocabulary:
         :param decoration_list: A list with decorations.
         :return : A LibinventVocabulary instance
         """
-        scaffold_tokenizer = SMILESTokenizer()
-        scaffold_vocabulary = create_vocabulary(scaffold_list, scaffold_tokenizer)
-
-        decoration_tokenizer = SMILESTokenizer()
-        decoration_vocabulary = create_vocabulary(decoration_list, decoration_tokenizer)
+        scaffold_tokenizer, decoration_tokenizer = SMILESTokenizer(), SMILESTokenizer()
+        scaffold_vocabulary, decoration_vocabulary = create_vocabularies(
+            scaffold_list, scaffold_tokenizer, decoration_list, decoration_tokenizer)
 
         return LibinventVocabulary(scaffold_vocabulary, scaffold_tokenizer, decoration_vocabulary, decoration_tokenizer)
 
