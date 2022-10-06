@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 
 from pytorchrl.agent.env import load_baselines_results
-from code_examples.train_genchem.ppo_libinvent.train_rnn_model import get_args
+from code_examples.train_genchem.reinvent.ppo.train_rnn_model import get_args
 
 
 def analize_results(num_top_molecules=30):

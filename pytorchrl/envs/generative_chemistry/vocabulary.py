@@ -4,7 +4,6 @@ Vocabulary helper class
 
 from https://github.com/MolecularAI/reinvent-models/blob/main/reinvent_models/reinvent_core/models/vocabulary.py
 
-
 str --> list of str --> np.array
 str --> list of str: tokenizer.tokenize
 list of str --> np.array: vocabulary.encode
@@ -264,7 +263,7 @@ class LibinventVocabulary:
         Creates the vocabularies from lists.
         :param scaffold_list: A list with scaffolds.
         :param decoration_list: A list with decorations.
-        :return : A DecoratorVocabulary instance
+        :return : A LibinventVocabulary instance
         """
         scaffold_tokenizer = SMILESTokenizer()
         scaffold_vocabulary = create_vocabulary(scaffold_list, scaffold_tokenizer)
@@ -272,6 +271,6 @@ class LibinventVocabulary:
         decoration_tokenizer = SMILESTokenizer()
         decoration_vocabulary = create_vocabulary(decoration_list, decoration_tokenizer)
 
-        return DecoratorVocabulary(scaffold_vocabulary, scaffold_tokenizer, decoration_vocabulary, decoration_tokenizer)
+        return LibinventVocabulary(scaffold_vocabulary, scaffold_tokenizer, decoration_vocabulary, decoration_tokenizer)
 
 

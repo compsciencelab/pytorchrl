@@ -27,8 +27,4 @@ lr: 0.0001
 kl_coef: 0.5
 feature_extractor_net: Embedding
 recurrent_net: LSTM
-num_grad_workers: 1
-num_col_workers: 1
-com_grad_workers: synchronous
-com_col_workers: synchronous
 wandb_key: null

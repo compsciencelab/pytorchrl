@@ -53,18 +53,18 @@ def main():
         args = wandb.config
 
         # 0. Load local pretrained checkpoint is available, otherwise load REINVENT pretrained checkpoint
-        # if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
-        #     pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
-        #     vocabulary = pretrained_ckpt.get("vocabulary")
-        #     feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
-        #     recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
-        #     max_sequence_length = pretrained_ckpt.get("max_sequence_length", None)
-        #     torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
-        #     network_weights = "/tmp/network_params.tmp"
-        # else:
-        (vocabulary, max_sequence_length, recurrent_net_kwargs,
-         network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
-            __file__)), "../models/library_design.prior"))
+        if os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
+            pretrained_ckpt = torch.load(f"{args.log_dir}/pretrained_ckpt.prior")
+            vocabulary = pretrained_ckpt.get("vocabulary")
+            feature_extractor_kwargs = pretrained_ckpt.get("feature_extractor_kwargs", {})
+            recurrent_net_kwargs = pretrained_ckpt.get("recurrent_net_kwargs", {})
+            max_sequence_length = pretrained_ckpt.get("max_sequence_length", None)
+            torch.save(pretrained_ckpt.get("network_weights"), "/tmp/network_params.tmp")
+            network_weights = "/tmp/network_params.tmp"
+        else:
+            (vocabulary, max_sequence_length, recurrent_net_kwargs,
+             network_weights) = adapt_libinvent_checkpoint(os.path.join(os.path.abspath(os.path.dirname(
+                __file__)), "../models/library_design.prior"))
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
@@ -95,7 +95,7 @@ def main():
             obs_space, action_space, prl.PPO,
             feature_extractor_network=torch.nn.Identity,
             feature_extractor_kwargs={},
-            recurrent_net=LSTMEncoderDecoder,
+            recurrent_net=get_memory_network(args.recurrent_net),
             recurrent_net_kwargs={**recurrent_net_kwargs},
             restart_model=restart_model,
         )
@@ -175,6 +175,28 @@ def get_args():
         "--agent-name", default=None, help="Name of the wandb run")
     parser.add_argument(
         "--wandb-key", default=None, help="Init key from wandb account")
+
+    # Pretrain specs
+    parser.add_argument(
+        "--pretrain-lr", type=float, default=1e-3,
+        help="learning rate used during agent pretraining (default: 1e-3)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-value", type=float, default=0.03,
+        help="How much to decrease lr during pretraining (default: 0.03)")
+    parser.add_argument(
+        "--pretrain-lr-decrease-period", type=int, default=550,
+        help="Number of network updates between lr decreases during pretraining (default 500).")
+    parser.add_argument(
+        "--pretrain-batch-size", type=int, default=128,
+        help="Batch size used to pretrain the agent (default 128).")
+    parser.add_argument(
+        "--pretrain-epochs", type=int, default=10,
+        help="Number of epochs to pretrain the agent (default 10).")
+    parser.add_argument(
+        "--pretrain-max-smile-length", type=int, default=200,
+        help="Max length allows for SMILES (default 200).")
+    parser.add_argument(
+        "--pretrainingset-path", default=None, help="Path to dataset to train the prior")
 
     # Environment specs
     parser.add_argument(

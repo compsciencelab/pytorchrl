@@ -5,6 +5,7 @@ numpy
 pandas
 scipy
 lz4
+tqdm
 opencv-python
 wandb
 hydra-core

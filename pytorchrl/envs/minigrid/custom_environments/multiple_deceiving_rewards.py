@@ -15,7 +15,29 @@ class BlueGoal(WorldObj):
         fill_coords(img, point_in_rect(0, 1, 0, 1), COLORS[self.color])
 
 
-class DeceivingRewardsEnv(MiniGridEnv):
+class YellowGoal(WorldObj):
+    def __init__(self):
+        super().__init__("goal", "yellow")
+
+    def can_overlap(self):
+        return True
+
+    def render(self, img):
+        fill_coords(img, point_in_rect(0, 1, 0, 1), COLORS[self.color])
+
+
+class GreyGoal(WorldObj):
+    def __init__(self):
+        super().__init__("goal", "grey")
+
+    def can_overlap(self):
+        return True
+
+    def render(self, img):
+        fill_coords(img, point_in_rect(0, 1, 0, 1), COLORS[self.color])
+
+
+class MultipleDeceivingRewardsEnv(MiniGridEnv):
     """
     ### Description
 
@@ -68,14 +90,17 @@ class DeceivingRewardsEnv(MiniGridEnv):
             mission_func=lambda: "get to the green goal square"
         )
 
-        size = 20
+        size = 40
         super().__init__(
             mission_space=mission_space,
             grid_size=size,
             max_steps=4 * size * size,
-            see_through_walls=True,  # Set this to True for maximum speed
+            # Set this to True for maximum speed
+            see_through_walls=True,
             **kwargs
         )
+
+    # generate a bunch of rooms
 
     def _gen_grid(self, width, height):
 
@@ -85,44 +110,35 @@ class DeceivingRewardsEnv(MiniGridEnv):
         # Generate the surrounding walls
         self.grid.wall_rect(0, 0, width, height)
 
-        room_w = width // 2
-        room_h = height // 2
+        # Create a room function
+        def create_room(upper_right_corner, room_wall_length=8, door_pos=None):
 
-        # For each row of rooms
-        for j in range(0, 2):
+            x, y = upper_right_corner
 
-            # For each column
-            for i in range(0, 2):
+            self.grid.vert_wall(x, y, room_wall_length)
+            self.grid.horz_wall(x, y, room_wall_length)
+            self.grid.vert_wall(x + room_wall_length, y, room_wall_length)
+            self.grid.horz_wall(x, y + room_wall_length, room_wall_length + 1)
 
-                if j != 1 and i != 1:
-                    continue
+            if door_pos:
+                self.grid.set(*door_pos, None)
 
-                xL = i * room_w
-                yT = j * room_h
-                xR = xL + room_w
-                yB = yT + room_h
+        # Create rooms
+        create_room((4, 4), 8, (4, 8))
+        create_room((20, 4), 8, (20, 8))
+        create_room((20, 20), 8, (20, 24))
 
-                # Bottom wall and door
-                if i + 1 < 2:
-                    self.grid.vert_wall(xR, yT, room_h)
-                    pos = (xR, yB - 2)
-                    self.grid.set(*pos, None)
-
-                # Bottom wall and door
-                if j + 1 < 2:
-                    self.grid.horz_wall(xL, yB, room_w)
-
+        # Create goals
         # Place a green goal square in the upper-right corner
         self.put_obj(Goal(), width - 2, 1)
 
         # Place a blue goal square in the bottom-right corner
-        self.put_obj(BlueGoal(), width - 2, height - 2)
-
-        # Place some lava to make goal more distinguishable
-        self.grid.vert_wall(height - 2, room_h + 1, 6, Lava)
+        self.put_obj(BlueGoal(), 8, 8)
+        self.put_obj(YellowGoal(), 24, 8)
+        self.put_obj(GreyGoal(), 24, 24)
 
         # Place the agent
-        self.agent_pos = (width - 5, room_h - 3)
+        self.agent_pos = (width - 5, 7)
         self.agent_dir = 3
 
         self.mission = "get to the green goal square"

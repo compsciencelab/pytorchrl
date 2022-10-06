@@ -28,8 +28,4 @@ max_grad_norm: 0.5
 lr: 0.001
 feature_extractor_net: Embedding
 recurrent_net: LSTM
-num_grad_workers: 1
-num_col_workers: 1 
-com_grad_workers: synchronous
-com_col_workers: synchronous
 wandb_key: null
