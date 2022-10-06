@@ -172,6 +172,7 @@ if __name__ == "__main__":
                     loss.backward()
                     optimizer.step()
 
+                    info_dict = {}
                     total_steps = step + len(data) * (epoch - 1)
                     if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
 
