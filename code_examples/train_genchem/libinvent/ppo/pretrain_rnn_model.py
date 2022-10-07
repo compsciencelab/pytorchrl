@@ -17,6 +17,7 @@ import torch.nn.utils.rnn as tnnur
 from torch.utils.data import Dataset, DataLoader
 from reinvent_chemistry.file_reader import FileReader
 from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
+from reinvent_chemistry import Conversions
 
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
@@ -31,12 +32,6 @@ def decrease_learning_rate(optimizer, decrease_by=0.01):
     """Multiplies the learning rate of the optimizer by 1 - decrease_by"""
     for param_group in optimizer.param_groups:
         param_group['lr'] *= (1 - decrease_by)
-
-
-def is_valid_smile(smile):
-    """Returns true is smile is syntactically valid."""
-    mol = Chem.MolFromSmiles(smile)
-    return mol is not None
 
 
 def load_dataset(path):
@@ -167,6 +162,7 @@ if __name__ == "__main__":
 
         # Define classes required to merge scaffolds and decorations
         bond_maker = BondMaker()
+        conversion = Conversions()
         attachment_points = AttachmentPoints()
 
         print("\nStarting pretraining...")
@@ -230,8 +226,9 @@ if __name__ == "__main__":
                                 scaffold = vocabulary.decode_scaffold(obs["context"].cpu().numpy().squeeze(0))
                                 decoration = vocabulary.remove_start_and_end_tokens(decoration)
                                 scaffold = attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)
-                                smile = bond_maker.join_scaffolds_and_decorations(scaffold, decoration)
-                                if smile and is_valid_smile(smile):
+                                molecule = bond_maker.join_scaffolds_and_decorations(scaffold, decoration)
+                                smile = conversion.mol_to_smiles(molecule) if molecule else None
+                                if smile:
                                     valid_molecules += 1
                                 list_decorations.append(decoration)
                                 list_num_tokens.append(num_tokens)
