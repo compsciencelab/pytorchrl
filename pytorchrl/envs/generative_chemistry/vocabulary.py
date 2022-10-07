@@ -197,9 +197,6 @@ class ReinventVocabulary:
 
 
 class LibinventVocabulary:
-    """
-    Encapsulation of the two vocabularies needed for the decorator.
-    """
 
     def __init__(self, scaffold_vocabulary, scaffold_tokenizer, decoration_vocabulary, decoration_tokenizer):
         self.scaffold_vocabulary = scaffold_vocabulary
@@ -208,31 +205,19 @@ class LibinventVocabulary:
         self.decoration_tokenizer = decoration_tokenizer
 
     def len_scaffold(self):
-        """
-        Returns the length of the scaffold vocabulary.
-        """
+        """Returns the length of the scaffold vocabulary."""
         return len(self.scaffold_vocabulary)
 
     def len_decoration(self):
-        """
-        Returns the length of the decoration vocabulary.
-        """
+        """Returns the length of the decoration vocabulary."""
         return len(self.decoration_vocabulary)
 
     def encode_scaffold(self, scaffold):
-        """
-        Encodes a scaffold SMILES.
-        :param smiles: Scaffold SMILES to encode.
-        :return : An one-hot-encoded vector with the scaffold information.
-        """
+        """Encodes a scaffold from str to np.array."""
         return self.scaffold_vocabulary.encode(self.scaffold_tokenizer.tokenize(scaffold))
 
     def decode_scaffold(self, encoded_scaffold):
-        """
-        Decodes the scaffold.
-        :param encoded_scaffold: A one-hot encoded version of the scaffold.
-        :return : A SMILES of the scaffold.
-        """
+        """Decodes the scaffold from np.array to str."""
         return self.scaffold_tokenizer.untokenize(self.scaffold_vocabulary.decode(encoded_scaffold))
 
     def encode_scaffold_token(self, token):
@@ -244,19 +229,11 @@ class LibinventVocabulary:
         return self.scaffold_vocabulary.decode([int(token)])[0]
 
     def encode_decoration(self, smiles):
-        """
-        Encodes a decoration SMILES.
-        :param smiles: Decoration SMILES to encode.
-        :return : An one-hot-encoded vector with the fragment information.
-        """
+        """Encodes a decoration from str to np.array."""
         return self.decoration_vocabulary.encode(self.decoration_tokenizer.tokenize(smiles))
 
     def decode_decoration(self, encoded_decoration):
-        """
-        Decodes the decorations for a scaffold.
-        :param encoded_decorations: A one-hot encoded version of the decoration.
-        :return : A list with SMILES of all the fragments.
-        """
+        """Decodes a decoration from np.array to str."""
         return self.decoration_tokenizer.untokenize(self.decoration_vocabulary.decode(encoded_decoration))
 
     def encode_decoration_token(self, token):
@@ -276,16 +253,10 @@ class LibinventVocabulary:
 
     @classmethod
     def from_lists(cls, scaffold_list, decoration_list):
-        """
-        Creates the vocabularies from lists.
-        :param scaffold_list: A list with scaffolds.
-        :param decoration_list: A list with decorations.
-        :return : A LibinventVocabulary instance
-        """
+        """Creates the vocabularies from lists."""
         scaffold_tokenizer, decoration_tokenizer = SMILESTokenizer(), SMILESTokenizer()
         scaffold_vocabulary, decoration_vocabulary = create_vocabularies(
             scaffold_list, scaffold_tokenizer, decoration_list, decoration_tokenizer)
-
         return LibinventVocabulary(scaffold_vocabulary, scaffold_tokenizer, decoration_vocabulary, decoration_tokenizer)
 
 

@@ -16,6 +16,7 @@ import torch
 import torch.nn.utils.rnn as tnnur
 from torch.utils.data import Dataset, DataLoader
 from reinvent_chemistry.file_reader import FileReader
+from reinvent_chemistry.library_design import BondMaker, AttachmentPoints
 
 import pytorchrl as prl
 from pytorchrl.agent.env import VecEnv
@@ -32,7 +33,7 @@ def decrease_learning_rate(optimizer, decrease_by=0.01):
         param_group['lr'] *= (1 - decrease_by)
 
 
-def is_valid_smile(smile):
+def is_valid_smile(scaffold, decoration):
     """Returns true is smile is syntactically valid."""
     mol = Chem.MolFromSmiles(smile)
     return mol is not None
@@ -164,6 +165,10 @@ if __name__ == "__main__":
         # Define optimizer
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
+        # Define classes required to merge scaffolds and decorations
+        bond_maker = BondMaker()
+        attachment_points = AttachmentPoints()
+
         print("\nStarting pretraining...")
         for epoch in range(1, args.pretrain_epochs):
 
@@ -202,12 +207,12 @@ if __name__ == "__main__":
                             # Generate a few molecules and check how many are valid
                             total_molecules = 100
                             valid_molecules = 0
-                            list_molecules = []
+                            list_decorations = []
                             list_num_tokens = []
                             list_entropy = []
                             for i in range(total_molecules):
                                 obs, rhs, done = actor.actor_initial_states(env.reset())
-                                molecule = "^"
+                                decoration = "^"
                                 num_tokens = 0
                                 with torch.no_grad():
                                     encoded_seqs, rhs = actor.policy_net.memory_net._forward_encoder(
@@ -218,18 +223,22 @@ if __name__ == "__main__":
                                             obs["obs"].to(device), obs["obs_length"].cpu().long(), encoded_seqs, rhs)
                                         action, _, logp, entropy_dist, dist = actor.policy_net.dist(features.squeeze(0))
                                         obs, _, done, _ = env.step(action)
-                                        molecule += vocabulary.decode_decoration_token(action)
+                                        decoration += vocabulary.decode_decoration_token(action)
                                         list_entropy.append(entropy_dist.item())
                                         num_tokens += 1
 
-                                if is_valid_smile(vocabulary.remove_start_and_end_tokens(molecule)):
+                                scaffold = vocabulary.decode_scaffold(obs["context"].cpu().numpy().squeeze(0))
+                                decoration = vocabulary.remove_start_and_end_tokens(decoration)
+                                scaffold = attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)
+                                smile = bond_maker.join_scaffolds_and_decorations(scaffold, decoration)
+                                if smile and is_valid_smile(smile):
                                     valid_molecules += 1
-                                list_molecules.append(molecule)
+                                list_decorations.append(decoration)
                                 list_num_tokens.append(num_tokens)
 
                             # Check how many are repeated
-                            ratio_repeated = len(set(list_molecules)) / len(
-                                list_molecules) if total_molecules > 0 else 0
+                            ratio_repeated = len(set(list_decorations)) / len(
+                                list_decorations) if total_molecules > 0 else 0
 
                             # Add to info dict
                             info_dict.update({
