@@ -8,7 +8,9 @@ import os
 import glob
 import wandb
 import argparse
+import numpy as np
 from tqdm import tqdm
+from rdkit import Chem
 import itertools as it
 import torch
 import torch.nn.utils.rnn as tnnur
@@ -22,6 +24,18 @@ from pytorchrl.envs.generative_chemistry.vocabulary import LibinventVocabulary
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_factory import libinvent_train_env_factory
 from code_examples.train_genchem.libinvent.ppo.train_rnn_model import get_args
+
+
+def decrease_learning_rate(optimizer, decrease_by=0.01):
+    """Multiplies the learning rate of the optimizer by 1 - decrease_by"""
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= (1 - decrease_by)
+
+
+def is_valid_smile(smile):
+    """Returns true is smile is syntactically valid."""
+    mol = Chem.MolFromSmiles(smile)
+    return mol is not None
 
 
 def load_dataset(path):
@@ -84,6 +98,10 @@ if __name__ == "__main__":
     if not os.path.exists(args.pretrainingset_path):
         raise ValueError(f"Missing training set: {args.pretrainingset_path}")
     training_set = load_dataset(args.pretrainingset_path)
+    testing_scaffolds = ["[*]"]
+    if args.pretestingset_path and os.path.exists(args.pretestingset_path):
+        testing_set = load_dataset(args.pretestingset_path)
+        testing_scaffolds = [i[0] for i in testing_set]
 
     # Create or load vocabularies
     if not os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
@@ -123,7 +141,7 @@ if __name__ == "__main__":
             env_kwargs={
                 "scoring_function": lambda a: {"reward": 1.0},
                 "vocabulary": vocabulary, "smiles_max_length": args.pretrain_max_smile_length,
-                "scaffolds": ["[*]"]
+                "scaffolds": testing_scaffolds
             },
             vec_env_size=1)
         env = test_env(device)
@@ -175,6 +193,51 @@ if __name__ == "__main__":
                     info_dict = {}
                     total_steps = step + len(data) * (epoch - 1)
                     if (total_steps % args.pretrain_lr_decrease_period) == 0 and total_steps != 0:
+
+                        # Decrease learning rate
+                        decrease_learning_rate(optimizer, decrease_by=args.pretrain_lr_decrease_value)
+
+                        if args.pretestingset_path and os.path.exists(args.pretestingset_path):
+
+                            # Generate a few molecules and check how many are valid
+                            total_molecules = 100
+                            valid_molecules = 0
+                            list_molecules = []
+                            list_num_tokens = []
+                            list_entropy = []
+                            for i in range(total_molecules):
+                                obs, rhs, done = actor.actor_initial_states(env.reset())
+                                molecule = "^"
+                                num_tokens = 0
+                                with torch.no_grad():
+                                    encoded_seqs, rhs = actor.policy_net.memory_net._forward_encoder(
+                                        obs["context"].to(device), obs["context_length"].cpu().long())
+                                while not done:
+                                    with torch.no_grad():
+                                        features, rhs, _ = actor.policy_net.memory_net._forward_decoder(
+                                            obs["obs"].to(device), obs["obs_length"].cpu().long(), encoded_seqs, rhs)
+                                        action, _, logp, entropy_dist, dist = actor.policy_net.dist(features.squeeze(0))
+                                        obs, _, done, _ = env.step(action)
+                                        molecule += vocabulary.decode_decoration_token(action)
+                                        list_entropy.append(entropy_dist.item())
+                                        num_tokens += 1
+
+                                if is_valid_smile(vocabulary.remove_start_and_end_tokens(molecule)):
+                                    valid_molecules += 1
+                                list_molecules.append(molecule)
+                                list_num_tokens.append(num_tokens)
+
+                            # Check how many are repeated
+                            ratio_repeated = len(set(list_molecules)) / len(
+                                list_molecules) if total_molecules > 0 else 0
+
+                            # Add to info dict
+                            info_dict.update({
+                                "pretrain_avg_molecular_length": np.mean(list_num_tokens),
+                                "pretrain_avg_entropy": np.mean(list_entropy),
+                                "pretrain_valid_molecules": valid_molecules / total_molecules,
+                                "pretrain_ratio_repeated": ratio_repeated
+                            })
 
                         # Save model
                         pretrained_ckpt["network_weights"] = actor.state_dict()

@@ -345,9 +345,8 @@ class LSTMEncoderDecoder(nn.Module):
                 # Chunk rhs (where does this go?)
                 hxs = torch.chunk((torch.transpose(hxs, 0, 1)), 2)
 
-                # TODO: run decoder from start_idx to end_idx
+                # Run decoder from start_idx to end_idx
                 lengths = torch.cat([torch.LongTensor([end_idx - start_idx])] * N)
-
                 logits, hxs, _ = self._forward_decoder(
                     decoder_seqs[:, start_idx:end_idx].squeeze(-1), lengths, self.encoder_padded_seqs, hxs)
 

@@ -244,12 +244,13 @@ if __name__ == "__main__":
                                         obs, rhs, done, deterministic=False)
                                 obs, _, done, _ = env.step(action)
                                 molecule += vocabulary.decode_token(action)
+                                list_entropy.append(entropy_dist.item())
                                 num_tokens += 1
+
                             if is_valid_smile(vocabulary.remove_start_and_end_tokens(molecule)):
                                 valid_molecules += 1
                             list_molecules.append(molecule)
                             list_num_tokens.append(num_tokens)
-                            list_entropy.append(entropy_dist.item())
 
                         # Check how many are repeated
                         ratio_repeated = len(set(list_molecules)) / len(list_molecules) if total_molecules > 0 else 0

@@ -3,6 +3,7 @@ agent_name: PPO_Libinvent
 num_env_steps : 1000_000_000
 log_dir: /tmp/genchem_ppo_libinvent
 pretrainingset_path: ../path/to/prior_trainingset
+pretestingset_path: null
 pretrain_lr: 0.0001
 pretrain_epochs: 20
 pretrain_lr_decrease_value: 0.05

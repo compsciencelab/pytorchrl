@@ -196,6 +196,8 @@ def get_args():
         help="Max length allows for SMILES (default 200).")
     parser.add_argument(
         "--pretrainingset-path", default=None, help="Path to dataset to train the prior")
+    parser.add_argument(
+        "--pretestingset-path", default=None, help="Path to dataset to test the prior")
 
     # Environment specs
     parser.add_argument(
