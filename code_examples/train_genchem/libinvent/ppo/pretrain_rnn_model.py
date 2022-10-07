@@ -33,7 +33,7 @@ def decrease_learning_rate(optimizer, decrease_by=0.01):
         param_group['lr'] *= (1 - decrease_by)
 
 
-def is_valid_smile(scaffold, decoration):
+def is_valid_smile(smile):
     """Returns true is smile is syntactically valid."""
     mol = Chem.MolFromSmiles(smile)
     return mol is not None
