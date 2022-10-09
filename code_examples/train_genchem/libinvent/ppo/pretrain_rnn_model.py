@@ -145,8 +145,8 @@ if __name__ == "__main__":
         # Define model
         feature_extractor_kwargs = {}
         recurrent_net_kwargs = {
-            "encoder_params": {"num_layers": 3, "num_dimensions": 512, "vocabulary_size": 38, "dropout": 0.2},
-            "decoder_params": {"num_layers": 3, "num_dimensions": 512, "vocabulary_size": 36, "dropout": 0.2}
+            "encoder_params": {"num_layers": 3, "num_dimensions": 512, "vocabulary_size": len(vocabulary.scaffold_vocabulary), "dropout": 0.1},
+            "decoder_params": {"num_layers": 3, "num_dimensions": 512, "vocabulary_size": len(vocabulary.decoration_vocabulary), "dropout": 0.1}
         }
         actor = OnPolicyActor.create_factory(
             obs_space, action_space, prl.PPO,
@@ -178,12 +178,12 @@ if __name__ == "__main__":
                     ((scaffold_batch, scaffold_lengths), (decorator_batch, decorator_length)) = batch
 
                     # Prediction
-                    encoded_seqs, rhs = actor.policy_net.memory_net._forward_encoder(
+                    encoded_seqs, encoder_rhs = actor.policy_net.memory_net._forward_encoder(
                         scaffold_batch.to(device), scaffold_lengths)
                     features, _, _ = actor.policy_net.memory_net._forward_decoder(
-                        decorator_batch.to(device), decorator_length, encoded_seqs, rhs)
+                        decorator_batch.to(device), decorator_length, encoded_seqs, encoder_rhs)
                     logp_action, entropy_dist, dist = actor.policy_net.dist.evaluate_pred(
-                        features[:-1, :], decorator_batch.to(device)[1:, :])
+                        features[:, :-1], decorator_batch.to(device)[:, 1:])
 
                     # Optimization step
                     loss = - logp_action.squeeze(-1).sum(0).mean()
