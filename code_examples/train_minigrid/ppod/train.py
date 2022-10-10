@@ -131,7 +131,7 @@ def get_args():
         '--episodic_life', action='store_true', default=False,
         help='Turn every life into an episode')
 
-    # PPO specs
+    # PPOD specs
     parser.add_argument(
         '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
@@ -164,6 +164,9 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
+    parser.add_argument(
+        "--initial-reward-threshold", type=float, default=1.0,
+        help="initial reward threshold to add a demo to the replay buffer (default: 1.0)")
 
     # Feature extractor model specs
     parser.add_argument(

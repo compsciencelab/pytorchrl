@@ -26,6 +26,7 @@ ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
 predictor_proportion: 1.0
 pre_normalization_steps: 1
+initial_reward_threshold: 1.0
 restart_reference_model: null
 restart_model: null
 shared_policy_value_network: True

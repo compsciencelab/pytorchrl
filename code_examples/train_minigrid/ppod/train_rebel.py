@@ -61,7 +61,7 @@ def main():
             size=args.num_steps, gae_lambda=args.gae_lambda,
             general_value_net_factory=actor_factory,
             target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
-            initial_reward_threshold=1.0)
+            initial_reward_threshold=args.initial_reward_threshold)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,

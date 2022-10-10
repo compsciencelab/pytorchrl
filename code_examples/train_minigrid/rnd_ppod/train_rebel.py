@@ -78,7 +78,8 @@ def main():
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda, phi=args.phi,
             rho=args.rho, general_value_net_factory=actor_factory,
-            initial_reward_threshold=1.0)
+            target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
+            initial_reward_threshold=args.initial_reward_threshold)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
@@ -121,6 +122,9 @@ def main():
             if args.max_time != -1 and (time.time() - start_time) > args.max_time:
                 break
 
+            if os.path.exists(os.path.join(args.log_dir, "reward_demos/found_demo.npz")):
+                break
+
             iterations += 1
 
         print("Finished!")
@@ -157,7 +161,7 @@ def get_args():
         "--episodic_life", action="store_true", default=False,
         help="Turn every life into an episode")
 
-    # PPO specs
+    # RND PPOD specs
     parser.add_argument(
         "--lr", type=float, default=7e-4, help="learning rate (default: 7e-4)")
     parser.add_argument(
@@ -211,6 +215,9 @@ def get_args():
     parser.add_argument(
         "--pre-normalization-steps", type=int, default=50,
         help="rnd ppo number of pre-normalization steps parameter (default: 50)")
+    parser.add_argument(
+        "--initial-reward-threshold", type=float, default=1.0,
+        help="initial reward threshold to add a demo to the replay buffer (default: 1.0)")
 
     # Feature extractor model specs
     parser.add_argument(
