@@ -216,6 +216,7 @@ class PPOD2RebelBuffer(B):
             "max_modified_reward": self.data[prl.REW].max().item(),
             "min_modified_reward": self.data[prl.REW].min().item(),
             "avg_modified_reward": self.data[prl.REW].mean().item(),
+            "value_pred_error_rms": self.pred_errors_rms.mean.float().item(),
         })
 
         return info
