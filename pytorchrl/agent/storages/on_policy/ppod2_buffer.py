@@ -288,6 +288,10 @@ class PPOD2Buffer(B):
         """
 
         super(PPOD2Buffer, self).after_gradients(batch, info)
+        
+        info["Algorithm"].update({
+            "value_pred_error_rms": self.pred_errors_rms.mean.float().item(),
+        })
 
         # info['NumberSamples'] -= self.inserted_samples
         self.inserted_samples = 0
