@@ -4,7 +4,7 @@ import gymnasium as gym
 from minigrid.utils.window import Window
 from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
-from code_examples.train_minigrid.ppo.train import get_args
+from code_examples.train_minigrid.ppod.train import get_args
 
 
 def redraw(window, img):

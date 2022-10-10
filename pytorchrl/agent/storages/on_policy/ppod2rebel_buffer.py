@@ -81,7 +81,7 @@ class PPOD2RebelBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory, rho=0.05, phi=0.05,
-                 error_threshold=0.01, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
+                 gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
                  initial_reward_threshold=None, initial_reward_demos_dir=None, supplementary_demos_dir=None,
                  target_reward_demos_dir=None, num_reward_demos_to_save=None, initial_int_demos_dir=None,
                  target_int_demos_dir=None, num_int_demos_to_save=None, save_demos_every=10,
@@ -93,8 +93,11 @@ class PPOD2RebelBuffer(B):
             num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
             save_demos_every, demo_dtypes)
 
+        # Create target demo dirs
+        os.makedirs(target_reward_demos_dir, exist_ok=True)
+
         # Define minimum value prediction error
-        self.error_threshold = error_threshold
+        self.error_threshold = self.actor.value_net1.value_threshold
 
         # Create general value model and move it to device
         self.general_value_net = general_value_net_factory(self.device)
@@ -104,10 +107,11 @@ class PPOD2RebelBuffer(B):
             p.requires_grad = False
 
         # Define reward threshold
-        self.reward_threshold = 1.0  # initial_reward_threshold
+        self.reward_threshold = initial_reward_threshold
+        self.update_pred_error_rms = False
 
     @classmethod
-    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, error_threshold=0.01, gae_lambda=0.95,
+    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95,
                        alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None,
                        initial_reward_demos_dir=None, supplementary_demos_dir=None, target_reward_demos_dir=None,
                        num_reward_demos_to_save=None, initial_int_demos_dir=None, target_int_demos_dir=None,
@@ -162,7 +166,7 @@ class PPOD2RebelBuffer(B):
         """
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPOD2RebelBuffer instance."""
-            return cls(size, device, actor, algorithm, envs, general_value_net_factory, rho, phi, error_threshold,
+            return cls(size, device, actor, algorithm, envs, general_value_net_factory, rho, phi,
                        gae_lambda, alpha, total_buffer_demo_capacity, initial_reward_threshold,
                        initial_reward_demos_dir, supplementary_demos_dir, target_reward_demos_dir,
                        num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
@@ -185,7 +189,6 @@ class PPOD2RebelBuffer(B):
 
     def before_gradients(self):
         """Before updating actor policy model, compute returns and advantages."""
-
         self.compute_cumulative_rewards()
         self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
@@ -234,9 +237,9 @@ class PPOD2RebelBuffer(B):
 
     def predict_reference_value(self):
         """Generate value predictions with the reference value network."""
+        _, rhs, _ = self.actor.actor_initial_states(self.data[prl.OBS])
         return self.general_value_net.get_value(
-            self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:]),
-            self.data[prl.RHS]["value_net1"].view(-1, *self.data[prl.RHS]["value_net1"].shape[2:]),
+            self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:]), rhs,
             self.data[prl.DONE].view(-1, *self.data[prl.DONE].shape[2:]),
         )['value_net1'].view(self.data[prl.DONE].shape)
 
@@ -267,14 +270,14 @@ class PPOD2RebelBuffer(B):
             cumulative_rewards[step] += cumulative_rewards[step + 1] * self.algo.gamma
 
         # Compute reference value prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
+        _, rhs, _ = self.actor.actor_initial_states(self.data[prl.OBS])
         value_preds = self.general_value_net.get_value(
-            torch.tensor(demo[prl.OBS][mask]).to(self.device),
-            torch.zeros_like(torch.tensor(demo[prl.REW][mask]).to(self.device)),
+            torch.tensor(demo[prl.OBS][mask]).to(self.device), rhs,
             torch.zeros_like(torch.tensor(demo[prl.REW][mask])).to(self.device)
         )['value_net1'].cpu().numpy()
 
         # Verify all predicted errors are higher than self.error_threshold
-        valid = (np.abs(value_preds - returns) < self.error_threshold).all()
+        valid = (np.abs(value_preds - returns) > float(self.error_threshold)).all()
 
         return valid
 

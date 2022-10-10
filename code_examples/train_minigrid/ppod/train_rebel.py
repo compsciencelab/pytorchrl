@@ -16,7 +16,7 @@ from pytorchrl.agent.storages import PPOD2RebelBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
-from code_examples.train_minigrid.ppo.train import get_args
+from code_examples.train_minigrid.ppod.train import get_args
 
 
 def main():
@@ -60,7 +60,8 @@ def main():
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda,
             general_value_net_factory=actor_factory,
-            value_threshold=args.value_threshold)
+            target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
+            initial_reward_threshold=1.0)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
@@ -101,6 +102,9 @@ def main():
                 save_name = learner.save_model()
 
             if args.max_time != -1 and (time.time() - start_time) > args.max_time:
+                break
+
+            if os.path.exists(os.path.join(args.log_dir, "reward_demos/found_demo.npz")):
                 break
 
             iterations += 1

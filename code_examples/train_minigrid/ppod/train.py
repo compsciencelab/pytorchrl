@@ -12,7 +12,7 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages import VanillaOnPolicyBuffer
+from pytorchrl.agent.storages import VanillaOnPolicyBuffer, PPOD2Buffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
@@ -56,7 +56,8 @@ def main():
             shared_policy_value_network=args.shared_policy_value_network)
 
         # 4. Define rollouts storage
-        storage_factory = VanillaOnPolicyBuffer.create_factory(size=args.num_steps)
+        # storage_factory = VanillaOnPolicyBuffer.create_factory(size=args.num_steps)
+        storage_factory = PPOD2Buffer.create_factory(size=args.num_steps)
 
         # 5. Define scheme
         params = {}
@@ -163,9 +164,6 @@ def get_args():
     parser.add_argument(
         '--clip-param', type=float, default=0.2,
         help='ppo clip parameter (default: 0.2)')
-    parser.add_argument(
-        "--value-threshold", type=float, default=0.01,
-        help="Minimum  value  prediction error (default: 0.01)")
 
     # Feature extractor model specs
     parser.add_argument(

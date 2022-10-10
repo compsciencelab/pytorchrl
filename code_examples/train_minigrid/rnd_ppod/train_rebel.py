@@ -78,7 +78,7 @@ def main():
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda, phi=args.phi,
             rho=args.rho, general_value_net_factory=actor_factory,
-            error_threshold=args.value_threshold)
+            initial_reward_threshold=1.0)
 
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
@@ -211,9 +211,6 @@ def get_args():
     parser.add_argument(
         "--pre-normalization-steps", type=int, default=50,
         help="rnd ppo number of pre-normalization steps parameter (default: 50)")
-    parser.add_argument(
-        "--value-threshold", type=float, default=0.01,
-        help="Minimum  value  prediction error (default: 0.01)")
 
     # Feature extractor model specs
     parser.add_argument(

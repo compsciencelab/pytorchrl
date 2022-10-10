@@ -1,7 +1,7 @@
 experiment_name: MiniGridTrain
 agent_name: MiniGridAgent
 wandb_key: null
-env_id: MiniGrid-MultipleDeceivingRewards-v0
+env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
 log_dir: /tmp/minigrid_ppo
 gamma: 0.99
@@ -18,7 +18,6 @@ entropy_coef: 0.05
 max_grad_norm: 0.5
 lr: 0.001
 feature_extractor_net: CNN
+shared_policy_value_network: True
 restart_reference_model: null
 restart_model: null
-value_threshold: 0.02
-shared_policy_value_network: True

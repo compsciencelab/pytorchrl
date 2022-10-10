@@ -7,6 +7,7 @@ from minigrid.minigrid_env import MiniGridEnv, WorldObj, COLORS, fill_coords, po
 class BlueGoal(WorldObj):
     def __init__(self):
         super().__init__("goal", "blue")
+        self.goal_type = "blue_goal"
 
     def can_overlap(self):
         return True
@@ -18,6 +19,7 @@ class BlueGoal(WorldObj):
 class YellowGoal(WorldObj):
     def __init__(self):
         super().__init__("goal", "yellow")
+        self.goal_type = "yellow_goal"
 
     def can_overlap(self):
         return True
@@ -29,6 +31,19 @@ class YellowGoal(WorldObj):
 class GreyGoal(WorldObj):
     def __init__(self):
         super().__init__("goal", "grey")
+        self.goal_type = "grey_goal"
+
+    def can_overlap(self):
+        return True
+
+    def render(self, img):
+        fill_coords(img, point_in_rect(0, 1, 0, 1), COLORS[self.color])
+
+
+class GreenGoal(WorldObj):
+    def __init__(self):
+        super().__init__("goal", "green")
+        self.goal_type = "green_goal"
 
     def can_overlap(self):
         return True
@@ -130,7 +145,7 @@ class MultipleDeceivingRewardsEnv(MiniGridEnv):
 
         # Create goals
         # Place a green goal square in the upper-right corner
-        self.put_obj(Goal(), width - 2, 1)
+        self.put_obj(GreenGoal(), width - 2, 1)
 
         # Place a blue goal square in the bottom-right corner
         self.put_obj(BlueGoal(), 8, 8)
@@ -142,6 +157,77 @@ class MultipleDeceivingRewardsEnv(MiniGridEnv):
         self.agent_dir = 3
 
         self.mission = "get to the green goal square"
+
+    def step(self, action):
+        self.step_count += 1
+
+        reward = 0
+        terminated = False
+        truncated = False
+
+        # Get the position in front of the agent
+        fwd_pos = self.front_pos
+
+        # Get the contents of the cell in front of the agent
+        fwd_cell = self.grid.get(*fwd_pos)
+
+        # Rotate left
+        if action == self.actions.left:
+            self.agent_dir -= 1
+            if self.agent_dir < 0:
+                self.agent_dir += 4
+
+        # Rotate right
+        elif action == self.actions.right:
+            self.agent_dir = (self.agent_dir + 1) % 4
+
+        # Move forward
+        elif action == self.actions.forward:
+            if fwd_cell is None or fwd_cell.can_overlap():
+                self.agent_pos = tuple(fwd_pos)
+            if fwd_cell is not None and fwd_cell.type == "goal" and fwd_cell.goal_type == "yellow_goal":
+                terminated = True
+                reward = self._reward()
+
+            if fwd_cell is not None and fwd_cell.type == "lava":
+                terminated = True
+
+        # Pick up an object
+        elif action == self.actions.pickup:
+            if fwd_cell and fwd_cell.can_pickup():
+                if self.carrying is None:
+                    self.carrying = fwd_cell
+                    self.carrying.cur_pos = np.array([-1, -1])
+                    self.grid.set(fwd_pos[0], fwd_pos[1], None)
+
+        # Drop an object
+        elif action == self.actions.drop:
+            if not fwd_cell and self.carrying:
+                self.grid.set(fwd_pos[0], fwd_pos[1], self.carrying)
+                self.carrying.cur_pos = fwd_pos
+                self.carrying = None
+
+        # Toggle/activate an object
+        elif action == self.actions.toggle:
+            if fwd_cell:
+                fwd_cell.toggle(self, fwd_pos)
+
+        # Done action (not used by default)
+        elif action == self.actions.done:
+            pass
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
+        if self.step_count >= self.max_steps:
+            truncated = True
+
+        if self.render_mode == "human":
+            self.render()
+
+        obs = self.gen_obs()
+
+        return obs, reward, terminated, truncated, {}
 
     def _reward(self):
         """
