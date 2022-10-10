@@ -51,10 +51,13 @@ def main():
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,)
 
         # 3. Define RL Policy
-        actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name,
-            restart_model=args.restart_reference_model,
-            shared_policy_value_network=args.shared_policy_value_network)
+        if args.restart_reference_model:
+            actor_factory = OnPolicyActor.create_factory(
+                obs_space, action_space, algo_name,
+                restart_model=args.restart_reference_model,
+                shared_policy_value_network=args.shared_policy_value_network)
+        else:
+            actor_factory = None
 
         # 4. Define rollouts storage
         storage_factory = PPOD2RebelBuffer.create_factory(

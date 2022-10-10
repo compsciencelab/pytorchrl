@@ -80,7 +80,7 @@ class PPOD2RebelBuffer(B):
     # Data tensors to collect for each reward_demos
     demos_data_fields = prl.DemosDataKeys
 
-    def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory, rho=0.05, phi=0.05,
+    def __init__(self, size, device, actor, algorithm, envs, general_value_net_factory=None, rho=0.05, phi=0.05,
                  gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
                  initial_reward_threshold=None, initial_reward_demos_dir=None, supplementary_demos_dir=None,
                  target_reward_demos_dir=None, num_reward_demos_to_save=None, initial_int_demos_dir=None,
@@ -100,18 +100,20 @@ class PPOD2RebelBuffer(B):
         self.error_threshold = self.actor.value_net1.value_threshold
 
         # Create general value model and move it to device
-        self.general_value_net = general_value_net_factory(self.device)
-
-        # Freeze general value model with respect to optimizers
-        for p in self.general_value_net.parameters():
-            p.requires_grad = False
+        if general_value_net_factory:
+            self.general_value_net = general_value_net_factory(self.device)
+            # Freeze general value model with respect to optimizers
+            for p in self.general_value_net.parameters():
+                p.requires_grad = False
+        else:
+            self.general_value_net = None
 
         # Define reward threshold
         self.reward_threshold = initial_reward_threshold
         self.update_pred_error_rms = False
 
     @classmethod
-    def create_factory(cls, size, general_value_net_factory, rho=0.05, phi=0.05, gae_lambda=0.95,
+    def create_factory(cls, size, general_value_net_factory=None, rho=0.05, phi=0.05, gae_lambda=0.95,
                        alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None,
                        initial_reward_demos_dir=None, supplementary_demos_dir=None, target_reward_demos_dir=None,
                        num_reward_demos_to_save=None, initial_int_demos_dir=None, target_int_demos_dir=None,
@@ -189,8 +191,9 @@ class PPOD2RebelBuffer(B):
 
     def before_gradients(self):
         """Before updating actor policy model, compute returns and advantages."""
-        self.compute_cumulative_rewards()
-        self.apply_rebel_logic()
+        if self.general_value_net:
+            self.compute_cumulative_rewards()
+            self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
 
     def after_gradients(self, batch, info):
@@ -255,6 +258,9 @@ class PPOD2RebelBuffer(B):
         Verify demo has high value prediction error for rewarded states with
         cumulative reward higher than self.reward_threshold - 1.
         """
+
+        if not self.general_value_net:
+            return True
 
         # Compute demo cumulative rewards
         cumulative_rewards = np.copy(demo[prl.REW])

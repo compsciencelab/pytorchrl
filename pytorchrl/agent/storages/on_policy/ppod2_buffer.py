@@ -629,6 +629,11 @@ class PPOD2Buffer(B):
         Warning: make sure the environment frame_skip and frame_stack hyperparameters are
         the same as those used in the demonstrations!
         """
+
+        # Create supp dir if necessary
+        if not os.path.exists(self.supplementary_demos_dir):
+            os.makedirs(self.supplementary_demos_dir, exist_ok=True)
+
         num_loaded_supplementary_demos = 0
         supplementary_demos = glob.glob(self.supplementary_demos_dir + '/*.npz') if self.supplementary_demos_dir else []
 
