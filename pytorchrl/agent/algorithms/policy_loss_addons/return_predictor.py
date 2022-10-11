@@ -10,16 +10,16 @@ class ReturnPredictor(PolicyLossAddOn):
 
     def __init__(self, predictor_net_factory, predictor_net_kwargs, masked_sparse_obs_ratio=0.0):
         """
-        Class to train a reward predictor in parallel with the RL actor.
+        Class to train a return predictor in parallel with the RL actor.
 
         Parameters
         ----------
         predictor_net_factory : func
-            Method to create the network that predict the reward (output has shape (1,)).
+            Method to create the network that predict the return (output has shape (1,)).
         predictor_net_factory : dict
             Keyword argument to be used in predictor_net_factory.
         masked_sparse_obs_ratio : func
-            Ratio, between 0.0 and 1.0, of states with reward 0.0 to be masked in the loss function.
+            Ratio, between 0.0 and 1.0, of states with return 0.0 to be masked in the loss function.
         """
         self.predictor_net_kwargs = predictor_net_kwargs
         self.predictor_net_factory = predictor_net_factory
@@ -67,13 +67,18 @@ class ReturnPredictor(PolicyLossAddOn):
         mask[r != 0.0] = 1.0
         loss = (mask * loss).sum() / mask.sum()
 
-        self.pred_errors_rms.update(error.reshape(-1, 1))
+        if len(error[r != 0.0]) > 0:
+            self.max_pred_errors_rms.update(error[r != 0.0].max().reshape(-1, 1))
+            self.mean_pred_errors_rms.update(error[r != 0.0].mean().reshape(-1, 1))
+            self.min_pred_errors_rms.update(error[r != 0.0].min().reshape(-1, 1))
         self.actor.error_threshold.data = self.pred_errors_rms.mean.float()
 
         info.update({
             "return_predictor_loss": loss.item(),
             "return_predictor_error": error.mean().item(),
-            "return_pred_error_rms": self.pred_errors_rms.mean.float().item(),
+            "max_return_pred_error_rms": self.max_pred_errors_rms.mean.float().item(),
+            "mean_return_pred_error_rms": self.mean_pred_errors_rms.mean.float().item(),
+            "min_return_pred_error_rms": self.min_pred_errors_rms.mean.float().item(),
         })
 
         return loss, info

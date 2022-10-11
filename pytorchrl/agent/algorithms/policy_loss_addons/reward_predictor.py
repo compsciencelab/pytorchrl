@@ -33,7 +33,9 @@ class RewardPredictor(PolicyLossAddOn):
 
         # Cast behavior weights to torch tensors
         self.actor.reward_predictor = self.predictor_net_factory(**self.predictor_net_kwargs).to(device)
-        self.pred_errors_rms = RunningMeanStd(shape=(1,), device=device)
+        self.max_pred_errors_rms = RunningMeanStd(shape=(1,), device=device)
+        self.mean_pred_errors_rms = RunningMeanStd(shape=(1,), device=device)
+        self.min_pred_errors_rms = RunningMeanStd(shape=(1,), device=device)
         self.actor.error_threshold = torch.nn.parameter.Parameter(
             data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
 
@@ -67,13 +69,18 @@ class RewardPredictor(PolicyLossAddOn):
         mask[r != 0.0] = 1.0
         loss = (mask * loss).sum() / mask.sum()
 
-        self.pred_errors_rms.update(error.reshape(-1, 1))
+        if len(error[r != 0.0]) > 0:
+            self.max_pred_errors_rms.update(error[r != 0.0].max().reshape(-1, 1))
+            self.mean_pred_errors_rms.update(error[r != 0.0].mean().reshape(-1, 1))
+            self.min_pred_errors_rms.update(error[r != 0.0].min().reshape(-1, 1))
         self.actor.error_threshold.data = self.pred_errors_rms.mean.float()
 
         info.update({
             "reward_predictor_loss": loss.item(),
             "reward_predictor_error": error.mean().item(),
-            "reward_pred_error_rms": self.pred_errors_rms.mean.float().item(),
+            "max_reward_pred_error_rms": self.max_pred_errors_rms.mean.float().item(),
+            "mean_reward_pred_error_rms": self.mean_pred_errors_rms.mean.float().item(),
+            "min_reward_pred_error_rms": self.min_pred_errors_rms.mean.float().item(),
         })
 
         return loss, info
