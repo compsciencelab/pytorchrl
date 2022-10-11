@@ -142,7 +142,7 @@ class DDQN(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -299,7 +299,13 @@ class DDQN(Algorithm):
 
         errors = (q_exp - q_targ).abs().detach().cpu()
 
-        return loss, errors
+        # Extend policy loss with addons
+        addons_info = {}
+        for addon in self.policy_loss_addons:
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss += addon_loss
+
+        return loss, errors, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -332,7 +338,7 @@ class DDQN(Algorithm):
         per_weights = batch["per_weights"] if "per_weights" in batch else 1.0
 
         # Compute DDQN loss and gradients
-        loss, errors = self.compute_loss(batch, n_step, per_weights)
+        loss, errors, addons_info = self.compute_loss(batch, n_step, per_weights)
         self.q_optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.q1.parameters(), self.max_grad_norm)
@@ -345,6 +351,8 @@ class DDQN(Algorithm):
 
         if "per_weights" in batch:
             info.update({"errors": errors})
+
+        info.update(addons_info)
 
         return grads, info
 

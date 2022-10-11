@@ -138,7 +138,7 @@ class PPO(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -353,10 +353,12 @@ class PPO(Algorithm):
         loss = value_loss + action_loss - entropy_loss
 
         # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-            loss += addon.compute_loss_term(self.actor, dist, data)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss += addon_loss
 
-        return value_loss, action_loss, entropy_loss, loss
+        return value_loss, action_loss, entropy_loss, loss, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -378,7 +380,7 @@ class PPO(Algorithm):
             Dict containing current PPO iteration information.
         """
 
-        value_loss, action_loss, dist_entropy, loss = self.compute_loss(batch)
+        value_loss, action_loss, dist_entropy, loss, addons_info = self.compute_loss(batch)
         self.optimizer.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
@@ -393,6 +395,8 @@ class PPO(Algorithm):
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item()
         }
+
+        info.update(addons_info)
 
         return grads, info
 

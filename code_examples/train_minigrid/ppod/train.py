@@ -14,6 +14,7 @@ from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import VanillaOnPolicyBuffer, PPOD2Buffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+from pytorchrl.agent.algorithms.policy_loss_addons import RewardPredictor
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_train_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -43,11 +44,22 @@ def main():
             vec_env_size=args.num_env_processes, log_dir=args.log_dir)
 
         # 2. Define RL training algorithm
+        reward_prediction_addon = RewardPredictor(
+            predictor_net_factory=get_feature_extractor(args.feature_extractor_net),
+            predictor_net_kwargs={
+                "input_space": obs_space,
+                "output_sizes": [512, 128, 1],
+                "final_activation": False,
+            },
+            masked_sparse_obs_ratio=0.0
+        )
         algo_factory, algo_name = PPO.create_factory(
             lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
             entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-            use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,)
+            use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,
+            policy_loss_addons=[reward_prediction_addon]
+        )
 
         # 3. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(

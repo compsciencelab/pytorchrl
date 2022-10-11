@@ -45,12 +45,13 @@ class AttractionKL(PolicyLossAddOn):
         self.behavior_weights = behavior_weights
         self.behavior_weights /= np.sum(self.behavior_weights)
 
-    def setup(self, device):
+    def setup(self, actor, device):
         """
         Setup addon module by casting behavior weights to torch tensors and
         initializing agent behaviors.
         """
 
+        self.actor = actor
         self.device = device
 
         # Cast behavior weights to torch tensors
@@ -60,7 +61,7 @@ class AttractionKL(PolicyLossAddOn):
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
 
-    def compute_loss_term(self, actor, actor_dist, data):
+    def compute_loss_term(self, data, actor_dist, info):
         """
         Calculate and add KL Attraction loss term.
             1. Calculate KL between actor policy and all behaviors.
@@ -70,17 +71,20 @@ class AttractionKL(PolicyLossAddOn):
 
         Parameters
         ----------
-        actor : Actor
-            Training algorithm's Actor_critic class instance.
         actor_dist : torch.distributions.Distribution
             Actor action distribution for actions in data[prl.OBS]
         data : dict
             data batch containing all required tensors to compute loss term.
+        info : dict
+            Dictionary to store log information.
 
         Returns
         -------
         attraction_kl_loss_term : torch.tensor
             KL loss term.
+        info : dict
+            Updated info dict.
+
         """
 
         o, rhs, a, d = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.DONE]
@@ -111,7 +115,7 @@ class AttractionKL(PolicyLossAddOn):
 
         kl_div = min(kl_div)
 
-        return self.loss_term_weight * kl_div
+        return self.loss_term_weight * kl_div, info
 
 
 class RepulsionKL(PolicyLossAddOn):
@@ -152,12 +156,13 @@ class RepulsionKL(PolicyLossAddOn):
         self.behavior_weights = behavior_weights
         self.behavior_weights /= np.sum(self.behavior_weights)
 
-    def setup(self, device):
+    def setup(self, actor, device):
         """
         Setup addon module by casting behavior weights to torch tensors and
         initializing agent behaviors.
         """
 
+        self.actor = actor
         self.device = device
 
         # Cast behavior weights to torch tensors
@@ -167,7 +172,7 @@ class RepulsionKL(PolicyLossAddOn):
         for b in self.behavior_factories:
             self.behaviors.append(b(self.device))
 
-    def compute_loss_term(self, actor, actor_dist, data):
+    def compute_loss_term(self, data, actor_dist, info):
         """
         Calculate and add KL Repulsion loss term.
             1. Calculate KL between actor policy and all behaviors.
@@ -177,17 +182,19 @@ class RepulsionKL(PolicyLossAddOn):
 
         Parameters
         ----------
-        actor : Actor
-            Training algorithm's Actor_critic class instance.
         actor_dist : torch.distributions.Distribution
             Actor action distribution for actions in data[prl.OBS]
         data : dict
             data batch containing all required tensors to compute loss term.
+        info : dict
+            Dictionary to store log information.
 
         Returns
         -------
         attraction_kl_loss_term : torch.tensor
             KL loss term.
+        info : dict
+            Updated info dict.
         """
 
         o, rhs, a, d = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.DONE]
@@ -216,4 +223,4 @@ class RepulsionKL(PolicyLossAddOn):
 
             kl_div += div.mean()
 
-        return -1 * self.loss_term_weight * kl_div
+        return -1 * self.loss_term_weight * kl_div, info

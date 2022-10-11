@@ -174,7 +174,7 @@ class SAC(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -494,10 +494,12 @@ class SAC(Algorithm):
         loss_pi = ((self.alpha * logp_pi - q_pi) * per_weights).mean()
 
         # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, batch)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss_pi += addon_loss
 
-        return loss_pi, logp_pi
+        return loss_pi, logp_pi, addons_info
 
     def compute_loss_alpha(self, log_probs, per_weights=1):
         """
@@ -572,7 +574,7 @@ class SAC(Algorithm):
             p.requires_grad = False
 
         # Run one gradient descent step for pi.
-        loss_pi, logp_pi = self.compute_loss_pi(batch, per_weights)
+        loss_pi, logp_pi, addons_info = self.compute_loss_pi(batch, per_weights)
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
         nn.utils.clip_grad_norm_(self.actor.policy_net.parameters(), self.max_grad_norm)
@@ -598,6 +600,8 @@ class SAC(Algorithm):
             info.update({"errors": errors})
 
         grads = {"q_grads": q_grads, "pi_grads": pi_grads}
+
+        info.update(addons_info)
 
         return grads, info
 

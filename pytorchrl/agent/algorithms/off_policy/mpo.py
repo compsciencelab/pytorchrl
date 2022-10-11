@@ -218,7 +218,7 @@ class MPO(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -672,11 +672,12 @@ class MPO(Algorithm):
                 loss_policy = -(loss_pi + self.alpha_mu * (self.kl_mean_constraint - kl_mu) +
                                 self.alpha_sigma * (self.kl_var_constraint - kl_sigma))
 
-        # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-           loss_policy += addon.compute_loss_term(self.actor, dist, batch)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss_policy += addon_loss
 
-        return loss_policy
+        return loss_policy, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -721,7 +722,7 @@ class MPO(Algorithm):
             p.requires_grad = False
 
         # Run one gradient descent step for pi.
-        loss_pi = self.compute_loss_pi(batch, per_weights)
+        loss_pi, addons_info = self.compute_loss_pi(batch, per_weights)
 
         self.pi_optimizer.zero_grad()
         loss_pi.backward()
@@ -740,6 +741,8 @@ class MPO(Algorithm):
             info.update({"errors": errors})
 
         grads = {"q_grads": q_grads, "pi_grads": pi_grads}
+
+        info.update(addons_info)
 
         return grads, info
 

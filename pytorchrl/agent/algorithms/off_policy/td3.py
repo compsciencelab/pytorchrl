@@ -160,7 +160,7 @@ class TD3(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -414,10 +414,12 @@ class TD3(Algorithm):
         loss_pi = - (q1_pi * per_weights).mean()
 
         # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-            loss_pi += addon.compute_loss_term(self.actor, dist, data)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss_pi += addon_loss
 
-        return loss_pi
+        return loss_pi, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -466,7 +468,7 @@ class TD3(Algorithm):
         # Compute policy
         loss_pi = self.prev_loss_pi
         if self.iter % self.target_update_interval == 0:
-            loss_pi = self.compute_loss_pi(batch, per_weights)
+            loss_pi, addons_info = self.compute_loss_pi(batch, per_weights)
             # Next run one gradient descent step for pi.
             self.pi_optimizer.zero_grad()
             loss_pi.backward()
@@ -486,6 +488,8 @@ class TD3(Algorithm):
 
         if "per_weights" in batch:
             info.update({"errors": errors})
+
+        info.update(addons_info)
 
         return grads, info
 

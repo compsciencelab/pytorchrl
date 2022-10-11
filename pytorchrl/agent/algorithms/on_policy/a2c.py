@@ -109,7 +109,7 @@ class A2C(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
 
     @classmethod
     def create_factory(cls,
@@ -281,14 +281,16 @@ class A2C(Algorithm):
         pi_loss = - (logp * adv).mean()
 
         # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-            pi_loss += addon.compute_loss_term(self.actor, dist, data)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            pi_loss += addon_loss
 
         # Value loss
         new_v = self.actor.get_value(o, rhs, d).get("value_net1")
         value_loss = (r - new_v).pow(2).mean()
 
-        return pi_loss, value_loss
+        return pi_loss, value_loss, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -311,7 +313,7 @@ class A2C(Algorithm):
         """
 
         # Compute A2C losses
-        action_loss, value_loss = self.compute_loss(batch)
+        action_loss, value_loss, addons_info = self.compute_loss(batch)
 
         # Compute policy gradients
         self.pi_optimizer.zero_grad()
@@ -338,6 +340,8 @@ class A2C(Algorithm):
             "value_loss": value_loss.item(),
             "action_loss": action_loss.item(),
         }
+
+        info.update(addons_info)
 
         return grads, info
 
