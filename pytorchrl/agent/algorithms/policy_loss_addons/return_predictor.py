@@ -6,7 +6,7 @@ from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.algorithms.policy_loss_addons import PolicyLossAddOn
 
 
-class RewardPredictor(PolicyLossAddOn):
+class ReturnPredictor(PolicyLossAddOn):
 
     def __init__(self, predictor_net_factory, predictor_net_kwargs, masked_sparse_obs_ratio=0.0):
         """
@@ -58,7 +58,7 @@ class RewardPredictor(PolicyLossAddOn):
             Updated info dict.
         """
 
-        o, rhs, r = data[prl.OBS], data[prl.RHS], data[prl.REW]
+        o, rhs, r = data[prl.OBS], data[prl.RHS], data[prl.RET]
         pred_r = self.actor.reward_predictor(o)
         error = torch.abs(r - pred_r)
         loss = 0.5 * error.pow(2)
@@ -71,9 +71,9 @@ class RewardPredictor(PolicyLossAddOn):
         self.actor.error_threshold.data = self.pred_errors_rms.mean.float()
 
         info.update({
-            "reward_predictor_loss": loss.item(),
-            "reward_predictor_error": error.mean().item(),
-            "reward_pred_error_rms": self.pred_errors_rms.mean.float().item(),
+            "return_predictor_loss": loss.item(),
+            "return_predictor_error": error.mean().item(),
+            "return_pred_error_rms": self.pred_errors_rms.mean.float().item(),
         })
 
         return loss, info

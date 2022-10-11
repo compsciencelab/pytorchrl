@@ -108,9 +108,10 @@ class PPOD2RebelBuffer(B):
         else:
             self.general_value_net = None
 
-        # Define reward threshold
+        # Define reward and error threshold
         self.reward_threshold = initial_reward_threshold
-        self.update_pred_error_rms = False
+        self.actor.error_threshold = torch.nn.parameter.Parameter(
+            data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
 
     @classmethod
     def create_factory(cls, size, general_value_net_factory=None, rho=0.05, phi=0.05, gae_lambda=0.95,

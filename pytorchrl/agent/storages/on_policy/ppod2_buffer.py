@@ -8,7 +8,6 @@ from copy import deepcopy
 from collections import defaultdict
 
 import pytorchrl as prl
-from pytorchrl.utils import RunningMeanStd
 from pytorchrl.agent.storages.on_policy.gae_buffer import GAEBuffer as B
 
 MIN_BUFFER_SIZE = 10
@@ -159,12 +158,6 @@ class PPOD2Buffer(B):
         # To keep track of supplementary demos loaded
         self.supplementary_demos_loaded = []
 
-        # To keep track of recent value prediction errors
-        self.update_pred_error_rms = True
-        self.pred_errors_rms = RunningMeanStd(shape=(1,), device=self.device)
-        self.actor.value_net1.value_threshold = torch.nn.parameter.Parameter(
-            data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
-
     @classmethod
     def create_factory(cls, size, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50,
                        initial_reward_threshold=None, initial_reward_demos_dir=None,
@@ -248,20 +241,9 @@ class PPOD2Buffer(B):
         """Before updating actor policy model, compute returns and advantages."""
 
         super(PPOD2Buffer, self).before_gradients()
-
-        try:
-            max_val_pred_error = torch.abs(
-                self.data[prl.RET][self.data[prl.REW] > 0.0] - self.data[prl.VAL][self.data[prl.REW] > 0.0]).max()
-            self.pred_errors_rms.update(max_val_pred_error.reshape(-1, 1))
-        except RuntimeError:
-            pass
-        if self.update_pred_error_rms:
-            self.actor.value_net1.value_threshold.data = self.pred_errors_rms.mean.float()
-
         print("\nREWARD DEMOS {}, INTRINSIC DEMOS {}, RHO {}, PHI {}, REWARD THRESHOLD {}, MAX DEMO REWARD {},"
-              " INTRINSIC THRESHOLD {}, PRED ERROR THRESHOLD {}\n".format(len(self.reward_demos), len(self.intrinsic_demos),
-            self.rho, self.phi, self.reward_threshold, self.max_demo_reward, self.intrinsic_threshold,
-            self.pred_errors_rms.mean.item()))
+              " INTRINSIC THRESHOLD {}\n".format(len(self.reward_demos), len(self.intrinsic_demos),
+            self.rho, self.phi, self.reward_threshold, self.max_demo_reward, self.intrinsic_threshold))
 
         self.iter += 1
         if self.iter % self.save_demos_every == 0:
@@ -288,10 +270,6 @@ class PPOD2Buffer(B):
         """
 
         super(PPOD2Buffer, self).after_gradients(batch, info)
-        
-        info["Algorithm"].update({
-            "value_pred_error_rms": self.pred_errors_rms.mean.float().item(),
-        })
 
         # info['NumberSamples'] -= self.inserted_samples
         self.inserted_samples = 0

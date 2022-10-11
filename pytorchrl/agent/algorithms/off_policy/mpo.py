@@ -195,12 +195,6 @@ class MPO(Algorithm):
         # List of parameters for policy network
         p_params = itertools.chain(self.actor.policy_net.parameters())
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.norm_loss_q = nn.SmoothL1Loss()
-        self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
-        self.q_optimizer = optim.Adam(q_params, lr=lr_q)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -219,6 +213,12 @@ class MPO(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.norm_loss_q = nn.SmoothL1Loss()
+        self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
+        self.q_optimizer = optim.Adam(q_params, lr=lr_q)
 
     @classmethod
     def create_factory(cls,

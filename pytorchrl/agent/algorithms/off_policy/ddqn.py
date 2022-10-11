@@ -121,10 +121,6 @@ class DDQN(Algorithm):
         for p in self.actor_targ.parameters():
             p.requires_grad = False
 
-        # ----- Optimizer -----------------------------------------------------
-
-        self.q_optimizer = optim.Adam(self.actor.q1.parameters(), lr=lr)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -143,6 +139,10 @@ class DDQN(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizer -----------------------------------------------------
+
+        self.q_optimizer = optim.Adam(self.actor.q1.parameters(), lr=lr)
 
     @classmethod
     def create_factory(cls,

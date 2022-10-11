@@ -117,10 +117,6 @@ class PPO(Algorithm):
 
         assert hasattr(self.actor, "value_net1"), "PPO requires value critic (num_critics=1)"
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -139,6 +135,10 @@ class PPO(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
 
     @classmethod
     def create_factory(cls,

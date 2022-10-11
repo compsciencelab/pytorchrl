@@ -151,12 +151,6 @@ class SAC(Algorithm):
         # List of parameters for policy network
         p_params = itertools.chain(self.actor.policy_net.parameters())
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
-        self.q_optimizer = optim.Adam(q_params, lr=lr_q)
-        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -175,6 +169,12 @@ class SAC(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.pi_optimizer = optim.Adam(p_params, lr=lr_pi)
+        self.q_optimizer = optim.Adam(q_params, lr=lr_q)
+        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
     @classmethod
     def create_factory(cls,

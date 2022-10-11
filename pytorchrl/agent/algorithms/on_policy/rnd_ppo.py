@@ -201,10 +201,6 @@ class RND_PPO(Algorithm):
         envs.reset()
         print("---Pre_normalization is done.---")
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -223,6 +219,10 @@ class RND_PPO(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
 
     @classmethod
     def create_factory(cls,

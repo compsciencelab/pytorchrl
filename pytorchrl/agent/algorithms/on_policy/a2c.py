@@ -87,11 +87,6 @@ class A2C(Algorithm):
 
         assert hasattr(self.actor, "value_net1"), "A2C requires value critic (num_critics=1)"
 
-        # ----- Optimizer -----------------------------------------------------
-
-        self.pi_optimizer = optim.Adam(self.actor.policy_net.parameters(), lr=lr_pi)
-        self.v_optimizer = optim.Adam(self.actor.value_net1.parameters(), lr=lr_v)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -110,6 +105,11 @@ class A2C(Algorithm):
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
             addon.setup(self.actor, self.device)
+
+        # ----- Optimizer -----------------------------------------------------
+
+        self.pi_optimizer = optim.Adam(self.actor.policy_net.parameters(), lr=lr_pi)
+        self.v_optimizer = optim.Adam(self.actor.value_net1.parameters(), lr=lr_v)
 
     @classmethod
     def create_factory(cls,
