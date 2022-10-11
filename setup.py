@@ -21,7 +21,7 @@ if __name__ == "__main__":
     setuptools.setup(
         name="pytorchrl",
         version=version,
-        author="",
+        author="albertbou92",
         author_email="",
         description="Disributed RL implementations with ray and pytorch.",
         long_description=long_description,
