@@ -10,6 +10,7 @@ from minigrid.utils.window import Window
 from pytorchrl.envs.minigrid.minigrid_env_factory import minigrid_test_env_factory
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.utils import LoadFromFile
+from pytorchrl.agent.storages import PPOD2RebelBuffer
 from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
 from code_examples.train_minigrid.ppod.train import get_args
 
@@ -21,7 +22,7 @@ class EnvManager:
         self.env = env
         self.policy = policy
         self.window = window
-        self.value = 0.0
+        self.reward = 0.0
 
     def redraw(self, img):
         self.window.show_img(img)
@@ -40,8 +41,8 @@ class EnvManager:
 
         obs, reward, done, info = self.env.step(action)
 
-        value_error = np.abs(self.value - reward)
-        print(f"step={self.env.step_count}, reward={reward:.2f}, value={self.value:.2f}, value_error={value_error:.2f}")
+        reward_error = np.abs(self.reward - reward)
+        print(f"step={self.env.step_count}, reward={reward:.2f}, reward_pred={self.reward:.2f}, reward_error={reward_error:.2f}")
 
         # Define tensors
         device = self.policy.device
@@ -50,8 +51,7 @@ class EnvManager:
         _, rhs, _ = self.policy.actor_initial_states(obs)
 
         with torch.no_grad():
-            _, _, _, rhs, _, _ = self.policy.get_action(obs, rhs, done, deterministic=False)
-            self.value = self.policy.get_value(obs, rhs, done)['value_net1'].item()
+            self.reward = self.policy.reward_predictor(obs).item()
 
         if done:
             print("terminated!")
@@ -105,6 +105,8 @@ def enjoy():
     # Define single copy of the environment
     env = minigrid_test_env_factory(env_id=args.env_id)
     env = TransposeImagesIfRequired(env)
+    env.num_envs = 1
+    env.env_kwargs = {}
 
     # Define agent device and agent
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -114,6 +116,19 @@ def enjoy():
         restart_model=args.restart_model or os.path.join(args.log_dir, "model.state_dict"),
         shared_policy_value_network=args.shared_policy_value_network,
     )(device)
+
+    storage_factory = PPOD2RebelBuffer.create_factory(
+        size=args.num_steps, gae_lambda=args.gae_lambda,
+        reward_predictor_factory=get_feature_extractor(args.feature_extractor_net),
+        reward_predictor_factory_kwargs={
+                "input_space": env.observation_space,
+                "output_sizes": [1],
+                "final_activation": False,
+            },
+        target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
+        initial_reward_threshold=args.initial_reward_threshold)(device, policy, None, env)
+
+    policy.try_load_from_checkpoint()
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
