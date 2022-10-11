@@ -28,7 +28,6 @@ ppo_epoch: 4
 recurrent_net: null
 restart_model: null
 save_interval: 100
-start_env_steps: 0
 target_env_steps: 1_000_000_000
 value_loss_coef: 1.0
 gamma_intrinsic: 0.99

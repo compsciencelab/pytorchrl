@@ -249,7 +249,7 @@ class PPOD2RebelBuffer(B):
     def modify_rewards(self, ref_value):
         """Flip the sign of the rewards with lower reference value prediction than self.error_threshold."""
         errors = torch.abs(ref_value - self.data[prl.RET])
-        mask = (errors < self.error_threshold) * (self.data["CumRew"] >= self.reward_threshold) * (
+        mask = (errors < float(self.error_threshold)) * (self.data["CumRew"] >= float(self.reward_threshold)) * (
                 self.data[prl.REW] > 0.0)
         self.data[prl.REW][mask] *= -1
 

@@ -25,7 +25,6 @@ from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_mem
 
 
 def main():
-
     print("GPU available: {}".format(torch.cuda.is_available()))
 
     # Get and log config
@@ -83,31 +82,23 @@ def main():
             intrinsic_rewards_network=get_feature_extractor("CNN"),
             intrinsic_rewards_target_network_kwargs={
                 "output_sizes": [512],
-                 "activation": nn.LeakyReLU,
+                "activation": nn.LeakyReLU,
                 "final_activation": False,
                 "rgb_norm": False,
             },
             intrinsic_rewards_predictor_network_kwargs={
                 "output_sizes": [512, 512, 512],
-                 "activation": nn.LeakyReLU,
+                "activation": nn.LeakyReLU,
                 "final_activation": False,
                 "rgb_norm": False,
             },
         )
 
-        # Look for available model checkpoint in log_dir - node failure case
-        checkpoints = sorted(glob.glob(os.path.join(args.log_dir, "model.state_dict*")))
-        if len(checkpoints) > 0:
-            checkpoint = checkpoints[-1]
-        else:
-            checkpoint = None
-
         # Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            shared_policy_value_network=False,
             feature_extractor_network=get_feature_extractor(args.feature_extractor_net),
-            restart_model=checkpoint, recurrent_net=get_memory_network(args.recurrent_net))
+            restart_model=args.restart_model, recurrent_net=get_memory_network(args.recurrent_net))
 
         # Define rollouts storage
         supp_demos_dir = args.log_dir + "/supplementary_demos/"
@@ -131,31 +122,15 @@ def main():
             "train_envs_factory": train_envs_factory,
         })
 
-        # add collection specs
-        params.update({
-            "num_col_workers": args.num_col_workers,
-            "col_workers_communication": args.com_col_workers,
-            "col_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
-        })
-
-        # add gradient specs
-        params.update({
-            "num_grad_workers": args.num_grad_workers,
-            "grad_workers_communication": args.com_grad_workers,
-            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.5},
-        })
-
         scheme = Scheme(**params)
         wandb.config.update(scheme.get_agent_components())  # Log agent components
 
         # Define learner
-        training_steps = args.target_env_steps - args.start_env_steps
+        training_steps = args.target_env_steps
         learner = Learner(scheme, target_steps=training_steps, log_dir=args.log_dir)
 
         # Define train loop
         iterations = 0
-        save_name = None
-        previous_save_name = None
         start_time = time.time()
         while not learner.done():
 
@@ -164,52 +139,17 @@ def main():
             if iterations % args.log_interval == 0:
                 log_data = learner.get_metrics(add_episodes_metrics=True)
                 log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
-                wandb.log(log_data, step=learner.num_samples_collected + args.start_env_steps)
+                wandb.log(log_data, step=learner.num_samples_collected)
                 learner.print_info()
-
-                with open(os.path.join(args.log_dir, "progress.txt"), "w+") as progressfile:
-                    progressfile.write("{:.2f}".format(learner.num_samples_collected / training_steps))
 
             if iterations % args.save_interval == 0:
                 # Save current model version
-                previous_save_name = save_name
                 save_name = learner.save_model()
-                # Remove previous model version
-                if previous_save_name:
-                    os.remove(previous_save_name)
 
             if args.max_time != -1 and (time.time() - start_time) > args.max_time:
                 break
 
             iterations += 1
-
-    # Save latest model version
-    previous_save_name = save_name
-    save_name = learner.save_model()
-
-    # Remove previous model version
-    os.remove(previous_save_name)
-    os.remove(save_name)
-
-    # Define results dir
-    shutil.move(
-        os.path.join(args.log_dir, "monitor_logs"),
-        os.path.join(args.log_dir, "results")
-    )
-
-    # Assert model.state_dict exists, and move it to results
-    assert os.path.exists(os.path.join(os.getcwd(), "model.state_dict"))
-    shutil.move(
-        os.path.join(os.getcwd(), "model.state_dict"),
-        os.path.join(os.getcwd(), "results/model.state_dict")
-    )
-
-    # Zip results
-    logs_path = os.path.join(args.log_dir, "results")
-    shutil.make_archive(logs_path, "zip", logs_path)
-
-    with open(os.path.join(args.log_dir, "progress.txt"), "w+") as progressfile:
-        progressfile.write("{:.2f}".format(1.00))
 
     print("Finished!")
     sys.exit()
@@ -340,9 +280,6 @@ def get_args():
         help='script is running in a cluster')
 
     # General training specs
-    parser.add_argument(
-        '--start-env-steps', type=int, default=0,
-        help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--target-env-steps', type=int, default=10e7,
         help='number of environment steps to train (default: 10e6)')
