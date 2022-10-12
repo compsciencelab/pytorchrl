@@ -201,10 +201,6 @@ class RND_PPO(Algorithm):
         envs.reset()
         print("---Pre_normalization is done.---")
 
-        # ----- Optimizers ----------------------------------------------------
-
-        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
-
         # ----- Policy Loss Addons --------------------------------------------
 
         # Sanity check, policy_loss_addons is a PolicyLossAddOn instance
@@ -222,7 +218,11 @@ class RND_PPO(Algorithm):
 
         self.policy_loss_addons = policy_loss_addons
         for addon in self.policy_loss_addons:
-            addon.setup(self.device)
+            addon.setup(self.actor, self.device)
+
+        # ----- Optimizers ----------------------------------------------------
+
+        self.optimizer = optim.Adam(self.actor.parameters(), lr=lr, eps=eps)
 
     @classmethod
     def create_factory(cls,
@@ -516,10 +516,12 @@ class RND_PPO(Algorithm):
         loss = total_value_loss + action_loss - entropy_loss + rnd_loss
 
         # Extend policy loss with addons
+        addons_info = {}
         for addon in self.policy_loss_addons:
-            loss += addon.compute_loss_term(self.actor, dist, data)
+            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            loss += addon_loss
 
-        return value_loss, ivalue_loss, action_loss, rnd_loss, entropy_loss, loss
+        return value_loss, ivalue_loss, action_loss, rnd_loss, entropy_loss, loss, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
         """
@@ -541,7 +543,7 @@ class RND_PPO(Algorithm):
             Dict containing current PPO iteration information.
         """
 
-        value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss = self.compute_loss(batch)
+        value_loss, ivalue_loss, action_loss, rnd_loss, dist_entropy, loss, addons_info = self.compute_loss(batch)
         self.optimizer.zero_grad()
         loss.backward()
 
@@ -566,6 +568,8 @@ class RND_PPO(Algorithm):
             "min_intrinsic_rewards": batch[prl.IREW].min().cpu().item(),
             "max_intrinsic_rewards": batch[prl.IREW].max().cpu().item(),
         }
+
+        info.update(addons_info)
 
         return grads, info
 

@@ -97,12 +97,15 @@ class Actor(nn.Module, ABC):
 
     def try_load_from_checkpoint(self):
         """Load weights from previously saved checkpoint."""
-        if isinstance(self.checkpoint, str):
-            print("Loading all model weight from {}".format(self.checkpoint))
-            self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
-        elif isinstance(self.checkpoint, dict):
-            for submodule, checkpoint in self.checkpoint.items():
-                print("Loading {} model weight from {}".format(submodule, self.checkpoint))
-                partially_load_checkpoint(self, submodule, checkpoint, map_location=self.device)
-        else:
-            print("Training model from scratch")
+        try:
+            if isinstance(self.checkpoint, str):
+                print("Loading all model weight from {}".format(self.checkpoint))
+                self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
+            elif isinstance(self.checkpoint, dict):
+                for submodule, checkpoint in self.checkpoint.items():
+                    print("Loading {} model weight from {}".format(submodule, self.checkpoint))
+                    partially_load_checkpoint(self, submodule, checkpoint, map_location=self.device)
+            else:
+                print("Training model from scratch")
+        except Exception:
+            print("Error when trying to load checkpoint!")

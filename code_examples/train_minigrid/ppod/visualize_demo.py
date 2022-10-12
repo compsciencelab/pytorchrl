@@ -32,7 +32,7 @@ def visualize():
             fig.clf()
             plt.imshow(np.moveaxis(demo[prl.OBS][step], [0, 1, 2], [2, 0, 1]) / 255.)
             plt.draw()
-            plt.pause(0.01)
+            plt.pause(0.001)
             step += 1
 
             if step == length_demo:

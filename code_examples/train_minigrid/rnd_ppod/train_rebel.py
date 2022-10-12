@@ -68,23 +68,28 @@ def main():
             },
         )
 
-        # 3. Define RL Policy
-        actor_factory = OnPolicyActor.create_factory(
-            obs_space, action_space, algo_name,
-            restart_model={"value_net1": args.restart_reference_model},
-            shared_policy_value_network=args.shared_policy_value_network)
-
-        # 4. Define rollouts storage
+        # 3. Define rollouts storage
         storage_factory = PPOD2RebelBuffer.create_factory(
-            size=args.num_steps, gae_lambda=args.gae_lambda, phi=args.phi,
-            rho=args.rho, general_value_net_factory=actor_factory,
+            size=args.num_steps, gae_lambda=args.gae_lambda,
+            reward_predictor_factory=get_feature_extractor(args.feature_extractor_net),
+            reward_predictor_net_kwargs={
+                "input_space": obs_space,
+                "output_sizes": [256, 448, 1],
+                "final_activation": False,
+            },
+            restart_reward_predictor_net=args.restart_reference_model,
             target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
             initial_reward_threshold=args.initial_reward_threshold)
 
+        # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model={"value_net1": args.restart_reference_model},
-            shared_policy_value_network=args.shared_policy_value_network)
+            restart_model={
+                "policy_net": args.restart_model,
+                "value_net": args.restart_model,
+            },
+            shared_policy_value_network=args.shared_policy_value_network,
+        )
 
         # 5. Define scheme
         params = {}

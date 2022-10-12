@@ -22,7 +22,7 @@ from code_examples.train_minigrid.ppod.train import get_args
 def main():
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
+    # cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
     # Handle wandb init
@@ -50,26 +50,28 @@ def main():
             max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
             use_clipped_value_loss=args.use_clipped_value_loss, gamma=args.gamma,)
 
-        # 3. Define RL Policy
-        if args.restart_reference_model:
-            actor_factory = OnPolicyActor.create_factory(
-                obs_space, action_space, algo_name,
-                restart_model=args.restart_reference_model,
-                shared_policy_value_network=args.shared_policy_value_network)
-        else:
-            actor_factory = None
-
-        # 4. Define rollouts storage
+        # 3. Define rollouts storage
         storage_factory = PPOD2RebelBuffer.create_factory(
             size=args.num_steps, gae_lambda=args.gae_lambda,
-            general_value_net_factory=actor_factory,
+            reward_predictor_factory=get_feature_extractor(args.feature_extractor_net),
+            reward_predictor_net_kwargs={
+                "input_space": obs_space,
+                "output_sizes": [256, 448, 1],
+                "final_activation": False,
+            },
+            restart_reward_predictor_net=args.restart_reference_model,
             target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
             initial_reward_threshold=args.initial_reward_threshold)
 
+        # 4. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(
             obs_space, action_space, algo_name,
-            restart_model=args.restart_model,
-            shared_policy_value_network=args.shared_policy_value_network)
+            restart_model={
+                "policy_net": args.restart_model,
+                "value_net": args.restart_model,
+            },
+            shared_policy_value_network=args.shared_policy_value_network,
+        )
 
         # 5. Define scheme
         params = {}
