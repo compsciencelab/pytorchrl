@@ -9,6 +9,7 @@ from collections import defaultdict
 
 import pytorchrl as prl
 from pytorchrl.utils import RunningMeanStd
+from pytorchrl.agent.actors.utils import partially_load_checkpoint
 from pytorchrl.agent.storages.on_policy.ppod2_buffer import PPOD2Buffer as B
 
 MIN_BUFFER_SIZE = 10
@@ -81,8 +82,8 @@ class PPOD2RebelBuffer(B):
     demos_data_fields = prl.DemosDataKeys
 
     def __init__(self, size, device, actor, algorithm, envs, reward_predictor_factory=None,
-                 reward_predictor_factory_kwargs={}, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
-                 total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
+                 reward_predictor_net_kwargs={}, restart_reward_predictor_net=None, rho=0.05, phi=0.05, gae_lambda=0.95,
+                 alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
                  supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
                  initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
                  save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
@@ -98,26 +99,36 @@ class PPOD2RebelBuffer(B):
 
         # Create general value model and move it to device
         if reward_predictor_factory:
-            self.actor.reward_predictor = reward_predictor_factory(
-                **reward_predictor_factory_kwargs).to(self.device)
+            model = torch.nn.Module()
+            model.reward_predictor = reward_predictor_factory(**reward_predictor_net_kwargs).to(self.device)
+            model.error_threshold = torch.nn.parameter.Parameter(
+                data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
+            if restart_reward_predictor_net:
+                partially_load_checkpoint(
+                    model, "reward_predictor", restart_reward_predictor_net, map_location=self.device)
+                partially_load_checkpoint(
+                    model, "error_threshold", restart_reward_predictor_net, map_location=self.device)
+
             # Freeze general value model with respect to optimizers
-            for p in self.actor.reward_predictor.parameters():
+            for p in model.reward_predictor.parameters():
                 p.requires_grad = False
+
+            self.actor.predictor = model
+            import ipdb; ipdb.set_trace()
+
         else:
-            self.actor.reward_predictor = None
+            self.actor.predictor = None
 
         # Define reward and error threshold
-        self.reward_threshold = initial_reward_threshold
-        self.actor.error_threshold = torch.nn.parameter.Parameter(
-            data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
+        self.reward_threshold = initial_reward_threshold or 0.0
 
     @classmethod
-    def create_factory(cls, size, reward_predictor_factory=None, reward_predictor_factory_kwargs={}, rho=0.05, phi=0.05,
-                       gae_lambda=0.95, alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None,
-                       initial_reward_demos_dir=None, supplementary_demos_dir=None, target_reward_demos_dir=None,
-                       num_reward_demos_to_save=None, initial_int_demos_dir=None, target_int_demos_dir=None,
-                       num_int_demos_to_save=None, save_demos_every=10,
-                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
+    def create_factory(cls, size, reward_predictor_factory=None, reward_predictor_net_kwargs={},
+                       restart_reward_predictor_net=None, rho=0.05, phi=0.05, gae_lambda=0.95, alpha=10,
+                       total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
+                       supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
+                       initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
+                       save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
         """
         Returns a function that creates PPOD2RebelBuffer instances.
 
@@ -167,11 +178,11 @@ class PPOD2RebelBuffer(B):
         """
         def create_buffer_instance(device, actor, algorithm, envs):
             """Create and return a PPOD2RebelBuffer instance."""
-            return cls(size, device, actor, algorithm, envs, reward_predictor_factory, reward_predictor_factory_kwargs,
-                       rho, phi, gae_lambda, alpha, total_buffer_demo_capacity, initial_reward_threshold,
-                       initial_reward_demos_dir, supplementary_demos_dir, target_reward_demos_dir,
-                       num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir, num_int_demos_to_save,
-                       save_demos_every, demo_dtypes)
+            return cls(size, device, actor, algorithm, envs, reward_predictor_factory, reward_predictor_net_kwargs,
+                       restart_reward_predictor_net, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
+                       initial_reward_threshold, initial_reward_demos_dir, supplementary_demos_dir,
+                       target_reward_demos_dir, num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir,
+                       num_int_demos_to_save, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
     def init_tensors(self, sample):
@@ -190,7 +201,7 @@ class PPOD2RebelBuffer(B):
 
     def before_gradients(self):
         """Before updating actor policy model, compute returns and advantages."""
-        if self.actor.reward_predictor:
+        if self.actor.predictor:
             self.compute_cumulative_rewards()
             self.apply_rebel_logic()
         super(PPOD2RebelBuffer, self).before_gradients()
@@ -239,17 +250,15 @@ class PPOD2RebelBuffer(B):
 
     def predict_reference_value(self):
         """Generate value predictions with the reference value network."""
-        _, rhs, _ = self.actor.actor_initial_states(self.data[prl.OBS])
-        return self.actor.reward_predictor.get_value(
-            self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:]), rhs,
-            self.data[prl.DONE].view(-1, *self.data[prl.DONE].shape[2:]),
-        )['value_net1'].view(self.data[prl.DONE].shape)
+        return self.actor.predictor.reward_predictor(
+            self.data[prl.OBS].view(-1, *self.data[prl.OBS].shape[2:])
+        ).view(self.data[prl.DONE].shape)
 
     def modify_rewards(self, ref_value):
         """Flip the sign of the rewards with lower reference value prediction than self.actor.error_threshold."""
         errors = torch.abs(ref_value - self.data[prl.RET])
-        mask = (errors < float(self.actor.error_threshold)) * (self.data["CumRew"] >= float(self.reward_threshold)) * (
-                self.data[prl.REW] > 0.0)
+        mask = (errors < float(self.actor.predictor.error_threshold)) * (self.data["CumRew"] >= float(
+            self.reward_threshold)) * (self.data[prl.REW] > 0.0)
         self.data[prl.REW][mask] *= -1
 
     def validate_demo(self, demo):
@@ -257,8 +266,7 @@ class PPOD2RebelBuffer(B):
         Verify demo has high value prediction error for rewarded states with
         cumulative reward higher than self.reward_threshold - 1.
         """
-
-        if not self.actor.reward_predictor:
+        if not self.actor.predictor:
             return True
 
         # Compute demo cumulative rewards
@@ -275,14 +283,10 @@ class PPOD2RebelBuffer(B):
             cumulative_rewards[step] += cumulative_rewards[step + 1] * self.algo.gamma
 
         # Compute reference value prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
-        _, rhs, _ = self.actor.actor_initial_states(self.data[prl.OBS])
-        value_preds = self.actor.reward_predictor.get_value(
-            torch.tensor(demo[prl.OBS][mask]).to(self.device), rhs,
-            torch.zeros_like(torch.tensor(demo[prl.REW][mask])).to(self.device)
-        )['value_net1'].cpu().numpy()
+        reward_preds = self.actor.predictor.reward_predictor(torch.tensor(demo[prl.OBS][mask]).to(self.device))
 
         # Verify all predicted errors are higher than self.error_threshold
-        valid = (np.abs(value_preds - returns) > float(self.actor.error_threshold)).all()
+        valid = (np.abs(reward_preds - returns) > float(self.actor.predictor.error_threshold)).all()
 
         return valid
 
@@ -367,7 +371,8 @@ class PPOD2RebelBuffer(B):
                             self.potential_demos_cumsum_int["env{}".format(i + 1)] / potential_demo["DemoLength"])
                     potential_demo["IntrinsicReward"] = episode_ireward
 
-                    if episode_ireward >= self.intrinsic_threshold or len(self.intrinsic_demos) < self.max_intrinsic_demos:
+                    if episode_ireward >= self.intrinsic_threshold or \
+                            len(self.intrinsic_demos) < self.max_intrinsic_demos:
 
                         # Add agent_demos to intrinsic buffer
                         self.intrinsic_demos.append(potential_demo)

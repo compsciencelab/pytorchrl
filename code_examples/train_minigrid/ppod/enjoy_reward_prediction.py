@@ -51,7 +51,7 @@ class EnvManager:
         _, rhs, _ = self.policy.actor_initial_states(obs)
 
         with torch.no_grad():
-            self.reward = self.policy.reward_predictor(obs).item()
+            self.reward = self.policy.predictor.reward_predictor(obs).item()
 
         if done:
             print("terminated!")
@@ -120,15 +120,14 @@ def enjoy():
     storage_factory = PPOD2RebelBuffer.create_factory(
         size=args.num_steps, gae_lambda=args.gae_lambda,
         reward_predictor_factory=get_feature_extractor(args.feature_extractor_net),
-        reward_predictor_factory_kwargs={
-                "input_space": env.observation_space,
-                "output_sizes": [1],
-                "final_activation": False,
-            },
+        reward_predictor_net_kwargs={
+            "input_space": env.observation_space,
+            "output_sizes": [256, 448, 1],
+            "final_activation": False,
+        },
+        restart_reward_predictor_net=args.restart_reference_model,
         target_reward_demos_dir=os.path.join(args.log_dir, "reward_demos"),
         initial_reward_threshold=args.initial_reward_threshold)(device, policy, None, env)
-
-    policy.try_load_from_checkpoint()
 
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")

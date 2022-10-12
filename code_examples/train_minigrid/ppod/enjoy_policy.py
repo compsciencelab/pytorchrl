@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import time
 import torch
 import argparse
@@ -24,9 +25,10 @@ def enjoy():
     # Define agent device and agent
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    restart_path = args.restart_model or os.path.join(args.log_dir, "model.state_dict")
     policy = OnPolicyActor.create_factory(
         env.observation_space, env.action_space, prl.PPO,
-        restart_model=args.restart_model or os.path.join(args.log_dir, "model.state_dict"),
+        restart_model={"policy_net": restart_path, "value_net": restart_path},
         shared_policy_value_network=args.shared_policy_value_network,
     )(device)
 
@@ -39,8 +41,9 @@ def enjoy():
     # Execute episodes
     window = Window("minigrid - MiniGrid-DeceivingRewards-v0")
 
-    try:
-        while not done:
+    while not done:
+
+        try:
 
             img = env.get_frame()
             window.show_img(img)
@@ -60,8 +63,9 @@ def enjoy():
                 done, episode_reward, episode_steps = 0, False, 0
                 obs = env.reset()
 
-    except KeyboardInterrupt:
-        window.close()
+        except KeyboardInterrupt:
+            window.close()
+            sys.exit()
 
 
 if __name__ == "__main__":

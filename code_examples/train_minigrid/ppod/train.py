@@ -48,7 +48,7 @@ def main():
             predictor_net_factory=get_feature_extractor(args.feature_extractor_net),
             predictor_net_kwargs={
                 "input_space": obs_space,
-                "output_sizes": [1],
+                "output_sizes": [256, 448, 1],
                 "final_activation": False,
             },
             masked_sparse_obs_ratio=0.0

@@ -73,7 +73,7 @@ class RewardPredictor(PolicyLossAddOn):
             self.max_pred_errors_rms.update(error[r != 0.0].max().reshape(-1, 1))
             self.mean_pred_errors_rms.update(error[r != 0.0].mean().reshape(-1, 1))
             self.min_pred_errors_rms.update(error[r != 0.0].min().reshape(-1, 1))
-        self.actor.error_threshold.data = self.pred_errors_rms.mean.float()
+        self.actor.error_threshold.data = self.max_pred_errors_rms.mean[0].float()
 
         info.update({
             "reward_predictor_loss": loss.item(),

@@ -3,7 +3,7 @@ agent_name: MiniGridAgent
 wandb_key: null
 env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
-log_dir: /tmp/minigrid_ppo
+log_dir: /tmp/minigrid_ppod
 gamma: 0.99
 save_interval: 500
 max_time: 86400

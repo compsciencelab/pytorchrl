@@ -3,7 +3,7 @@ agent_name: MiniGridAgent
 wandb_key: null
 env_id: MiniGrid-DeceivingRewards-v0
 num_env_steps : 10000000
-log_dir: /tmp/minigrid_ppod
+log_dir: /tmp/minigrid_rnd_ppod
 gamma: 0.99
 save_interval: 500
 max_time: 86400
@@ -20,12 +20,11 @@ lr: 0.0001
 feature_extractor_net: CNN
 rho: 0.0
 phi: 0.15
-value_threshold: 0.01
 gamma_intrinsic: 0.99
 ext_adv_coeff: 2.0
 int_adv_coeff: 1.0
 predictor_proportion: 1.0
-pre_normalization_steps: 1
+pre_normalization_steps: 50
 initial_reward_threshold: 1.0
 restart_reference_model: null
 restart_model: null
