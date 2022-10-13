@@ -5,6 +5,7 @@ Requires preprocessed data as explained in https://github.com/MolecularAI/Lib-IN
 """
 
 import os
+import copy
 import glob
 import wandb
 import argparse
@@ -89,6 +90,11 @@ if __name__ == "__main__":
     os.makedirs("data", exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # Define classes required to merge scaffolds and decorations
+    bond_maker = BondMaker()
+    conversion = Conversions()
+    attachment_points = AttachmentPoints()
+
     # Load training set
     print("\nLoading data...")
     if not os.path.exists(args.pretrainingset_path):
@@ -102,9 +108,9 @@ if __name__ == "__main__":
     # Create or load vocabularies
     if not os.path.exists(f"{args.log_dir}/pretrained_ckpt.prior"):
         print("\nConstructing vocabularies...")
-        scaffold_list = [i[0] for i in training_set]
+        scaffold_list = [attachment_points.remove_attachment_point_numbers(i[0]) for i in training_set]
         decoration_list = [i[1] for i in training_set]
-        vocabulary = LibinventVocabulary.from_lists(scaffold_list, decoration_list)  # Takes a long time!
+        vocabulary = LibinventVocabulary.from_lists(scaffold_list, decoration_list)  # Can take a long time!
         pretrained_ckpt["vocabulary"] = vocabulary
         pretrained_ckpt["max_sequence_length"] = args.pretrain_max_smile_length
         torch.save(pretrained_ckpt, f"{args.log_dir}/pretrained_ckpt.prior")
@@ -160,11 +166,6 @@ if __name__ == "__main__":
         # Define optimizer
         optimizer = torch.optim.Adam(actor.parameters(), lr=args.pretrain_lr)
 
-        # Define classes required to merge scaffolds and decorations
-        bond_maker = BondMaker()
-        conversion = Conversions()
-        attachment_points = AttachmentPoints()
-
         print("\nStarting pretraining...")
         for epoch in range(1, args.pretrain_epochs):
 
@@ -186,7 +187,7 @@ if __name__ == "__main__":
                         features[:, :-1], decorator_batch.to(device)[:, 1:])
 
                     # Optimization step
-                    loss = - logp_action.squeeze(-1).sum(0).mean()
+                    loss = - logp_action.squeeze(-1).sum(-1).mean()
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
@@ -207,14 +208,14 @@ if __name__ == "__main__":
                             list_num_tokens = []
                             list_entropy = []
                             for i in range(total_molecules):
-                                obs, rhs, done = actor.actor_initial_states(env.reset())
-                                decoration = "^"
                                 num_tokens = 0
+                                decoration = "^"
+                                obs, rhs, done = actor.actor_initial_states(env.reset())
+                                scaffold = vocabulary.decode_scaffold(obs["context"].cpu().numpy().squeeze(0))
                                 with torch.no_grad():
                                     encoded_seqs, rhs = actor.policy_net.memory_net._forward_encoder(
                                         obs["context"].to(device), obs["context_length"].cpu().long())
-                                while not done:
-                                    with torch.no_grad():
+                                    while not done:
                                         features, rhs, _ = actor.policy_net.memory_net._forward_decoder(
                                             obs["obs"].to(device), obs["obs_length"].cpu().long(), encoded_seqs, rhs)
                                         action, _, logp, entropy_dist, dist = actor.policy_net.dist(features.squeeze(0))
@@ -223,7 +224,6 @@ if __name__ == "__main__":
                                         list_entropy.append(entropy_dist.item())
                                         num_tokens += 1
 
-                                scaffold = vocabulary.decode_scaffold(obs["context"].cpu().numpy().squeeze(0))
                                 decoration = vocabulary.remove_start_and_end_tokens(decoration)
                                 scaffold = attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)
                                 molecule = bond_maker.join_scaffolds_and_decorations(scaffold, decoration)

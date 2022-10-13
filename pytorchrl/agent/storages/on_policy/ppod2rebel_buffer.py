@@ -114,7 +114,6 @@ class PPOD2RebelBuffer(B):
                 p.requires_grad = False
 
             self.actor.predictor = model
-            import ipdb; ipdb.set_trace()
 
         else:
             self.actor.predictor = None

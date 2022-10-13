@@ -6,8 +6,8 @@ pretrainingset_path: ../path/to/prior_trainingset
 pretestingset_path: null
 pretrain_lr: 0.0001
 pretrain_epochs: 20
-pretrain_lr_decrease_value: 0.05
-pretrain_lr_decrease_period: 500
+pretrain_lr_decrease_value: 0.03
+pretrain_lr_decrease_period: 5000
 pretrain_batch_size: 256
 pretrain_max_smile_length: 100
 gamma: 0.99
