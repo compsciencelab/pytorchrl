@@ -280,6 +280,7 @@ class PPOD2RebelBuffer(B):
         # Compute demo returns
         rewards = np.copy(demo[prl.REW][mask])
 
+        # Create stacked observations
         stacked_obs = []
         for start in range(self.frame_stack):
             end = - (self.frame_stack - 1 - start)
@@ -289,7 +290,7 @@ class PPOD2RebelBuffer(B):
         stacked_obs = np.concatenate(stacked_obs, axis=1)
         mask = mask[self.frame_stack - 1:]
 
-        # Compute reference value prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
+        # Compute reward prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
         reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs[mask]).to(self.device)).cpu().numpy()
 
         # Verify all predicted errors are higher than self.error_threshold
