@@ -7,7 +7,7 @@ This code example uses the same approach as REINVENT (Blaschke et al., 2020) to 
 To be able to use the same scoring functions as REINVENT, install the conda environment. To use a customized scoring function that is not necessary.
 
     conda env create -f environment.yml
-    conda activate reinvent.v3.2
+    conda activate code_examples/train_genchem/reinvent/reinvent.v3.2
 
 pytorchrl also has to be pip installed
 

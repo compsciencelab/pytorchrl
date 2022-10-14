@@ -6,8 +6,8 @@ This code example uses the same approach as LIBINVENT (Fialková, Vendy, et al.,
 
 To be able to use the same scoring functions as LIBINVENT, install the conda environment. To use a customized scoring function that is not necessary.
 
-    conda env create -f environment.yml
-    conda activate lib-invent
+    conda env create -f code_examples/train_genchem/libinvent/environment.yml
+    conda activate libinvent
 
 pytorchrl also has to be pip installed
 
@@ -20,6 +20,14 @@ Training parameters can be adjusted in the `code_examples/train_genchem/libinven
 Default parameters are reasonable values for the PPO algorithm. To get a description of each parameter run
 
     python code_examples/train_genchem/libinvent/ppo/train_rnn_model.py --help
+
+## 3. Pre-training (not necessary)
+
+To pretrain an agent with the current `conf.yaml` configuration run
+
+    ./code_examples/train_genchem/reinvent/ppo/pretrain_rnn_model.sh
+
+In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on. Additionally,  `conf.yaml` fields `pretrain_element_list`,  `pretrain_min_heavy_atoms` and `pretrain_max_heavy_atoms` allow filtering out molecules from the training set.
 
 ## 3. Training
 
