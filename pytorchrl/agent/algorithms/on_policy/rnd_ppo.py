@@ -170,17 +170,17 @@ class RND_PPO(Algorithm):
 
         # Create target model
         setattr(
-            self.actor, "target_model",
+            self.actor, "rnd_target_net",
             int_net((self.obs_channels,) + obs_space[1:],
                     **intrinsic_rewards_target_network_kwargs).to(self.device))
 
         # Freeze target model parameters
-        for param in self.actor.target_model.parameters():
+        for param in self.actor.rnd_target_net.parameters():
             param.requires_grad = False
 
         # Create predictor model
         setattr(
-            self.actor, "predictor_model",
+            self.actor, "rnd_predictor_net",
             int_net((self.obs_channels,) + obs_space[1:],
                     **intrinsic_rewards_predictor_network_kwargs).to(self.device))
 
@@ -429,8 +429,8 @@ class RND_PPO(Algorithm):
             obs = obs[:, -self.obs_channels:, ...]
             obs = torch.clamp((obs - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
             # obs = torch.clamp((obs - self.state_rms.mean) / (self.state_rms.var ** 0.5), -5, 5).float()
-            predictor_encoded_features = self.actor.predictor_model(obs)
-            target_encoded_features = self.actor.target_model(obs)
+            predictor_encoded_features = self.actor.rnd_predictor_net(obs)
+            target_encoded_features = self.actor.rnd_target_net(obs)
             int_reward = (predictor_encoded_features - target_encoded_features).pow(2).mean(1).unsqueeze(1)
 
             other = {prl.VAL: ext_value, prl.IVAL: int_value, prl.LOGP: logp_action, prl.IREW: int_reward}
@@ -503,8 +503,8 @@ class RND_PPO(Algorithm):
         o = torch.clamp((o - self.state_rms.mean.float()) / (self.state_rms.var.float() ** 0.5), -5, 5)
 
         # Rnd loss
-        encoded_target_features = self.actor.target_model(o)
-        encoded_predictor_features = self.actor.predictor_model(o)
+        encoded_target_features = self.actor.rnd_target_net(o)
+        encoded_predictor_features = self.actor.rnd_predictor_net(o)
         loss = (encoded_predictor_features - encoded_target_features).pow(2).mean(-1)
         mask2 = torch.rand(loss.size(), device=self.device)
         mask2 = (mask2 <= self.predictor_proportion).float()
@@ -553,7 +553,7 @@ class RND_PPO(Algorithm):
         pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
         v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
         iv_grads = get_gradients(self.actor.ivalue_net1, grads_to_cpu=grads_to_cpu)
-        pred_grads = get_gradients(self.actor.predictor_model, grads_to_cpu=grads_to_cpu)
+        pred_grads = get_gradients(self.actor.rnd_predictor_net, grads_to_cpu=grads_to_cpu)
 
         grads = {"pi_grads": pi_grads, "v_grads": v_grads, "iv_grads": iv_grads, "pred_grads": pred_grads}
 
@@ -593,7 +593,7 @@ class RND_PPO(Algorithm):
                 self.actor.ivalue_net1,
                 gradients=gradients["iv_grads"], device=self.device)
             set_gradients(
-                self.actor.predictor_model,
+                self.actor.rnd_predictor_net,
                 gradients=gradients["pred_grads"], device=self.device)
 
         self.optimizer.step()

@@ -103,7 +103,7 @@ class Actor(nn.Module, ABC):
                 self.load_state_dict(torch.load(self.checkpoint, map_location=self.device))
             elif isinstance(self.checkpoint, dict):
                 for submodule, checkpoint in self.checkpoint.items():
-                    print("Loading {} model weight from {}".format(submodule, self.checkpoint))
+                    print("Loading {} model weight from {}".format(submodule, self.checkpoint[submodule]))
                     partially_load_checkpoint(self, submodule, checkpoint, map_location=self.device)
             else:
                 print("Training model from scratch")

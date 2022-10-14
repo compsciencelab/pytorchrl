@@ -265,7 +265,8 @@ class PPOD2RebelBuffer(B):
         Verify demo has high value prediction error for rewarded states with
         cumulative reward higher than self.reward_threshold - 1.
         """
-        if not self.actor.predictor:
+
+        if not self.actor.predictor.reward_predictor:
             return True
 
         # Compute demo cumulative rewards
@@ -277,15 +278,22 @@ class PPOD2RebelBuffer(B):
         mask = (cumulative_rewards >= self.reward_threshold).reshape(-1)
 
         # Compute demo returns
-        returns = np.copy(demo[prl.REW][mask])
-        for step in reversed(range(len(returns) - 1)):
-            cumulative_rewards[step] += cumulative_rewards[step + 1] * self.algo.gamma
+        rewards = np.copy(demo[prl.REW][mask])
+
+        stacked_obs = []
+        for start in range(self.frame_stack):
+            end = - (self.frame_stack - 1 - start)
+            if end == 0:
+                end = None
+            stacked_obs.append(demo[prl.OBS][start:end])
+        stacked_obs = np.concatenate(stacked_obs, axis=1)
+        mask = mask[self.frame_stack - 1:]
 
         # Compute reference value prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
-        reward_preds = self.actor.predictor.reward_predictor(torch.tensor(demo[prl.OBS][mask]).to(self.device))
+        reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs[mask]).to(self.device)).cpu().numpy()
 
         # Verify all predicted errors are higher than self.error_threshold
-        valid = (np.abs(reward_preds - returns) > float(self.actor.predictor.error_threshold)).all()
+        valid = (np.abs(reward_preds - rewards) > float(self.actor.predictor.error_threshold)).all()
 
         return valid
 

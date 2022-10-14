@@ -546,7 +546,7 @@ class PPOD2Buffer(B):
             "ID": str(uuid.uuid4()),
             "DemoLength": demo[prl.ACT].shape[0],
             "TotalReward": new_demo[prl.REW].sum(),
-            "IntrinsicReward": 1000,
+            "IntrinsicReward": 1e-5,
         })
 
         return new_demo
@@ -574,7 +574,7 @@ class PPOD2Buffer(B):
 
             try:
 
-                new_demo = self.new_demo(demo_file)
+                new_demo = self.load_demo(demo_file)
                 self.reward_demos.append(new_demo)
                 loaded_reward_demos.append(new_demo["ID"])
 
@@ -588,7 +588,7 @@ class PPOD2Buffer(B):
 
             try:
 
-                new_demo = self.new_demo(demo_file)
+                new_demo = self.load_demo(demo_file)
                 self.intrinsic_demos.append(new_demo)
                 loaded_int_demos.append(new_demo["ID"])
 
