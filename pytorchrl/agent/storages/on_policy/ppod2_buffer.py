@@ -70,7 +70,7 @@ class PPOD2Buffer(B):
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
-    on_policy_data_fields = prl.OnPolicyDataKeys
+    storage_tensors = prl.OnPolicyDataKeys
 
     # Data tensors to collect for each reward_demos
     demos_data_fields = prl.DemosDataKeys
@@ -230,11 +230,12 @@ class PPOD2Buffer(B):
             Data sample (containing all tensors of an environment transition)
         """
 
-        super(PPOD2Buffer, self).init_tensors(sample)
-
         if prl.EMBED in sample.keys():
             self.demos_data_fields += (prl.EMBED,)
-            self.demo_dtypes[prl.EMBED] = dtype(sample[prl.EMBED][0])
+            self.storage_tensors += (prl.EMBED,)
+            self.demo_dtypes[prl.EMBED] = sample[prl.EMBED].cpu().numpy().dtype
+
+        super(PPOD2Buffer, self).init_tensors(sample)
 
         if prl.IREW not in sample.keys():
             self.phi = 0.0
@@ -781,7 +782,7 @@ class PPOD2Buffer(B):
                     prl.ACT: np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
 
-                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields.keys():
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
                     save_data.update({prl.EMBED: np.array(self.reward_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data),
@@ -811,7 +812,7 @@ class PPOD2Buffer(B):
                     prl.ACT: np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
 
-                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields.keys():
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
                     save_data.update({prl.EMBED: np.array(self.intrinsic_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_int_demos_dir, filename), **save_data)
