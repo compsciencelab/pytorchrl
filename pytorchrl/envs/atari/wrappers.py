@@ -10,6 +10,7 @@ import numpy as np
 from collections import deque
 
 cv2.ocl.setUseOpenCL(False)
+from pytorchrl import EMBED
 from pytorchrl.envs.common import FrameStack
 from pytorchrl.envs.atari.utils import imdownscale
 
@@ -314,7 +315,7 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
                 self._embed_buff.append(embed_state)
             embed_state = np.concatenate(self._embed_buff)
 
-        info.update({"StateEmbeddings": embed_state})
+        info.update({EMBED: embed_state})
         self.last_state = state
 
         return state, reward, done, info
@@ -363,7 +364,7 @@ class PitfallEmbeddingsEnv(gym.Wrapper):
                 self._embed_buff.append(embed_state)
             embed_state = np.concatenate(self._embed_buff)
 
-        info.update({"StateEmbeddings": embed_state})
+        info.update({EMBED: embed_state})
         self.last_state = state
 
         return state, reward, done, info

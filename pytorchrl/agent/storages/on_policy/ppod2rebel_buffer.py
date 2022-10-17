@@ -275,10 +275,11 @@ class PPOD2RebelBuffer(B):
             cumulative_rewards[step] += cumulative_rewards[step - 1]
 
         # Define mask to get only final states
-        mask = (cumulative_rewards >= self.reward_threshold).reshape(-1)
+        mask1 = (cumulative_rewards >= self.reward_threshold).reshape(-1)[self.frame_stack - 1:]
+        mask2 = (cumulative_rewards <= self.reward_threshold).reshape(-1)[self.frame_stack - 1:]
 
         # Compute demo returns
-        rewards = np.copy(demo[prl.REW][mask])
+        rewards = np.copy(demo[prl.REW])
 
         # Create stacked observations
         stacked_obs = []
@@ -288,15 +289,16 @@ class PPOD2RebelBuffer(B):
                 end = None
             stacked_obs.append(demo[prl.OBS][start:end])
         stacked_obs = np.concatenate(stacked_obs, axis=1)
-        mask = mask[self.frame_stack - 1:]
 
         # Compute reward prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
-        reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs[mask]).to(self.device)).cpu().numpy()
+        reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs).to(self.device)).cpu().numpy()
 
-        # Verify all predicted errors are higher than self.error_threshold
-        valid = (np.abs(reward_preds - rewards) > float(self.actor.predictor.error_threshold)).all()
+        # Verify all predicted errors are higher than self.error_threshold at the end and lowe at the beginning
+        validation1 = (np.abs(reward_preds[mask1] - rewards[mask1]) > float(self.actor.predictor.error_threshold)).all()
+        validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(self.actor.predictor.error_threshold)).all()
+        validation = validation1 and validation2
 
-        return valid
+        return validation
 
     def track_potential_demos(self, sample):
         """ Tracks current episodes looking for potential agent_demos """

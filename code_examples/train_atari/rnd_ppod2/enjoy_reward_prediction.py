@@ -159,7 +159,8 @@ def play():
 
             if reward != 0.0:
                 print(f"step={step_count}, reward={reward:.2f},"
-                      f" reward_pred={rew_pred:.2f}, reward_error={rew_error:.2f}")
+                      f" reward_pred={rew_pred:.2f}, reward_error={rew_error:.2f},"
+                      f" error_threshold={policy.predictor.error_threshold.item()}")
 
             if done:
                 print("EPISODE FINISHED", flush=True)

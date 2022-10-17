@@ -232,6 +232,10 @@ class PPOD2Buffer(B):
 
         super(PPOD2Buffer, self).init_tensors(sample)
 
+        if prl.EMBED in sample.keys():
+            self.demos_data_fields += (prl.EMBED,)
+            self.demo_dtypes[prl.EMBED] = dtype(sample[prl.EMBED][0])
+
         if prl.IREW not in sample.keys():
             self.phi = 0.0
             self.max_reward_demos = self.max_demos
@@ -285,6 +289,12 @@ class PPOD2Buffer(B):
         sample : dict
             Data sample (containing all tensors of an environment transition)
         """
+
+        # If obs embeddings available, add them (for logging purposes)
+        if prl.EMBED in sample[prl.INFO][0].keys():
+            obs_embeds = [i[prl.EMBED] for i in sample[prl.INFO]]
+            obs_embeds = np.stack(obs_embeds).reshape(len(obs_embeds), -1)
+            sample.update({prl.EMBED: torch.from_numpy(obs_embeds)})
 
         if self.num_channels_obs is None:
             self.get_num_channels_obs(sample)
@@ -766,10 +776,13 @@ class PPOD2Buffer(B):
                 filename = "reward_demo_{}".format(saved_demos + 1)
 
                 save_data = {
-                    "Observation": np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                    "Reward": np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                    "Action": np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                    prl.OBS: np.array(self.reward_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                    prl.REW: np.array(self.reward_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                    prl.ACT: np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
+
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields.keys():
+                    save_data.update({prl.EMBED: np.array(self.reward_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data),
                 saved_demos += 1
@@ -793,10 +806,13 @@ class PPOD2Buffer(B):
                 filename = "intrinsic_demo_{}".format(saved_demos + 1)
 
                 save_data = {
-                    "Observation": np.array(self.intrinsic_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                    "Reward": np.array(self.intrinsic_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                    "Action": np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
+                    prl.OBS: np.array(self.intrinsic_demos[demo_pos][prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
+                    prl.REW: np.array(self.intrinsic_demos[demo_pos][prl.REW]).astype(self.demo_dtypes[prl.REW]),
+                    prl.ACT: np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
+
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields.keys():
+                    save_data.update({prl.EMBED: np.array(self.intrinsic_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_int_demos_dir, filename), **save_data)
                 saved_demos += 1

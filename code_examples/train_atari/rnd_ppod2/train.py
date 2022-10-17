@@ -65,6 +65,8 @@ def main():
                 "episodic_life": args.episodic_life,
                 "clip_rewards": args.clip_rewards,
                 "sticky_actions": args.sticky_actions,
+                "use_domain_knowledge": True,
+                "domain_knowledge_embedding": "room"
             },
             vec_env_size=args.num_env_processes, log_dir=args.log_dir,
             info_keywords=tuple(info_keywords))

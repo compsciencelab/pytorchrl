@@ -68,6 +68,7 @@ IADV = "IntrinsicAdvantage"
 RET = "ExternalReturn"
 IRET = "IntrinsicReturn"
 MASK = "MaskedSamples"
+EMBED = "Embedding"
 INFO = "EnvironmentInformation"
 DataTransitionKeys = (OBS, RHS, DONE, ACT, REW, OBS2, RHS2, DONE2, INFO)
 DataTransition = namedtuple('DataTransition', DataTransitionKeys)
