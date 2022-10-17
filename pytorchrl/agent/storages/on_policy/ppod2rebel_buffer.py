@@ -360,6 +360,8 @@ class PPOD2RebelBuffer(B):
                                 "Reward": np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
                                 "Action": np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                                 "FrameSkip": self.frame_skip}
+                            if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
+                                save_data.update({prl.EMBED: np.array(potential_demo[prl.EMBED])})
                             np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data)
 
                         # Add agent_demos to reward buffer
