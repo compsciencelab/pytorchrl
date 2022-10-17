@@ -106,8 +106,8 @@ class PPOD2RebelBuffer(B):
             if restart_reward_predictor_net:
                 partially_load_checkpoint(
                     model, "reward_predictor", restart_reward_predictor_net, map_location=self.device)
-                # partially_load_checkpoint(
-                #     model, "error_threshold", restart_reward_predictor_net, map_location=self.device)
+                partially_load_checkpoint(
+                    model, "error_threshold", restart_reward_predictor_net, map_location=self.device)
 
             # Freeze general value model with respect to optimizers
             for p in model.reward_predictor.parameters():
