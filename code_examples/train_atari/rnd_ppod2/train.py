@@ -18,8 +18,8 @@ from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import RND_PPO
 from pytorchrl.agent.env import VecEnv
-from pytorchrl.agent.storages.on_policy.ppod2_buffer import PPOD2Buffer
 from pytorchrl.envs.atari import atari_train_env_factory
+from pytorchrl.agent.storages.on_policy.ppod2_buffer import PPOD2Buffer
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor, get_memory_network
 
@@ -256,6 +256,9 @@ def get_args():
     parser.add_argument(
         '--restart-model', default=None,
         help='Restart training using the model given')
+    parser.add_argument(
+        '--restart-reference-model', default=None,
+        help='Path to reward predictor model')
     parser.add_argument(
         '--recurrent-net', default=None, help='Recurrent neural networks to use')
 

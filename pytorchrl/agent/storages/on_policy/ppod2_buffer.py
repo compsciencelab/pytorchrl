@@ -546,7 +546,7 @@ class PPOD2Buffer(B):
             "ID": str(uuid.uuid4()),
             "DemoLength": demo[prl.ACT].shape[0],
             "TotalReward": new_demo[prl.REW].sum(),
-            "IntrinsicReward": 1e-5,
+            "IntrinsicReward": 1000,
         })
 
         return new_demo
@@ -624,6 +624,7 @@ class PPOD2Buffer(B):
 
                     new_demo = self.load_demo(demo_file)
                     self.reward_demos.append(new_demo)
+                    self.intrinsic_demos.append(new_demo)
                     num_loaded_supplementary_demos += 1
 
                     # Check if buffer is full
@@ -632,11 +633,17 @@ class PPOD2Buffer(B):
                     # Update reward_threshold.
                     self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
+                    # Update intrinsic_threshold
+                    self.intrinsic_threshold = min([p["IntrinsicReward"] for p in self.intrinsic_demos])
+
                     # Update max demo reward
                     self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
                 except Exception:
                     print("Failed to load supplementary demo!")
+
+        # Check if buffer is full
+        self.check_demo_buffer_capacity()
 
         if num_loaded_supplementary_demos > 0:
             print("LOADED {} SUPPLEMENTARY DEMOS\n".format(num_loaded_supplementary_demos))

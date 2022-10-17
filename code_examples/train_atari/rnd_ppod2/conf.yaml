@@ -27,6 +27,7 @@ num_steps: 128
 ppo_epoch: 4
 recurrent_net: null
 restart_model: null
+restart_reference_model: null
 save_interval: 100
 target_env_steps: 1_000_000_000
 value_loss_coef: 1.0
