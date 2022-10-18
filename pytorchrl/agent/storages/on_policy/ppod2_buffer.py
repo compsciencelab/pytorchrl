@@ -552,6 +552,8 @@ class PPOD2Buffer(B):
         new_demo[prl.ACT] = demo[prl.ACT]
         new_demo[prl.OBS] = demo[prl.OBS]
         new_demo[prl.REW] = demo[prl.REW]
+        if prl.EMBED in demo.keys():
+            new_demo[prl.EMBED] = demo[prl.EMBED]
 
         new_demo.update({
             "ID": str(uuid.uuid4()),

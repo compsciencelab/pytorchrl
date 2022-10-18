@@ -102,7 +102,7 @@ class PPOD2RebelBuffer(B):
             model = torch.nn.Module()
             model.reward_predictor = reward_predictor_factory(**reward_predictor_net_kwargs).to(self.device)
             model.error_threshold = torch.nn.parameter.Parameter(
-                data=torch.tensor(1000000, dtype=torch.float32), requires_grad=False)
+                data=torch.tensor(-1000000, dtype=torch.float32), requires_grad=False)
             if restart_reward_predictor_net:
                 partially_load_checkpoint(
                     model, "reward_predictor", restart_reward_predictor_net, map_location=self.device)
@@ -273,13 +273,14 @@ class PPOD2RebelBuffer(B):
         cumulative_rewards = np.copy(demo[prl.REW])
         for step in range(1, len(cumulative_rewards)):
             cumulative_rewards[step] += cumulative_rewards[step - 1]
+        cumulative_rewards = cumulative_rewards[self.frame_stack - 1:]
+
+        # Get demo rewards
+        rewards = np.copy(demo[prl.REW])[self.frame_stack - 1:]
 
         # Define mask to get only final states
-        mask1 = (cumulative_rewards >= self.reward_threshold).reshape(-1)[self.frame_stack - 1:]
-        mask2 = (cumulative_rewards <= self.reward_threshold).reshape(-1)[self.frame_stack - 1:]
-
-        # Compute demo returns
-        rewards = np.copy(demo[prl.REW])
+        mask1 = np.logical_and(cumulative_rewards >= self.reward_threshold, rewards != 0)
+        mask2 = np.logical_and(cumulative_rewards < self.reward_threshold, rewards != 0)
 
         # Create stacked observations
         stacked_obs = []
@@ -290,10 +291,11 @@ class PPOD2RebelBuffer(B):
             stacked_obs.append(demo[prl.OBS][start:end])
         stacked_obs = np.concatenate(stacked_obs, axis=1)
 
-        # Compute reward prediction for rewarded states with cumulative rewards > self.reward_threshold - 1
+        # Compute reward prediction for rewarded states with cumulative rewards < self.reward_threshold
         reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs).to(self.device)).cpu().numpy()
 
         # Verify all predicted errors are higher than self.error_threshold at the end and lowe at the beginning
+        import ipdb; ipdb.set_trace()
         validation1 = (np.abs(reward_preds[mask1] - rewards[mask1]) > float(self.actor.predictor.error_threshold)).all()
         validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(self.actor.predictor.error_threshold)).all()
         validation = validation1 and validation2

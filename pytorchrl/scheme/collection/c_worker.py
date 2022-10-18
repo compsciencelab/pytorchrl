@@ -293,6 +293,7 @@ class CWorker(W):
         obs = self.envs_test.reset()
         rewards = np.zeros(obs.shape[0])
         obs, rhs, done = self.actor.actor_initial_states(obs)
+        self.actor.eval()
 
         while len(completed_episodes) < self.algo.num_test_episodes:
 
@@ -312,6 +313,7 @@ class CWorker(W):
 
             obs = obs2
 
+        self.actor.train()
         return np.mean(completed_episodes)
 
     def set_weights(self, actor_weights):
