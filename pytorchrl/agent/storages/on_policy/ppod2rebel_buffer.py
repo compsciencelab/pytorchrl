@@ -295,7 +295,6 @@ class PPOD2RebelBuffer(B):
         reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs).to(self.device)).cpu().numpy()
 
         # Verify all predicted errors are higher than self.error_threshold at the end and lowe at the beginning
-        import ipdb; ipdb.set_trace()
         validation1 = (np.abs(reward_preds[mask1] - rewards[mask1]) > float(self.actor.predictor.error_threshold)).all()
         validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(self.actor.predictor.error_threshold)).all()
         validation = validation1 and validation2
