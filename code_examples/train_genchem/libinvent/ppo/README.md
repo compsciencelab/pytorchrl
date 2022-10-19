@@ -25,7 +25,7 @@ Default parameters are reasonable values for the PPO algorithm. To get a descrip
 
 To pretrain an agent with the current `conf.yaml` configuration run
 
-    ./code_examples/train_genchem/reinvent/ppo/pretrain_rnn_model.sh
+    ./code_examples/train_genchem/libinvent/ppo/pretrain_rnn_model.sh
 
 In particular, the `conf.yaml` field `pretrainingset_path` has to provide a valid path to a file with SMILES for the agent to be pre-trained on. Additionally,  `conf.yaml` fields `pretrain_element_list`,  `pretrain_min_heavy_atoms` and `pretrain_max_heavy_atoms` allow filtering out molecules from the training set.
 
