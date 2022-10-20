@@ -119,7 +119,7 @@ class PPOD2RebelBuffer(B):
             self.actor.predictor = None
 
         # Define reward and error threshold
-        self.reward_threshold = initial_reward_threshold or 0.0
+        self.reward_threshold = self.initial_reward_threshold = initial_reward_threshold or 0.0
 
     @classmethod
     def create_factory(cls, size, reward_predictor_factory=None, reward_predictor_net_kwargs={},
@@ -279,8 +279,8 @@ class PPOD2RebelBuffer(B):
         rewards = np.copy(demo[prl.REW])[self.frame_stack - 1:]
 
         # Define mask to get only final states
-        mask1 = np.logical_and(cumulative_rewards >= self.reward_threshold, rewards != 0)
-        mask2 = np.logical_and(cumulative_rewards < self.reward_threshold, rewards != 0)
+        mask1 = np.logical_and(cumulative_rewards > self.initial_reward_threshold, rewards != 0)  # after thresh
+        mask2 = np.logical_and(cumulative_rewards <= self.initial_reward_threshold, rewards != 0)  # from 0 to thresh
 
         # Create stacked observations
         stacked_obs = []
@@ -294,7 +294,7 @@ class PPOD2RebelBuffer(B):
         # Compute reward prediction for rewarded states with cumulative rewards < self.reward_threshold
         reward_preds = self.actor.predictor.reward_predictor(torch.tensor(stacked_obs).to(self.device)).cpu().numpy()
 
-        # Verify all predicted errors are higher than self.error_threshold at the end and lowe at the beginning
+        # Verify all predicted errors are higher than self.error_threshold at the end and lower at the beginning
         validation1 = (np.abs(reward_preds[mask1] - rewards[mask1]) > float(self.actor.predictor.error_threshold)).all()
         validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(self.actor.predictor.error_threshold)).all()
         validation = validation1 and validation2
@@ -354,19 +354,10 @@ class PPOD2RebelBuffer(B):
 
                         # Make sure new reward was previously unknown
                         valid = self.validate_demo(potential_demo)
-                        if valid and self.target_reward_demos_dir:
-                            filename = "found_demo"
-                            save_data = {
-                                "Observation": np.array(potential_demo[prl.OBS]).astype(self.demo_dtypes[prl.OBS]),
-                                "Reward": np.array(potential_demo[prl.REW]).astype(self.demo_dtypes[prl.REW]),
-                                "Action": np.array(potential_demo[prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
-                                "FrameSkip": self.frame_skip}
-                            if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
-                                save_data.update({prl.EMBED: np.array(potential_demo[prl.EMBED])})
-                            np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data)
 
                         # Add agent_demos to reward buffer
-                        self.reward_demos.append(potential_demo)
+                        if valid:
+                            self.reward_demos.append(potential_demo)
 
                         # Check if buffers are full
                         self.check_demo_buffer_capacity()

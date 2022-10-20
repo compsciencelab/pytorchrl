@@ -268,10 +268,13 @@ class PPODBuffer(B):
         # Track episodes for potential demos
         self.track_potential_demos(sample)
 
+        # Overwrite demo data in environments where a demo being replayed
         all_envs, all_obs, all_done, all_rhs = [], [], [], {k: [] for k in sample[prl.RHS].keys()}
 
+        # Step 1: prepare tensors
         for i in range(self.num_envs):
 
+            # If demo replay is in progress
             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]:
 
                 # Get demo obs, rhs and done tensors to run forward pass
@@ -293,6 +296,7 @@ class PPODBuffer(B):
 
                 self.sample_demo(env_id=i)
 
+        # Step 2: perform acting step and overwrite data
         if len(all_envs) > 0:
 
             # Cast obs, rhs, dones into the right format
@@ -323,10 +327,8 @@ class PPODBuffer(B):
 
                 # Update demo_in_progress variables
                 self.demos_in_progress["env{}".format(i + 1)]["Step"] += 1
-
                 self.demos_in_progress["env{}".format(i + 1)][prl.RHS] = {
                     k: rhs2[k][num].reshape(1, -1) for k in rhs2.keys()}
-
                 self.demos_in_progress["env{}".format(i + 1)]["MaxValue"] = max(
                     [algo_data[prl.VAL][num].item(), self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]])
 
@@ -342,7 +344,7 @@ class PPODBuffer(B):
                             if self.demos_in_progress["env{}".format(i + 1)]["Demo"]["ID"] == value_demo["ID"]:
                                 value_demo["MaxValue"] = self.demos_in_progress["env{}".format(i + 1)]["MaxValue"]
 
-                    # Randomly sample new demos if last demos has finished
+                    # Randomly sample new demo if last demo has finished
                     self.sample_demo(env_id=i)
 
                 else:
@@ -371,7 +373,7 @@ class PPODBuffer(B):
 
             # Copy transition
             for tensor in self.demos_data_fields:
-                if tensor in (prl.OBS):
+                if tensor in (prl.OBS, ):
                     self.potential_demos["env{}".format(i + 1)][tensor].append(copy.deepcopy(
                         sample[tensor][i, -self.num_channels_obs:]).cpu().numpy().astype(self.demo_dtypes[tensor]))
                 else:

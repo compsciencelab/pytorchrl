@@ -95,7 +95,7 @@ class PPOD2Buffer(B):
         self.phi = phi
         self.alpha = alpha
         self.iter = 0
-        self.eta = 0.9  # To weight max and cumsum intrinsic rewards
+        self.eta = 0.9  # To weight max and cumulative intrinsic rewards
 
         # Define buffer demos capacity
         if rho != 0.0 or phi != 0.0:
@@ -297,15 +297,10 @@ class PPOD2Buffer(B):
             obs_embeds = np.stack(obs_embeds).reshape(len(obs_embeds), -1)
             sample.update({prl.EMBED: torch.from_numpy(obs_embeds)})
 
-        if self.num_channels_obs is None:
-            self.get_num_channels_obs(sample)
-
         # Data tensors lazy initialization, only executed the first time
         if self.size == 0 and self.data[prl.OBS] is None:
             self.init_tensors(sample)
-
-        # Track episodes for potential agent_demos
-        self.track_potential_demos(sample)
+            self.get_num_channels_obs(sample)
 
         # Insert environment sample data
         for k in sample:
@@ -332,6 +327,9 @@ class PPOD2Buffer(B):
                     self.data[k][x][pos].copy_(sample[sample_k][x])
             else:
                 self.data[k][pos].copy_(sample[sample_k])
+
+        # Track episodes for potential agent_demos
+        self.track_potential_demos(sample)
 
         # Set inserted data mask to 1.0
         if prl.MASK in self.data.keys():
@@ -396,7 +394,6 @@ class PPOD2Buffer(B):
 
                 # Insert other tensors predicted in the forward pass
                 for tensor in (prl.IREW, prl.VAL, prl.IVAL):
-
                     if tensor in algo_data.keys():
                         self.data[tensor][self.step][i].copy_(algo_data[tensor][num])
 
@@ -415,7 +412,7 @@ class PPOD2Buffer(B):
                     k: rhs2[k][num].reshape(1, -1) for k in rhs2.keys()}
                 self.inserted_samples += 1
 
-                # Handle end of agent_demos
+                # Handle end of demo
                 if demo_step == self.demos_in_progress["env{}".format(i + 1)]["DemoLength"] - 1:
 
                     # If intrinsic demo
@@ -428,7 +425,7 @@ class PPOD2Buffer(B):
                                     (1 - self.eta) * (self.demos_in_progress["env{}".format(i + 1)]["CumIntrinsicReward"] /
                                                       self.demos_in_progress["env{}".format(i + 1)]["DemoLength"])
 
-                    # Randomly sample new agent_demos if last agent_demos has finished
+                    # Randomly sample new demo if last demo has finished
                     self.sample_demo(env_id=i)
 
                 else:
@@ -477,7 +474,7 @@ class PPOD2Buffer(B):
             # Handle end of episode
             if sample[prl.DONE2][i] == 1.0:
 
-                # Get candidate agent_demos
+                # Get candidate demo
                 potential_demo = {}
                 for tensor in self.demos_data_fields:
                     potential_demo[tensor] = np.stack(self.potential_demos["env{}".format(i + 1)][tensor])
@@ -491,7 +488,7 @@ class PPOD2Buffer(B):
                 potential_demo["TotalReward"] = episode_reward
                 potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
-                # Consider candidate agent_demos for agent_demos reward
+                # Consider candidate demo to be a reward demo
                 if self.max_reward_demos > 0:
 
                     if episode_reward >= self.reward_threshold:
@@ -501,7 +498,7 @@ class PPOD2Buffer(B):
                             potential_demo[tensor] = potential_demo[tensor][0:last_reward + 1]
                         potential_demo["DemoLength"] = potential_demo[prl.ACT].shape[0]
 
-                        # Add agent_demos to reward buffer
+                        # Add demo to reward buffer
                         self.reward_demos.append(potential_demo)
 
                         # Check if buffers are full
@@ -513,6 +510,7 @@ class PPOD2Buffer(B):
                         # Update max demo reward
                         self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
+                # Consider candidate demo to be a intrinsic demo
                 if self.max_intrinsic_demos > 0:
 
                     # Set potential demo cumulative intrinsic reward
@@ -522,7 +520,7 @@ class PPOD2Buffer(B):
 
                     if episode_ireward >= self.intrinsic_threshold or len(self.intrinsic_demos) < self.max_intrinsic_demos:
 
-                        # Add agent_demos to intrinsic buffer
+                        # Add demo to intrinsic buffer
                         self.intrinsic_demos.append(potential_demo)
 
                         # Check if buffer is full
@@ -531,7 +529,7 @@ class PPOD2Buffer(B):
                         # Update intrinsic_threshold
                         self.intrinsic_threshold = min([p["IntrinsicReward"] for p in self.intrinsic_demos])
 
-                # Reset potential agent_demos dict
+                # Reset potential demo dict
                 for tensor in self.demos_data_fields:
                     self.potential_demos["env{}".format(i + 1)][tensor] = []
                     self.potential_demos_max_int["env{}".format(i + 1)] = 0.0
@@ -608,11 +606,7 @@ class PPOD2Buffer(B):
             except Exception:
                 print("Failed to load intrinsic demo!")
 
-        self.num_loaded_reward_demos, self.num_loaded_int_demos = len(loaded_reward_demos), len(loaded_int_demos)
-        self.loaded_reward_demos, self.loaded_int_demos = tuple(loaded_reward_demos), tuple(loaded_int_demos)
-
-        print("\nLOADED {} AGENT DEMOS AND {} INTRINSIC DEMOS".format(
-            self.num_loaded_reward_demos, self.num_loaded_int_demos))
+        print("\nLOADED {} AGENT DEMOS AND {} INTRINSIC DEMOS".format(len(loaded_reward_demos), len(loaded_int_demos)))
 
     def load_supplementary_demos(self):
         """
