@@ -355,18 +355,19 @@ class PPOD2RebelBuffer(B):
                         # Make sure new reward was previously unknown
                         valid = self.validate_demo(potential_demo)
 
-                        # Add agent_demos to reward buffer
                         if valid:
+                            
+                            # Add agent_demos to reward buffer
                             self.reward_demos.append(potential_demo)
 
-                        # Check if buffers are full
-                        self.check_demo_buffer_capacity()
+                            # Check if buffers are full
+                            self.check_demo_buffer_capacity()
 
-                        # Update reward_threshold.
-                        self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+                            # Update reward_threshold.
+                            self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
 
-                        # Update max demo reward
-                        self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
+                            # Update max demo reward
+                            self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 
                 if self.max_intrinsic_demos > 0:
 
