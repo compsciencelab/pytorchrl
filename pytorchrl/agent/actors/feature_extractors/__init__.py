@@ -1,4 +1,5 @@
 import gym
+import torch.nn as nn
 from pytorchrl.agent.actors.feature_extractors.mlp import MLP
 from pytorchrl.agent.actors.feature_extractors.cnn import CNN
 from pytorchrl.agent.actors.feature_extractors.dictnet import DictNet
@@ -39,7 +40,7 @@ def default_feature_extractor(input_space):
     if isinstance(input_space, gym.spaces.Dict):
         net = DictNet
     elif len(input_space.shape) <= 2:
-        net = MLP
+        net = nn.Identity
     elif len(input_space.shape) == 3:
         net = CNN
     else:
