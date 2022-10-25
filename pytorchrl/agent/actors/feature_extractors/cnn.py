@@ -20,6 +20,10 @@ class CNN(nn.Module):
         Non-linear activation function.
     final_activation : bool
         Whether or not to apply activation function after last layer.
+    layer_norm: bool
+        Use layer normalization.
+    dropout: float
+        Dropout probability.
     strides : list
         Convolutional layers strides.
     filters : list

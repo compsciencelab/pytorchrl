@@ -100,7 +100,6 @@ class OffPolicyActor(Actor):
         # ----- Policy Network ----------------------------------------------------
 
         self.create_policy("policy_net")
-
         # ----- Q Networks ----------------------------------------------------
 
         for i in range(num_critics):
@@ -464,6 +463,7 @@ class OffPolicyActor(Actor):
             obs_feature_extractor = self.obs_feature_extractor
         else:
             obs_feature_extractor =  default_feature_extractor(self.input_space)
+
         # ---- 1. Define action feature extractor -----------------------------
 
         act_extractor = self.act_feature_extractor or nn.Identity
@@ -471,6 +471,7 @@ class OffPolicyActor(Actor):
             self.action_space, **self.act_feature_extractor_kwargs)
 
         # ---- 2. Define obs feature extractor -----------------------------
+
         obs_extractor = obs_feature_extractor or nn.Identity
         q_obs_feature_extractor = obs_extractor(
             self.input_space, **self.obs_feature_extractor_kwargs)
@@ -500,6 +501,7 @@ class OffPolicyActor(Actor):
             q_common_feature_extractor = nn.Identity()
 
         # ---- 4. Define memory network ---------------------------------------
+
         q_memory_net = self.recurrent_net(feature_size, **self.recurrent_net_kwargs) if\
             self.recurrent_net else nn.Identity()
         feature_size = q_memory_net.recurrent_hidden_state_size if self.recurrent_net\
@@ -555,6 +557,7 @@ class OffPolicyActor(Actor):
             feature_size = policy_common_feature_extractor(torch.zeros(1, feature_size)).shape[-1]
         else:
             policy_common_feature_extractor = nn.Identity()
+
         # ---- 3. Define memory network  --------------------------------------
 
         if self.recurrent_net:

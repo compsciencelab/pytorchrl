@@ -34,8 +34,7 @@ class MLP(nn.Module):
         layers = []
         sizes = [np.prod(input_shape)] + hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
-            layers += [nn.Linear(sizes[j], sizes[j + 1])
-                       ]
+            layers += [nn.Linear(sizes[j], sizes[j + 1])]
             if dropout > 0.0 and j < len(sizes) - 2:
                 layers += [nn.Dropout(dropout)]
             if layer_norm and j < len(sizes) - 2:
