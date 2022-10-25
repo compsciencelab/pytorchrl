@@ -20,6 +20,10 @@ class CNN(nn.Module):
         Non-linear activation function.
     final_activation : bool
         Whether or not to apply activation function after last layer.
+    layer_norm: bool
+        Use layer normalization.
+    dropout: float
+        Dropout probability.
     strides : list
         Convolutional layers strides.
     filters : list
@@ -34,6 +38,8 @@ class CNN(nn.Module):
                  rgb_norm=True,
                  activation=nn.ReLU,
                  final_activation=True,
+                 dropout=0.0,
+                 layer_norm=False,
                  strides=[4, 2, 1],
                  filters=[32, 64, 64],
                  kernel_sizes=[8, 4, 3],
@@ -68,6 +74,10 @@ class CNN(nn.Module):
         sizes = [feature_size] + output_sizes
         for j in range(len(sizes) - 1):
             layers += [nn.Linear(sizes[j], sizes[j + 1])]
+            if dropout > 0.0 and j < len(sizes) - 2:
+                layers += [nn.Dropout(dropout)]
+            if layer_norm and j < len(sizes) - 2:
+                layers += [nn.LayerNorm(sizes[j + 1])]
             if j < len(sizes) - 2 or final_activation:
                 layers += [activation()]
         self.head = nn.Sequential(*layers)

@@ -22,7 +22,7 @@ class MLP(nn.Module):
     final_activation : bool
         Whether or not to apply activation function after last layer.
     """
-    def __init__(self, input_space, hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU, final_activation=True):
+    def __init__(self, input_space, hidden_sizes=[256, 256], output_size=256, activation=nn.ReLU, layer_norm=False, dropout=0.0, final_activation=True):
         super(MLP, self).__init__()
 
         if isinstance(input_space, gym.Space):
@@ -35,6 +35,10 @@ class MLP(nn.Module):
         sizes = [np.prod(input_shape)] + hidden_sizes + [output_size]
         for j in range(len(sizes) - 1):
             layers += [nn.Linear(sizes[j], sizes[j + 1])]
+            if dropout > 0.0 and j < len(sizes) - 2:
+                layers += [nn.Dropout(dropout)]
+            if layer_norm and j < len(sizes) - 2:
+                layers += [nn.LayerNorm(sizes[j + 1])]
             if j < len(sizes) - 2 or final_activation:
                 layers += [activation()]
         self.feature_extractor = nn.Sequential(*layers)
