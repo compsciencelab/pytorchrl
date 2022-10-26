@@ -19,6 +19,10 @@ class MLP(nn.Module):
         Size of output feature map.
     activation : func
         Non-linear activation function.
+    layer_norm: bool
+        Use layer normalization.
+    dropout: float
+        Dropout probability.
     final_activation : bool
         Whether or not to apply activation function after last layer.
     """
