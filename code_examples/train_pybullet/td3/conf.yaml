@@ -1,4 +1,7 @@
 env_id: HalfCheetahBulletEnv-v0
+experiment_name: HalfCheetahBullet
+agent_name: TD3
+wandb_key: null
 num_env_steps : 1_000_000
 log_dir: /tmp/pybullet_td3
 frame_skip: 0
