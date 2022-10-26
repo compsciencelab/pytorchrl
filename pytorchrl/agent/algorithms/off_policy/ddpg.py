@@ -402,8 +402,6 @@ class DDPG(Algorithm):
             addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
             loss_pi += addon_loss
 
-        info.update(addons_info)
-
         return loss_pi, addons_info
 
     def compute_gradients(self, batch, grads_to_cpu=True):
@@ -462,7 +460,7 @@ class DDPG(Algorithm):
             "loss_pi": loss_pi.detach().item(),
             "loss_q1": loss_q.detach().item(),
         }
-
+        info.update(addons_info)
         if "per_weights" in batch:
             info.update({"errors": errors})
 
