@@ -110,7 +110,7 @@ def play():
             "clip_rewards": args.clip_rewards,
         }, vec_env_size=1)
     env = env()
-    env.reset()
+    obs = env.reset()
 
     # Define policy
     checkpoints = sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "model.state_dict*")))
@@ -148,19 +148,20 @@ def play():
         while True:
 
             env.render()
-            action = create_action()
-            obs, reward, done, info = env.step(torch.tensor([action]).unsqueeze(1))
-
-            step_count += 1
-            reward = reward.item()
             with torch.no_grad():
                 rew_pred = policy.predictor.reward_predictor(obs).item()
-                rew_error = np.abs(rew_pred - reward)
+
+            action = create_action()
+            obs, reward, done, info = env.step(torch.tensor([action]).unsqueeze(1))
+            reward = reward.item()
+            rew_error = np.abs(rew_pred - reward)
 
             if reward != 0.0:
                 print(f"step={step_count}, reward={reward:.2f},"
                       f" reward_pred={rew_pred:.2f}, reward_error={rew_error:.2f},"
                       f" error_threshold={policy.predictor.error_threshold.item()}")
+
+            step_count += 1
 
             if done:
                 print("EPISODE FINISHED", flush=True)

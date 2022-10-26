@@ -66,7 +66,7 @@ def enjoy():
         done = torch.Tensor([done]).to(device)
 
         with torch.no_grad():
-            _, clipped_action, _, rhs, _, _ = policy.get_action(obs, rhs, done, deterministic=False)
+            _, clipped_action, _, rhs, _, _ = policy.get_action(obs, rhs, done, deterministic=True)
             rew_pred = policy.predictor.reward_predictor(obs).item()
 
         obs, reward, done, info = env.step(clipped_action)
