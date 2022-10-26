@@ -1,3 +1,7 @@
+env_id: HalfCheetahBulletEnv-v0
+experiment_name: HalfCheetahBullet
+agent_name: PPO
+wandb_key: null
 num_env_steps : 10000000
 log_dir: /tmp/pybullet_ppo
 gamma: 0.99
@@ -16,7 +20,6 @@ lr: 0.0002
 feature_extractor_net: MLP
 frame_skip: 0
 frame_stack: 1
-env_id: HalfCheetahBulletEnv-v0
 num_grad_workers: 1 
 num_col_workers: 1 
 com_grad_workers: synchronous

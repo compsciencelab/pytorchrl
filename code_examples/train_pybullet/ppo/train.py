@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import wandb
 import argparse
 
 from pytorchrl.learner import Learner
@@ -10,7 +11,8 @@ from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
 from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
-from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
+from pytorchrl.agent.actors import OnPolicyActor
+from pytorchrl.agent.actors.feature_extractors.mlp import MLP
 from pytorchrl.envs.pybullet import pybullet_train_env_factory, pybullet_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
@@ -20,88 +22,101 @@ def main():
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"),[])
+    
+    # Handle wandb init
+    if args.wandb_key:
+        mode = "online"
+        wandb.login(key=str(args.wandb_key))
+    else:
+        mode = "disabled"
 
-    # 1. Define Train Vector of Envs
-    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_train_env_factory, env_kwargs={
-            "env_id": args.env_id,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
+    with wandb.init(project=args.experiment_name, name=args.agent_name, config=args, mode=mode):
 
-    # 2. Define Test Vector of Envs (Optional)
-    test_envs_factory, _, _ = VecEnv.create_factory(
-        vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-        env_fn=pybullet_test_env_factory, env_kwargs={
-            "env_id": args.env_id,
-            "frame_skip": args.frame_skip,
-            "frame_stack": args.frame_stack})
+        # 1. Define Train Vector of Envs
+        train_envs_factory, action_space, obs_space = VecEnv.create_factory(
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+            env_fn=pybullet_train_env_factory, env_kwargs={
+                "env_id": args.env_id,
+                "frame_skip": args.frame_skip,
+                "frame_stack": args.frame_stack})
 
-    # 3. Define RL training algorithm
-    algo_factory, algo_name = PPO.create_factory(
-        lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
-        entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
-        max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
-        gamma=args.gamma)
+        # 2. Define Test Vector of Envs (Optional)
+        test_envs_factory, _, _ = VecEnv.create_factory(
+            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
+            env_fn=pybullet_test_env_factory, env_kwargs={
+                "env_id": args.env_id,
+                "frame_skip": args.frame_skip,
+                "frame_stack": args.frame_stack})
 
-    # 4. Define RL Policy
-    actor_factory = OnPolicyActor.create_factory(
-        obs_space, action_space, algo_name, restart_model=args.restart_model)
+        # 3. Define RL training algorithm
+        algo_factory, algo_name = PPO.create_factory(
+            lr=args.lr, num_epochs=args.ppo_epoch, clip_param=args.clip_param,
+            entropy_coef=args.entropy_coef, value_loss_coef=args.value_loss_coef,
+            max_grad_norm=args.max_grad_norm, num_mini_batch=args.num_mini_batch,
+            gamma=args.gamma)
 
-    # 5. Define rollouts storage
-    storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
+        # 4. Define RL Policy
+        actor_factory = OnPolicyActor.create_factory(
+            obs_space, action_space, algo_name, restart_model=args.restart_model,
+            feature_extractor_network=MLP, feature_extractor_kwargs={"hidden_sizes": [256, 256]})
 
-    # 6. Define scheme
-    params = {}
+        # 5. Define rollouts storage
+        storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
 
-    # add core modules
-    params.update({
-        "algo_factory": algo_factory,
-        "actor_factory": actor_factory,
-        "storage_factory": storage_factory,
-        "train_envs_factory": train_envs_factory,
-        "test_envs_factory": test_envs_factory,
-    })
+        # 6. Define scheme
+        params = {}
 
-    # add collection specs
-    params.update({
-        "num_col_workers": args.num_col_workers,
-        "col_workers_communication": args.com_col_workers,
-        "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.25},
-    })
+        # add core modules
+        params.update({
+            "algo_factory": algo_factory,
+            "actor_factory": actor_factory,
+            "storage_factory": storage_factory,
+            "train_envs_factory": train_envs_factory,
+            "test_envs_factory": test_envs_factory,
+        })
 
-    # add gradient specs
-    params.update({
-        "num_grad_workers": args.num_grad_workers,
-        "grad_workers_communication": args.com_grad_workers,
-        "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.25},
-    })
+        # add collection specs
+        params.update({
+            "num_col_workers": args.num_col_workers,
+            "col_workers_communication": args.com_col_workers,
+            "col_workers_resources": {"num_cpus": 1, "num_gpus": 0.25},
+        })
 
-    scheme = Scheme(**params)
+        # add gradient specs
+        params.update({
+            "num_grad_workers": args.num_grad_workers,
+            "grad_workers_communication": args.com_grad_workers,
+            "grad_workers_resources": {"num_cpus": 1.0, "num_gpus": 0.25},
+        })
 
-    # 7. Define learner
-    learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
+        scheme = Scheme(**params)
 
-    # 8. Define train loop
-    iterations = 0
-    start_time = time.time()
-    while not learner.done():
+        # 7. Define learner
+        learner = Learner(scheme, target_steps=args.num_env_steps, log_dir=args.log_dir)
 
-        learner.step()
+        # 8. Define train loop
+        iterations = 0
+        start_time = time.time()
+        while not learner.done():
 
-        if iterations % args.log_interval == 0:
-            learner.print_info()
+            learner.step()
 
-        if iterations % args.save_interval == 0:
-            save_name = learner.save_model()
+            if iterations % args.log_interval == 0:
+                log_data = learner.get_metrics(add_episodes_metrics=True)
+                log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
+                wandb.log(log_data, step=learner.num_samples_collected)
+                learner.print_info()
 
-        if args.max_time != -1 and (time.time() - start_time) > args.max_time:
-            break
+            if iterations % args.save_interval == 0:
+                save_name = learner.save_model()
 
-        iterations += 1
+            if args.max_time != -1 and (time.time() - start_time) > args.max_time:
+                break
 
-    print("Finished!")
-    sys.exit()
+            iterations += 1
+
+        print("Finished!")
+        sys.exit()
 
 
 def get_args():
@@ -109,6 +124,14 @@ def get_args():
 
     # Configuration file, keep first
     parser.add_argument('--conf', '-c', type=open, action=LoadFromFile)
+    
+    # Wandb
+    parser.add_argument(
+        '--experiment_name', default=None, help='Name of the wandb experiment the agent belongs to')
+    parser.add_argument(
+        '--agent_name', default=None, help='Name of the wandb run')
+    parser.add_argument(
+        '--wandb_key', default=None, help='Init key from wandb account')
 
     # Environment specs
     parser.add_argument(
