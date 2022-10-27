@@ -364,8 +364,9 @@ class PPOD2RebelBuffer(B):
                             self.check_demo_buffer_capacity()
 
                             # Update reward_threshold.
-                            self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
-
+                            self.reward_threshold = max(
+                                self.reward_threshold, min([d["TotalReward"] for d in self.reward_demos]))
+                            
                             # Update max demo reward
                             self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
 

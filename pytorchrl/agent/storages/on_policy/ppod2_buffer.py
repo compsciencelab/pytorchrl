@@ -132,9 +132,8 @@ class PPOD2Buffer(B):
         # Define reward_threshold
         self.reward_threshold = initial_reward_threshold or - np.inf
         if len(self.reward_demos) > 0:
-            new_threshold = min([d["TotalReward"] for d in self.reward_demos])
-            if new_threshold > self.reward_threshold:
-                self.reward_threshold = new_threshold
+            self.reward_threshold = max(
+                self.reward_threshold, min([d["TotalReward"] for d in self.reward_demos]))
         self.max_demo_reward = max(
             [d["TotalReward"] for d in self.reward_demos]) if len(self.reward_demos) > 0 else -np.inf
 
@@ -505,7 +504,8 @@ class PPOD2Buffer(B):
                         self.check_demo_buffer_capacity()
 
                         # Update reward_threshold.
-                        self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
+                        self.reward_threshold = max(
+                            self.reward_threshold, min([d["TotalReward"] for d in self.reward_demos]))
 
                         # Update max demo reward
                         self.max_demo_reward = max([d["TotalReward"] for d in self.reward_demos])
@@ -638,8 +638,9 @@ class PPOD2Buffer(B):
                     self.check_demo_buffer_capacity()
 
                     # Update reward_threshold.
-                    self.reward_threshold = min([d["TotalReward"] for d in self.reward_demos])
-
+                    self.reward_threshold = max(
+                        self.reward_threshold, min([d["TotalReward"] for d in self.reward_demos]))
+                    
                     # Update intrinsic_threshold
                     self.intrinsic_threshold = min([p["IntrinsicReward"] for p in self.intrinsic_demos])
 
