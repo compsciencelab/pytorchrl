@@ -69,10 +69,14 @@ class PPOD2RebelBuffer(B):
         Number of top intrinsic reward_demos to save.
     total_buffer_demo_capacity : int
         Maximum number of reward_demos to keep between reward and intrinsic reward_demos.
+    validate_entire_demos : bool
+        If True, valid demos need not only to visit unknown rewarded states after reaching the reward threshold,
+        but also need to visit exclusively known rewarded state before reaching the reward threshold. Known and unknown
+        is defined by being over or below the error_threshold for the reward_predictor.
     save_demos_every : int
         Save top reward_demos every  `save_demo_frequency`th data collection.
     demo_dtypes : dict
-        data types to use for the reward_demos.
+        Data types to use for the reward_demos.
     """
 
     # Accepted data fields. Inserting other fields will raise AssertionError
@@ -86,7 +90,8 @@ class PPOD2RebelBuffer(B):
                  alpha=10, total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
                  supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
                  initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
-                 save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
+                 validate_entire_demos=False, save_demos_every=10,
+                 demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32,  prl.REW: np.float32}):
 
         super(PPOD2RebelBuffer, self).__init__(
             size, device, actor, algorithm, envs, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
@@ -118,6 +123,8 @@ class PPOD2RebelBuffer(B):
         else:
             self.actor.predictor = None
 
+        self.validate_entire_demos = validate_entire_demos
+
         # Define reward and error threshold
         self.reward_threshold = self.initial_reward_threshold = initial_reward_threshold or 0.0
 
@@ -127,7 +134,8 @@ class PPOD2RebelBuffer(B):
                        total_buffer_demo_capacity=50, initial_reward_threshold=None, initial_reward_demos_dir=None,
                        supplementary_demos_dir=None, target_reward_demos_dir=None, num_reward_demos_to_save=None,
                        initial_int_demos_dir=None, target_int_demos_dir=None, num_int_demos_to_save=None,
-                       save_demos_every=10, demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
+                       validate_entire_demos=False, save_demos_every=10,
+                       demo_dtypes={prl.OBS: np.float32, prl.ACT: np.float32, prl.REW: np.float32}):
         """
         Returns a function that creates PPOD2RebelBuffer instances.
 
@@ -165,6 +173,10 @@ class PPOD2RebelBuffer(B):
             Number of top intrinsic reward_demos to save.
         total_buffer_demo_capacity : int
             Maximum number of reward_demos to keep between reward and intrinsic reward_demos.
+        validate_entire_demos : bool
+            If True, valid demos need not only to visit unknown rewarded states after reaching the reward threshold,
+            but also need to visit exclusively known rewarded state before reaching the reward threshold. Known and unknown
+            is defined by being over or below the error_threshold for the reward_predictor.
         save_demos_every : int
             Save top reward_demos every  `save_demo_frequency`th data collection.
         demo_dtypes : dict
@@ -181,7 +193,7 @@ class PPOD2RebelBuffer(B):
                        restart_reward_predictor_net, rho, phi, gae_lambda, alpha, total_buffer_demo_capacity,
                        initial_reward_threshold, initial_reward_demos_dir, supplementary_demos_dir,
                        target_reward_demos_dir, num_reward_demos_to_save, initial_int_demos_dir, target_int_demos_dir,
-                       num_int_demos_to_save, save_demos_every, demo_dtypes)
+                       num_int_demos_to_save, validate_entire_demos, save_demos_every, demo_dtypes)
         return create_buffer_instance
 
     def init_tensors(self, sample):
@@ -296,7 +308,11 @@ class PPOD2RebelBuffer(B):
 
         # Verify all predicted errors are higher than self.error_threshold at the end and lower at the beginning
         validation1 = (np.abs(reward_preds[mask1] - rewards[mask1]) > float(self.actor.predictor.error_threshold)).all()
-        validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(self.actor.predictor.error_threshold)).all()
+        if self.validate_entire_demos:
+            validation2 = (np.abs(reward_preds[mask2] - rewards[mask2]) < float(
+                self.actor.predictor.error_threshold)).all()
+        else:
+            validation2 = True
         validation = validation1 and validation2
 
         return validation
