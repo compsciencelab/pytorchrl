@@ -251,11 +251,7 @@ class PPOD2RebelBuffer(B):
     def compute_cumulative_rewards(self):
         """Compute cumulative episode rewards and also returns."""
         length = self.step - 1 if self.step != 0 else self.max_size
-        self.data[prl.RET][length].copy_(self.data[prl.VAL][length])
         self.data["CumRew"].copy_(self.data[prl.REW])
-        for step in reversed(range(length)):
-            self.data[prl.RET][step] = (self.data[prl.RET][step + 1] * self.algo.gamma * (
-                    1.0 - self.data[prl.DONE][step + 1]) + self.data[prl.REW][step])
         for step in range(length + 1):
             self.data["CumRew"][step] += self.data["CumRew"][step - 1] * (1.0 - self.data[prl.DONE][step])
 
@@ -267,7 +263,7 @@ class PPOD2RebelBuffer(B):
 
     def modify_rewards(self, ref_value):
         """Flip the sign of the rewards with lower reference value prediction than self.actor.error_threshold."""
-        errors = torch.abs(ref_value - self.data[prl.RET])
+        errors = torch.abs(ref_value - self.data[prl.REW])
         mask = (errors < float(self.actor.predictor.error_threshold)) * (self.data["CumRew"] > float(
             self.reward_threshold)) * (self.data[prl.REW] > 0.0)
         self.data[prl.REW][mask] *= -1
@@ -282,10 +278,7 @@ class PPOD2RebelBuffer(B):
             return True
 
         # Compute demo cumulative rewards
-        cumulative_rewards = np.copy(demo[prl.REW])
-        for step in range(1, len(cumulative_rewards)):
-            cumulative_rewards[step] += cumulative_rewards[step - 1]
-        cumulative_rewards = cumulative_rewards[self.frame_stack - 1:]
+        cumulative_rewards = np.cumsum(demo[prl.REW], axis=0)[self.frame_stack - 1:]
 
         # Get demo rewards
         rewards = np.copy(demo[prl.REW])[self.frame_stack - 1:]
