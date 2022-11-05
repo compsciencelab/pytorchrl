@@ -278,7 +278,7 @@ class PPOD2RebelBuffer(B):
         cumulative reward higher than self.reward_threshold - 1.
         """
 
-        if not self.actor.predictor.reward_predictor:
+        if not self.actor.predictor:
             return True
 
         # Compute demo cumulative rewards
