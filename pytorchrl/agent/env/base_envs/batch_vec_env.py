@@ -3,15 +3,8 @@ import numpy as np
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
 
-# Steps
-#    1. VecEnv create factory could allow to create a batched environment
-#    2. BatchedVecEnv would be just a type of environment, maybe needs to inherit from gym.env?
-#    3.
-#    4.
-#    5.
 
-
-class BatchedVecEnv(VecEnvBase):
+class BatchedEnv(gym.Env):
     """
     VecEnv that runs multiple environments and executes batched steps.
     Recommended to use when num_envs > 1 and step() can be parallelized in GPU.

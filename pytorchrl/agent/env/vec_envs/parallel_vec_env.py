@@ -1,8 +1,7 @@
 import multiprocessing as mp
 
 import numpy as np
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase, CloudpickleWrapper,\
-    clear_mpi_env_vars
+from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvBase, CloudpickleWrapper, clear_mpi_env_vars
 
 
 def worker(remote, parent_remote, env_fn_wrappers):
@@ -31,13 +30,13 @@ def worker(remote, parent_remote, env_fn_wrappers):
             else:
                 raise NotImplementedError
     except KeyboardInterrupt:
-        print('SubprocVecEnv worker: got KeyboardInterrupt')
+        print('ParallelVecEnv worker: got KeyboardInterrupt')
     finally:
         for env in envs:
             env.close()
 
 
-class SubprocVecEnv(VecEnvBase):
+class ParallelVecEnv(VecEnvBase):
     """
     VecEnv that runs multiple environments in parallel in subproceses and communicates with them via pipes.
     Recommended to use when num_envs > 1 and step() can be a bottleneck.
@@ -120,7 +119,7 @@ class SubprocVecEnv(VecEnvBase):
         return imgs
 
     def _assert_not_closed(self):
-        assert not self.closed, "Trying to operate on a SubprocVecEnv after calling close()"
+        assert not self.closed, "Trying to operate on a ParallelVecEnv after calling close()"
 
     def __del__(self):
         if not self.closed:

@@ -10,14 +10,14 @@ import numpy as np
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
-from pytorchrl.agent.env import VecEnv, BatchedVecEnv
+from pytorchrl.agent.env import VecEnv
 from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # testing
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.batch_vec_env import BatchedVecEnv as MyEnv
+from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
 
 
 def batched_vecenv_factory():
@@ -26,7 +26,7 @@ def batched_vecenv_factory():
     num_envs = 4
     action_space = gym.spaces.Discrete(10)
     observation_space = gym.spaces.Discrete(10)
-    env = MyEnv(num_envs, observation_space, action_space)
+    env = BatchedEnv(num_envs, observation_space, action_space)
     return env
 
 
@@ -38,7 +38,7 @@ def main():
 
     info_keywords = []
     # 1. Define Train Vector of Envs
-    train_envs_factory, action_space, obs_space = BatchedVecEnv.create_factory(
+    train_envs_factory, action_space, obs_space = VecEnv.create_factory(
         env_fn=batched_vecenv_factory,
         env_kwargs={},
         log_dir=args.log_dir,
