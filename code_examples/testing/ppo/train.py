@@ -17,7 +17,7 @@ from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
 
 # testing
-from pytorchrl.agent.env.openai_baseline_dependencies.vec_envs.batch_vec_env import BatchedVecEnv as MyEnv
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.batch_vec_env import BatchedVecEnv as MyEnv
 
 
 def batched_vecenv_factory():
@@ -26,7 +26,8 @@ def batched_vecenv_factory():
     num_envs = 4
     action_space = gym.spaces.Discrete(10)
     observation_space = gym.spaces.Discrete(10)
-    return MyEnv(num_envs, observation_space, action_space)
+    env = MyEnv(num_envs, observation_space, action_space)
+    return env
 
 
 def main():

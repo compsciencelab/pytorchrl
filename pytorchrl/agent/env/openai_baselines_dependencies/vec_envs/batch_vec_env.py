@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
 
 # Steps
 #    1. VecEnv create factory could allow to create a batched environment
@@ -20,7 +21,9 @@ class BatchedVecEnv(VecEnvBase):
 
     def __init__(self, num_envs, observation_space, action_space):
         VecEnvBase.__init__(self, num_envs, observation_space, action_space)
-        self.keys, self.shapes, self.dtypes = obs_space_info(obs_space)
+        self.keys, self.shapes, self.dtypes = obs_space_info(observation_space)
+        self.action_shape = (num_envs, *action_space.shape) if action_space.shape != () else (num_envs, -1)
+        self.observation_shape = (num_envs, *observation_space.shape) if observation_space.shape != () else (num_envs, -1)
 
     def reset(self):
         """
@@ -30,8 +33,8 @@ class BatchedVecEnv(VecEnvBase):
         be cancelled and step_wait() should not be called
         until step_async() is invoked again.
         """
-        obs = {k: np.zeros((self.num_envs,) + tuple(shapes[k]), dtype=dtypes[k]) for k in self.keys}
-        return obs
+        obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
+        return dict_to_obs(obs).reshape(self.observation_shape)
 
     def step_async(self, actions):
         """
@@ -57,5 +60,5 @@ class BatchedVecEnv(VecEnvBase):
         rews = np.zeros((self.num_envs, ), dtype=np.float32)
         dones = np.zeros((self.num_envs, ), dtype=np.bool)
         infos = [{} for _ in range(self.num_envs)]
-        return obs, rews, dones, infos
+        return dict_to_obs(obs).reshape(self.observation_shape), rews, dones, infos
 

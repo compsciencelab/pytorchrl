@@ -110,11 +110,11 @@ class BatchedVecEnv:
         def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
             """Create and return a vector environment"""
 
-            env_kwargs.update({
-                "mode": mode,
-                "index_col_worker": index_col_worker,
-                "index_grad_worker": index_grad_worker,
-            })
+            # env_kwargs.update({
+            #     "mode": mode,
+            #     "index_col_worker": index_col_worker,
+            #     "index_grad_worker": index_grad_worker,
+            # })
 
             batched_env = env_fn(**env_kwargs)
 

@@ -455,7 +455,7 @@ class OnPolicyActor(Actor):
             features = policy_feature_extractor(dummy_obs)
 
         if isinstance(policy_feature_extractor, nn.Identity):
-            feature_size = dummy_obs
+            feature_size = dummy_obs.shape[-1]
         else:
             feature_size = features.shape[-1]
 
