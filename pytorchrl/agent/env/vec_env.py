@@ -3,6 +3,7 @@ from pytorchrl.agent.env.make_env import make_env
 from pytorchrl.agent.env.vector_wrappers import VecPyTorch
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.dummy_vec_env import DummyVecEnv
 from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.subproc_vec_env import SubprocVecEnv
+from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.batch_vec_env import BatchedVecEnv as BEnv
 
 
 class VecEnv:
@@ -72,5 +73,62 @@ class VecEnv:
         cls.action_space = dummy_env.action_space
         cls.observation_space = dummy_env.observation_space
         dummy_env.envs[0].close()
+
+        return make_vec_env, dummy_env.action_space, dummy_env.observation_space
+
+
+class BatchedVecEnv:
+    """Class to handle creation of environment vectors"""
+
+    @classmethod
+    def create_factory(cls, env_fn, env_kwargs={}, log_dir=None, info_keywords=()):
+        """
+        Returns a function to create a vector of environments of size
+        num_processes, so it can be executed by any worker, remote or not.
+
+        Parameters
+        ----------
+        env_fn : func
+            Function to create the environment.
+        env_kwargs : dict
+            keyword arguments of env_fn.
+        log_dir : str
+            Target path for envs to log information through bench.Monitor class.
+        info_keywords : tuple
+            Information keywords to be logged stored by bench.Monitor class.
+
+        Returns
+        -------
+        make_vec_env : func
+            Function to create a vector of environments.
+        dummy_env.action_space : gym.Space
+            Environments action space.
+        dummy_env.observation_space: gym.Space
+            Environments observation space.
+        """
+
+        def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
+            """Create and return a vector environment"""
+
+            env_kwargs.update({
+                "mode": mode,
+                "index_col_worker": index_col_worker,
+                "index_grad_worker": index_grad_worker,
+            })
+
+            batched_env = env_fn(**env_kwargs)
+
+            assert isinstance(batched_env, BEnv)
+
+            envs = VecPyTorch(batched_env, device)
+
+            envs.env_kwargs = env_kwargs
+
+            return envs
+
+        dummy_env = make_vec_env()
+        cls.action_space = dummy_env.action_space
+        cls.observation_space = dummy_env.observation_space
+        dummy_env.close()
 
         return make_vec_env, dummy_env.action_space, dummy_env.observation_space
