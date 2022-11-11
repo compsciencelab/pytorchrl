@@ -3,7 +3,12 @@ import copy
 import inspect
 import torch
 from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
-from pytorchrl.agent.env.base_envs.env_wrappers import TransposeImagesIfRequired, PyTorchEnv, Monitor
+from pytorchrl.agent.env.base_envs.env_wrappers import (
+    Monitor,
+    PyTorchEnv,
+    BatchedMonitor,
+    TransposeImagesIfRequired,
+)
 from pytorchrl.agent.env.vec_envs.vector_wrappers import VecPyTorch
 from pytorchrl.agent.env.vec_envs.parallel_vec_env import ParallelVecEnv
 from pytorchrl.agent.env.vec_envs.sequential_vec_env import SequentialVecEnv
@@ -64,7 +69,7 @@ class VecEnv:
                 if log_dir:
                     path = os.path.join(log_dir, "monitor_logs", mode)
                     os.makedirs(path, exist_ok=True)
-                    env = Monitor(
+                    env = BatchedMonitor(
                         env, os.path.join(path, "{}_{}".format(
                             index_grad_worker, index_col_worker)),
                         info_keywords=info_keywords)

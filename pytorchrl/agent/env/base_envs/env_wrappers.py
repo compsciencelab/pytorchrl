@@ -1,7 +1,8 @@
-import torch
 import csv
 import time
 import json
+import torch
+import numpy as np
 import gym
 from gym.spaces.box import Box
 from glob import glob
@@ -128,7 +129,7 @@ class Monitor(gym.Wrapper):
     EXT = "monitor.csv"
     f = None
 
-    def __init__(self, env, filename, allow_early_resets=False, info_keywords=()):
+    def __init__(self, env, filename, info_keywords=()):
         super(Monitor, self).__init__(env)
         self.tstart = time.time()
         if filename:
@@ -151,7 +152,58 @@ class Monitor(gym.Wrapper):
 
     def step(self, action):
         ob, rew, done, info = self.env.step(action)
-        [self.update(o, r, d, i) for o, r, d, i in zip(ob, rew, done, info)]
+        self.update(ob, rew, done, info)
+        return ob, rew, done, info
+
+    def update(self, ob, rew, done, info):
+        self.rewards.append(rew)
+        if done:
+            eprew = sum(self.rewards)
+            eplen = len(self.rewards)
+            epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
+            for k in self.info_keywords:
+                epinfo[k] = info[k]
+            if self.results_writer:
+                self.results_writer.write_row(epinfo)
+            assert isinstance(info, dict)
+            if isinstance(info, dict):
+                info['episode'] = epinfo
+        self.total_steps += 1
+
+    def close(self):
+        super(Monitor, self).close()
+        if self.f is not None:
+            self.f.close()
+
+
+class BatchedMonitor(gym.Wrapper):
+    EXT = "monitor.csv"
+    f = None
+
+    def __init__(self, env, filename, info_keywords=()):
+        super(BatchedMonitor, self).__init__(env)
+        self.tstart = time.time()
+        if filename:
+            self.results_writer = ResultsWriter(
+                filename,
+                header={"t_start": time.time(), 'env_id': env.spec and env.spec.id},
+                extra_keys=info_keywords)
+        else:
+            self.results_writer = None
+        self.info_keywords = info_keywords
+        self.rewards = None
+        self.total_steps = 0
+
+    def reset(self, **kwargs):
+        self.reset_state()
+        return self.env.reset(**kwargs)
+
+    def reset_state(self):
+        self.rewards = []
+
+    def step(self, action):
+        ob, rew, done, info = self.env.step(action)
+        [self.update(o, r, d, i) for o, r, d, i in zip(ob, rew, done, info) if done]
         return ob, rew, done, info
 
     def update(self, ob, rew, done, info):

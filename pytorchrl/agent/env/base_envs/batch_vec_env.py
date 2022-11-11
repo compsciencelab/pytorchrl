@@ -55,7 +55,7 @@ class BatchedEnv(Env):
         """
         obs = {k: np.zeros((self.num_envs, ) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
         rews = np.zeros((self.num_envs, ), dtype=np.float32)
-        dones = np.ones((self.num_envs, ), dtype=np.bool)
+        dones = np.zeros((self.num_envs, ), dtype=np.bool)
         infos = [{} for _ in range(self.num_envs)]
         return dict_to_obs(obs).reshape(self.observation_shape), rews, dones, infos
 
