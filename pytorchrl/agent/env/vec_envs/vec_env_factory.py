@@ -2,11 +2,11 @@ import os
 import copy
 import inspect
 import torch
-from pytorchrl.agent.env.vector_wrappers import VecPyTorch
-from pytorchrl.agent.env.vec_envs.env_wrappers import TransposeImagesIfRequired, PyTorchEnv, Monitor
-from pytorchrl.agent.env.vec_envs.sequential_vec_env import SequentialVecEnv
-from pytorchrl.agent.env.vec_envs.parallel_vec_env import ParallelVecEnv
 from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
+from pytorchrl.agent.env.base_envs.env_wrappers import TransposeImagesIfRequired, PyTorchEnv, Monitor
+from pytorchrl.agent.env.vec_envs.vector_wrappers import VecPyTorch
+from pytorchrl.agent.env.vec_envs.parallel_vec_env import ParallelVecEnv
+from pytorchrl.agent.env.vec_envs.sequential_vec_env import SequentialVecEnv
 
 
 class VecEnv:
@@ -61,13 +61,13 @@ class VecEnv:
 
                 env = env_fn(**env_kwargs)
 
-                # if log_dir:
-                path = os.path.join(log_dir, "monitor_logs", mode)
-                os.makedirs(path, exist_ok=True)
-                env = Monitor(
-                    env, os.path.join(path, "{}_{}".format(
-                        index_grad_worker, index_col_worker)),
-                    allow_early_resets=True, info_keywords=info_keywords)
+                if log_dir:
+                    path = os.path.join(log_dir, "monitor_logs", mode)
+                    os.makedirs(path, exist_ok=True)
+                    env = Monitor(
+                        env, os.path.join(path, "{}_{}".format(
+                            index_grad_worker, index_col_worker)),
+                        info_keywords=info_keywords)
 
                 env = PyTorchEnv(env, device)
 
@@ -165,7 +165,7 @@ def make_env(env_fn, env_kwargs, index_col_worker, index_grad_worker, index_env,
             env = Monitor(
                 env, os.path.join(path, "{}_{}_{}".format(
                     index_grad_worker, index_col_worker, str(index_env))),
-                allow_early_resets=True, info_keywords=info_keywords)
+                info_keywords=info_keywords)
 
         # if obs are images with shape (W,H,C), transpose to (C,W,H) for PyTorch convolutions
         env = TransposeImagesIfRequired(env, op=[2, 0, 1])
