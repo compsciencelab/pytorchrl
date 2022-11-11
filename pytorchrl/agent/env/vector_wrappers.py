@@ -1,5 +1,5 @@
 import torch
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvWrapper
+from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvWrapper
 
 
 class VecPyTorch(VecEnvWrapper):
@@ -26,7 +26,6 @@ class VecPyTorch(VecEnvWrapper):
 
     """
     def __init__(self, venv, device):
-        """Return only every `skip`-th frame"""
         super(VecPyTorch, self).__init__(venv)
         self.venv = venv
         self.device = device

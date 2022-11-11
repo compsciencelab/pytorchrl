@@ -1,10 +1,10 @@
-import gym
+from gym import Env
 import numpy as np
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
+from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvBase
+from pytorchrl.agent.env.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
 
 
-class BatchedEnv(gym.Env):
+class BatchedEnv(Env):
     """
     VecEnv that runs multiple environments and executes batched steps.
     Recommended to use when num_envs > 1 and step() can be parallelized in GPU.
@@ -13,7 +13,10 @@ class BatchedEnv(gym.Env):
     """
 
     def __init__(self, num_envs, observation_space, action_space):
-        VecEnvBase.__init__(self, num_envs, observation_space, action_space)
+        super(BatchedEnv, self).__init__()
+        self.num_envs = num_envs
+        self.action_space = action_space
+        self.observation_space = observation_space
         self.keys, self.shapes, self.dtypes = obs_space_info(observation_space)
         self.action_shape = (num_envs, *action_space.shape) if action_space.shape != () else (num_envs, -1)
         self.observation_shape = (num_envs, *observation_space.shape) if observation_space.shape != () else (num_envs, -1)
@@ -29,17 +32,7 @@ class BatchedEnv(gym.Env):
         obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
         return dict_to_obs(obs).reshape(self.observation_shape)
 
-    def step_async(self, actions):
-        """
-        Tell all the environments to start taking a step
-        with the given actions.
-        Call step_wait() to get the results of the step.
-        You should not call this if a step_async run is
-        already pending.
-        """
-        pass
-
-    def step_wait(self):
+    def step(self):
         """
         Wait for the step taken with step_async().
         Returns (obs, rews, dones, infos):

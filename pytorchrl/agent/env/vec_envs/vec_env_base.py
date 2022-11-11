@@ -2,7 +2,7 @@ import contextlib
 import os
 from abc import ABC, abstractmethod
 
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import tile_images
+from pytorchrl.agent.env.vec_envs.util import tile_images
 
 
 class VecEnvBase(ABC):

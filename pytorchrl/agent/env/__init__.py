@@ -1,2 +1,2 @@
-from pytorchrl.agent.env.vec_envs.vec_env_factory import VecEnv, BatchedVecEnv
+from pytorchrl.agent.env.vec_envs.vec_env_factory import VecEnv
 from pytorchrl.agent.env.openai_baselines_dependencies.load_baselines_results import load_baselines_results

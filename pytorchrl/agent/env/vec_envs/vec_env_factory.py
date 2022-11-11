@@ -4,7 +4,7 @@ import inspect
 import torch
 from pytorchrl.agent.env.vector_wrappers import VecPyTorch
 from pytorchrl.agent.env.openai_baselines_dependencies.Monitor import Monitor
-from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired
+from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired, PyTorchEnv
 from pytorchrl.agent.env.vec_envs.sequential_vec_env import SequentialVecEnv
 from pytorchrl.agent.env.vec_envs.parallel_vec_env import ParallelVecEnv
 from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
@@ -52,7 +52,6 @@ class VecEnv:
             def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
                 """Create and return a vector environment"""
 
-                env_kwargs = copy.deepcopy(env_kwargs)
                 if "index_col_worker" in inspect.getfullargspec(env_fn).args:
                     env_kwargs["index_col_worker"] = index_col_worker
                 if "index_grad_worker" in inspect.getfullargspec(env_fn).args:
@@ -62,15 +61,15 @@ class VecEnv:
 
                 env = env_fn(**env_kwargs)
 
-                if log_dir:
-                    path = os.path.join(log_dir, "monitor_logs", mode)
-                    os.makedirs(path, exist_ok=True)
-                    env = Monitor(
-                        env, os.path.join(path, "{}_{}".format(
-                            index_grad_worker, index_col_worker)),
-                        allow_early_resets=True, info_keywords=info_keywords)
+                # if log_dir:
+                path = os.path.join(log_dir, "monitor_logs", mode)
+                os.makedirs(path, exist_ok=True)
+                env = Monitor(
+                    env, os.path.join(path, "{}_{}".format(
+                        index_grad_worker, index_col_worker)),
+                    allow_early_resets=True, info_keywords=info_keywords)
 
-                env = VecPyTorch(env, device)
+                env = PyTorchEnv(env, device)
 
                 env.env_kwargs = env_kwargs
 
