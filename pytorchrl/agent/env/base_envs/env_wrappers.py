@@ -141,7 +141,6 @@ class Monitor(gym.Wrapper):
             self.results_writer = None
         self.info_keywords = info_keywords
         self.rewards = None
-        self.total_steps = 0
 
     def reset(self, **kwargs):
         self.reset_state()
@@ -168,7 +167,6 @@ class Monitor(gym.Wrapper):
             assert isinstance(info, dict)
             if isinstance(info, dict):
                 info['episode'] = epinfo
-        self.total_steps += 1
 
     def close(self):
         super(Monitor, self).close()
@@ -177,6 +175,8 @@ class Monitor(gym.Wrapper):
 
 
 class BatchedMonitor(gym.Wrapper):
+    """Class to log BatchEnv data."""
+
     EXT = "monitor.csv"
     f = None
 
@@ -192,38 +192,43 @@ class BatchedMonitor(gym.Wrapper):
             self.results_writer = None
         self.info_keywords = info_keywords
         self.rewards = None
-        self.total_steps = 0
+        self.steps = None
 
     def reset(self, **kwargs):
-        self.reset_state()
         return self.env.reset(**kwargs)
 
-    def reset_state(self):
-        self.rewards = []
+    def reset_single_env(self, num_env):
+        return self.env.reset_single_env(num_env)
 
     def step(self, action):
         ob, rew, done, info = self.env.step(action)
-        [self.update(o, r, d, i) for o, r, d, i in zip(ob, rew, done, info) if done]
+        self.update(ob, rew, done, info)
         return ob, rew, done, info
 
     def update(self, ob, rew, done, info):
-        self.rewards.append(rew)
-        if done:
-            eprew = sum(self.rewards)
-            eplen = len(self.rewards)
+
+        if self.rewards is None:
+            self.rewards = np.zeros_like(rew)
+            self.steps = np.zeros_like(done)
+        else:
+            self.rewards += rew
+            self.rewards += np.zeros_like(done)
+        for num in np.nonzero(done)[0]:
+            eprew = self.rewards[num]
+            eplen = self.steps[num]
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
-                epinfo[k] = info[k]
+                epinfo[k] = info[num][k]
             if self.results_writer:
                 self.results_writer.write_row(epinfo)
-            assert isinstance(info, dict)
+            assert isinstance(info[num], dict)
             if isinstance(info, dict):
-                info['episode'] = epinfo
-
-        self.total_steps += 1
+                info[num]['episode'] = epinfo
+            self.rewards[num] = 0
+            self.steps[num] = 0
 
     def close(self):
-        super(Monitor, self).close()
+        super(BatchedMonitor, self).close()
         if self.f is not None:
             self.f.close()
 

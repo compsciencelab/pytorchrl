@@ -63,9 +63,8 @@ class SequentialVecEnv(VecEnvBase):
         return self._obs_from_buf()
 
     def reset_single_env(self, num_env):
-        for e in range(self.num_envs):
-            obs = self.envs[e].reset()
-            self._save_obs(e, obs)
+        obs = self.envs[num_env].reset()
+        self._save_obs(num_env, obs)
         return self._obs_from_buf()
 
     def _save_obs(self, e, obs):

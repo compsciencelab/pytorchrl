@@ -9,7 +9,11 @@ class BatchedEnv(Env):
     VecEnv that runs multiple environments and executes batched steps.
     Recommended to use when num_envs > 1 and step() can be parallelized in GPU.
 
-    It uses numpy vectors for parallel execution.
+    Obs, actions and dones have to be numpy arrays. Create sanity checks
+
+    dict has to be a list of dicts. Create sanity checks.
+
+    Reset is done automatically !!! But reset and reset_single_env can be called as well
     """
 
     def __init__(self, num_envs, observation_space, action_space):
@@ -23,25 +27,14 @@ class BatchedEnv(Env):
 
     def reset(self):
         """
-        Reset all the environments and return an array of
-        observations, or a dict of observation arrays.
-        If step_async is still doing work, that work will
-        be cancelled and step_wait() should not be called
-        until step_async() is invoked again.
+        Reset all the environments and return an array of observations.
         """
         obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
         return dict_to_obs(obs).reshape(self.observation_shape)
 
-    def reset_single_environment(self, environment_num):
-        """
-        Reset all the environments and return an array of
-        observations, or a dict of observation arrays.
-        If step_async is still doing work, that work will
-        be cancelled and step_wait() should not be called
-        until step_async() is invoked again.
-        """
-        obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
-        return dict_to_obs(obs).reshape(self.observation_shape)
+    def reset_single_env(self, num_env):
+        """Reset environment in position num_env and return an the whole array of observations."""
+        pass
 
     def step(self, action):
         """
