@@ -1,3 +1,5 @@
+"""Adapted from openai baselines"""
+
 import numpy as np
 from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvBase
 from pytorchrl.agent.env.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info

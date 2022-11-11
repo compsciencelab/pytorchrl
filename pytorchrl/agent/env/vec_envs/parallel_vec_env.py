@@ -1,4 +1,5 @@
 import multiprocessing as mp
+"""Adapted from openai baselines"""
 
 import numpy as np
 from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvBase, CloudpickleWrapper, clear_mpi_env_vars

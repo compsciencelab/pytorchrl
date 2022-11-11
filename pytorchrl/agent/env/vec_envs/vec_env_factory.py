@@ -3,8 +3,7 @@ import copy
 import inspect
 import torch
 from pytorchrl.agent.env.vector_wrappers import VecPyTorch
-from pytorchrl.agent.env.openai_baselines_dependencies.Monitor import Monitor
-from pytorchrl.agent.env.env_wrappers import TransposeImagesIfRequired, PyTorchEnv
+from pytorchrl.agent.env.vec_envs.env_wrappers import TransposeImagesIfRequired, PyTorchEnv, Monitor
 from pytorchrl.agent.env.vec_envs.sequential_vec_env import SequentialVecEnv
 from pytorchrl.agent.env.vec_envs.parallel_vec_env import ParallelVecEnv
 from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
@@ -26,7 +25,8 @@ class VecEnv:
         env_kwargs : dict
             keyword arguments of env_fn.
         vec_env_size : int
-            size of the vector of environments.
+            size of the vector of environments. If env_fn creates an instance BatchedEnv class this
+            parameter will be ignored.
         log_dir : str
             Target path for envs to log information through bench.Monitor class.
         info_keywords : tuple

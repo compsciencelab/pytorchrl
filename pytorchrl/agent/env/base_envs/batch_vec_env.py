@@ -32,7 +32,18 @@ class BatchedEnv(Env):
         obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
         return dict_to_obs(obs).reshape(self.observation_shape)
 
-    def step(self):
+    def reset_single_environment(self, environment_num):
+        """
+        Reset all the environments and return an array of
+        observations, or a dict of observation arrays.
+        If step_async is still doing work, that work will
+        be cancelled and step_wait() should not be called
+        until step_async() is invoked again.
+        """
+        obs = {k: np.zeros((self.num_envs,) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
+        return dict_to_obs(obs).reshape(self.observation_shape)
+
+    def step(self, action):
         """
         Wait for the step taken with step_async().
         Returns (obs, rews, dones, infos):
@@ -44,7 +55,7 @@ class BatchedEnv(Env):
         """
         obs = {k: np.zeros((self.num_envs, ) + tuple(self.shapes[k]), dtype=self.dtypes[k]) for k in self.keys}
         rews = np.zeros((self.num_envs, ), dtype=np.float32)
-        dones = np.zeros((self.num_envs, ), dtype=np.bool)
+        dones = np.ones((self.num_envs, ), dtype=np.bool)
         infos = [{} for _ in range(self.num_envs)]
         return dict_to_obs(obs).reshape(self.observation_shape), rews, dones, infos
 
