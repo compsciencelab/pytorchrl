@@ -12,27 +12,37 @@ class WrapperScoringClass:
     def __init__(self, scoring_class):
         self.scoring_class = scoring_class
 
-    def get_final_score(self, smiles):
+    def get_final_score(self, smile):
 
         output = {}
+        try:
 
-        # if isinstance(smile, str):
-        #     score = self.scoring_class.get_final_score([smile])
-        # elif smile is None:
-        #     raise TypeError
-        # else:
-        #     raise ValueError("Scoring error due to wrong dtype")
+            if isinstance(smile, str):
+                score = self.scoring_class.get_final_score([smile])
+            elif smile is None:
+                raise TypeError
+            else:
+                raise ValueError("Scoring error due to wrong dtype")
 
-        scores = self.scoring_class.get_final_score(smiles)
+            output.update({
+                "valid_smile": True,
+                "score": float(score.total_score[0]),
+                "reward": float(score.total_score[0]),
+                "DRD2": float(score.profile[0].score[0]),
+                "custom_alerts": float(score.profile[1].score[0]),
+                "raw_DRD2": float(score.profile[2].score[0]),
+            })
 
-        output.update({
-            "valid_smile": True,
-            "score": float(scores.total_score[0]),
-            "reward": float(scores.total_score[0]),
-            "DRD2": float(scores.profile[0].score[0]),
-            "custom_alerts": float(scores.profile[1].score[0]),
-            "raw_DRD2": float(scores.profile[2].score[0]),
-        })
+        except TypeError:
+
+            output.update({
+                "valid_smile": False,
+                "score": 0.0,
+                "reward": 0.0,
+                "DRD2": 0.0,
+                "custom_alerts": 0.0,
+                "raw_DRD2": 0.0,
+            })
 
         return output
 
@@ -99,4 +109,3 @@ scoring_params = ScoringFunctionParameters(
 scoring_class = ScoringFunctionFactory(scoring_params)
 wrapper_scoring_class = WrapperScoringClass(scoring_class)
 scoring_function = wrapper_scoring_class.get_final_score
-

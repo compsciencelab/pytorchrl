@@ -1,4 +1,5 @@
 import gym
+import copy
 import random
 import numpy as np
 import rdkit as Chem
@@ -13,9 +14,12 @@ from pytorchrl.agent.env import BatchedEnv
 
 
 class BatchedGenChemEnv(BatchedEnv):
-    """Custom Environment for Generative Chemistry RL."""
+    """
+    Batched custom Environment for Generative Chemistry RL.
+    To be used when the scoring function is the bottleneck.
+    """
 
-    metadata = {'render.modes': ['human']}
+    metadata = {"render.modes": ["human"]}
 
     def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200,
                  reactions=[], num_envs=1):
@@ -36,7 +40,7 @@ class BatchedGenChemEnv(BatchedEnv):
         self._attachment_points = AttachmentPoints()
 
         # Check maximum possible scaffold length
-        self.max_scaffold_length = max([len(self.select_scaffold()) for _ in range(1000)])
+        self.max_scaffold_length = max([self.select_scaffold()[1] for _ in range(1000)])
 
         # Define action and observation space of a single environment
         self.action_space = gym.spaces.Discrete(len(self.vocabulary.decoration_vocabulary))
@@ -67,18 +71,65 @@ class BatchedGenChemEnv(BatchedEnv):
         # Diversity Filter: penalizes the score by 0.5 if a previously seen compound is proposed.
         self.diversity_filter = NoFilterWithPenalty()
 
+        # Trackers
+        self.current_decorations = ["" for _ in range(self.num_envs)]
+        self.context = np.ones((self.num_envs, self.max_scaffold_length)) * self.vocabulary.encode_decoration_token("<pad>")
+        self.context_length = np.zeros(self.num_envs)
+
     def step(self, action):
         """Execute one time step within the environment"""
 
-        observation = {
-            "context": np.zeros((self.num_envs, self.max_scaffold_length)),
-            "context_length": np.zeros(self.num_envs) + 10,
-            "obs": np.zeros((self.num_envs, 1)) + 2,
-            "obs_length": np.zeros(self.num_envs) + 1,
-        }
-        rew = np.zeros((self.num_envs, ), dtype=np.float32)
-        done = np.zeros((self.num_envs, ), dtype=np.bool)
+        import ipdb; ipdb.set_trace()
+
+        rew = np.zeros((self.num_envs, 1), dtype=np.float32)
+        done = np.zeros((self.num_envs, 1), dtype=np.bool)
         info = [{} for _ in range(self.num_envs)]
+
+        finished = action == self.vocabulary.encode_decoration_token("$")
+        done[finished] = True
+
+        # for i in range(self.num_envs):
+        #     self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
+        #     if finished[i]:
+        #
+        #         # Join scaffold and decoration
+        #         decorated_smile, molecule = self.join_scaffold_and_decorations(
+        #             self.vocabulary.decode_scaffold(self.context[i]),
+        #             self.vocabulary.remove_start_and_end_tokens(self.current_decorations[i]))
+        #
+        #         # Compute score
+        #         score = self.scoring_function(decorated_smile)
+        #
+        #         # Apply reaction filters
+        #         score.update({"reaction_scores": 0.0})
+        #         if molecule:
+        #             self.apply_reaction_filters(molecule, score)
+        #
+        #         # Get reward
+        #         reward = score["reward"] if "reward" in score.keys() else score["score"]
+        #
+        #         # Adjust reward with diversity filter
+        #         reward = self.diversity_filter.update_score(reward, decorated_smile)
+        #
+        #         # If score contain field "Valid", update counter
+        #         if "valid_smile" in score.keys():
+        #             valid = score["valid_smile"]
+        #             self.running_mean_valid_smiles.append(1.0) if valid else \
+        #                 self.running_mean_valid_smiles.append(0.0)
+        #
+        #         # rew[i] = reward
+        #
+        #         # Update molecule
+        #         # env_info = {"molecule": decorated_smile or "invalid_smile"}
+        #         # env_info.update(score)
+        #         # info.append(env_info)
+
+        observation = {
+            "context": copy.copy(self.context),
+            "context_length": copy.copy(self.context_length),
+            "obs": action.reshape(self.num_envs, 1),
+            "obs_length": np.ones(self.num_envs),
+        }
 
         return observation, rew, done, info
 
@@ -88,21 +139,31 @@ class BatchedGenChemEnv(BatchedEnv):
         Return padded base molecule to match length `obs_length`.
         """
 
-        # Initial observation
+        # Define vectors
+        obs = np.ones((self.num_envs, 1)) * self.vocabulary.encode_decoration_token("^")
+        obs_length = np.ones(self.num_envs)
+
+        # Fill up context and context_length
+        for i in range(self.num_envs):
+            scaffold, scaffold_length = self.select_scaffold()
+            self.context[i, 0:scaffold_length] = scaffold
+            self.context_length[i] = scaffold_length
+
+        # Create observation
         observation = {
-            "context": np.zeros((self.num_envs, self.max_scaffold_length)),
-            "context_length": np.zeros(self.num_envs) + 10,
-            "obs": np.zeros((self.num_envs, 1)) + 2,
-            "obs_length": np.zeros(self.num_envs) + 1,
+            "context": copy.copy(self.context),
+            "context_length": copy.copy(self.context_length),
+            "obs": obs,
+            "obs_length": obs_length,
         }
 
         return observation
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         """Render the environment to the screen"""
 
-        print(f'Current Molecule: {self.current_molecule}')
-        print(f'Vocabulary: {self.vocabulary._tokens}')
+        print(f"Current Molecule: {self.current_molecule}")
+        print(f"Vocabulary: {self.vocabulary._tokens}")
 
     def select_scaffold(self):
         scaffold = random.choice(self.scaffolds)
@@ -111,7 +172,8 @@ class BatchedGenChemEnv(BatchedEnv):
             scaffold = self._bond_maker.randomize_scaffold(mol)  # randomize
         scaffold = self._attachment_points.remove_attachment_point_numbers(scaffold)
         scaffold = self.vocabulary.encode_scaffold(scaffold)
-        return scaffold
+        scaffold_length = len(scaffold)
+        return scaffold, scaffold_length
 
     def join_scaffold_and_decorations(self, scaffold, decorations):
         scaffold = self._attachment_points.add_attachment_point_numbers(scaffold, canonicalize=False)

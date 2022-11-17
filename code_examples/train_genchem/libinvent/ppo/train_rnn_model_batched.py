@@ -67,6 +67,7 @@ def main():
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
+        info_keywords = ()
         # info_keywords = ("molecule", )
         # info_keywords += (
         #     "custom_alerts",
