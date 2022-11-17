@@ -23,11 +23,11 @@ class BatchedEnv(Env):
     def __init__(self, num_envs, observation_space=None, action_space=None, **kwargs):
         super(BatchedEnv, self).__init__()
         self.num_envs = num_envs
-        self.action_space = action_space
-        self.observation_space = observation_space
-        self.keys, self.shapes, self.dtypes = obs_space_info(observation_space)
-        self.action_shape = (num_envs, *action_space.shape) if action_space.shape != () else (num_envs, -1)
-        self.observation_shape = (num_envs, *observation_space.shape) if observation_space.shape != () else (num_envs, -1)
+        # self.action_space = action_space
+        # self.observation_space = observation_space
+        # self.keys, self.shapes, self.dtypes = obs_space_info(observation_space)
+        # self.action_shape = (num_envs, *action_space.shape) if action_space.shape != () else (num_envs, -1)
+        # self.observation_shape = (num_envs, *observation_space.shape) if observation_space.shape != () else (num_envs, -1)
 
     def _check_obs(self, obs):
         """Returns True if obs has the correct type and shape."""

@@ -2,7 +2,7 @@ import os
 import copy
 import inspect
 import torch
-from pytorchrl.agent.env.base_envs.batch_vec_env import BatchedEnv
+from pytorchrl.agent.env.base_envs.batched_env import BatchedEnv
 from pytorchrl.agent.env.base_envs.env_wrappers import (
     Monitor,
     PyTorchEnv,

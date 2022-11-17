@@ -389,8 +389,8 @@ class LSTMEncoderDecoder(nn.Module):
 
         encoder_seqs = inputs["context"]
         decoder_seqs = inputs["obs"]
-        encoder_seq_lengths = inputs["context_length"].cpu().long()
-        decoder_seq_lengths = inputs["obs_length"].cpu().long()
+        encoder_seq_lengths = inputs["context_length"].cpu().long().reshape(-1)
+        decoder_seq_lengths = inputs["obs_length"].cpu().long().reshape(-1)
 
         logits, rhs = self._forward_encoder_decoder(
             encoder_seqs, encoder_seq_lengths, decoder_seqs, decoder_seq_lengths, rhs, done)

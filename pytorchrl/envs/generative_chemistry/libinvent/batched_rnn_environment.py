@@ -19,7 +19,7 @@ class BatchedGenChemEnv(BatchedEnv):
 
     def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200,
                  reactions=[], num_envs=1):
-        super(GenChemEnv, self).__init__()
+        super(BatchedGenChemEnv, self).__init__(num_envs=num_envs)
 
         self.num_envs = num_envs
         self.reactions = reactions
@@ -75,6 +75,7 @@ class BatchedGenChemEnv(BatchedEnv):
         done = np.zeros((self.num_envs, ), dtype=np.bool)
         info = [{} for _ in range(self.num_envs)]
 
+        import ipdb; ipdb.set_trace()
         return next_obs, rew, done, info
 
     def reset(self):
@@ -85,12 +86,13 @@ class BatchedGenChemEnv(BatchedEnv):
 
         # Initial observation
         self.observation = {
-            "context": np.zeros(self.num_envs, self.max_scaffold_length),
-            "context_length": np.zeros(self.num_envs, 1) + 10,
-            "obs": np.zeros(self.num_envs, 1),
-            "obs_length": np.zeros(self.num_envs, 1),
+            "context": np.zeros((self.num_envs, self.max_scaffold_length)),
+            "context_length": np.zeros((self.num_envs, 1)) + 10,
+            "obs": np.zeros(self.num_envs) + 2,
+            "obs_length": np.zeros(self.num_envs) + 1,
         }
 
+        import ipdb; ipdb.set_trace()
         return self.observation
 
     def render(self, mode='human'):

@@ -100,20 +100,3 @@ scoring_class = ScoringFunctionFactory(scoring_params)
 wrapper_scoring_class = WrapperScoringClass(scoring_class)
 scoring_function = wrapper_scoring_class.get_final_score
 
-# TEST
-
-smiles = [
-    "Cc1ccc2c(c1)sc1c(=O)[nH]c3ccc(C(=O)NCCCN(C)C)cc3c12",
-    "O=C(NCCN1CCOCC1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1",
-    "COc1cc(CN2CCCC(C(=O)Nc3ccccc3Oc3cccnc3)C2)ccc1F",
-    "CC(=O)CN1C(=O)C2CC(O)CN2C(=O)c2ccccc21",
-    "COc1cccc(NC(=O)c2oc3ccccc3c2NC(=O)c2ccc3c(c2)OCO3)c1",
-    "Cc1ncc(COP(=O)(O)O)c(CNC(Cc2ccc(O)c(O)c2)C(=O)O)c1O",
-    "Cc1ccccc1N1C(=O)NC(=O)C(=Cc2cc(Br)c(N3CCOCC3)o2)C1=O",
-    "COc1nc(=Nc2ccc(Cl)cc2)sn1C",
-    "CCOC(=O)C(C)NP(=O)(COc1ccc(C)c2c1-c1ncsc1C2)NC(C)C(=O)OCC",
-    "Cc1ccc(SCC(=O)OCC(=O)NC2(C#N)CCCCC2)cc1",
-    "CC(C)(C)OC(=O)NC(Cc1ccc2cc(O)ccc2c1)C(=O)O",
-]
-scores = scoring_function(smiles)
-print(scores)
