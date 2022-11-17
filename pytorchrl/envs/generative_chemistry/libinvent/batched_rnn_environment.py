@@ -72,7 +72,7 @@ class BatchedGenChemEnv(BatchedEnv):
         self.diversity_filter = NoFilterWithPenalty()
 
         # Trackers
-        self.current_decorations = ["" for _ in range(self.num_envs)]
+        self.current_decorations = ["^" for _ in range(self.num_envs)]
         self.context = np.ones((self.num_envs, self.max_scaffold_length)) * self.vocabulary.encode_decoration_token("<pad>")
         self.context_length = np.zeros(self.num_envs)
 
@@ -81,13 +81,14 @@ class BatchedGenChemEnv(BatchedEnv):
 
         rew = np.zeros(self.num_envs, dtype=np.float32)
         done = np.zeros(self.num_envs, dtype=np.bool)
-        info = [{} for _ in range(self.num_envs)]
+        info = []
 
         finished = action == self.vocabulary.encode_decoration_token("$")
         done[finished] = True
 
         for i in range(self.num_envs):
 
+            env_info = {}
             self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
 
             if finished[i]:
@@ -120,12 +121,13 @@ class BatchedGenChemEnv(BatchedEnv):
                 rew[i] = reward
 
                 # Update molecule
-                env_info = {"molecule": decorated_smile or "invalid_smile"}
+                env_info.update({"molecule": decorated_smile or "invalid_smile"})
                 env_info.update(score)
-                info.append(env_info)
 
                 # Reset finished env
                 self.reset_single_env(i)
+
+            info.append(env_info)
 
         observation = {
             "context": copy.copy(self.context),
@@ -169,6 +171,7 @@ class BatchedGenChemEnv(BatchedEnv):
         self.context[num_env] = self.vocabulary.encode_decoration_token("<pad>")
         self.context[num_env, 0:scaffold_length] = scaffold
         self.context_length[num_env] = scaffold_length
+        self.current_decorations[num_env] = "^"
 
     def render(self, mode="human"):
         """Render the environment to the screen"""

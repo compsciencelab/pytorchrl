@@ -67,15 +67,14 @@ def main():
         restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
-        info_keywords = ()
-        # info_keywords = ("molecule", )
-        # info_keywords += (
-        #     "custom_alerts",
-        #     "DRD2",
-        #     "raw_DRD2",
-        #     "valid_smile",
-        #     "reaction_scores"
-        # )
+        info_keywords = ("molecule", )
+        info_keywords += (
+            "custom_alerts",
+            "DRD2",
+            "raw_DRD2",
+            "valid_smile",
+            "reaction_scores"
+        )
 
         train_envs_factory, action_space, obs_space = VecEnv.create_factory(
             env_fn=libinvent_train_batched_env_factory,
@@ -86,10 +85,9 @@ def main():
                 "scaffolds": args.scaffolds,
                 "reaction_filters": args.reaction_filters,
                 "randomize_scaffolds": args.randomize_scaffolds,
-                "num_envs": 10
+                "num_envs": args.num_env_processes
             },
-            vec_env_size=args.num_env_processes, log_dir=args.log_dir,
-            info_keywords=info_keywords)
+            log_dir=args.log_dir, info_keywords=info_keywords)
 
         # 2. Define RL Policy
         actor_factory = OnPolicyActor.create_factory(

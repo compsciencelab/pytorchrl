@@ -214,11 +214,14 @@ class BatchedMonitor(gym.Wrapper):
             self.rewards += rew
             self.rewards += np.zeros_like(done)
         for num in np.nonzero(done)[0]:
-            eprew = self.rewards[num]
-            eplen = self.steps[num]
+            eprew = float(self.rewards[num])
+            eplen = float(self.steps[num])
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
-                epinfo[k] = info[num][k]
+                try:
+                    epinfo[k] = float(info[num][k])
+                except Exception:
+                    epinfo[k] = info[num][k]
             if self.results_writer:
                 self.results_writer.write_row(epinfo)
             assert isinstance(info[num], dict)
