@@ -24,7 +24,7 @@ from pytorchrl.envs.generative_chemistry.libinvent.generative_chemistry_env_fact
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
 
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from default_scoring_function import scoring_function
+from batched_default_scoring_function import scoring_function
 
 # Test dummy custom score function
 # from dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function

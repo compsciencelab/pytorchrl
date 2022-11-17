@@ -76,58 +76,74 @@ class BatchedGenChemEnv(BatchedEnv):
         self.context = np.ones((self.num_envs, self.max_scaffold_length)) * self.vocabulary.encode_decoration_token("<pad>")
         self.context_length = np.zeros(self.num_envs)
 
+        # Scoring example
+        self.scoring_exmple = scoring_function([""])
+        self.scoring_exmple.update({"molecule": "invalid", "reaction_scores": 0.0})
+
     def step(self, action):
         """Execute one time step within the environment"""
 
         rew = np.zeros(self.num_envs, dtype=np.float32)
         done = np.zeros(self.num_envs, dtype=np.bool)
-        info = []
+        info = [{k: v for k, v in self.scoring_exmple.items()} for _ in range(self.num_envs)]
 
         finished = action == self.vocabulary.encode_decoration_token("$")
         done[finished] = True
 
+        molecules = []
+        valid_molecules = []
+        decorated_smiles = []
         for i in range(self.num_envs):
 
-            env_info = {}
-            self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
+            if not finished[i]:
+
+                # Add token
+                self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
 
             if finished[i]:
 
                 # Join scaffold and decoration
                 decorated_smile, molecule = self.join_scaffold_and_decorations(
                     self.vocabulary.decode_scaffold(self.context[i]),
-                    self.vocabulary.remove_start_and_end_tokens(self.current_decorations[i]))
+                    self.vocabulary.remove_start_and_end_tokens(self.current_decorations[i] + "$"))
 
-                # Compute score
-                score = self.scoring_function(decorated_smile)
-
-                # Apply reaction filters
-                score.update({"reaction_scores": 0.0})
-                if molecule:
-                    self.apply_reaction_filters(molecule, score)
-
-                # Get reward
-                reward = score["reward"] if "reward" in score.keys() else score["score"]
-
-                # Adjust reward with diversity filter
-                reward = self.diversity_filter.update_score(reward, decorated_smile)
-
-                # If score contain field "Valid", update counter
-                if "valid_smile" in score.keys():
-                    valid = score["valid_smile"]
-                    self.running_mean_valid_smiles.append(1.0) if valid else \
-                        self.running_mean_valid_smiles.append(0.0)
-
-                rew[i] = reward
-
-                # Update molecule
-                env_info.update({"molecule": decorated_smile or "invalid_smile"})
-                env_info.update(score)
-
-                # Reset finished env
+                decorated_smiles.append(decorated_smile)
+                molecules.append(molecule)
+                if molecule is not None:
+                    valid_molecules.append(i)
                 self.reset_single_env(i)
 
-            info.append(env_info)
+        # Compute score
+        if sum(valid_molecules) > 0:
+
+            import ipdb; ipdb.set_trace()
+            score = self.scoring_function(decorated_smiles)
+
+            # Apply reaction filters
+            score.update({"reaction_scores": 0.0})
+            if molecule:
+                self.apply_reaction_filters(molecule, score)
+
+            # Get reward
+            reward = score["reward"] if "reward" in score.keys() else score["score"]
+
+            # Adjust reward with diversity filter
+            reward = self.diversity_filter.update_score(reward, decorated_smile)
+
+            # If score contain field "Valid", update counter
+            if "valid_smile" in score.keys():
+                valid = score["valid_smile"]
+                self.running_mean_valid_smiles.append(1.0) if valid else \
+                    self.running_mean_valid_smiles.append(0.0)
+
+            rew[i] = reward
+
+            # Update molecule
+            info[i].update({"molecule": decorated_smile or "invalid_smile"})
+            info[i].update(score)
+
+            # Reset finished env
+            self.reset_single_env(i)
 
         observation = {
             "context": copy.copy(self.context),
