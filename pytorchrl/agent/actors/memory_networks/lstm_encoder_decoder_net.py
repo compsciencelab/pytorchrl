@@ -273,8 +273,6 @@ class LSTMEncoderDecoder(nn.Module):
 
     def _forward_encoder_decoder(self, encoder_seqs, encoder_seq_lengths, decoder_seqs, decoder_seq_lengths, hxs, done):
 
-        encoder_seq_lengths = encoder_seq_lengths.cpu().long()
-        decoder_seq_lengths = decoder_seq_lengths.cpu().long()
         masks = 1 - done
 
         if decoder_seqs.size(0) == hxs.size(0):
@@ -389,8 +387,8 @@ class LSTMEncoderDecoder(nn.Module):
 
         encoder_seqs = inputs["context"]
         decoder_seqs = inputs["obs"]
-        encoder_seq_lengths = inputs["context_length"].cpu().long().reshape(-1)
-        decoder_seq_lengths = inputs["obs_length"].cpu().long().reshape(-1)
+        encoder_seq_lengths = inputs["context_length"].cpu().long()
+        decoder_seq_lengths = inputs["obs_length"].cpu().long()
 
         logits, rhs = self._forward_encoder_decoder(
             encoder_seqs, encoder_seq_lengths, decoder_seqs, decoder_seq_lengths, rhs, done)

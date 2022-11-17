@@ -70,13 +70,17 @@ class BatchedGenChemEnv(BatchedEnv):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        next_obs = self.observation
+        observation = {
+            "context": np.zeros((self.num_envs, self.max_scaffold_length)),
+            "context_length": np.zeros(self.num_envs) + 10,
+            "obs": np.zeros((self.num_envs, 1)) + 2,
+            "obs_length": np.zeros(self.num_envs) + 1,
+        }
         rew = np.zeros((self.num_envs, ), dtype=np.float32)
         done = np.zeros((self.num_envs, ), dtype=np.bool)
         info = [{} for _ in range(self.num_envs)]
 
-        import ipdb; ipdb.set_trace()
-        return next_obs, rew, done, info
+        return observation, rew, done, info
 
     def reset(self):
         """
@@ -85,15 +89,14 @@ class BatchedGenChemEnv(BatchedEnv):
         """
 
         # Initial observation
-        self.observation = {
+        observation = {
             "context": np.zeros((self.num_envs, self.max_scaffold_length)),
-            "context_length": np.zeros((self.num_envs, 1)) + 10,
-            "obs": np.zeros(self.num_envs) + 2,
+            "context_length": np.zeros(self.num_envs) + 10,
+            "obs": np.zeros((self.num_envs, 1)) + 2,
             "obs_length": np.zeros(self.num_envs) + 1,
         }
 
-        import ipdb; ipdb.set_trace()
-        return self.observation
+        return observation
 
     def render(self, mode='human'):
         """Render the environment to the screen"""
