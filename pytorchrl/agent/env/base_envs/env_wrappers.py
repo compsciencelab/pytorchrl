@@ -247,7 +247,11 @@ class ResultsWriter(object):
                 filename = filename + "." + Monitor.EXT
 
         already_exists = osp.isfile(filename)
-        self.f = open(filename, "a+"))
+        self.f = open(filename, "a+")
+        if not already_exists:
+            if isinstance(header, dict):
+                header = '# {} \n'.format(json.dumps(header))
+            self.f.write(header)
         self.f.flush()
         self.logger = csv.DictWriter(self.f, fieldnames=('r', 'l', 't')+tuple(extra_keys))
         if not already_exists:
