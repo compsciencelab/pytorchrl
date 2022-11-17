@@ -222,7 +222,7 @@ class BatchedMonitor(gym.Wrapper):
             if self.results_writer:
                 self.results_writer.write_row(epinfo)
             assert isinstance(info[num], dict)
-            if isinstance(info, dict):
+            if isinstance(info[num], dict):
                 info[num]['episode'] = epinfo
             self.rewards[num] = 0
             self.steps[num] = 0

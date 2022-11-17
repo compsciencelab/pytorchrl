@@ -79,50 +79,53 @@ class BatchedGenChemEnv(BatchedEnv):
     def step(self, action):
         """Execute one time step within the environment"""
 
-        import ipdb; ipdb.set_trace()
-
-        rew = np.zeros((self.num_envs, 1), dtype=np.float32)
-        done = np.zeros((self.num_envs, 1), dtype=np.bool)
+        rew = np.zeros(self.num_envs, dtype=np.float32)
+        done = np.zeros(self.num_envs, dtype=np.bool)
         info = [{} for _ in range(self.num_envs)]
 
         finished = action == self.vocabulary.encode_decoration_token("$")
         done[finished] = True
 
-        # for i in range(self.num_envs):
-        #     self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
-        #     if finished[i]:
-        #
-        #         # Join scaffold and decoration
-        #         decorated_smile, molecule = self.join_scaffold_and_decorations(
-        #             self.vocabulary.decode_scaffold(self.context[i]),
-        #             self.vocabulary.remove_start_and_end_tokens(self.current_decorations[i]))
-        #
-        #         # Compute score
-        #         score = self.scoring_function(decorated_smile)
-        #
-        #         # Apply reaction filters
-        #         score.update({"reaction_scores": 0.0})
-        #         if molecule:
-        #             self.apply_reaction_filters(molecule, score)
-        #
-        #         # Get reward
-        #         reward = score["reward"] if "reward" in score.keys() else score["score"]
-        #
-        #         # Adjust reward with diversity filter
-        #         reward = self.diversity_filter.update_score(reward, decorated_smile)
-        #
-        #         # If score contain field "Valid", update counter
-        #         if "valid_smile" in score.keys():
-        #             valid = score["valid_smile"]
-        #             self.running_mean_valid_smiles.append(1.0) if valid else \
-        #                 self.running_mean_valid_smiles.append(0.0)
-        #
-        #         # rew[i] = reward
-        #
-        #         # Update molecule
-        #         # env_info = {"molecule": decorated_smile or "invalid_smile"}
-        #         # env_info.update(score)
-        #         # info.append(env_info)
+        for i in range(self.num_envs):
+
+            self.current_decorations[i] += self.vocabulary.decode_decoration_token(action[i])
+
+            if finished[i]:
+
+                # Join scaffold and decoration
+                decorated_smile, molecule = self.join_scaffold_and_decorations(
+                    self.vocabulary.decode_scaffold(self.context[i]),
+                    self.vocabulary.remove_start_and_end_tokens(self.current_decorations[i]))
+
+                # Compute score
+                score = self.scoring_function(decorated_smile)
+
+                # Apply reaction filters
+                score.update({"reaction_scores": 0.0})
+                if molecule:
+                    self.apply_reaction_filters(molecule, score)
+
+                # Get reward
+                reward = score["reward"] if "reward" in score.keys() else score["score"]
+
+                # Adjust reward with diversity filter
+                reward = self.diversity_filter.update_score(reward, decorated_smile)
+
+                # If score contain field "Valid", update counter
+                if "valid_smile" in score.keys():
+                    valid = score["valid_smile"]
+                    self.running_mean_valid_smiles.append(1.0) if valid else \
+                        self.running_mean_valid_smiles.append(0.0)
+
+                rew[i] = reward
+
+                # Update molecule
+                env_info = {"molecule": decorated_smile or "invalid_smile"}
+                env_info.update(score)
+                info.append(env_info)
+
+                # Reset finished env
+                self.reset_single_env(i)
 
         observation = {
             "context": copy.copy(self.context),
@@ -158,6 +161,14 @@ class BatchedGenChemEnv(BatchedEnv):
         }
 
         return observation
+
+    def reset_single_env(self, num_env):
+        """Reset environment in position num_env and return an the whole array of observations."""
+        # Fill up context and context_length
+        scaffold, scaffold_length = self.select_scaffold()
+        self.context[num_env] = self.vocabulary.encode_decoration_token("<pad>")
+        self.context[num_env, 0:scaffold_length] = scaffold
+        self.context_length[num_env] = scaffold_length
 
     def render(self, mode="human"):
         """Render the environment to the screen"""
