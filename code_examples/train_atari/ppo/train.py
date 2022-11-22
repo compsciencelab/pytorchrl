@@ -8,6 +8,7 @@ import wandb
 import argparse
 import numpy as np
 
+import torch
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -23,12 +24,6 @@ def main():
     args = get_args()
     cleanup_log_dir(args.log_dir)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
-
-    # Fix random seeds
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
 
     # Handle wandb init
     if args.wandb_key:
@@ -108,7 +103,7 @@ def main():
             if iterations % args.log_interval == 0:
                 log_data = learner.get_metrics(add_episodes_metrics=True)
                 log_data = {k.split("/")[-1]: v for k, v in log_data.items()}
-                wandb.log(log_data, step=learner.num_samples_collected + args.start_env_steps)
+                wandb.log(log_data, step=learner.num_samples_collected)
                 learner.print_info()
 
             if iterations % args.save_interval == 0:
