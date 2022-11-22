@@ -1,4 +1,7 @@
 env_id: HalfCheetahBulletEnv-v0
+experiment_name: HalfCheetahBullet
+agent_name: DDPG
+wandb_key: null
 num_env_steps : 1_000_000
 log_dir: /tmp/pybullet_ddpg
 frame_skip: 0

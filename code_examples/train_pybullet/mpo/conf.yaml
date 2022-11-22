@@ -1,6 +1,9 @@
-env_id: Pendulum-v0
+env_id: HalfCheetahBulletEnv-v0
+experiment_name: HalfCheetahBullet
+agent_name: MPO
+wandb_key: null
 num_env_steps : 200000
-log_dir: /tmp/pybullet_sac
+log_dir: /tmp/pybullet_mpo
 frame_skip: 0
 frame_stack: 1
 feature_extractor_net: MLP
