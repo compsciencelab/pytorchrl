@@ -1,3 +1,5 @@
+experiment_name: PongNoFrameskip-v4
+agent_name: PPO
 env_id: PongNoFrameskip-v4
 num_env_steps : 10000000
 log_dir: /tmp/atari_ppo
