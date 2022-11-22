@@ -19,7 +19,4 @@ clip_rewards: False
 episodic_life: True
 frame_skip: 0
 frame_stack: 4
-num_grad_workers: 1
-num_col_workers: 1 
-com_grad_workers: synchronous
-com_col_workers: synchronous
+wandb_key: null
