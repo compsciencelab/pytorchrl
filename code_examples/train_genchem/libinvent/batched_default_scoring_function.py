@@ -3,6 +3,7 @@ Defines the default scoring function to guide the genchem RL agent.
 """
 
 import os
+import numpy as np
 from reinvent_scoring.scoring import ScoringFunctionFactory
 from reinvent_scoring.scoring.scoring_function_parameters import ScoringFunctionParameters
 
@@ -12,37 +13,21 @@ class WrapperScoringClass:
     def __init__(self, scoring_class):
         self.scoring_class = scoring_class
 
-    def get_final_score(self, smile):
+    def get_final_score(self, smiles):
 
         output = {}
-        try:
+        scores = self.scoring_class.get_final_score(smiles)
+        valid_smiles = np.zeros_like(scores.total_score, dtype=np.bool)
+        valid_smiles[scores.valid_idxs] = True
 
-            if isinstance(smile, str):
-                score = self.scoring_class.get_final_score([smile])
-            elif smile is None:
-                raise TypeError
-            else:
-                raise ValueError("Scoring error due to wrong dtype")
-
-            output.update({
-                "valid_smile": True,
-                "score": float(score.total_score[0]),
-                "reward": float(score.total_score[0]),
-                "DRD2": float(score.profile[0].score[0]),
-                "custom_alerts": float(score.profile[1].score[0]),
-                "raw_DRD2": float(score.profile[2].score[0]),
-            })
-
-        except TypeError:
-
-            output.update({
-                "valid_smile": False,
-                "score": 0.0,
-                "reward": 0.0,
-                "DRD2": 0.0,
-                "custom_alerts": 0.0,
-                "raw_DRD2": 0.0,
-            })
+        output.update({
+            "valid_smile": valid_smiles,
+            "score": scores.total_score,
+            "reward": scores.total_score,
+            "DRD2": scores.profile[0].score,
+            "custom_alerts": scores.profile[1].score,
+            "raw_DRD2": scores.profile[2].score,
+        })
 
         return output
 
@@ -109,3 +94,24 @@ scoring_params = ScoringFunctionParameters(
 scoring_class = ScoringFunctionFactory(scoring_params)
 wrapper_scoring_class = WrapperScoringClass(scoring_class)
 scoring_function = wrapper_scoring_class.get_final_score
+
+if __name__ == "__main__":
+
+    # TEST
+    smiles_batch = [
+        "Cc1ccc2c(c1)sc1c(=O)[nH]c3ccc(C(=O)NCCCN(C)C)cc3c12",
+        "O=C(NCCN1CCOCC1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1",
+        "COc1cc(CN2CCCC(C(=O)Nc3ccccc3Oc3cccnc3)C2)ccc1F",
+        "LOLOLOLOOLOLOLLLLOLLOLO",
+        "COc1cccc(NC(=O)c2oc3ccccc3c2NC(=O)c2ccc3c(c2)OCO3)c1",
+        "Cc1ncc(COP(=O)(O)O)c(CNC(Cc2ccc(O)c(O)c2)C(=O)O)c1O",
+        "Cc1ccccc1N1C(=O)NC(=O)C(=Cc2cc(Br)c(N3CCOCC3)o2)C1=O",
+        "COc1nc(=Nc2ccc(Cl)cc2)sn1C",
+        "CCOC(=O)C(C)NP(=O)(COc1ccc(C)c2c1-c1ncsc1C2)NC(C)C(=O)OCC",
+        "Cc1ccc(SCC(=O)OCC(=O)NC2(C#N)CCCCC2)cc1",
+        "CC(C)(C)OC(=O)NC(Cc1ccc2cc(O)ccc2c1)C(=O)O",
+    ]
+    scores = scoring_function(smiles_batch)
+
+    for k, v in scores.items():
+        print(f"{k}: \n    type {type(v)} shape {v.shape}")

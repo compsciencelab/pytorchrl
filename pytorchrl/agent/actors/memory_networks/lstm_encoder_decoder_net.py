@@ -273,8 +273,6 @@ class LSTMEncoderDecoder(nn.Module):
 
     def _forward_encoder_decoder(self, encoder_seqs, encoder_seq_lengths, decoder_seqs, decoder_seq_lengths, hxs, done):
 
-        encoder_seq_lengths = encoder_seq_lengths.cpu().long()
-        decoder_seq_lengths = decoder_seq_lengths.cpu().long()
         masks = 1 - done
 
         if decoder_seqs.size(0) == hxs.size(0):

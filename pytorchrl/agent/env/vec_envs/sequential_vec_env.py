@@ -1,9 +1,11 @@
+"""Adapted from openai baselines"""
+
 import numpy as np
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.vec_env_base import VecEnvBase
-from pytorchrl.agent.env.openai_baselines_dependencies.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
+from pytorchrl.agent.env.vec_envs.vec_env_base import VecEnvBase
+from pytorchrl.agent.env.vec_envs.util import copy_obs_dict, dict_to_obs, obs_space_info
 
 
-class DummyVecEnv(VecEnvBase):
+class SequentialVecEnv(VecEnvBase):
     """
     VecEnv that does runs multiple environments sequentially, that is,
     the step and reset commands are send to one environment at a time.
@@ -61,9 +63,8 @@ class DummyVecEnv(VecEnvBase):
         return self._obs_from_buf()
 
     def reset_single_env(self, num_env):
-        for e in range(self.num_envs):
-            obs = self.envs[e].reset()
-            self._save_obs(e, obs)
+        obs = self.envs[num_env].reset()
+        self._save_obs(num_env, obs)
         return self._obs_from_buf()
 
     def _save_obs(self, e, obs):

@@ -14,7 +14,7 @@ from pytorchrl.envs.generative_chemistry.diversity_filter.no_filter_with_penalty
 class GenChemEnv(gym.Env):
     """Custom Environment for Generative Chemistry RL."""
 
-    metadata = {'render.modes': ['human']}
+    metadata = {"render.modes": ["human"]}
 
     def __init__(self, scoring_function, vocabulary, scaffolds, randomize_scaffolds=False, max_length=200,
                  reactions=[]):
@@ -154,11 +154,11 @@ class GenChemEnv(gym.Env):
             self.scaffold = self.select_scaffold()
             self.scaffold_length = len(self.scaffold)
 
-        self.padded_scaffold = self.vocabulary.encode_scaffold_token('<pad>') * np.ones(self.max_scaffold_length)
+        self.padded_scaffold = self.vocabulary.encode_scaffold_token("<pad>") * np.ones(self.max_scaffold_length)
         self.padded_scaffold[0:self.scaffold_length] = self.scaffold
 
         self.current_decoration = "^"
-        self.padded_current_decoration = self.vocabulary.encode_decoration_token('<pad>') * np.ones(self.max_length)
+        self.padded_current_decoration = self.vocabulary.encode_decoration_token("<pad>") * np.ones(self.max_length)
         self.padded_current_decoration[0] = self.vocabulary.encode_decoration_token(self.current_decoration)
         self.current_decoration_length = 1
 
@@ -176,11 +176,11 @@ class GenChemEnv(gym.Env):
 
         return obs
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         """Render the environment to the screen"""
 
-        print(f'Current Molecule: {self.current_molecule}')
-        print(f'Vocabulary: {self.vocabulary._tokens}')
+        print(f"Current Molecule: {self.current_molecule}")
+        print(f"Vocabulary: {self.vocabulary._tokens}")
 
     def select_scaffold(self):
         scaffold = random.choice(self.scaffolds)
