@@ -136,6 +136,7 @@ class BatchedGenChemEnv(BatchedEnv):
             for k in score:
                 info[k][finished] = score[k]
 
+        action[finished] = self.vocabulary.encode_decoration_token("^")
         observation = {
             "context": copy.copy(self.context),
             "context_length": copy.copy(self.context_length),
