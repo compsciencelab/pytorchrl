@@ -253,13 +253,19 @@ class CWorker(W):
             # Handle end of episode - collect episode info
             done_positions = torch.nonzero(done2, as_tuple=False)[:, 0].tolist()
 
-            for i in done_positions:
-                if "episode" in episode_infos[i]:  # gym envs should have it
-                    for k, v in episode_infos[i]["episode"].items():
-                        if isinstance(v, (float, int)):
-                            if k == 'r':
-                                k = "TrainReward"
-                            info[k].append(v)
+            if isinstance(episode_infos, (list, tuple)):
+                for i in done_positions:
+                    if "episode" in episode_infos[i]:  # gym envs should have it
+                        for k, v in episode_infos[i]["episode"].items():
+                            if isinstance(v, (float, int)):
+                                if k == 'r':
+                                    k = "TrainReward"
+                                info[k].append(v)
+            else:
+                for k, v in episode_infos.items():
+                    if k == 'r':
+                        k = "TrainReward"
+                    info[k].extend(v[done_positions])
 
             # Update current world state
             self.obs, self.rhs, self.done = obs2, rhs2, done2

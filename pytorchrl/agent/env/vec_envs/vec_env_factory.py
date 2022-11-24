@@ -47,12 +47,20 @@ class VecEnv:
             Environments observation space.
         """
 
+        if "index_col_worker" in inspect.getfullargspec(env_fn).args:
+            env_kwargs["index_col_worker"] = 0
+        if "index_grad_worker" in inspect.getfullargspec(env_fn).args:
+            env_kwargs["index_grad_worker"] = 0
+        if "index_env" in inspect.getfullargspec(env_fn).args:
+            env_kwargs["index_env"] = 0
         dummy_env = env_fn(**env_kwargs)
-        cls.action_space = dummy_env.action_space
-        cls.observation_space = dummy_env.observation_space
-        dummy_env.close()
 
         if isinstance(dummy_env, BatchedEnv):
+
+            dummy_env = TransposeImagesIfRequired(dummy_env, op=[2, 0, 1])
+            cls.action_space = dummy_env.action_space
+            cls.observation_space = dummy_env.observation_space
+            dummy_env.close()
 
             def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
                 """Create and return a vector environment"""
@@ -74,6 +82,9 @@ class VecEnv:
                             index_grad_worker, index_col_worker)),
                         info_keywords=info_keywords)
 
+                # if obs are images with shape (W,H,C), transpose to (C,W,H) for PyTorch convolutions
+                env = TransposeImagesIfRequired(env, op=[2, 0, 1])
+
                 env = PyTorchEnv(env, device)
 
                 env.env_kwargs = env_kwargs
@@ -81,6 +92,15 @@ class VecEnv:
                 return env
 
         else:
+
+            dummy_env.close()
+            dummy_env = [make_env(
+                env_fn=env_fn, env_kwargs=env_kwargs, index_col_worker=0,
+                index_grad_worker=0, index_env=0)]
+            dummy_env = SequentialVecEnv(dummy_env)
+            cls.action_space = dummy_env.action_space
+            cls.observation_space = dummy_env.observation_space
+            dummy_env.envs[0].close()
 
             def make_vec_env(device=torch.device("cpu"), index_col_worker=1, index_grad_worker=1, mode="train"):
                 """Create and return a vector environment"""

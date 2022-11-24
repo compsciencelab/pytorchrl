@@ -33,7 +33,7 @@ class BatchedGenChemEnv(BatchedEnv):
         self.current_episode_length = 0
         self.scoring_function = scoring_function
         self.randomize_scaffolds = randomize_scaffolds
-        self.running_mean_valid_smiles = deque(maxlen=1)
+        self.running_mean_valid_smiles = deque(maxlen=100)
 
         self._bond_maker = BondMaker()
         self._conversion = Conversions()
@@ -85,7 +85,7 @@ class BatchedGenChemEnv(BatchedEnv):
 
         rew = np.zeros(self.num_envs, dtype=np.float32)
         done = np.zeros(self.num_envs, dtype=np.bool)
-        info = [{k: v for k, v in self.scoring_exmple.items()} for _ in range(self.num_envs)]
+        info = {k: np.zeros(self.num_envs) for k, v in self.scoring_exmple.items()}
 
         finished = action == self.vocabulary.encode_decoration_token("$")
         done[finished] = True
@@ -117,33 +117,24 @@ class BatchedGenChemEnv(BatchedEnv):
 
             score = self.scoring_function(decorated_smiles)
 
-            # {'valid_smile': array([False, True, True]), 'score': array([0., 0.7840629, 0.7300222], dtype=float32),
-            #  'reward': array([0., 0.7840629, 0.7300222], dtype=float32),
-            #  'DRD2': array([0., 0.7840629, 0.7300222], dtype=float32),
-            #  'custom_alerts': array([0., 1., 1.], dtype=float32),
-            #  'raw_DRD2': array([0., 0.7840629, 0.7300222], dtype=float32)}
-
             # Apply reaction filters
-            # score.update({"reaction_scores": 0.0})
-            # if molecule:
-            #     self.apply_reaction_filters(molecule, score)
+            score = self.apply_reaction_filters(molecules, score)
 
             # Adjust reward with diversity filter
-            # reward = self.diversity_filter.update_score(reward, decorated_smile)
+            for i in range(len(decorated_smiles)):
+                if decorated_smiles[i] != "invalid":
+                    score["reward"][i] = self.diversity_filter.update_score(score["reward"][i], decorated_smiles[i])
 
-            # If score contain field "Valid", update counter
-            # if "valid_smile" in score.keys():
-            #     valid = score["valid_smile"]
-            #     self.running_mean_valid_smiles.append(1.0) if valid else \
-            #         self.running_mean_valid_smiles.append(0.0)
+            # Track valid smiles
+            self.running_mean_valid_smiles.extend(score['valid_smile'])
+            score["valid_smile"] = np.ones_like(score["valid_smile"]) * (sum(self.running_mean_valid_smiles) / len(self.running_mean_valid_smiles))
 
             # Get reward
             rew[finished] = score["reward"]
 
-            # Update molecule
-            # info[i].update({"molecule": decorated_smile or "invalid_smile"})
-            # info[i].update(score)
-
+            # Update infos
+            for k in score:
+                info[k][finished] = score[k]
 
         observation = {
             "context": copy.copy(self.context),
@@ -211,9 +202,9 @@ class BatchedGenChemEnv(BatchedEnv):
         smile = self._conversion.mol_to_smiles(molecule) if molecule else None
         return smile, molecule
 
-    def apply_reaction_filters(self, mol, final_score):
-        reaction_scores = [self.reaction_filter.evaluate(mol) if mol else 0.0]
+    def apply_reaction_filters(self, mols, final_score):
+        reaction_scores = [self.reaction_filter.evaluate(mol) if mol else 0.0 for mol in mols]
         reward = final_score["reward"] if "reward" in final_score.keys() else final_score["score"]
-        final_score["reward"] = float(reward * np.array(reaction_scores))
-        final_score["reaction_scores"] = float(np.array(reaction_scores))
+        final_score["reward"] = reward * np.array(reaction_scores)
+        final_score["reaction_scores"] = np.array(reaction_scores)
         return final_score

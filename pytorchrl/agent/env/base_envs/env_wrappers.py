@@ -2,6 +2,7 @@ import csv
 import time
 import json
 import torch
+from copy import copy
 import numpy as np
 import gym
 from gym.spaces.box import Box
@@ -208,27 +209,26 @@ class BatchedMonitor(gym.Wrapper):
     def update(self, ob, rew, done, info):
 
         if self.rewards is None:
-            self.rewards = np.zeros_like(rew)
-            self.steps = np.zeros_like(done)
+            self.rewards = np.zeros_like(rew, dtype=np.float64)
+            self.steps = np.zeros_like(rew, dtype=np.float64)
         else:
             self.rewards += rew
-            self.rewards += np.zeros_like(done)
+            self.steps += + 1.0
+
         for num in np.nonzero(done)[0]:
             eprew = float(self.rewards[num])
             eplen = float(self.steps[num])
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
-                try:
-                    epinfo[k] = float(info[num][k])
-                except Exception:
-                    epinfo[k] = info[num][k]
+                epinfo[k] = float(info[k][num])
             if self.results_writer:
                 self.results_writer.write_row(epinfo)
-            assert isinstance(info[num], dict)
-            if isinstance(info[num], dict):
-                info[num]['episode'] = epinfo
-            self.rewards[num] = 0
-            self.steps[num] = 0
+
+        info["r"] = copy(self.rewards)
+        info["l"] = copy(self.steps)
+
+        self.steps *= (1 - done)
+        self.rewards *= (1 - done)
 
     def close(self):
         super(BatchedMonitor, self).close()
