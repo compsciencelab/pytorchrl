@@ -263,9 +263,10 @@ class CWorker(W):
                                 info[k].append(v)
             else:
                 for k, v in episode_infos.items():
-                    if k == 'r':
-                        k = "TrainReward"
-                    info[k].extend(v[done_positions])
+                    if isinstance(v, (float, int, np.ndarray)):
+                        if k == 'r':
+                            k = "TrainReward"
+                        info[k].extend(v[done_positions])
 
             # Update current world state
             self.obs, self.rhs, self.done = obs2, rhs2, done2
