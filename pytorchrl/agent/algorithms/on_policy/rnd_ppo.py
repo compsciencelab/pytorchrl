@@ -518,7 +518,7 @@ class RND_PPO(Algorithm):
         # Extend policy loss with addons
         addons_info = {}
         for addon in self.policy_loss_addons:
-            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            addon_loss, addons_info = addon.compute_loss_term(batch, dist, addons_info)
             loss += addon_loss
 
         return value_loss, ivalue_loss, action_loss, rnd_loss, entropy_loss, loss, addons_info

@@ -674,7 +674,7 @@ class MPO(Algorithm):
 
         addons_info = {}
         for addon in self.policy_loss_addons:
-            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            addon_loss, addons_info = addon.compute_loss_term(batch, dist, addons_info)
             loss_policy += addon_loss
 
         return loss_policy, addons_info

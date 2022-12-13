@@ -21,17 +21,18 @@ from pytorchrl.envs.generative_chemistry.vocabulary import SMILESTokenizer, crea
 from pytorchrl.envs.generative_chemistry.utils import adapt_reinvent_checkpoint
 from pytorchrl.envs.generative_chemistry.reinvent.generative_chemistry_env_factory import reinvent_train_env_factory
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
+
 # Default scoring function. Can be replaced by any other scoring function that accepts a SMILE and returns a score!
-from pytorchrl.envs.generative_chemistry.reinvent.default_scoring_function import scoring_function
+from default_scoring_function import scoring_function
 
 # Test dummy custom score function
-# from code_examples.train_genchem.ppo_reinvent.dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
+# from dummy_custom_scoring_function import dummy_custom_scoring_function as scoring_function
 
 
 def main():
 
     args = get_args()
-    cleanup_log_dir(args.log_dir)
     os.makedirs(args.log_dir, exist_ok=True)
     save_argparse(args, os.path.join(args.log_dir, "conf.yaml"), [])
 
@@ -58,7 +59,7 @@ def main():
             network_weights = "/tmp/network_params.tmp"
         else:
             raise ValueError(f"Missing pretrained_ckpt.prior! in {args.log_dir}")
-        restart_model = network_weights
+        restart_model = {"policy_net": network_weights}
 
         # 1. Define Train Vector of Envs
         info_keywords = ("molecule", )

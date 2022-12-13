@@ -302,7 +302,7 @@ class DDQN(Algorithm):
         # Extend policy loss with addons
         addons_info = {}
         for addon in self.policy_loss_addons:
-            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            addon_loss, addons_info = addon.compute_loss_term(batch, dist, addons_info)
             loss += addon_loss
 
         return loss, errors, addons_info

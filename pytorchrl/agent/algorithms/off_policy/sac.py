@@ -49,6 +49,8 @@ class SAC(Algorithm):
         Num of initial random environment steps before learning starts.
     mini_batch_size : int
         Size of actor update batches.
+    target_entropy : float (Optional)
+        Defines a target for the policy  entropy. If not provides, it is automatically calculated.
     target_update_interval : float
         regularity of target nets updates with respect to actor Adam updates.
     num_test_episodes : int
@@ -85,6 +87,7 @@ class SAC(Algorithm):
                  start_steps=20000,
                  mini_batch_size=64,
                  num_test_episodes=5,
+                 target_entropy=None,
                  target_update_interval=1,
                  policy_loss_addons=[]):
 
@@ -133,7 +136,7 @@ class SAC(Algorithm):
         self.alpha = self.log_alpha.detach().exp()
 
         # Compute target entropy
-        target_entropy = self.calculate_target_entropy()
+        target_entropy = target_entropy or self.calculate_target_entropy()
         self.target_entropy = torch.tensor(
             data=target_entropy, dtype=torch.float32,
             requires_grad=False, device=device)
@@ -191,6 +194,7 @@ class SAC(Algorithm):
                        initial_alpha=1.0,
                        mini_batch_size=64,
                        num_test_episodes=5,
+                       target_entropy=None,
                        target_update_interval=1.0,
                        policy_loss_addons=[]):
         """
@@ -218,6 +222,8 @@ class SAC(Algorithm):
             Num of initial random environment steps before learning starts.
         mini_batch_size : int
             Size of actor update batches.
+        target_entropy : float (Optional)
+            Defines a target for the policy  entropy. If not provides, it is automatically calculated.
         target_update_interval : float
             regularity of target nets updates with respect to actor Adam updates.
         num_test_episodes : int
@@ -252,6 +258,7 @@ class SAC(Algorithm):
                        update_every=update_every,
                        initial_alpha=initial_alpha,
                        max_grad_norm=max_grad_norm,
+                       target_entropy=target_entropy,
                        mini_batch_size=mini_batch_size,
                        num_test_episodes=num_test_episodes,
                        target_update_interval=target_update_interval,
@@ -496,7 +503,7 @@ class SAC(Algorithm):
         # Extend policy loss with addons
         addons_info = {}
         for addon in self.policy_loss_addons:
-            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            addon_loss, addons_info = addon.compute_loss_term(batch, dist, addons_info)
             loss_pi += addon_loss
 
         return loss_pi, logp_pi, addons_info

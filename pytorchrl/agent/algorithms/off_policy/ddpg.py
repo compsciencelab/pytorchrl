@@ -17,6 +17,7 @@ class DDPG(Algorithm):
     Deep Deterministic Policy Gradient algorithm class.
 
     Algorithm class to execute DDPG, from Timothy P. Lillicrap et al.
+    Algorithm class to execute DDPG, from Timothy P. Lillicrap et al.
     CONTINUOUS CONTROL WITH DEEP REINFORCEMENT LEARNING
     (https://arxiv.org/pdf/1509.02971.pdf). Algorithms are modules generally
     required by multiple workers, so DDPG.algo_factory(...) returns a function
@@ -399,7 +400,7 @@ class DDPG(Algorithm):
         # Extend policy loss with addons
         addons_info = {}
         for addon in self.policy_loss_addons:
-            addon_loss, addons_info = addon.compute_loss_term(data, dist, addons_info)
+            addon_loss, addons_info = addon.compute_loss_term(batch, dist, addons_info)
             loss_pi += addon_loss
 
         return loss_pi, addons_info
