@@ -258,13 +258,13 @@ class A2C(Algorithm):
 
         return action, clipped_action, rhs, other
 
-    def compute_loss(self, data):
+    def compute_loss(self, batch):
         """
         Calculate A2C loss
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             Data batch dict containing all required tensors to compute A2C loss.
 
         Returns
@@ -273,8 +273,8 @@ class A2C(Algorithm):
             A2C loss.
         """
 
-        o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
-        r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
+        o, rhs, a, old_v = batch[prl.OBS], batch[prl.RHS], batch[prl.ACT], batch[prl.VAL]
+        r, d, old_logp, adv = batch[prl.RET], batch[prl.DONE], batch[prl.LOGP], batch[prl.ADV]
 
         # Policy loss
         logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
@@ -299,7 +299,7 @@ class A2C(Algorithm):
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             data batch containing all required tensors to compute A2C loss.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.

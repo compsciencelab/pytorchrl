@@ -308,13 +308,13 @@ class PPO(Algorithm):
 
         return action, clipped_action, rhs, other
 
-    def compute_loss(self, data):
+    def compute_loss(self, batch):
         """
         Compute PPO loss from data batch.
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             Data batch dict containing all required tensors to compute PPO loss.
 
         Returns
@@ -329,8 +329,8 @@ class PPO(Algorithm):
             PPO loss.
         """
 
-        o, rhs, a, old_v = data[prl.OBS], data[prl.RHS], data[prl.ACT], data[prl.VAL]
-        r, d, old_logp, adv = data[prl.RET], data[prl.DONE], data[prl.LOGP], data[prl.ADV]
+        o, rhs, a, old_v = batch[prl.OBS], batch[prl.RHS], batch[prl.ACT], batch[prl.VAL]
+        r, d, old_logp, adv = batch[prl.RET], batch[prl.DONE], batch[prl.LOGP], batch[prl.ADV]
 
         new_logp, dist_entropy, dist = self.actor.evaluate_actions(o, rhs, d, a)
         new_v = self.actor.get_value(o, rhs, d).get("value_net1")
@@ -367,7 +367,7 @@ class PPO(Algorithm):
 
         Parameters
         ----------
-        data: dict
+        batch: dict
             data batch containing all required tensors to compute PPO loss.
         grads_to_cpu: bool
             If gradient tensor will be sent to another node, need to be in CPU.
