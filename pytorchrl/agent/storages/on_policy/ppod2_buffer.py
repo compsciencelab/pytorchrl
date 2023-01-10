@@ -575,8 +575,8 @@ class PPOD2Buffer(B):
         initial_reward_demos = glob.glob(self.initial_reward_demos_dir + '/*.npz') if self.initial_reward_demos_dir else []
         initial_int_demos = glob.glob(self.initial_int_demos_dir + '/*.npz') if self.initial_int_demos_dir else []
 
-        max_reward_demos = max(0, int(self.max_demos * (self.rho / (self.rho + self.phi))))
-        max_int_demos = int(self.max_demos * (self.phi / (self.rho + self.phi)))
+        max_reward_demos = max(0, int(self.max_demos * (self.rho / (self.rho + self.phi)))) if self.rho != 0.0 else int(0)
+        max_int_demos = int(self.max_demos * (self.phi / (self.rho + self.phi))) if self.phi != 0.0 else int(0)
 
         for num, demo_file in enumerate(initial_reward_demos):
 
