@@ -70,9 +70,12 @@ class RewardPredictor(PolicyLossAddOn):
         loss = (mask * loss).sum() / mask.sum()
 
         if len(error[r != 0.0]) > 0:
-            self.max_pred_errors_rms.update(error[r != 0.0].max().reshape(-1, 1))
-            self.mean_pred_errors_rms.update(error[r != 0.0].mean().reshape(-1, 1))
-            self.min_pred_errors_rms.update(error[r != 0.0].min().reshape(-1, 1))
+            max_val = error[r != 0.0].max().reshape(-1, 1)
+            self.max_pred_errors_rms.update(max_val)
+            man_val = error[r != 0.0].mean().reshape(-1, 1)
+            self.mean_pred_errors_rms.update(man_val)
+            min_val = error[r != 0.0].min().reshape(-1, 1)
+            self.min_pred_errors_rms.update(min_val)
         self.actor.error_threshold.data = self.max_pred_errors_rms.mean[0].float()
 
         info.update({
@@ -82,5 +85,7 @@ class RewardPredictor(PolicyLossAddOn):
             "mean_reward_pred_error_rms": self.mean_pred_errors_rms.mean.float().item(),
             "min_reward_pred_error_rms": self.min_pred_errors_rms.mean.float().item(),
         })
+
+        del error
 
         return loss, info
