@@ -84,7 +84,7 @@ class BatchedGenChemEnv(BatchedEnv):
         """Execute one time step within the environment"""
 
         rew = np.zeros(self.num_envs, dtype=np.float32)
-        done = np.zeros(self.num_envs, dtype=np.bool)
+        done = np.zeros(self.num_envs, dtype=bool)
         info = {k: np.zeros(self.num_envs) for k, v in self.scoring_exmple.items()}
 
         finished = action == self.vocabulary.encode_decoration_token("$")

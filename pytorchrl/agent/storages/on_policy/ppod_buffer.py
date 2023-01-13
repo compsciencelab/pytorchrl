@@ -432,7 +432,7 @@ class PPODBuffer(B):
                     # Find current number of demos, and current value threshold
                     potential_demo["MaxValue"] = self.potential_demos_val[i]
                     total_demos = len(self.reward_demos) + len(self.value_demos)
-                    value_thresh = - np.float("Inf") if len(self.value_demos) == 0 \
+                    value_thresh = - float("Inf") if len(self.value_demos) == 0 \
                         else min([p["MaxValue"] for p in self.value_demos])
 
                     if self.potential_demos_val["env{}".format(i + 1)] >= value_thresh or total_demos < self.max_demos:
