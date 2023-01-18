@@ -84,8 +84,4 @@ class RewardPredictor(PolicyLossAddOn):
             "min_reward_pred_error_rms": self.min_pred_errors_rms.mean.float().item(),
         })
 
-        # del error
-        # del filtered_error
-        # del filtered_error_mean
-
         return loss, info
