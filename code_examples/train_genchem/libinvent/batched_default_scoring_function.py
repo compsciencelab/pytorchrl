@@ -17,7 +17,7 @@ class WrapperScoringClass:
 
         output = {}
         scores = self.scoring_class.get_final_score(smiles)
-        valid_smiles = np.zeros_like(scores.total_score, dtype=np.bool)
+        valid_smiles = np.zeros_like(scores.total_score, dtype=bool)
         valid_smiles[scores.valid_idxs] = True
 
         output.update({
