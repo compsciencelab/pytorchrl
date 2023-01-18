@@ -63,19 +63,17 @@ class RewardPredictor(PolicyLossAddOn):
         o, rhs, r = data[prl.OBS], data[prl.RHS], data[prl.REW]
         pred_r = self.actor.reward_predictor(o)
         error = torch.abs(r - pred_r)
+        filtered_error = error[r != 0.0].detach().clone().contiguous()
         loss = 0.5 * error.pow(2)
         mask = torch.rand(loss.size(), device=self.device)
         mask = (mask >= self.masked_sparse_obs_ratio).float()
         mask[r != 0.0] = 1.0
         loss = (mask * loss).sum() / mask.sum()
 
-        if len(error[r != 0.0]) > 0:
-            max_val = error[r != 0.0].max().reshape(-1, 1)
-            self.max_pred_errors_rms.update(max_val)
-            man_val = error[r != 0.0].mean().reshape(-1, 1)
-            self.mean_pred_errors_rms.update(man_val)
-            min_val = error[r != 0.0].min().reshape(-1, 1)
-            self.min_pred_errors_rms.update(min_val)
+        if len(filtered_error) > 0:
+            self.max_pred_errors_rms.update(filtered_error.max().view(-1, 1))
+            self.mean_pred_errors_rms.update(filtered_error.mean().view(-1, 1))
+            self.min_pred_errors_rms.update(filtered_error.min().view(-1, 1))
         self.actor.error_threshold.data = self.max_pred_errors_rms.mean[0].float()
 
         info.update({
@@ -86,6 +84,8 @@ class RewardPredictor(PolicyLossAddOn):
             "min_reward_pred_error_rms": self.min_pred_errors_rms.mean.float().item(),
         })
 
-        del error
+        # del error
+        # del filtered_error
+        # del filtered_error_mean
 
         return loss, info
