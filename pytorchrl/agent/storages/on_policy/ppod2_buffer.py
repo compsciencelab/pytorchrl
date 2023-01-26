@@ -779,7 +779,8 @@ class PPOD2Buffer(B):
                     prl.ACT: np.array(self.reward_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
 
-                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields \
+                        and prl.EMBED in self.reward_demos[demo_pos].keys():
                     save_data.update({prl.EMBED: np.array(self.reward_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_reward_demos_dir, filename), **save_data),
@@ -809,7 +810,8 @@ class PPOD2Buffer(B):
                     prl.ACT: np.array(self.intrinsic_demos[demo_pos][prl.ACT]).astype(self.demo_dtypes[prl.ACT]),
                     "FrameSkip": self.frame_skip}
 
-                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields:
+                if prl.EMBED in self.data.keys() and prl.EMBED in self.demos_data_fields and \
+                        prl.EMBED in self.intrinsic_demos[demo_pos].keys():
                     save_data.update({prl.EMBED: np.array(self.intrinsic_demos[demo_pos][prl.EMBED])})
 
                 np.savez(os.path.join(self.target_int_demos_dir, filename), **save_data)
