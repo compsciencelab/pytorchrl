@@ -220,7 +220,7 @@ class BatchedMonitor(gym.Wrapper):
             eplen = float(self.steps[num])
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
-                if isinstance(info[k][num], (str, bool)):
+                if isinstance(info[k][num], (str, bool, np.bool_)):
                     epinfo[k] = info[k][num]
                 else:
                     epinfo[k] = float(info[k][num])
