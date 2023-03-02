@@ -106,6 +106,7 @@ class PPO(Algorithm):
 
         # ---- PPO-specific attributes ----------------------------------------
 
+        self.lr = lr
         self.envs = envs
         self.actor = actor
         self.device = device
@@ -381,13 +382,6 @@ class PPO(Algorithm):
         """
 
         value_loss, action_loss, dist_entropy, loss, addons_info = self.compute_loss(batch)
-        self.optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
-
-        pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
-        v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
-        grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         info = {
             "loss": loss.item(),
@@ -395,8 +389,16 @@ class PPO(Algorithm):
             "action_loss": action_loss.item(),
             "entropy_loss": dist_entropy.item()
         }
-
         info.update(addons_info)
+
+        grads = None
+        if self.lr != 0.0:
+            self.optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+            pi_grads = get_gradients(self.actor.policy_net, grads_to_cpu=grads_to_cpu)
+            v_grads = get_gradients(self.actor.value_net1, grads_to_cpu=grads_to_cpu)
+            grads = {"pi_grads": pi_grads, "v_grads": v_grads}
 
         return grads, info
 
@@ -416,7 +418,7 @@ class PPO(Algorithm):
             set_gradients(
                 self.actor.value_net1,
                 gradients=gradients["v_grads"], device=self.device)
-        self.optimizer.step()
+            self.optimizer.step()
 
     def set_weights(self, actor_weights):
         """
