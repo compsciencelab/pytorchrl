@@ -392,7 +392,7 @@ class PPO(Algorithm):
         info.update(addons_info)
 
         grads = None
-        if self.lr != 0.0:
+        if self.lr > 0.0:
             self.optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
@@ -418,6 +418,7 @@ class PPO(Algorithm):
             set_gradients(
                 self.actor.value_net1,
                 gradients=gradients["v_grads"], device=self.device)
+        if self.lr > 0.0:
             self.optimizer.step()
 
     def set_weights(self, actor_weights):
