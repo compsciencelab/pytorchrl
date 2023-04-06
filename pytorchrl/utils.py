@@ -3,7 +3,11 @@ import yaml
 import torch
 import shutil
 import argparse
-from torch._six import inf
+
+try:
+    from torch import inf
+except ImportError:
+    inf = float('inf')
 
 
 def cleanup_log_dir(log_dir):
