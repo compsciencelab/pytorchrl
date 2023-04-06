@@ -158,8 +158,8 @@ class Monitor(gym.Wrapper):
     def update(self, ob, rew, done, info):
         self.rewards.append(rew)
         if done:
-            eprew = sum(self.rewards)
-            eplen = len(self.rewards)
+            eprew = 0.0 + sum(self.rewards)
+            eplen = 1.0 + len(self.rewards)
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
                 epinfo[k] = info[k]
@@ -216,8 +216,8 @@ class BatchedMonitor(gym.Wrapper):
             self.steps += + 1.0
 
         for num in np.nonzero(done)[0]:
-            eprew = float(self.rewards[num])
-            eplen = float(self.steps[num])
+            eprew = 0.0 + float(self.rewards[num])
+            eplen = 1.0 + float(self.steps[num])
             epinfo = {"r": round(eprew, 6), "l": eplen, "t": round(time.time() - self.tstart, 6)}
             for k in self.info_keywords:
                 if isinstance(info[k][num], (str, bool, np.bool_)):
