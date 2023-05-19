@@ -69,7 +69,7 @@ def main():
         # Component 5: Data Storage
         storage_factory = GAEBuffer.create_factory(size=args.num_steps, gae_lambda=args.gae_lambda)
 
-        # Component 6: Data collector
+        # Component 6: Data collector (has copies of agent modules: envs, actor, storage, algo)
         col_workers_factory = CWorkerSet.create_factory(
             # core modules
             algo_factory=algo_factory,
@@ -86,7 +86,7 @@ def main():
             total_parent_workers=1,
         )
 
-        # # Component 7: Gradient Collector
+        # # Component 7: Gradient Collector (has copies of agent modules: envs, actor, storage, algo + data collector)
         grad_workers_factory = GWorkerSet.create_factory(
             # col specs
             col_execution=prl.CENTRAL,
@@ -99,7 +99,7 @@ def main():
             compress_grads_to_send=False,
         )
 
-        # # Component 8: Model Updater
+        # # Component 8: Model Updater 
         update_worker = UWorker(
             # col specs
             col_fraction_workers=1.0,
