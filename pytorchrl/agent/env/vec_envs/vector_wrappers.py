@@ -25,7 +25,7 @@ class VecPyTorch(VecEnvWrapper):
         Size of vector environment.
 
     """
-    def __init__(self, venv, device):
+    def __init__(self, venv, device=torch.device('cpu')):
         super(VecPyTorch, self).__init__(venv)
         self.venv = venv
         self.device = device
