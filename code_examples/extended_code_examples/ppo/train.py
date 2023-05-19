@@ -86,7 +86,7 @@ def main():
             total_parent_workers=1,
         )
 
-        # # Component 7: Gradient Collector (has copies of agent modules: envs, actor, storage, algo + data collector)
+        # Component 7: Gradient Collector (has copies of data collectors)
         grad_workers_factory = GWorkerSet.create_factory(
             # col specs
             col_execution=prl.CENTRAL,
@@ -99,7 +99,7 @@ def main():
             compress_grads_to_send=False,
         )
 
-        # # Component 8: Model Updater 
+        # Component 8: Model Updater (has copies of gradient collectors)
         update_worker = UWorker(
             # col specs
             col_fraction_workers=1.0,
