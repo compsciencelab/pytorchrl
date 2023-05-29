@@ -64,7 +64,6 @@ class GWorkerSet(WS):
         self.worker_params = {
             "col_communication": col_communication,
             "col_workers_factory": col_workers_factory,
-            "col_fraction_workers": col_fraction_workers,
             "compress_grads_to_send": compress_grads_to_send,
         }
 
