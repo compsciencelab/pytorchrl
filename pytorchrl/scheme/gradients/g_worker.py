@@ -79,7 +79,6 @@ class GWorker(W):
                  col_workers_factory,
                  col_communication=prl.SYNC,
                  compress_grads_to_send=False,
-                 col_execution=prl.CENTRAL,
                  col_fraction_workers=1.0,
                  initial_weights=None,
                  device=None):
@@ -102,6 +101,7 @@ class GWorker(W):
         self.remote_workers = self.col_workers.remote_workers()
         self.num_remote_workers = len(self.remote_workers)
         self.num_collection_workers = 1 if self.num_remote_workers == 0 else self.num_remote_workers
+        self.col_execution = prl.CENTRAL if self.num_remote_workers == 0 else prl.PARALLEL
 
         # Get Actor Critic instance
         self.actor = self.local_worker.actor
@@ -146,7 +146,7 @@ class GWorker(W):
                 remote_workers=self.remote_workers,
                 col_communication=col_communication,
                 col_fraction_workers=col_fraction_workers,
-                col_execution=col_execution,
+                col_execution=self.col_execution,
                 broadcast_interval=1)
 
             # Print worker information

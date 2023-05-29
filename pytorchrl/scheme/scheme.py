@@ -78,9 +78,6 @@ class Scheme:
         assert grad_workers_communication in (prl.SYNC, prl.ASYNC),\
             "grad_workers_communication can only be `prl.SYNC` or `prl.ASYNC`"
 
-        col_execution = prl.PARALLEL if num_col_workers > 1 else prl.CENTRAL
-        grad_execution = prl.PARALLEL if num_grad_workers > 1 else prl.CENTRAL
-
         col_workers_factory = CWorkerSet.create_factory(
 
             # core modules
@@ -103,7 +100,6 @@ class Scheme:
         grad_workers_factory = GWorkerSet.create_factory(
 
             # col specs
-            col_execution=col_execution,
             col_communication=col_workers_communication,
             col_workers_factory=col_workers_factory,
             col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
@@ -120,7 +116,6 @@ class Scheme:
             col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
 
             # grad specs
-            grad_execution=grad_execution,
             grad_communication=grad_workers_communication,
             grad_workers_factory=grad_workers_factory,
 
