@@ -103,28 +103,6 @@ def main():
             print("step!")
             info = update_worker.step()
 
-        # start_time = time.time()
-        # collected_steps = 0
-        # target_steps = args.num_env_steps
-        # total_updates = np.ceil((args.num_env_steps * args.ppo_epoch * args.num_mini_batch) / (
-        #         args.num_env_processes * args.num_steps)) + args.ppo_epoch * args.num_mini_batch
-        # alpha = np.linspace(1.0, 0.0, int(total_updates))
-        #
-        # while collected_steps < target_steps:
-        #
-        #     # Collect data, take one grad step, update model parameters
-        #     info = self.update_worker.step()
-        #
-        #     # Update counter
-        #     self.num_samples_collected += info.pop(prl.NUMSAMPLES)
-        #
-        #     # Update learning rate and clip param
-        #     update_worker.update_algorithm_parameter("lr", alpha[updates] * args.lr)
-        #     update_worker.update_algorithm_parameter("clip_param", alpha[updates] * args.clip_param)
-        #
-        #     if args.max_time != -1 and (time.time() - start_time) > args.max_time:
-        #         break
-
         print("Finished!")
         sys.exit()
 
