@@ -59,4 +59,4 @@ update_worker = UWorker(
 collected_steps = 0
 while collected_steps < target_steps:
     # Collect data, take one grad step, update model parameters
-    info = self.update_worker.step()
+    info = update_worker.step()

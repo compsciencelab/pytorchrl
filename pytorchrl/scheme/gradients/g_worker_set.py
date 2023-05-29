@@ -62,7 +62,6 @@ class GWorkerSet(WS):
         self.remote_config = default_remote_config
 
         self.worker_params = {
-            "col_execution": col_execution,
             "col_communication": col_communication,
             "col_workers_factory": col_workers_factory,
             "col_fraction_workers": col_fraction_workers,
@@ -76,8 +75,6 @@ class GWorkerSet(WS):
             worker_params=self.worker_params,
             index_parent_worker=index_parent,
             worker_remote_config=self.remote_config)
-
-        import ipdb; ipdb.set_trace()
 
     @classmethod
     def create_factory(cls,
