@@ -93,7 +93,6 @@ class UWorker(W):
             remote_workers=self.remote_workers,
             col_fraction_workers=col_fraction_workers,
             grad_communication=grad_communication,
-            grad_execution=grad_execution,
             decentralized_update_execution=decentralized_update_execution,
         )
 
