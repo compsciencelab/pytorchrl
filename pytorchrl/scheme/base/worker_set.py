@@ -56,13 +56,13 @@ class WorkerSet:
                 {"device": local_device, "initial_weights": initial_weights})
 
             # If multiple grad workers the collection workers of grad worker with index 0 should not collect
-            if worker.__name__ == "CWorker" and total_parent_workers > 0 and index_parent_worker == 0:
+            if worker.__name__ == "CWorker" and total_parent_workers and total_parent_workers > 0 and index_parent_worker == 0:
                 self.num_workers = 0
                 _ = local_params.pop("test_envs_factory")
                 _ = local_params.pop("train_envs_factory")
 
             # If multiple col workers, local collection workers don't need to collect
-            elif worker.__name__ == "CWorker" and num_workers > 0:
+            elif worker.__name__ == "CWorker" and num_workers > 1:
                 _ = local_params.pop("test_envs_factory")
                 _ = local_params.pop("train_envs_factory")
 
@@ -74,7 +74,7 @@ class WorkerSet:
             self._local_worker = None
 
         self._remote_workers = []
-        if self.num_workers > 0:
+        if self.num_workers > 1:
             self.add_workers(self.num_workers)
 
     @staticmethod

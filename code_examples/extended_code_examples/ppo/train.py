@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 
 import torch
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -17,6 +18,10 @@ from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+# from pytorchrl.scheme import CWorkerSet, GWorkerSet, UWorker
+from pytorchrl.scheme.collection.c_worker_set import CWorkerSet
+from pytorchrl.scheme.gradients.g_worker_set import GWorkerSet
+from pytorchrl.scheme.updates.u_worker import UWorker
 
 
 def main():
@@ -71,67 +76,32 @@ def main():
 
         # Component 6: Data collector (has copies of agent modules: envs, actor, storage, algo)
         col_workers_factory = CWorkerSet.create_factory(
-            # core modules
+            num_workers=1,
             algo_factory=algo_factory,
             actor_factory=actor_factory,
             storage_factory=storage_factory,
             test_envs_factory=test_envs_factory,
             train_envs_factory=train_envs_factory,
-            # col specs
-            num_workers=1,
-            col_worker_resources={"num_cpus": 1, "num_gpus": 0.5},
-            col_fraction_samples=1.0,  # Collect 100% of the samples, no preemption mechanism
-            compress_data_to_send=False,  # Compress data when collectors send it
-            # grad specs
-            total_parent_workers=1,
+            col_worker_resources={"num_cpus": 1, "num_gpus": 0.25},
         )
-
         # Component 7: Gradient Collector (has copies of data collectors)
         grad_workers_factory = GWorkerSet.create_factory(
-            # col specs
-            col_execution=prl.CENTRAL,
+            num_workers=1,
             col_communication=prl.SYNC,
             col_workers_factory=col_workers_factory,
-            col_fraction_workers=1.0,
-            # grad_specs
-            num_workers=1,
-            grad_worker_resources={"num_cpus": 1, "num_gpus": 0.5},
-            compress_grads_to_send=False,
+            grad_worker_resources={"num_cpus": 1, "num_gpus": 0.25},
         )
-
         # Component 8: Model Updater (has copies of gradient collectors)
         update_worker = UWorker(
-            # col specs
-            col_fraction_workers=1.0,
-            # grad specs
-            grad_execution=prl.CENTRAL,
             grad_communication=prl.SYNC,
             grad_workers_factory=grad_workers_factory,
-            # update specs
-            decentralized_update_execution=False,  # Gradients are applied in the update workers (central update)
         )
-
-        start_time = time.time()
         collected_steps = 0
         target_steps = args.num_env_steps
-        total_updates = np.ceil((args.num_env_steps * args.ppo_epoch * args.num_mini_batch) / (
-                args.num_env_processes * args.num_steps)) + args.ppo_epoch * args.num_mini_batch
-        alpha = np.linspace(1.0, 0.0, int(total_updates))
-
         while collected_steps < target_steps:
-
             # Collect data, take one grad step, update model parameters
-            info = self.update_worker.step()
-
-            # Update counter
-            self.num_samples_collected += info.pop(prl.NUMSAMPLES)
-
-            # Update learning rate and clip param
-            update_worker.update_algorithm_parameter("lr", alpha[updates] * args.lr)
-            update_worker.update_algorithm_parameter("clip_param", alpha[updates] * args.clip_param)
-
-            if args.max_time != -1 and (time.time() - start_time) > args.max_time:
-                break
+            print("step!")
+            info = update_worker.step()
 
         print("Finished!")
         sys.exit()

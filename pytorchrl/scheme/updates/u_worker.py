@@ -28,8 +28,6 @@ class UWorker(W):
         Minimum fraction of samples required to stop if collection is
         synchronously coordinated and most workers have finished their
         collection task.
-    grad_execution : str
-        Execution patterns for gradients computation.
     grad_communication : str
         Communication coordination pattern for gradient computation workers.
     decentralized_update_execution : bool
@@ -61,16 +59,11 @@ class UWorker(W):
     def __init__(self,
                  grad_workers_factory,
                  index_worker=0,
-                 col_fraction_workers=1.0,
-                 grad_execution=prl.CENTRAL,
                  grad_communication=prl.SYNC,
                  decentralized_update_execution=False,
                  local_device=None):
 
         super(UWorker, self).__init__(index_worker)
-
-        self.grad_execution = grad_execution
-        self.grad_communication = grad_communication
 
         # Computation device
         dev = local_device or "cuda" if torch.cuda.is_available() else "cpu"
@@ -79,6 +72,9 @@ class UWorker(W):
         self.local_worker = self.grad_workers.local_worker()
         self.remote_workers = self.grad_workers.remote_workers()
         self.num_workers = len(self.grad_workers.remote_workers())
+
+        self.grad_execution = prl.PARALLEL if self.num_workers > 1 else prl.CENTRAL
+        self.grad_communication = grad_communication
 
         # Create CWorkerSet instance
         if decentralized_update_execution:
@@ -94,9 +90,8 @@ class UWorker(W):
         self.updater = UpdaterThread(
             local_worker=self.local_worker,
             remote_workers=self.remote_workers,
-            col_fraction_workers=col_fraction_workers,
+            col_fraction_workers=self.local_worker.col_fraction_workers,
             grad_communication=grad_communication,
-            grad_execution=grad_execution,
             decentralized_update_execution=decentralized_update_execution,
         )
 
@@ -177,10 +172,6 @@ class UpdaterThread(threading.Thread):
         grad_workers remote data collection workers.
     decentralized_update_execution : bool
         Whether decentralized execution pattern for update steps is enabled or not.
-    col_fraction_workers : float
-        Minimum fraction of samples required to stop if collection is
-        synchronously coordinated and most workers have finished their
-        collection task.
     grad_execution : str
         Execution patterns for gradients computation.
     grad_communication : str

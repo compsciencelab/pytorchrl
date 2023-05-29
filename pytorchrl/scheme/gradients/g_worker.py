@@ -36,10 +36,6 @@ class GWorker(W):
         Whether or not to compress gradients before sending then to the update worker.
     col_execution : str
         Execution patterns for data collection.
-    col_fraction_workers : float
-        Minimum fraction of samples required to stop if collection is
-        synchronously coordinated and most workers have finished their
-        collection task.
     device : str
         "cpu" or specific GPU "cuda:number`" to use for computation.
     initial_weights : ray object ID
@@ -57,6 +53,10 @@ class GWorker(W):
         Whether or not to compress gradients before sending then to the update worker.
     col_workers : CWorkerSet
         A CWorkerSet class instance.
+    col_fraction_workers : float
+        Minimum fraction of samples required to stop if collection is
+        synchronously coordinated and most workers have finished their
+        collection task.
     local_worker : CWorker
         col_workers local worker.
     remote_workers : List of CWorker's
@@ -79,8 +79,6 @@ class GWorker(W):
                  col_workers_factory,
                  col_communication=prl.SYNC,
                  compress_grads_to_send=False,
-                 col_execution=prl.CENTRAL,
-                 col_fraction_workers=1.0,
                  initial_weights=None,
                  device=None):
 
@@ -98,10 +96,12 @@ class GWorker(W):
 
         # Create CWorkerSet instance
         self.col_workers = col_workers_factory(dev, initial_weights, index_worker)
+        self.col_fraction_workers = self.col_workers.fraction_samples
         self.local_worker = self.col_workers.local_worker()
         self.remote_workers = self.col_workers.remote_workers()
         self.num_remote_workers = len(self.remote_workers)
         self.num_collection_workers = 1 if self.num_remote_workers == 0 else self.num_remote_workers
+        self.col_execution = prl.CENTRAL if self.num_remote_workers == 0 else prl.PARALLEL
 
         # Get Actor Critic instance
         self.actor = self.local_worker.actor
@@ -145,8 +145,8 @@ class GWorker(W):
                 local_worker=self.local_worker,
                 remote_workers=self.remote_workers,
                 col_communication=col_communication,
-                col_fraction_workers=col_fraction_workers,
-                col_execution=col_execution,
+                col_fraction_workers=self.col_fraction_workers,
+                col_execution=self.col_execution,
                 broadcast_interval=1)
 
             # Print worker information

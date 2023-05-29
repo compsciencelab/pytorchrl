@@ -78,36 +78,26 @@ class Scheme:
         assert grad_workers_communication in (prl.SYNC, prl.ASYNC),\
             "grad_workers_communication can only be `prl.SYNC` or `prl.ASYNC`"
 
-        col_execution = prl.PARALLEL if num_col_workers > 1 else prl.CENTRAL
-        grad_execution = prl.PARALLEL if num_grad_workers > 1 else prl.CENTRAL
-
         col_workers_factory = CWorkerSet.create_factory(
-
             # core modules
             algo_factory=algo_factory,
             actor_factory=actor_factory,
             storage_factory=storage_factory,
             test_envs_factory=test_envs_factory,
             train_envs_factory=train_envs_factory,
-
             # col specs
             num_workers=num_col_workers - 1 if num_col_workers == 1 else num_col_workers,
             col_worker_resources=col_workers_resources,
             col_fraction_samples=col_preemption_thresholds.get("fraction_samples"),
             compress_data_to_send=col_compress_data,
-
             # grad specs
             total_parent_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
         )
 
         grad_workers_factory = GWorkerSet.create_factory(
-
             # col specs
-            col_execution=col_execution,
             col_communication=col_workers_communication,
             col_workers_factory=col_workers_factory,
-            col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
-
             # grad_specs
             num_workers=num_grad_workers - 1 if num_grad_workers == 1 else num_grad_workers,
             grad_worker_resources=grad_workers_resources,
@@ -115,15 +105,9 @@ class Scheme:
         )
 
         self._update_worker = UWorker(
-
-           # col specs
-            col_fraction_workers=col_preemption_thresholds.get("fraction_workers"),
-
             # grad specs
-            grad_execution=grad_execution,
             grad_communication=grad_workers_communication,
             grad_workers_factory=grad_workers_factory,
-
             # update specs
             local_device=local_device,
             decentralized_update_execution=decentralized_update_execution,

@@ -62,10 +62,8 @@ class GWorkerSet(WS):
         self.remote_config = default_remote_config
 
         self.worker_params = {
-            "col_execution": col_execution,
             "col_communication": col_communication,
             "col_workers_factory": col_workers_factory,
-            "col_fraction_workers": col_fraction_workers,
             "compress_grads_to_send": compress_grads_to_send,
         }
 
