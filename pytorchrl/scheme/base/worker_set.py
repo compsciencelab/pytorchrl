@@ -74,7 +74,7 @@ class WorkerSet:
             self._local_worker = None
 
         self._remote_workers = []
-        if self.num_workers > 0:
+        if self.num_workers > 1:
             self.add_workers(self.num_workers)
 
     @staticmethod

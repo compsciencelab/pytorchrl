@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 
 import torch
+import pytorchrl as prl
 from pytorchrl.learner import Learner
 from pytorchrl.scheme import Scheme
 from pytorchrl.agent.algorithms import PPO
@@ -17,6 +18,10 @@ from pytorchrl.agent.storages import GAEBuffer
 from pytorchrl.agent.actors import OnPolicyActor, get_feature_extractor
 from pytorchrl.envs.atari import atari_train_env_factory, atari_test_env_factory
 from pytorchrl.utils import LoadFromFile, save_argparse, cleanup_log_dir
+# from pytorchrl.scheme import CWorkerSet, GWorkerSet, UWorker
+from pytorchrl.scheme.collection.c_worker_set import CWorkerSet
+from pytorchrl.scheme.gradients.g_worker_set import GWorkerSet
+from pytorchrl.scheme.updates.u_worker import UWorker
 
 
 def main():
