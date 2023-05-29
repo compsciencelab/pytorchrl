@@ -136,7 +136,6 @@ class GWorker(W):
         else:
             self.storage = self.local_worker.storage
 
-        import ipdb; ipdb.set_trace()
         if len(self.remote_workers) > 0 or (len(self.remote_workers) == 0 and
                 self.local_worker.envs_train is not None):
 
