@@ -69,6 +69,7 @@ class UWorker(W):
 
         super(UWorker, self).__init__(index_worker)
 
+        import ipdb; ipdb.set_trace()
         self.grad_execution = grad_execution
         self.grad_communication = grad_communication
 

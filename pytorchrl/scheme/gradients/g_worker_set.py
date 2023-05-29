@@ -77,6 +77,8 @@ class GWorkerSet(WS):
             index_parent_worker=index_parent,
             worker_remote_config=self.remote_config)
 
+        import ipdb; ipdb.set_trace()
+
     @classmethod
     def create_factory(cls,
                        num_workers,
