@@ -55,16 +55,16 @@ class WorkerSet:
             local_params.update(
                 {"device": local_device, "initial_weights": initial_weights})
 
-            # If multiple grad workers the collection workers of grad worker with index 0 should not collect
-            if worker.__name__ == "CWorker" and total_parent_workers and total_parent_workers > 0 and index_parent_worker == 0:
-                self.num_workers = 0
-                _ = local_params.pop("test_envs_factory")
-                _ = local_params.pop("train_envs_factory")
-
-            # If multiple col workers, local collection workers don't need to collect
-            elif worker.__name__ == "CWorker" and num_workers > 0:
-                _ = local_params.pop("test_envs_factory")
-                _ = local_params.pop("train_envs_factory")
+            # # If multiple grad workers the collection workers of grad worker with index 0 should not collect
+            # if worker.__name__ == "CWorker" and total_parent_workers and total_parent_workers > 0 and index_parent_worker == 0:
+            #     self.num_workers = 0
+            #     _ = local_params.pop("test_envs_factory")
+            #     _ = local_params.pop("train_envs_factory")
+            #
+            # # If multiple col workers, local collection workers don't need to collect
+            # elif worker.__name__ == "CWorker" and num_workers > 1:
+            #     _ = local_params.pop("test_envs_factory")
+            #     _ = local_params.pop("train_envs_factory")
 
             self._local_worker = self._make_worker(
                 self.worker_class, index_worker=0,

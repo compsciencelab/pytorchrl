@@ -97,6 +97,7 @@ def main():
             grad_workers_factory=grad_workers_factory,
         )
         collected_steps = 0
+        target_steps = args.num_env_steps
         while collected_steps < target_steps:
             # Collect data, take one grad step, update model parameters
             print("step!")
