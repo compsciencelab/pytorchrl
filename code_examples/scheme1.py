@@ -13,18 +13,16 @@ col_workers_factory = CWorkerSet.create_factory(
 
 # Gradient Collector (has copies of data collectors)
 grad_workers_factory = GWorkerSet.create_factory(
-    col_execution=prl.CENTRAL,  # TODO: remove! this can be known from len(collection_workers)
     col_communication=prl.SYNC,
     col_workers_factory=col_workers_factory,
     num_workers=1,  # num grad workers in the set
-#    col_fraction_workers=1.0,
+#    col_fraction_workers=1.0,  # TODO. is this needed here?
     grad_worker_resources={"num_cpus": 1, "num_gpus": 0.25},
 )
 
 # Model Updater (has copies of gradient collectors)
 update_worker = UWorker(
     col_fraction_workers=1.0,
-    grad_execution=prl.CENTRAL,  # TODO: remove! this can be known from len(gradient_workers)
     grad_communication=prl.SYNC,
     grad_workers_factory=grad_workers_factory,
     decentralized_update_execution=False,  # Gradients are applied in the update workers (central update)

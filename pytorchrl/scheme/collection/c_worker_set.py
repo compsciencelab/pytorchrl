@@ -66,6 +66,7 @@ class CWorkerSet(WS):
                  worker_remote_config=default_remote_config):
 
         self.worker_class = CWorker
+        self.fraction_samples = fraction_samples
         default_remote_config.update(worker_remote_config)
         self.remote_config = default_remote_config
         self.worker_params = {
