@@ -10,7 +10,7 @@ Deep Reinforcement learning (DRL) has been very successful in recent years but c
 
     conda install pytorch torchvision cudatoolkit -c pytorch
 
-    pip install pytorchrl gym[atari,accept-rom-license]==0.19.0 wandb opencv-python hydra-core
+    pip install pytorchrl gym[atari,accept-rom-license]==0.22.0 wandb opencv-python hydra-core
 ```
 
 ### Documentation

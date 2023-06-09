@@ -21,13 +21,13 @@ Installing PyTorchRL library
 3. Install package. It can be installed either via PyPI or from source. ::
 
     # PyPI installation
-    pip install pytorchrl gym[atari,accept-rom-license]==0.19.0 wandb opencv-python hydra-core
+    pip install pytorchrl gym[atari,accept-rom-license]==0.22.0 wandb opencv-python hydra-core
 
 
     # source installation
     git clone git@github.com:PyTorchRL/pytorchrl.git
     cd pytorchrl
-    pip install gym[atari,accept-rom-license]==0.19.0 wandb opencv-python hydra-core
+    pip install gym[atari,accept-rom-license]==0.22.0 wandb opencv-python hydra-core
     pip install -e .
 
 4. To quickly test if installation was successful you can execute the following script, which runs a few training steps of the ``AC2`` algorithm on the ``CartPole-v0`` environment.
