@@ -63,6 +63,21 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
 
         return ob
 
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return self.observation(obs), reward, done, info
+
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return self.observation(obs)
+
 
 class PyTorchEnv(gym.Wrapper):
     """
@@ -91,7 +106,10 @@ class PyTorchEnv(gym.Wrapper):
 
     def reset(self):
         """New vec env reset function"""
-        obs = self.env.reset()
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
         if isinstance(obs, dict):
             for k in obs:
                 obs[k] = torch.from_numpy(obs[k]).float().to(self.device)
@@ -112,7 +130,11 @@ class PyTorchEnv(gym.Wrapper):
                 action = action.squeeze(1).cpu().numpy()
             action = action[None, :]
 
-        obs, reward, done, info = self.env.step(action.squeeze(0))
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action.squeeze(0))
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action.squeeze(0))
 
         if isinstance(obs, dict):
             for k in obs:
@@ -145,15 +167,22 @@ class Monitor(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.reset_state()
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
     def reset_state(self):
         self.rewards = []
 
     def step(self, action):
-        ob, rew, done, info = self.env.step(action)
-        self.update(ob, rew, done, info)
-        return ob, rew, done, info
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return obs, rew, done, info
 
     def update(self, ob, rew, done, info):
         self.rewards.append(rew)
@@ -196,15 +225,27 @@ class BatchedMonitor(gym.Wrapper):
         self.steps = None
 
     def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
     def reset_single_env(self, num_env):
-        return self.env.reset_single_env(num_env)
+        try:
+            obs = self.env.reset_single_env(num_env)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset_single_env(num_env)
+        return obs
 
     def step(self, action):
-        ob, rew, done, info = self.env.step(action)
-        self.update(ob, rew, done, info)
-        return ob, rew, done, info
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        self.update(obs, rew, done, info)
+        return obs, rew, done, info
 
     def update(self, ob, rew, done, info):
 

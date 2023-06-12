@@ -26,11 +26,21 @@ class StickyActionEnv(gym.Wrapper):
             action = self.last_action
 
         self.last_action = action
-        return self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
 
-    def reset(self):
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
         self.last_action = 0
-        return self.env.reset()
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class TimeLimit(gym.Wrapper):
@@ -39,17 +49,25 @@ class TimeLimit(gym.Wrapper):
         self._max_episode_steps = max_episode_steps
         self._elapsed_steps = 0
 
-    def step(self, ac):
-        observation, reward, done, info = self.env.step(ac)
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         self._elapsed_steps += 1
         if self._elapsed_steps >= self._max_episode_steps:
             done = True
             info['TimeLimit.truncated'] = True
-        return observation, reward, done, info
+        return obs, reward, done, info
 
     def reset(self, **kwargs):
         self._elapsed_steps = 0
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class NoopResetEnv(gym.Wrapper):
@@ -63,44 +81,31 @@ class NoopResetEnv(gym.Wrapper):
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return obs, reward, done, info
+
     def reset(self, **kwargs):
         """ Do no-op action for a number of steps in [1, noop_max]."""
         self.env.reset(**kwargs)
         if self.override_num_noops is not None:
             noops = self.override_num_noops
         else:
-            noops = self.unwrapped.np_random.randint(1, self.noop_max + 1)  # pylint: disable=E1101
+            noops = np.random.randint(1, self.noop_max + 1)
         assert noops > 0
         obs = None
-        for _ in range(noops):
-            obs, _, done, _ = self.env.step(self.noop_action)
-            if done:
-                obs = self.env.reset(**kwargs)
+        try:
+            for _ in range(noops):
+                obs, reward, terminated, truncated, info = self.env.step(self.noop_action)
+                done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            for _ in range(noops):
+                obs, reward, done, info = self.env.step(self.noop_action)
         return obs
-
-    def step(self, ac):
-        return self.env.step(ac)
-
-
-class FireResetEnv(gym.Wrapper):
-    def __init__(self, env):
-        """Take action on reset for environments that are fixed until firing."""
-        gym.Wrapper.__init__(self, env)
-        assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
-        assert len(env.unwrapped.get_action_meanings()) >= 3
-
-    def reset(self, **kwargs):
-        self.env.reset(**kwargs)
-        obs, _, done, _ = self.env.step(1)
-        if done:
-            self.env.reset(**kwargs)
-        obs, _, done, _ = self.env.step(2)
-        if done:
-            self.env.reset(**kwargs)
-        return obs
-
-    def step(self, ac):
-        return self.env.step(ac)
 
 
 class EpisodicLifeEnv(gym.Wrapper):
@@ -114,7 +119,11 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.total_reward = 0.0
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
 
         self.total_reward += reward
         info['EpisodicReward'] = self.total_reward
@@ -137,14 +146,21 @@ class EpisodicLifeEnv(gym.Wrapper):
         This way all states are still reachable even though lives are episodic,
         and the learner need not know about any of this behind-the-scenes.
         """
+        self.lives = self.env.unwrapped.ale.lives()
         if self.was_real_done:
             self.total_reward = 0.0
-            obs = self.env.reset(**kwargs)
+            try:
+                obs = self.env.reset(**kwargs)
+            except ValueError:  # too many values to unpack (expected 2)
+                obs, info = self.env.reset(**kwargs)
+            return obs
         else:
-            # no-op step to advance from terminal/lost life state
-            obs, _, _, _ = self.env.step(0)
-        self.lives = self.env.unwrapped.ale.lives()
-        return obs
+            try:
+                obs, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                obs, reward, done, info = self.env.step(action)
+            return obs
 
 
 class ClipRewardEnv(gym.Wrapper):
@@ -153,8 +169,11 @@ class ClipRewardEnv(gym.Wrapper):
         self.total_reward = 0.0
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         self.total_reward += reward
         info['UnclippedReward'] = self.total_reward
 
@@ -163,7 +182,11 @@ class ClipRewardEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.total_reward = 0.0
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class ScaleRewardEnv(gym.Wrapper):
@@ -173,7 +196,11 @@ class ScaleRewardEnv(gym.Wrapper):
         self.total_reward = 0.0
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         self.total_reward += reward
         info['UnscaledReward'] = self.total_reward
         reward = self.scaling * reward
@@ -181,7 +208,11 @@ class ScaleRewardEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.total_reward = 0.0
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class MaxAndSkipEnv(gym.Wrapper):
@@ -197,7 +228,13 @@ class MaxAndSkipEnv(gym.Wrapper):
         total_reward = 0.0
         done = None
         for i in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
+
+            try:
+                obs, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                obs, reward, done, info = self.env.step(action)
+
             if i == self._skip - 2:
                 self._obs_buffer[0] = obs
             if i == self._skip - 1:
@@ -212,7 +249,11 @@ class MaxAndSkipEnv(gym.Wrapper):
         return max_frame, total_reward, done, info
 
     def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class MontezumaVisitedRoomEnv(gym.Wrapper):
@@ -222,16 +263,24 @@ class MontezumaVisitedRoomEnv(gym.Wrapper):
         self.visited_rooms = set()  # Only stores unique numbers.
 
     def step(self, action):
-        state, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         ram = self.unwrapped.ale.getRAM()
         assert len(ram) == 128
         self.visited_rooms.add(ram[self.room_address])
         info['VisitedRooms'] = len(self.visited_rooms)
         return state, reward, done, info
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.visited_rooms.clear()
-        return self.env.reset()
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class MontezumaEmbeddingsEnv(gym.Wrapper):
@@ -298,9 +347,17 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
                         ram[self.room_address] + 24 * ram[self.room_level],
                     ]
                 )
-            state, reward, done, info = self.env.step(action)
+            try:
+                state, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                state, reward, done, info = self.env.step(action)
         else:
-            state, reward, done, info = self.env.step(action)
+            try:
+                state, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                state, reward, done, info = self.env.step(action)
             embed_state = imdownscale(
                 state=self.last_state[:, :, -1],
                 target_shape=self.embeddings_shape,
@@ -320,9 +377,14 @@ class MontezumaEmbeddingsEnv(gym.Wrapper):
 
         return state, reward, done, info
 
-    def reset(self):
-        self.last_state = self.env.reset()
-        return self.last_state
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+            self.last_state = obs
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+            self.last_state = obs
+        return obs
 
 
 class PitfallEmbeddingsEnv(gym.Wrapper):
@@ -347,9 +409,17 @@ class PitfallEmbeddingsEnv(gym.Wrapper):
             ram = self.unwrapped.ale.getRAM()
             assert len(ram) == 128
             embed_state = np.array([np.clip(ram[self.room_level], 0, 255)])  # range 0 - 255
-            state, reward, done, info = self.env.step(action)
+            try:
+                state, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                state, reward, done, info = self.env.step(action)
         else:
-            state, reward, done, info = self.env.step(action)
+            try:
+                state, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                state, reward, done, info = self.env.step(action)
             embed_state = imdownscale(
                 state=self.last_state[:, :, -1],
                 target_shape=self.embeddings_shape,
@@ -369,9 +439,14 @@ class PitfallEmbeddingsEnv(gym.Wrapper):
 
         return state, reward, done, info
 
-    def reset(self):
-        self.last_state = self.env.reset()
-        return self.last_state
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+            self.last_state = obs
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+            self.last_state = obs
+        return obs
 
 
 class WarpFrame(gym.ObservationWrapper):
@@ -426,6 +501,21 @@ class WarpFrame(gym.ObservationWrapper):
             obs[self._key] = frame
         return obs
 
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return self.observation(obs), reward, done, info
+
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return self.observation(obs)
+
 
 class ScaledFloatFrame(gym.ObservationWrapper):
     def __init__(self, env):
@@ -436,6 +526,21 @@ class ScaledFloatFrame(gym.ObservationWrapper):
         # careful! This undoes the memory optimization, use
         # with smaller replay buffers only.
         return np.array(observation).astype(np.float32) / 255.0
+
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return self.observation(obs), reward, done, info
+
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return self.observation(obs)
 
 
 class LazyFrames(object):
@@ -475,13 +580,26 @@ class LazyFrames(object):
     def frame(self, i):
         return self._force()[..., i]
 
+    def step(self, action):
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
+
 
 def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=1, scale=False):
     """Configure environment for DeepMind-style Atari"""
     if episode_life:
         env = EpisodicLifeEnv(env)
-    if 'FIRE' in env.unwrapped.get_action_meanings():
-        env = FireResetEnv(env)
     env = WarpFrame(env)
     if scale:
         env = ScaledFloatFrame(env)

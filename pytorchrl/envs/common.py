@@ -10,8 +10,19 @@ class CartPoleActionWrapper(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class FrameSkip(gym.Wrapper):
@@ -25,7 +36,11 @@ class FrameSkip(gym.Wrapper):
         total_reward = 0.0
         done = None
         for i in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
+            try:
+                obs, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+            except ValueError:  # not enough values to unpack (expected 5, got 4)
+                obs, reward, done, info = self.env.step(action)
             total_reward += reward
             if done:
                 break
@@ -33,7 +48,11 @@ class FrameSkip(gym.Wrapper):
         return last_frame, total_reward, done, info
 
     def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class FrameStack(gym.Wrapper):
@@ -53,15 +72,23 @@ class FrameStack(gym.Wrapper):
         shp = env.observation_space.shape
         self.observation_space = spaces.Box(low=0, high=255, shape=(shp[:-1] + (shp[-1] * k,)), dtype=env.observation_space.dtype)
 
-    def reset(self):
-        ob = self.env.reset()
+    def reset(self, **kwargs):
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
         for _ in range(self.k):
-            self.frames.append(ob)
+            self.frames.append(obs)
         return self._get_ob()
 
     def step(self, action):
-        ob, reward, done, info = self.env.step(action)
-        self.frames.append(ob)
+        try:
+            import ipdb; ipdb.set_trace()
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
+        self.frames.append(obs)
         return self._get_ob(), reward, done, info
 
     def _get_ob(self):
@@ -85,7 +112,11 @@ class DelayedReward(gym.Wrapper):
         """Repeat action, sum reward, and max over last observations."""
 
         self._step += 1
-        obs, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         self._reward += reward
 
         if self._step % self._delay == 0 or done:
@@ -99,7 +130,11 @@ class DelayedReward(gym.Wrapper):
     def reset(self, **kwargs):
         self._step = 0
         self._reward = 0.0
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
 
 
 class SparseReward(gym.Wrapper):
@@ -115,7 +150,11 @@ class SparseReward(gym.Wrapper):
     def step(self, action):
         """Repeat action, sum reward, and max over last observations."""
 
-        obs, reward, done, info = self.env.step(action)
+        try:
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            done = terminated or truncated
+        except ValueError:  # not enough values to unpack (expected 5, got 4)
+            obs, reward, done, info = self.env.step(action)
         self._reward += reward
 
         if self._reward // self._threshold > 0 or done:
@@ -128,4 +167,8 @@ class SparseReward(gym.Wrapper):
 
     def reset(self, **kwargs):
         self._reward = 0.0
-        return self.env.reset(**kwargs)
+        try:
+            obs = self.env.reset(**kwargs)
+        except ValueError:  # too many values to unpack (expected 2)
+            obs, info = self.env.reset(**kwargs)
+        return obs
