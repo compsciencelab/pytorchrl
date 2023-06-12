@@ -83,7 +83,6 @@ class FrameStack(gym.Wrapper):
 
     def step(self, action):
         try:
-            import ipdb; ipdb.set_trace()
             obs, reward, terminated, truncated, info = self.env.step(action)
             done = terminated or truncated
         except ValueError:  # not enough values to unpack (expected 5, got 4)

@@ -182,7 +182,7 @@ class Monitor(gym.Wrapper):
             done = terminated or truncated
         except ValueError:  # not enough values to unpack (expected 5, got 4)
             obs, reward, done, info = self.env.step(action)
-        return obs, rew, done, info
+        return obs, reward, done, info
 
     def update(self, ob, rew, done, info):
         self.rewards.append(rew)
