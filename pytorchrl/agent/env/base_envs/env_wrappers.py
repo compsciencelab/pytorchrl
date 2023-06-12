@@ -63,6 +63,13 @@ class TransposeImagesIfRequired(gym.ObservationWrapper):
 
         return ob
 
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        return self.observation(obs), reward, done, info
+
+    def reset(self):
+        return self.observation(self.env.reset())
+
 
 class PyTorchEnv(gym.Wrapper):
     """
@@ -136,7 +143,7 @@ class Monitor(gym.Wrapper):
         if filename:
             self.results_writer = ResultsWriter(
                 filename,
-                header={"t_start": time.time(), 'env_id': env.spec and env.spec.id},
+                header={"t_start": time.time()},
                 extra_keys=info_keywords)
         else:
             self.results_writer = None
@@ -187,7 +194,7 @@ class BatchedMonitor(gym.Wrapper):
         if filename:
             self.results_writer = ResultsWriter(
                 filename,
-                header={"t_start": time.time(), 'env_id': env.spec and env.spec.id},
+                header={"t_start": time.time()},
                 extra_keys=info_keywords)
         else:
             self.results_writer = None

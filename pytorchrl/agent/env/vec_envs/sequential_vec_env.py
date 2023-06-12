@@ -27,7 +27,6 @@ class SequentialVecEnv(VecEnvBase):
         self.buf_rews = np.zeros((self.num_envs,), dtype=np.float32)
         self.buf_infos = [{} for _ in range(self.num_envs)]
         self.actions = None
-        self.spec = self.envs[0].spec
 
     def step_async(self, actions):
         listify = True
