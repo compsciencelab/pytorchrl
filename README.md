@@ -23,9 +23,9 @@ Here is the [paper](https://arxiv.org/abs/2007.02622)
 
 ```
 @misc{bou2021pytorchrl,
-      title={PyTorchRL: Modular and Distributed Reinforcement Learning in PyTorch},
-      author={Albert Bou and Gianni De Fabritiis},
-      year={2021},
+      title={Integrating Distributed Architectures in Highly Modular RL Libraries},
+      author={Albert Bou, Sebastian Dittert and Gianni De Fabritiis},
+      year={2023},
       eprint={2007.02622},
       archivePrefix={arXiv},
       primaryClass={cs.CV}
